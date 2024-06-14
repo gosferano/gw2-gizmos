@@ -1,13 +1,13 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ItemGameType
+public readonly struct ItemGameType : IEquatable<ItemGameType>
 {
-    public static ItemGameType Activity = new(ItemGameTypes.Activity);
-    public static ItemGameType Dungeon = new(ItemGameTypes.Dungeon);
-    public static ItemGameType Pve = new(ItemGameTypes.Pve);
-    public static ItemGameType Pvp = new(ItemGameTypes.Pvp);
-    public static ItemGameType PvpLobby = new(ItemGameTypes.PvpLobby);
-    public static ItemGameType Wvw = new(ItemGameTypes.Wvw);
+    public static readonly ItemGameType Activity = new("Activity");
+    public static readonly ItemGameType Dungeon = new("Dungeon");
+    public static readonly ItemGameType Pve = new("Pve");
+    public static readonly ItemGameType Pvp = new("Pvp");
+    public static readonly ItemGameType PvpLobby = new("PvpLobby");
+    public static readonly ItemGameType Wvw = new("Wvw");
 
     public string Value { get; }
 
@@ -16,5 +16,35 @@ public struct ItemGameType
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ItemGameType(string value) => new(value);
+
+    public bool Equals(ItemGameType other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ItemGameType other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ItemGameType left, ItemGameType right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ItemGameType left, ItemGameType right)
+    {
+        return !left.Equals(right);
+    }
 }

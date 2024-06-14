@@ -1,17 +1,15 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public class Armor : Item
+public class BackItem : Item
 {
-    public ArmorDetails Details { get; set; }
+    public BackItemDetails Details { get; set; }
 }
 
-public class ArmorDetails
+public class BackItemDetails
 {
-    public ArmorSlotType Type { get; set; }
-    public ArmorWeightClass WeightClass { get; set; }
-    public int Defense { get; set; }
     public InfusionSlot[] InfusionSlots { get; set; } = Array.Empty<InfusionSlot>();
-    public double AttributeAdjustment { get; set; }
+    public decimal AttributeAdjustment { get; set; }
+    public InfixUpgrade? InfixUpgrade { get; set; }
     public int? SuffixItemId { get; set; }
     public string SecondarySuffixItemId { get; set; } = "";
     public int[] StatChoices { get; set; } = Array.Empty<int>();

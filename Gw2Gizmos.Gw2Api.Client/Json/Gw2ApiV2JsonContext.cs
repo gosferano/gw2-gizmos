@@ -1,0 +1,26 @@
+﻿using System.Text.Json.Serialization;
+using Gw2Gizmos.Gw2Api.Contract.Account;
+using Gw2Gizmos.Gw2Api.Contract.Items;
+
+namespace Gw2Gizmos.Gw2Api.Client.Json;
+
+// Account
+[JsonSerializable(typeof(Account))]
+[JsonSerializable(typeof(AccountAchievement[]))]
+[JsonSerializable(typeof(AccountItem[]))]
+// Items
+[JsonSerializable(typeof(Item))]
+[JsonSerializable(typeof(Item[]))]
+[JsonSerializable(typeof(Armor))]
+[JsonSerializable(typeof(BackItem))]
+[JsonSerializable(typeof(Bag))]
+[JsonSerializable(typeof(Consumable))]
+[JsonSerializable(typeof(Container))]
+[JsonSerializable(typeof(Gathering))]
+[JsonSerializable(typeof(Gizmo))]
+[JsonSerializable(typeof(MiniPet))]
+[JsonSerializable(typeof(Tool))]
+[JsonSerializable(typeof(Trinket))]
+[JsonSerializable(typeof(UpgradeComponent))]
+[JsonSerializable(typeof(Weapon))]
+public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

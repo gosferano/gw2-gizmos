@@ -1,24 +1,24 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ItemFlag
+public readonly struct ItemFlag : IEquatable<ItemFlag>
 {
-    public static ItemFlag AccountBindOnUse = new(ItemFlags.AccountBindOnUse);
-    public static ItemFlag AccountBound = new(ItemFlags.AccountBound);
-    public static ItemFlag Attuned = new(ItemFlags.Attuned);
-    public static ItemFlag BulkConsume = new(ItemFlags.BulkConsume);
-    public static ItemFlag DeleteWarning = new(ItemFlags.DeleteWarning);
-    public static ItemFlag HideSuffix = new(ItemFlags.HideSuffix);
-    public static ItemFlag Infused = new(ItemFlags.Infused);
-    public static ItemFlag MonsterOnly = new(ItemFlags.MonsterOnly);
-    public static ItemFlag NoMysticForge = new(ItemFlags.NoMysticForge);
-    public static ItemFlag NoSalvage = new(ItemFlags.NoSalvage);
-    public static ItemFlag NoSell = new(ItemFlags.NoSell);
-    public static ItemFlag NotUpgradeable = new(ItemFlags.NotUpgradeable);
-    public static ItemFlag NoUnderwater = new(ItemFlags.NoUnderwater);
-    public static ItemFlag SoulbindOnAcquire = new(ItemFlags.SoulbindOnAcquire);
-    public static ItemFlag SoulBindOnUse = new(ItemFlags.SoulBindOnUse);
-    public static ItemFlag Tonic = new(ItemFlags.Tonic);
-    public static ItemFlag Unique = new(ItemFlags.Unique);
+    public static readonly ItemFlag AccountBindOnUse = new("AccountBindOnUse");
+    public static readonly ItemFlag AccountBound = new("AccountBound");
+    public static readonly ItemFlag Attuned = new("Attuned");
+    public static readonly ItemFlag BulkConsume = new("BulkConsume");
+    public static readonly ItemFlag DeleteWarning = new("DeleteWarning");
+    public static readonly ItemFlag HideSuffix = new("HideSuffix");
+    public static readonly ItemFlag Infused = new("Infused");
+    public static readonly ItemFlag MonsterOnly = new("MonsterOnly");
+    public static readonly ItemFlag NoMysticForge = new("NoMysticForge");
+    public static readonly ItemFlag NoSalvage = new("NoSalvage");
+    public static readonly ItemFlag NoSell = new("NoSell");
+    public static readonly ItemFlag NotUpgradeable = new("NotUpgradeable");
+    public static readonly ItemFlag NoUnderwater = new("NoUnderwater");
+    public static readonly ItemFlag SoulbindOnAcquire = new("SoulbindOnAcquire");
+    public static readonly ItemFlag SoulBindOnUse = new("SoulBindOnUse");
+    public static readonly ItemFlag Tonic = new("Tonic");
+    public static readonly ItemFlag Unique = new("Unique");
 
     public string Value { get; }
 
@@ -27,5 +27,35 @@ public struct ItemFlag
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ItemFlag(string value) => new(value);
+
+    public bool Equals(ItemFlag other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ItemFlag other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ItemFlag left, ItemFlag right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ItemFlag left, ItemFlag right)
+    {
+        return !left.Equals(right);
+    }
 }

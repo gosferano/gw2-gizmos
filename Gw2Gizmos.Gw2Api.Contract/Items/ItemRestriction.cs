@@ -1,22 +1,22 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ItemRestriction
+public readonly struct ItemRestriction : IEquatable<ItemRestriction>
 {
-    public static ItemRestriction Asura = new(ItemRestrictions.Asura);
-    public static ItemRestriction Charr = new(ItemRestrictions.Charr);
-    public static ItemRestriction Human = new(ItemRestrictions.Human);
-    public static ItemRestriction Norn = new(ItemRestrictions.Norn);
-    public static ItemRestriction Sylvari = new(ItemRestrictions.Sylvari);
-    public static ItemRestriction Elementalist = new(ItemRestrictions.Elementalist);
-    public static ItemRestriction Engineer = new(ItemRestrictions.Engineer);
-    public static ItemRestriction Guardian = new(ItemRestrictions.Guardian);
-    public static ItemRestriction Mesmer = new(ItemRestrictions.Mesmer);
-    public static ItemRestriction Necromancer = new(ItemRestrictions.Necromancer);
-    public static ItemRestriction Ranger = new(ItemRestrictions.Ranger);
-    public static ItemRestriction Revenant = new(ItemRestrictions.Revenant);
-    public static ItemRestriction Thief = new(ItemRestrictions.Thief);
-    public static ItemRestriction Warrior = new(ItemRestrictions.Warrior);
-    public static ItemRestriction Female = new(ItemRestrictions.Female);
+    public static readonly ItemRestriction Asura = new("Asura");
+    public static readonly ItemRestriction Charr = new("Charr");
+    public static readonly ItemRestriction Human = new("Human");
+    public static readonly ItemRestriction Norn = new("Norn");
+    public static readonly ItemRestriction Sylvari = new("Sylvari");
+    public static readonly ItemRestriction Elementalist = new("Elementalist");
+    public static readonly ItemRestriction Engineer = new("Engineer");
+    public static readonly ItemRestriction Guardian = new("Guardian");
+    public static readonly ItemRestriction Mesmer = new("Mesmer");
+    public static readonly ItemRestriction Necromancer = new("Necromancer");
+    public static readonly ItemRestriction Ranger = new("Ranger");
+    public static readonly ItemRestriction Revenant = new("Revenant");
+    public static readonly ItemRestriction Thief = new("Thief");
+    public static readonly ItemRestriction Warrior = new("Warrior");
+    public static readonly ItemRestriction Female = new("Female");
 
     public string Value { get; }
 
@@ -25,5 +25,35 @@ public struct ItemRestriction
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ItemRestriction(string value) => new(value);
+
+    public bool Equals(ItemRestriction other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ItemRestriction other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ItemRestriction left, ItemRestriction right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ItemRestriction left, ItemRestriction right)
+    {
+        return !left.Equals(right);
+    }
 }

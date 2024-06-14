@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ArmorWeightClass
+public readonly struct ArmorWeightClass : IEquatable<ArmorWeightClass>
 {
-    public static ArmorWeightClass Heavy = new(ArmorWeightClasses.Heavy);
-    public static ArmorWeightClass Medium = new(ArmorWeightClasses.Medium);
-    public static ArmorWeightClass Light = new(ArmorWeightClasses.Light);
-    public static ArmorWeightClass Clothing = new(ArmorWeightClasses.Clothing);
+    public static readonly ArmorWeightClass Heavy = new("Heavy");
+    public static readonly ArmorWeightClass Medium = new("Medium");
+    public static readonly ArmorWeightClass Light = new("Light");
+    public static readonly ArmorWeightClass Clothing = new("Clothing");
 
     public string Value { get; }
 
@@ -14,5 +14,35 @@ public struct ArmorWeightClass
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ArmorWeightClass(string value) => new(value);
+
+    public bool Equals(ArmorWeightClass other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ArmorWeightClass other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ArmorWeightClass left, ArmorWeightClass right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ArmorWeightClass left, ArmorWeightClass right)
+    {
+        return !left.Equals(right);
+    }
 }

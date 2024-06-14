@@ -1,15 +1,15 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ArmorSlotType
+public readonly struct ArmorSlotType : IEquatable<ArmorSlotType>
 {
-    public static ArmorSlotType HelmAquatic = new(ArmorSlotTypes.HelmAquatic);
-    public static ArmorSlotType Backpack = new(ArmorSlotTypes.Backpack);
-    public static ArmorSlotType Coat = new(ArmorSlotTypes.Coat);
-    public static ArmorSlotType Boots = new(ArmorSlotTypes.Boots);
-    public static ArmorSlotType Gloves = new(ArmorSlotTypes.Gloves);
-    public static ArmorSlotType Helm = new(ArmorSlotTypes.Helm);
-    public static ArmorSlotType Leggings = new(ArmorSlotTypes.Leggings);
-    public static ArmorSlotType Shoulders = new(ArmorSlotTypes.Shoulders);
+    public static readonly ArmorSlotType HelmAquatic = new("HelmAquatic");
+    public static readonly ArmorSlotType Backpack = new("Backpack");
+    public static readonly ArmorSlotType Coat = new("Coat");
+    public static readonly ArmorSlotType Boots = new("Boots");
+    public static readonly ArmorSlotType Gloves = new("Gloves");
+    public static readonly ArmorSlotType Helm = new("Helm");
+    public static readonly ArmorSlotType Leggings = new("Leggings");
+    public static readonly ArmorSlotType Shoulders = new("Shoulders");
 
     public string Value { get; }
 
@@ -18,5 +18,35 @@ public struct ArmorSlotType
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ArmorSlotType(string value) => new(value);
+
+    public bool Equals(ArmorSlotType other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ArmorSlotType other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ArmorSlotType left, ArmorSlotType right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ArmorSlotType left, ArmorSlotType right)
+    {
+        return !left.Equals(right);
+    }
 }

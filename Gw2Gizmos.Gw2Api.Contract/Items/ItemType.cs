@@ -1,30 +1,65 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
 
-public struct ItemType
+public readonly struct ItemType : IEquatable<ItemType>
 {
-    public static ItemType Armor = new(ItemTypes.Armor);
-    public static ItemType Back = new(ItemTypes.Back);
-    public static ItemType Bag = new(ItemTypes.Bag);
-    public static ItemType Consumable = new(ItemTypes.Consumable);
-    public static ItemType Container = new(ItemTypes.Container);
-    public static ItemType CraftingMaterial = new(ItemTypes.CraftingMaterial);
-    public static ItemType Gathering = new(ItemTypes.Gathering);
-    public static ItemType Gizmo = new(ItemTypes.Gizmo);
-    public static ItemType Key = new(ItemTypes.Key);
-    public static ItemType MiniPet = new(ItemTypes.MiniPet);
-    public static ItemType Tool = new(ItemTypes.Tool);
-    public static ItemType Trait = new(ItemTypes.Trait);
-    public static ItemType Trinket = new(ItemTypes.Trinket);
-    public static ItemType Trophy = new(ItemTypes.Trophy);
-    public static ItemType UpgradeComponent = new(ItemTypes.UpgradeComponent);
-    public static ItemType Weapon = new(ItemTypes.Weapon);
-    
+    public static readonly ItemType Armor = new("Armor");
+    public static readonly ItemType Back = new("Back");
+    public static readonly ItemType Bag = new("Bag");
+    public static readonly ItemType Consumable = new("Consumable");
+    public static readonly ItemType Container = new("Container");
+    public static readonly ItemType CraftingMaterial = new("CraftingMaterial");
+    public static readonly ItemType Gathering = new("Gathering");
+    public static readonly ItemType Gizmo = new("Gizmo");
+    public static readonly ItemType JadeTechModule = new("JadeTechModule");
+    public static readonly ItemType Key = new("Key");
+    public static readonly ItemType MiniPet = new("MiniPet");
+    public static readonly ItemType PowerCore = new("PowerCore");
+    public static readonly ItemType Relic = new("Relic");
+    public static readonly ItemType Tool = new("Tool");
+    public static readonly ItemType Trait = new("Trait");
+    public static readonly ItemType Trinket = new("Trinket");
+    public static readonly ItemType Trophy = new("Trophy");
+    public static readonly ItemType UpgradeComponent = new("UpgradeComponent");
+    public static readonly ItemType Weapon = new("Weapon");
+
     public string Value { get; }
 
-    public ItemType(string value)
+    private ItemType(string value)
     {
         Value = value;
     }
 
+    public override string ToString()
+    {
+        return Value;
+    }
+
     public static implicit operator ItemType(string value) => new(value);
+
+    public static implicit operator string(ItemType value) => value.Value;
+
+    public bool Equals(ItemType other)
+    {
+        return Value == other.Value;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ItemType other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return Value.GetHashCode();
+    }
+
+    public static bool operator ==(ItemType left, ItemType right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ItemType left, ItemType right)
+    {
+        return !left.Equals(right);
+    }
 }
