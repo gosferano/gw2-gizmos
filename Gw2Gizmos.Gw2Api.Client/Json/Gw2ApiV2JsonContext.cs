@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using Gw2Gizmos.Gw2Api.Contract.Account;
+using Gw2Gizmos.Gw2Api.Contract.Achievements;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -8,6 +9,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Account))]
 [JsonSerializable(typeof(AccountAchievement[]))]
 [JsonSerializable(typeof(AccountItem[]))]
+// Achievements
+[JsonSerializable(typeof(Achievement[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

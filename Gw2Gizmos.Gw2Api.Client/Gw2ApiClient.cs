@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Gw2Gizmos.Gw2Api.Client.Clients.Account;
+using Gw2Gizmos.Gw2Api.Client.Clients.Achievements;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Json;
 
@@ -15,6 +16,7 @@ public class Gw2ApiClient : IGw2ApiClient
     private const string SchemaVersionHeaderName = "X-Schema-Version";
 
     public IAccountClient Account { get; }
+    public IAchievementsClient Achievements { get; }
     public IItemsClient Items { get; }
 
     private readonly HttpClient _httpClient;
@@ -35,6 +37,7 @@ public class Gw2ApiClient : IGw2ApiClient
 
         // Initialize clients
         Account = new AccountClient(this);
+        Achievements = new AchievementsClient(this);
         Items = new ItemsClient(this);
     }
 
