@@ -13,6 +13,6 @@ public class ArmorDetails
     public InfusionSlot[] InfusionSlots { get; set; } = Array.Empty<InfusionSlot>();
     public double AttributeAdjustment { get; set; }
     public int? SuffixItemId { get; set; }
-    public string SecondarySuffixItemId { get; set; } = "";
+    public int? SecondarySuffixItemId { get; set; }
     public int[] StatChoices { get; set; } = Array.Empty<int>();
 }
