@@ -10,7 +10,10 @@ public class CharactersIdBuildTabsClient : BaseBulkAllClient<CharacterBuildTab, 
         : base(apiClient, "tabs")
     {
         _characterId = characterId;
+        Active = new CharactersIdBuildTabsActiveClient(apiClient, characterId);
     }
 
     protected override string UriPath => $"/v2/characters/{_characterId}/buildtabs";
+
+    public ICharactersIdBuildTabsActiveClient Active { get; }
 }
