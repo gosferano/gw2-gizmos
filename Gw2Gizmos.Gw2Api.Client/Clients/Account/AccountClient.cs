@@ -8,6 +8,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Achievements = new AccountAchievementsClient(apiClient);
         Bank = new AccountBankClient(apiClient);
         Dyes = new AccountDyesClient(apiClient);
+        Materials = new AccountMaterialsClient(apiClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -15,4 +16,5 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountAchievementsClient Achievements { get; }
     public IAccountBankClient Bank { get; }
     public IAccountDyesClient Dyes { get; }
+    public IAccountMaterialsClient Materials { get; }
 }
