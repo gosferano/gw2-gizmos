@@ -6,8 +6,10 @@ public class CommerceClient : ICommerceClient
     {
         Delivery = new CommerceDeliveryClient(apiClient);
         Exchange = new CommerceExchangeClient(apiClient);
+        Listings = new CommerceListingsClient(apiClient);
     }
 
     public ICommerceDeliveryClient Delivery { get; }
     public ICommerceExchangeClient Exchange { get; }
+    public ICommerceListingsClient Listings { get; }
 }
