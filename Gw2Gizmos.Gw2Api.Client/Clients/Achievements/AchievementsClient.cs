@@ -8,9 +8,11 @@ public class AchievementsClient : BaseBulkClient<Achievement, int>, IAchievement
         : base(apiClient)
     {
         Categories = new AchievementCategoriesClient(apiClient);
+        Groups = new AchievementGroupsClient(apiClient);
     }
 
     public IAchievementCategoriesClient Categories { get; }
+    public IAchievementGroupsClient Groups { get; }
 
     protected override string UriPath => "/v2/achievements";
 }

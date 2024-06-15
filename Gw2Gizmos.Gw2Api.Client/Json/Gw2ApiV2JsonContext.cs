@@ -12,6 +12,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 // Achievements
 [JsonSerializable(typeof(Achievement[]))]
 [JsonSerializable(typeof(AchievementCategory[]))]
+[JsonSerializable(typeof(AchievementGroup[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
