@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Gw2Gizmos.Gw2Api.Client.Clients.Account;
 using Gw2Gizmos.Gw2Api.Client.Clients.Achievements;
+using Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Json;
 
@@ -17,6 +18,7 @@ public class Gw2ApiClient : IGw2ApiClient
 
     public IAccountClient Account { get; }
     public IAchievementsClient Achievements { get; }
+    public ICharactersClient Characters { get; }
     public IItemsClient Items { get; }
 
     private readonly HttpClient _httpClient;
@@ -38,6 +40,7 @@ public class Gw2ApiClient : IGw2ApiClient
         // Initialize clients
         Account = new AccountClient(this);
         Achievements = new AchievementsClient(this);
+        Characters = new CharactersClient(this);
         Items = new ItemsClient(this);
     }
 

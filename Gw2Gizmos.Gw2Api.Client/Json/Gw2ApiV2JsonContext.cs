@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Gw2Gizmos.Gw2Api.Contract.Account;
 using Gw2Gizmos.Gw2Api.Contract.Achievements;
+using Gw2Gizmos.Gw2Api.Contract.Characters;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -13,6 +14,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Achievement[]))]
 [JsonSerializable(typeof(AchievementCategory[]))]
 [JsonSerializable(typeof(AchievementGroup[]))]
+// Character
+[JsonSerializable(typeof(CharacterBackstory))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

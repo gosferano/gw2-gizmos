@@ -11,7 +11,7 @@ public abstract class BaseClient
 
     protected abstract string UriPath { get; }
 
-    private IGw2ApiClient ApiClient { get; }
+    internal IGw2ApiClient ApiClient { get; }
 
     protected Task<TResponse> GetBlob<TResponse>(CancellationToken cancellationToken)
     {
