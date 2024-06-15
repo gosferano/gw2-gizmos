@@ -8,6 +8,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Colors;
 using Gw2Gizmos.Gw2Api.Client.Clients.Commerce;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
+using Gw2Gizmos.Gw2Api.Client.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.Json;
 
 namespace Gw2Gizmos.Gw2Api.Client;
@@ -27,6 +28,7 @@ public class Gw2ApiClient : IGw2ApiClient
     public ICommerceClient Commerce { get; }
     public IItemsClient Items { get; }
     public IMaterialsClient Materials { get; }
+    public IRacesClient Races { get; }
 
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonSerializerOptions =
@@ -52,6 +54,7 @@ public class Gw2ApiClient : IGw2ApiClient
         Commerce = new CommerceClient(this);
         Items = new ItemsClient(this);
         Materials = new MaterialsClient(this);
+        Races = new RacesClient(this);
     }
 
     public Gw2ApiClient()

@@ -3,7 +3,7 @@
 public class CharacterCore
 {
     public string Name { get; set; }
-    public Race Race { get; set; }
+    public CharacterRace Race { get; set; }
     public Gender Gender { get; set; }
     public Profession Profession { get; set; }
     public int Level { get; set; }
