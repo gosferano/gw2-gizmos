@@ -2,5 +2,5 @@
 
 public interface IAllExpandableClient<TResponse>
 {
-    Task<TResponse[]> GetAll(CancellationToken cancellationToken);
+    Task<TResponse[]> GetAll(CancellationToken cancellationToken = default);
 }
