@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
-public struct Profession : IEquatable<Profession>
+public readonly struct Profession : IEquatable<Profession>
 {
     public static readonly Profession Elementalist = new Profession("Elementalist");
     public static readonly Profession Engineer = new Profession("Engineer");
