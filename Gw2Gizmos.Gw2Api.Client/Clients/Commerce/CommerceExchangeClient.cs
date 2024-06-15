@@ -6,9 +6,11 @@ public class CommerceExchangeClient : BaseBlobClient<string[]>, ICommerceExchang
         : base(apiClient)
     {
         Coins = new CommerceExchangeCoinsClient(apiClient);
+        Gems = new CommerceExchangeGemsClient(apiClient);
     }
 
     protected override string UriPath => "/v2/commerce/exchange";
 
     public ICommerceExchangeCoinsClient Coins { get; }
+    public ICommerceExchangeGemsClient Gems { get; }
 }

@@ -3,4 +3,5 @@
 public interface ICommerceExchangeClient : IBlobClient<string[]>
 {
     public ICommerceExchangeCoinsClient Coins { get; }
+    public ICommerceExchangeGemsClient Gems { get; }
 }
