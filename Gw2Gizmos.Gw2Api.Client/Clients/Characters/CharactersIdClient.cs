@@ -9,9 +9,11 @@ public class CharactersIdClient : BaseClient, ICharactersIdClient
     {
         CharacterName = characterName;
         Backstory = new CharactersIdBackstoryClient(apiClient, characterName);
+        BuildTabs = new CharactersIdBuildTabsClient(apiClient, characterName);
     }
 
     protected override string UriPath => $"/v2/characters/{CharacterName}";
 
     public ICharactersIdBackstoryClient Backstory { get; }
+    public ICharactersIdBuildTabsClient BuildTabs { get; set; }
 }

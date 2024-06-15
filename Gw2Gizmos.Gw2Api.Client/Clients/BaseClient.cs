@@ -2,10 +2,12 @@
 
 public abstract class BaseClient
 {
+    private readonly string _idsParameterName;
     private const string SchemaVersion = "2022-03-23T19:00:00.000Z";
 
-    internal BaseClient(IGw2ApiClient apiClient)
+    internal BaseClient(IGw2ApiClient apiClient, string idsParameterName = "ids")
     {
+        _idsParameterName = idsParameterName;
         ApiClient = apiClient;
     }
 
@@ -30,7 +32,11 @@ public abstract class BaseClient
 
     protected Task<TResponse[]> GetByIds<TResponse, TId>(IEnumerable<TId> ids, CancellationToken cancellationToken)
     {
-        return ApiClient.Get<TResponse[]>($"{UriPath}?ids=" + string.Join(",", ids), SchemaVersion, cancellationToken);
+        return ApiClient.Get<TResponse[]>(
+            $"{UriPath}?{_idsParameterName}=" + string.Join(",", ids),
+            SchemaVersion,
+            cancellationToken
+        );
     }
 
     protected Task<TResponse[]> GetPage<TResponse>(int page, CancellationToken cancellationToken)
@@ -49,6 +55,6 @@ public abstract class BaseClient
 
     protected Task<TResponse[]> GetAll<TResponse>(CancellationToken cancellationToken)
     {
-        return ApiClient.Get<TResponse[]>($"{UriPath}?ids=all", SchemaVersion, cancellationToken);
+        return ApiClient.Get<TResponse[]>($"{UriPath}?{_idsParameterName}=all", SchemaVersion, cancellationToken);
     }
 }
