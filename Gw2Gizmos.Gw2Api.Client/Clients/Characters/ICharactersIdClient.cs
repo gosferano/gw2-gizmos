@@ -8,6 +8,7 @@ public interface ICharactersIdClient
     public ICharactersIdCraftingClient Crafting { get; }
     public ICharactersIdEquipmentClient Equipment { get; }
     public ICharactersIdEquipmentTabsClient EquipmentTabs { get; }
+    public ICharactersIdHeroPointsClient HeroPoints { get; }
     public ICharactersIdInventoryClient Inventory { get; set; }
     public ICharactersIdRecipesClient Recipes { get; }
     public ICharactersIdTrainingClient Training { get; }
