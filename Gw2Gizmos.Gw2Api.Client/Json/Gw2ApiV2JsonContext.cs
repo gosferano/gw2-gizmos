@@ -2,6 +2,7 @@
 using Gw2Gizmos.Gw2Api.Contract.Account;
 using Gw2Gizmos.Gw2Api.Contract.Achievements;
 using Gw2Gizmos.Gw2Api.Contract.Characters;
+using Gw2Gizmos.Gw2Api.Contract.Colors;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -26,6 +27,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(CharacterRecipes))]
 [JsonSerializable(typeof(CharacterSab))]
 [JsonSerializable(typeof(CharacterTraining))]
+// Colors
+[JsonSerializable(typeof(Color[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
