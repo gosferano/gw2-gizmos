@@ -15,6 +15,7 @@ public class CharactersIdClient : BaseClient, ICharactersIdClient
         Equipment = new CharactersIdEquipmentClient(apiClient, characterId);
         EquipmentTabs = new CharactersIdEquipmentTabsClient(apiClient, characterId);
         Inventory = new CharactersIdInventoryClient(apiClient, characterId);
+        Recipes = new CharactersIdRecipesClient(apiClient, characterId);
     }
 
     protected override string UriPath => $"/v2/characters/{_characterId}";
@@ -26,4 +27,5 @@ public class CharactersIdClient : BaseClient, ICharactersIdClient
     public ICharactersIdEquipmentClient Equipment { get; }
     public ICharactersIdEquipmentTabsClient EquipmentTabs { get; set; }
     public ICharactersIdInventoryClient Inventory { get; set; }
+    public ICharactersIdRecipesClient Recipes { get; }
 }
