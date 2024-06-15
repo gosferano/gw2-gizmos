@@ -8,10 +8,12 @@ public class CommerceClient : ICommerceClient
         Exchange = new CommerceExchangeClient(apiClient);
         Listings = new CommerceListingsClient(apiClient);
         Prices = new CommercePricesClient(apiClient);
+        Transactions = new CommerceTransactionsClient(apiClient);
     }
 
     public ICommerceDeliveryClient Delivery { get; }
     public ICommerceExchangeClient Exchange { get; }
     public ICommerceListingsClient Listings { get; }
     public ICommercePricesClient Prices { get; }
+    public ICommerceTransactionsClient Transactions { get; }
 }
