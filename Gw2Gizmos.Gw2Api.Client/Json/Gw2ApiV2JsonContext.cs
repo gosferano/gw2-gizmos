@@ -17,9 +17,10 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 // Character
 [JsonSerializable(typeof(CharacterBackstory))]
 [JsonSerializable(typeof(CharacterBuildTab[]))]
-[JsonSerializable(typeof(CharacterCore[]))]
+[JsonSerializable(typeof(CharacterCore))]
 [JsonSerializable(typeof(CharacterCrafting))]
 [JsonSerializable(typeof(CharacterEquipment))]
+[JsonSerializable(typeof(CharacterEquipmentTab[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

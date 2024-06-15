@@ -7,4 +7,5 @@ public interface ICharactersIdClient
     public ICharactersIdCoreClient Core { get; }
     public ICharactersIdCraftingClient Crafting { get; }
     public ICharactersIdEquipmentClient Equipment { get; }
+    public ICharactersIdEquipmentTabsClient EquipmentTabs { get; }
 }
