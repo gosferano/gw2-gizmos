@@ -5,6 +5,7 @@ using Gw2Gizmos.Gw2Api.Contract.Characters;
 using Gw2Gizmos.Gw2Api.Contract.Colors;
 using Gw2Gizmos.Gw2Api.Contract.Commerce;
 using Gw2Gizmos.Gw2Api.Contract.Items;
+using Gw2Gizmos.Gw2Api.Contract.Materials;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
@@ -52,4 +53,6 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Trinket))]
 [JsonSerializable(typeof(UpgradeComponent))]
 [JsonSerializable(typeof(Weapon))]
+// Materials
+[JsonSerializable(typeof(MaterialCategory[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;
