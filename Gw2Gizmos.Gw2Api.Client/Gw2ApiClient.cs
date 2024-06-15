@@ -15,6 +15,7 @@ public class Gw2ApiClient : IGw2ApiClient
     private const string AuthorizationHeaderName = "Authorization";
     private const string AcceptLanguageHeaderName = "Accept-Language";
     private const string SchemaVersionHeaderName = "X-Schema-Version";
+    private const string UserAgentHeaderName = "User-Agent";
 
     public IAccountClient Account { get; }
     public IAchievementsClient Achievements { get; }
@@ -56,6 +57,8 @@ public class Gw2ApiClient : IGw2ApiClient
     private static HttpClient BuildDefaultHttpClient(string? accessToken, Locale? locale)
     {
         var httpClient = new HttpClient { BaseAddress = new Uri(BaseUrl), };
+
+        httpClient.DefaultRequestHeaders.Add(UserAgentHeaderName, "Gw2Gizmos");
 
         if (accessToken != null)
         {
