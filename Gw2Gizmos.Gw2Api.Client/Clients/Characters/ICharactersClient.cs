@@ -2,5 +2,5 @@
 
 public interface ICharactersClient
 {
-    ICharactersIdClient this[string characterName] { get; }
+    ICharactersIdClient this[string characterId] { get; }
 }

@@ -2,20 +2,20 @@
 
 public class CharactersIdClient : BaseClient, ICharactersIdClient
 {
-    private string CharacterName { get; }
+    private readonly string _characterId;
 
-    internal CharactersIdClient(IGw2ApiClient apiClient, string characterName)
+    internal CharactersIdClient(IGw2ApiClient apiClient, string characterId)
         : base(apiClient)
     {
-        CharacterName = characterName;
-        Backstory = new CharactersIdBackstoryClient(apiClient, characterName);
-        BuildTabs = new CharactersIdBuildTabsClient(apiClient, characterName);
-        Core = new CharactersIdCoreClient(apiClient, characterName);
-        Crafting = new CharactersIdCraftingClient(apiClient, characterName);
-        Equipment = new CharactersIdEquipmentClient(apiClient, characterName);
+        _characterId = characterId;
+        Backstory = new CharactersIdBackstoryClient(apiClient, characterId);
+        BuildTabs = new CharactersIdBuildTabsClient(apiClient, characterId);
+        Core = new CharactersIdCoreClient(apiClient, characterId);
+        Crafting = new CharactersIdCraftingClient(apiClient, characterId);
+        Equipment = new CharactersIdEquipmentClient(apiClient, characterId);
     }
 
-    protected override string UriPath => $"/v2/characters/{CharacterName}";
+    protected override string UriPath => $"/v2/characters/{_characterId}";
 
     public ICharactersIdBackstoryClient Backstory { get; }
     public ICharactersIdBuildTabsClient BuildTabs { get; set; }
