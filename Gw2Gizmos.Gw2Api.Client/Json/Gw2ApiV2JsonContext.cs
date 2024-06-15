@@ -34,6 +34,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(CommerceDelivery))]
 [JsonSerializable(typeof(CommerceExchange))]
 [JsonSerializable(typeof(CommerceListings[]))]
+[JsonSerializable(typeof(CommercePrices[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

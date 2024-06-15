@@ -5,4 +5,5 @@ public interface ICommerceClient
     ICommerceDeliveryClient Delivery { get; }
     ICommerceExchangeClient Exchange { get; }
     ICommerceListingsClient Listings { get; }
+    ICommercePricesClient Prices { get; }
 }
