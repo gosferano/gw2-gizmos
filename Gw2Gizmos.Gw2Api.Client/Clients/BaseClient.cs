@@ -3,7 +3,7 @@
 public abstract class BaseClient
 {
     private readonly string _idsParameterName;
-    private const string SchemaVersion = "2022-03-23T19:00:00.000Z";
+    protected const string SchemaVersion = "2022-03-23T19:00:00.000Z";
 
     internal BaseClient(IGw2ApiClient apiClient, string idsParameterName = "ids")
     {
