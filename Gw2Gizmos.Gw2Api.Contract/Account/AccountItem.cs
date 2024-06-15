@@ -10,7 +10,7 @@ public class AccountItem
     public int[] Upgrades { get; set; } = Array.Empty<int>();
     public int[] UpgradeSlotIndices { get; set; } = Array.Empty<int>();
     public int[] Infusions { get; set; } = Array.Empty<int>();
-    public AccountItemBinding? Binding { get; set; }
+    public ItemBinding? Binding { get; set; }
     public string? BoundTo { get; set; }
     public ItemStats? Stats { get; set; }
 }
