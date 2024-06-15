@@ -4,4 +4,5 @@ public interface ICharactersIdClient
 {
     public ICharactersIdBackstoryClient Backstory { get; }
     public ICharactersIdBuildTabsClient BuildTabs { get; }
+    public ICharactersIdCoreClient Core { get; }
 }
