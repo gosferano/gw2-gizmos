@@ -18,6 +18,7 @@ public class CharactersIdClient : BaseClient, ICharactersIdClient
         Inventory = new CharactersIdInventoryClient(apiClient, characterId);
         Quests = new CharactersIdQuestsClient(apiClient, characterId);
         Recipes = new CharactersIdRecipesClient(apiClient, characterId);
+        Sab = new CharactersIdSabClient(apiClient, characterId);
         Training = new CharactersIdTrainingClient(apiClient, characterId);
     }
 
@@ -33,5 +34,6 @@ public class CharactersIdClient : BaseClient, ICharactersIdClient
     public ICharactersIdInventoryClient Inventory { get; set; }
     public ICharactersIdQuestsClient Quests { get; }
     public ICharactersIdRecipesClient Recipes { get; }
+    public ICharactersIdSabClient Sab { get; }
     public ICharactersIdTrainingClient Training { get; }
 }
