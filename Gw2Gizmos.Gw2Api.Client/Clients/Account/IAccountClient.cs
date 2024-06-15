@@ -4,4 +4,5 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
 {
     public IAccountAchievementsClient Achievements { get; }
     public IAccountBankClient Bank { get; }
+    public IAccountDyesClient Dyes { get; }
 }
