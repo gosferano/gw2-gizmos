@@ -5,7 +5,9 @@ public class CommerceClient : ICommerceClient
     internal CommerceClient(IGw2ApiClient apiClient)
     {
         Delivery = new CommerceDeliveryClient(apiClient);
+        Exchange = new CommerceExchangeClient(apiClient);
     }
 
     public ICommerceDeliveryClient Delivery { get; }
+    public ICommerceExchangeClient Exchange { get; }
 }
