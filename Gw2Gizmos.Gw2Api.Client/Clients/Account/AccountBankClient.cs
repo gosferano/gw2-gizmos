@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Account;
 
-public class AccountBankClient : BaseBlobClient<AccountItem[]>, IAccountBankClient
+public class AccountBankClient : BaseBlobClient<AccountItem?[]>, IAccountBankClient
 {
     internal AccountBankClient(IGw2ApiClient apiClient)
         : base(apiClient) { }

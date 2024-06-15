@@ -2,4 +2,4 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Account;
 
-public interface IAccountBankClient : IBlobClient<AccountItem[]> { }
+public interface IAccountBankClient : IBlobClient<AccountItem?[]> { }
