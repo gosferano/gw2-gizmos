@@ -11,7 +11,7 @@ public class ArmorDetails
     public ArmorWeightClass WeightClass { get; set; }
     public int Defense { get; set; }
     public InfusionSlot[] InfusionSlots { get; set; } = Array.Empty<InfusionSlot>();
-    public double AttributeAdjustment { get; set; }
+    public decimal AttributeAdjustment { get; set; }
     public int? SuffixItemId { get; set; }
     public int? SecondarySuffixItemId { get; set; }
     public int[] StatChoices { get; set; } = Array.Empty<int>();
