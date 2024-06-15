@@ -3,5 +3,5 @@
 public class CharacterBuildTabSpecialization
 {
     public int Id { get; set; }
-    public int[] Traits { get; set; } = Array.Empty<int>();
+    public int?[] Traits { get; set; } = Array.Empty<int?>();
 }
