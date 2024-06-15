@@ -5,6 +5,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Account;
 using Gw2Gizmos.Gw2Api.Client.Clients.Achievements;
 using Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 using Gw2Gizmos.Gw2Api.Client.Clients.Colors;
+using Gw2Gizmos.Gw2Api.Client.Clients.Commerce;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Json;
 
@@ -22,6 +23,7 @@ public class Gw2ApiClient : IGw2ApiClient
     public IAchievementsClient Achievements { get; }
     public ICharactersClient Characters { get; }
     public IColorsClient Colors { get; }
+    public ICommerceClient Commerce { get; }
     public IItemsClient Items { get; }
 
     private readonly HttpClient _httpClient;
@@ -45,6 +47,7 @@ public class Gw2ApiClient : IGw2ApiClient
         Achievements = new AchievementsClient(this);
         Characters = new CharactersClient(this);
         Colors = new ColorsClient(this);
+        Commerce = new CommerceClient(this);
         Items = new ItemsClient(this);
     }
 
