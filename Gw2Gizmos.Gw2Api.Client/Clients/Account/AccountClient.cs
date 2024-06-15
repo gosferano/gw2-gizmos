@@ -11,6 +11,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
 
     protected override string UriPath => "/v2/account";
 
-    public AccountAchievementsClient Achievements { get; }
-    public AccountBankClient Bank { get; }
+    public IAccountAchievementsClient Achievements { get; }
+    public IAccountBankClient Bank { get; }
 }
