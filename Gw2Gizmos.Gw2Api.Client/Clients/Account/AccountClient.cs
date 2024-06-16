@@ -31,6 +31,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Pvp = new AccountPvpClient(httpClient);
         Raids = new AccountRaidsClient(httpClient);
         Recipes = new AccountRecipesClient(httpClient);
+        Skiffs = new AccountSkiffsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -61,4 +62,5 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountPvpClient Pvp { get; }
     public IAccountRaidsClient Raids { get; }
     public IAccountRecipesClient Recipes { get; }
+    public IAccountSkiffsClient Skiffs { get; }
 }
