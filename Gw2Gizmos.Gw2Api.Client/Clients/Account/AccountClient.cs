@@ -16,6 +16,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Gliders = new AccountGlidersClient(httpClient);
         Home = new AccountHomeClient(httpClient);
         Inventory = new AccountInventoryClient(httpClient);
+        JadeBots = new AccountJadeBotsClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
     }
 
@@ -32,5 +33,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountGlidersClient Gliders { get; }
     public IAccountHomeClient Home { get; }
     public IAccountInventoryClient Inventory { get; }
+    public IAccountJadeBotsClient JadeBots { get; }
     public IAccountMaterialsClient Materials { get; }
 }
