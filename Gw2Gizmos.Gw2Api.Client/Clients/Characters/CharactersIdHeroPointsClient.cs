@@ -4,8 +4,8 @@ public class CharactersIdHeroPointsClient : BaseBlobClient<string[]>, ICharacter
 {
     private readonly string _characterId;
 
-    internal CharactersIdHeroPointsClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdHeroPointsClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

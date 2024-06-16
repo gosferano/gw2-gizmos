@@ -2,8 +2,8 @@
 
 public class AccountEmotesClient : BaseBlobClient<string[]>, IAccountEmotesClient
 {
-    internal AccountEmotesClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal AccountEmotesClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "/v2/account/emotes";
 }

@@ -6,8 +6,8 @@ public class CharactersIdCraftingClient : BaseBlobClient<CharacterCrafting>, ICh
 {
     private readonly string _characterId;
 
-    internal CharactersIdCraftingClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdCraftingClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

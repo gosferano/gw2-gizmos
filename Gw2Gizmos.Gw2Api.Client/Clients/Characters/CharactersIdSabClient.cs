@@ -6,8 +6,8 @@ public class CharactersIdSabClient : BaseBlobClient<CharacterSab>, ICharactersId
 {
     private readonly string _characterId;
 
-    internal CharactersIdSabClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdSabClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

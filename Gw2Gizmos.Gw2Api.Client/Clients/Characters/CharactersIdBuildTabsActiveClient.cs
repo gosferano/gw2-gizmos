@@ -6,8 +6,8 @@ public class CharactersIdBuildTabsActiveClient : BaseBlobClient<CharacterBuildTa
 {
     private readonly string _characterId;
 
-    internal CharactersIdBuildTabsActiveClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdBuildTabsActiveClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

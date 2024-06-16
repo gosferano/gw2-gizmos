@@ -2,11 +2,11 @@
 
 public class CommerceExchangeClient : BaseBlobClient<string[]>, ICommerceExchangeClient
 {
-    internal CommerceExchangeClient(IGw2ApiClient apiClient)
-        : base(apiClient)
+    internal CommerceExchangeClient(HttpClient httpClient)
+        : base(httpClient)
     {
-        Coins = new CommerceExchangeCoinsClient(apiClient);
-        Gems = new CommerceExchangeGemsClient(apiClient);
+        Coins = new CommerceExchangeCoinsClient(httpClient);
+        Gems = new CommerceExchangeGemsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/commerce/exchange";

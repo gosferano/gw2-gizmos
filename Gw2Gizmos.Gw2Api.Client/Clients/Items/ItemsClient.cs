@@ -4,8 +4,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Clients.Items;
 
 public class ItemsClient : BaseBulkClient<Item, int>, IItemsClient
 {
-    internal ItemsClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal ItemsClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "/v2/items";
 }

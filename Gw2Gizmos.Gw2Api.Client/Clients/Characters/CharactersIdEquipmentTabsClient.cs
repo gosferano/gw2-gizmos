@@ -8,8 +8,8 @@ public class CharactersIdEquipmentTabsClient
 {
     private readonly string _characterId;
 
-    internal CharactersIdEquipmentTabsClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient, "tabs")
+    internal CharactersIdEquipmentTabsClient(HttpClient httpClient, string characterId)
+        : base(httpClient, "tabs")
     {
         _characterId = characterId;
     }

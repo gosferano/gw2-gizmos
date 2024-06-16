@@ -2,8 +2,8 @@
 
 public class AccountDailyCraftingClient : BaseBlobClient<string[]>, IAccountDailyCraftingClient
 {
-    internal AccountDailyCraftingClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal AccountDailyCraftingClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "/v2/account/dailycrafting";
 }

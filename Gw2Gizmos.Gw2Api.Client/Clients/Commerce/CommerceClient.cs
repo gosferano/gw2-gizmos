@@ -2,13 +2,13 @@
 
 public class CommerceClient : ICommerceClient
 {
-    internal CommerceClient(IGw2ApiClient apiClient)
+    internal CommerceClient(HttpClient httpClient)
     {
-        Delivery = new CommerceDeliveryClient(apiClient);
-        Exchange = new CommerceExchangeClient(apiClient);
-        Listings = new CommerceListingsClient(apiClient);
-        Prices = new CommercePricesClient(apiClient);
-        Transactions = new CommerceTransactionsClient(apiClient);
+        Delivery = new CommerceDeliveryClient(httpClient);
+        Exchange = new CommerceExchangeClient(httpClient);
+        Listings = new CommerceListingsClient(httpClient);
+        Prices = new CommercePricesClient(httpClient);
+        Transactions = new CommerceTransactionsClient(httpClient);
     }
 
     public ICommerceDeliveryClient Delivery { get; }

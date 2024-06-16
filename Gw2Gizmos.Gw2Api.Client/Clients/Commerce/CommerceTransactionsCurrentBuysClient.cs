@@ -6,8 +6,8 @@ public class CommerceTransactionsCurrentBuysClient
     : BasePaginatedBlobClient<CommerceTransaction>,
         ICommerceTransactionsCurrentBuysClient
 {
-    internal CommerceTransactionsCurrentBuysClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal CommerceTransactionsCurrentBuysClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "/v2/commerce/transactions/current/buys";
 }

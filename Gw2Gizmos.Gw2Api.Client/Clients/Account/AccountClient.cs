@@ -2,17 +2,17 @@
 
 public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountClient
 {
-    internal AccountClient(IGw2ApiClient apiClient)
-        : base(apiClient)
+    internal AccountClient(HttpClient httpClient)
+        : base(httpClient)
     {
-        Achievements = new AccountAchievementsClient(apiClient);
-        Bank = new AccountBankClient(apiClient);
-        DailyCrafting = new AccountDailyCraftingClient(apiClient);
-        Dungeons = new AccountDungeonsClient(apiClient);
-        Dyes = new AccountDyesClient(apiClient);
-        Emotes = new AccountEmotesClient(apiClient);
-        Finishers = new AccountFinishersClient(apiClient);
-        Materials = new AccountMaterialsClient(apiClient);
+        Achievements = new AccountAchievementsClient(httpClient);
+        Bank = new AccountBankClient(httpClient);
+        DailyCrafting = new AccountDailyCraftingClient(httpClient);
+        Dungeons = new AccountDungeonsClient(httpClient);
+        Dyes = new AccountDyesClient(httpClient);
+        Emotes = new AccountEmotesClient(httpClient);
+        Finishers = new AccountFinishersClient(httpClient);
+        Materials = new AccountMaterialsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";

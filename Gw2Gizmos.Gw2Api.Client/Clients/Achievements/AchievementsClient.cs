@@ -4,11 +4,11 @@ namespace Gw2Gizmos.Gw2Api.Client.Clients.Achievements;
 
 public class AchievementsClient : BaseBulkClient<Achievement, int>, IAchievementsClient
 {
-    internal AchievementsClient(IGw2ApiClient apiClient)
-        : base(apiClient)
+    internal AchievementsClient(HttpClient httpClient)
+        : base(httpClient)
     {
-        Categories = new AchievementCategoriesClient(apiClient);
-        Groups = new AchievementGroupsClient(apiClient);
+        Categories = new AchievementCategoriesClient(httpClient);
+        Groups = new AchievementGroupsClient(httpClient);
     }
 
     public IAchievementCategoriesClient Categories { get; }

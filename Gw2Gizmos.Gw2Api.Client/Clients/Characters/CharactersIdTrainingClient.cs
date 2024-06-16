@@ -6,8 +6,8 @@ public class CharactersIdTrainingClient : BaseBlobClient<CharacterTraining>, ICh
 {
     private readonly string _characterId;
 
-    internal CharactersIdTrainingClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdTrainingClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

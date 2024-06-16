@@ -2,11 +2,11 @@
 
 public class CommerceTransactionsHistoryClient : BaseBlobClient<string[]>, ICommerceTransactionsHistoryClient
 {
-    internal CommerceTransactionsHistoryClient(IGw2ApiClient apiClient)
-        : base(apiClient)
+    internal CommerceTransactionsHistoryClient(HttpClient httpClient)
+        : base(httpClient)
     {
-        Buys = new CommerceTransactionsHistoryBuysClient(apiClient);
-        Sells = new CommerceTransactionsHistorySellsClient(apiClient);
+        Buys = new CommerceTransactionsHistoryBuysClient(httpClient);
+        Sells = new CommerceTransactionsHistorySellsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/commerce/transactions/history";

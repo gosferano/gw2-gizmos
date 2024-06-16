@@ -2,11 +2,11 @@
 
 public class CommerceTransactionsCurrentClient : BaseBlobClient<string[]>, ICommerceTransactionsCurrentClient
 {
-    internal CommerceTransactionsCurrentClient(IGw2ApiClient apiClient)
-        : base(apiClient)
+    internal CommerceTransactionsCurrentClient(HttpClient httpClient)
+        : base(httpClient)
     {
-        Buys = new CommerceTransactionsCurrentBuysClient(apiClient);
-        Sells = new CommerceTransactionsCurrentSellsClient(apiClient);
+        Buys = new CommerceTransactionsCurrentBuysClient(httpClient);
+        Sells = new CommerceTransactionsCurrentSellsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/commerce/transactions/current";

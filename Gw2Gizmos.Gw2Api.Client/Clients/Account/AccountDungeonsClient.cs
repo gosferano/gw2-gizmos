@@ -2,8 +2,8 @@
 
 public class AccountDungeonsClient : BaseBlobClient<string[]>, IAccountDungeonsClient
 {
-    internal AccountDungeonsClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal AccountDungeonsClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "/v2/account/dungeons";
 }

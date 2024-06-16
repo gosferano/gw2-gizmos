@@ -2,12 +2,12 @@
 
 public class CommerceExchangeCoinsClient : BaseClient, ICommerceExchangeCoinsClient
 {
-    internal CommerceExchangeCoinsClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal CommerceExchangeCoinsClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     public ICommerceExchangeCoinsQuantityClient Quantity(int quantity)
     {
-        return new CommerceExchangeCoinsQuantityClient(ApiClient, quantity);
+        return new CommerceExchangeCoinsQuantityClient(HttpClient, quantity);
     }
 
     protected override string UriPath => "/v2/commerce/exchange/coins";

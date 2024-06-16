@@ -6,8 +6,8 @@ public abstract class BaseBulkAllClient<TResponse, TId>
         IBulkExpandableClient<TResponse, TId>,
         IPaginatedClient<TResponse>
 {
-    internal BaseBulkAllClient(IGw2ApiClient apiClient, string idsParameterName = "ids")
-        : base(apiClient, idsParameterName) { }
+    internal BaseBulkAllClient(HttpClient httpClient, string idsParameterName = "ids")
+        : base(httpClient, idsParameterName) { }
 
     public Task<TResponse> GetById(TId id, CancellationToken cancellationToken = default)
     {

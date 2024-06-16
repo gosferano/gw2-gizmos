@@ -6,11 +6,11 @@ public class CharactersIdBuildTabsClient : BaseBulkAllClient<CharacterBuildTab, 
 {
     private readonly string _characterId;
 
-    internal CharactersIdBuildTabsClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient, "tabs")
+    internal CharactersIdBuildTabsClient(HttpClient httpClient, string characterId)
+        : base(httpClient, "tabs")
     {
         _characterId = characterId;
-        Active = new CharactersIdBuildTabsActiveClient(apiClient, characterId);
+        Active = new CharactersIdBuildTabsActiveClient(httpClient, characterId);
     }
 
     protected override string UriPath => $"/v2/characters/{_characterId}/buildtabs";

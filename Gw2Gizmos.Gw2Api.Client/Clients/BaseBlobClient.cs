@@ -2,8 +2,8 @@
 
 public abstract class BaseBlobClient<TResponse> : BaseClient, IBlobClient<TResponse>
 {
-    internal BaseBlobClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal BaseBlobClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     public Task<TResponse> GetBlob(CancellationToken cancellationToken = default)
     {

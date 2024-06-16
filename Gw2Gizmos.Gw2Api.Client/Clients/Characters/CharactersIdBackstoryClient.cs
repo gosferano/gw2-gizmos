@@ -6,8 +6,8 @@ public class CharactersIdBackstoryClient : BaseBlobClient<CharacterBackstory>, I
 {
     private readonly string _characterId;
 
-    internal CharactersIdBackstoryClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdBackstoryClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

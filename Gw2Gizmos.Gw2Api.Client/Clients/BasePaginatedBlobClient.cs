@@ -5,8 +5,8 @@ public abstract class BasePaginatedBlobClient<TResponse>
         IBlobClient<TResponse[]>,
         IPaginatedClient<TResponse>
 {
-    internal BasePaginatedBlobClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal BasePaginatedBlobClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     public Task<TResponse[]> GetBlob(CancellationToken cancellationToken = default)
     {

@@ -2,8 +2,8 @@
 
 public class AccountDyesClient : BaseBlobClient<int[]>, IAccountDyesClient
 {
-    internal AccountDyesClient(IGw2ApiClient apiClient)
-        : base(apiClient) { }
+    internal AccountDyesClient(HttpClient httpClient)
+        : base(httpClient) { }
 
     protected override string UriPath => "v2/account/dyes";
 }

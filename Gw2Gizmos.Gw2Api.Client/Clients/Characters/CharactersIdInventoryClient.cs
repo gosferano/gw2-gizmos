@@ -6,8 +6,8 @@ public class CharactersIdInventoryClient : BaseBlobClient<CharacterInventory>, I
 {
     private readonly string _characterId;
 
-    internal CharactersIdInventoryClient(IGw2ApiClient apiClient, string characterId)
-        : base(apiClient)
+    internal CharactersIdInventoryClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
     {
         _characterId = characterId;
     }

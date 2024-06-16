@@ -6,8 +6,8 @@ public class CommerceExchangeCoinsQuantityClient : BaseClient, ICommerceExchange
 {
     private readonly int _quantity;
 
-    internal CommerceExchangeCoinsQuantityClient(IGw2ApiClient apiClient, int quantity)
-        : base(apiClient)
+    internal CommerceExchangeCoinsQuantityClient(HttpClient httpClient, int quantity)
+        : base(httpClient)
     {
         _quantity = quantity;
     }
@@ -16,6 +16,6 @@ public class CommerceExchangeCoinsQuantityClient : BaseClient, ICommerceExchange
 
     public Task<CommerceExchange> GetBlob(CancellationToken cancellationToken = default)
     {
-        return ApiClient.Get<CommerceExchange>($"{UriPath}?quantity={_quantity}", SchemaVersion, cancellationToken);
+        return Get<CommerceExchange>($"{UriPath}?quantity={_quantity}", SchemaVersion, cancellationToken);
     }
 }
