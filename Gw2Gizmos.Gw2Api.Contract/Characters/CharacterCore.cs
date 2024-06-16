@@ -3,9 +3,9 @@
 public class CharacterCore
 {
     public string Name { get; set; }
-    public CharacterRace Race { get; set; }
+    public RaceName Race { get; set; }
     public Gender Gender { get; set; }
-    public Profession Profession { get; set; }
+    public ProfessionName Profession { get; set; }
     public int Level { get; set; }
     public string? Guild { get; set; }
     public int Age { get; set; }
