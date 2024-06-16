@@ -33,6 +33,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Recipes = new AccountRecipesClient(httpClient);
         Skiffs = new AccountSkiffsClient(httpClient);
         Skins = new AccountSkinsClient(httpClient);
+        Titles = new AccountTitlesClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -65,4 +66,5 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountRecipesClient Recipes { get; }
     public IAccountSkiffsClient Skiffs { get; }
     public IAccountSkinsClient Skins { get; }
+    public IAccountTitlesClient Titles { get; }
 }
