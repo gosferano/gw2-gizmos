@@ -29,4 +29,5 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountRaidsClient Raids { get; }
     public IAccountRecipesClient Recipes { get; }
     public IAccountSkiffsClient Skiffs { get; }
+    public IAccountSkinsClient Skins { get; }
 }
