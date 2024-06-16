@@ -18,6 +18,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Inventory = new AccountInventoryClient(httpClient);
         JadeBots = new AccountJadeBotsClient(httpClient);
         LegendaryArmory = new AccountLegendaryArmoryClient(httpClient);
+        Luck = new AccountLuckClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
     }
 
@@ -36,5 +37,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountInventoryClient Inventory { get; }
     public IAccountJadeBotsClient JadeBots { get; }
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }
+    public IAccountLuckClient Luck { get; }
     public IAccountMaterialsClient Materials { get; }
 }
