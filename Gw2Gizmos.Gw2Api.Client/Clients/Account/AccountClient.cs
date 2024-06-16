@@ -12,6 +12,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Dyes = new AccountDyesClient(httpClient);
         Emotes = new AccountEmotesClient(httpClient);
         Finishers = new AccountFinishersClient(httpClient);
+        Gliders = new AccountGlidersClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
     }
 
@@ -24,5 +25,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountDyesClient Dyes { get; }
     public IAccountEmotesClient Emotes { get; }
     public IAccountFinishersClient Finishers { get; }
+    public IAccountGlidersClient Gliders { get; }
     public IAccountMaterialsClient Materials { get; }
 }
