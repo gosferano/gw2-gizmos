@@ -28,6 +28,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Novelties = new AccountNoveltiesClient(httpClient);
         Outfits = new AccountOutfitsClient(httpClient);
         Progression = new AccountProgressionClient(httpClient);
+        Pvp = new AccountPvpClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -55,4 +56,5 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountNoveltiesClient Novelties { get; }
     public IAccountOutfitsClient Outfits { get; }
     public IAccountProgressionClient Progression { get; }
+    public IAccountPvpClient Pvp { get; }
 }
