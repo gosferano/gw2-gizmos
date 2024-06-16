@@ -8,6 +8,7 @@ using Gw2Gizmos.Gw2Api.Contract.Characters;
 using Gw2Gizmos.Gw2Api.Contract.Colors;
 using Gw2Gizmos.Gw2Api.Contract.Commerce;
 using Gw2Gizmos.Gw2Api.Contract.Continents;
+using Gw2Gizmos.Gw2Api.Contract.Currencies;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
@@ -66,6 +67,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(ContinentFloorRegionMapPoi[]))]
 [JsonSerializable(typeof(ContinentFloorRegionMapSector[]))]
 [JsonSerializable(typeof(ContinentFloorRegionMapTask[]))]
+// Currencies
+[JsonSerializable(typeof(Currency[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
