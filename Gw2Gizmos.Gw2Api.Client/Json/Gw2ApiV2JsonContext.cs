@@ -7,6 +7,7 @@ using Gw2Gizmos.Gw2Api.Contract.BuildStorage;
 using Gw2Gizmos.Gw2Api.Contract.Characters;
 using Gw2Gizmos.Gw2Api.Contract.Colors;
 using Gw2Gizmos.Gw2Api.Contract.Commerce;
+using Gw2Gizmos.Gw2Api.Contract.Continents;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
@@ -57,6 +58,14 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(CommerceListings[]))]
 [JsonSerializable(typeof(CommercePrices[]))]
 [JsonSerializable(typeof(CommerceTransaction[]))]
+// Continents
+[JsonSerializable(typeof(Continent[]))]
+[JsonSerializable(typeof(ContinentFloor[]))]
+[JsonSerializable(typeof(ContinentFloorRegion[]))]
+[JsonSerializable(typeof(ContinentFloorRegionMap[]))]
+[JsonSerializable(typeof(ContinentFloorRegionMapPoi[]))]
+[JsonSerializable(typeof(ContinentFloorRegionMapSector[]))]
+[JsonSerializable(typeof(ContinentFloorRegionMapTask[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

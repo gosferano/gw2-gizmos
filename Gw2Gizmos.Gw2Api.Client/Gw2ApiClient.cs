@@ -5,6 +5,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Build;
 using Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 using Gw2Gizmos.Gw2Api.Client.Clients.Colors;
 using Gw2Gizmos.Gw2Api.Client.Clients.Commerce;
+using Gw2Gizmos.Gw2Api.Client.Clients.Continents;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
@@ -26,6 +27,7 @@ public class Gw2ApiClient
     public ICharactersClient Characters { get; }
     public IColorsClient Colors { get; }
     public ICommerceClient Commerce { get; }
+    public IContinentsClient Continents { get; }
     public IItemsClient Items { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
@@ -41,6 +43,7 @@ public class Gw2ApiClient
         Characters = new CharactersClient(httpClient);
         Colors = new ColorsClient(httpClient);
         Commerce = new CommerceClient(httpClient);
+        Continents = new ContinentsClient(httpClient);
         Items = new ItemsClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);
