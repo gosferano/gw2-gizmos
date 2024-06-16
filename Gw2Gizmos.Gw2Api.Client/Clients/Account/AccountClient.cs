@@ -23,6 +23,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         MapChests = new AccountMapChestsClient(httpClient);
         Masteries = new AccountMasteriesClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
+        Minis = new AccountMinisClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -44,5 +45,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountMailCarriersClient MailCarriers { get; }
     public IAccountMapChestsClient MapChests { get; }
     public IAccountMasteriesClient Masteries { get; }
+    public IAccountMinisClient Minis { get; }
     public IAccountMaterialsClient Materials { get; }
 }
