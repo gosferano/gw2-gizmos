@@ -31,4 +31,5 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountSkiffsClient Skiffs { get; }
     public IAccountSkinsClient Skins { get; }
     public IAccountTitlesClient Titles { get; }
+    public IAccountWalletClient Wallet { get; }
 }

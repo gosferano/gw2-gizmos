@@ -34,6 +34,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Skiffs = new AccountSkiffsClient(httpClient);
         Skins = new AccountSkinsClient(httpClient);
         Titles = new AccountTitlesClient(httpClient);
+        Wallet = new AccountWalletClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -67,4 +68,5 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountSkiffsClient Skiffs { get; }
     public IAccountSkinsClient Skins { get; }
     public IAccountTitlesClient Titles { get; }
+    public IAccountWalletClient Wallet { get; }
 }

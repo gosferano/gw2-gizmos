@@ -23,6 +23,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(AccountLuck[]))]
 [JsonSerializable(typeof(AccountMastery[]))]
 [JsonSerializable(typeof(AccountProgression[]))]
+[JsonSerializable(typeof(AccountWalletCurrency[]))]
 [JsonSerializable(typeof(BuildStorageBuild[]))]
 // Achievements
 [JsonSerializable(typeof(Achievement[]))]
