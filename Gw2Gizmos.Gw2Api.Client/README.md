@@ -1,0 +1,170 @@
+### Supported endpoints
+
+- [x] /v2/account
+- [x] /v2/account/achievements
+- [x] /v2/account/bank
+- [x] /v2/account/buildstorage
+- [x] /v2/account/dailycrafting
+- [x] /v2/account/dungeons
+- [x] /v2/account/dyes
+- [x] /v2/account/emotes
+- [x] /v2/account/finishers
+- [x] /v2/account/gliders
+- [x] /v2/account/home
+- [x] /v2/account/home/cats
+- [x] /v2/account/home/nodes
+- [x] /v2/account/inventory
+- [x] /v2/account/jadebots
+- [x] /v2/account/legendaryarmory
+- [x] /v2/account/luck
+- [ ] /v2/account/mail
+- [x] /v2/account/mailcarriers
+- [x] /v2/account/mapchests
+- [x] /v2/account/masteries
+- [ ] /v2/account/mastery/points
+- [x] /v2/account/materials
+- [x] /v2/account/minis
+- [x] /v2/account/mounts
+- [x] /v2/account/mounts/skins
+- [x] /v2/account/mounts/types
+- [x] /v2/account/novelties
+- [x] /v2/account/outfits
+- [x] /v2/account/progression
+- [x] /v2/account/pvp/heroes
+- [x] /v2/account/raids
+- [x] /v2/account/recipes
+- [x] /v2/account/skiffs
+- [x] /v2/account/skins
+- [x] /v2/account/titles
+- [x] /v2/account/wallet
+- [x] /v2/account/wizardsvault/daily
+- [x] /v2/account/wizardsvault/listings
+- [x] /v2/account/wizardsvault/special
+- [x] /v2/account/wizardsvault/weekly
+- [x] /v2/account/worldbosses
+- [x] /v2/achievements
+- [x] /v2/achievements/categories
+- [ ] /v2/achievements/daily
+- [ ] /v2/achievements/daily/tomorrow
+- [x] /v2/achievements/groups
+- [ ] /v2/adventures
+- [ ] /v2/adventures/:id/leaderboards
+- [ ] /v2/adventures/:id/leaderboards/:board/:region
+- [x] /v2/backstory/answers
+- [x] /v2/backstory/questions
+- [x] /v2/build
+- [x] /v2/characters
+- [x] /v2/characters/:id/backstory
+- [x] /v2/characters/:id/buildtabs
+- [x] /v2/characters/:id/buildtabs/active
+- [x] /v2/characters/:id/core
+- [x] /v2/characters/:id/crafting
+- [ ] /v2/characters/:id/dungeons
+- [x] /v2/characters/:id/equipment
+- [x] /v2/characters/:id/equipmenttabs
+- [ ] /v2/characters/:id/equipmenttabs/active
+- [x] /v2/characters/:id/heropoints
+- [x] /v2/characters/:id/inventory
+- [x] /v2/characters/:id/quests
+- [x] /v2/characters/:id/recipes
+- [x] /v2/characters/:id/sab
+- [ ] /v2/characters/:id/skills
+- [ ] /v2/characters/:id/specializations
+- [x] /v2/characters/:id/training
+- [x] /v2/colors
+- [x] /v2/commerce/delivery
+- [x] /v2/commerce/exchange
+- [x] /v2/commerce/listings
+- [x] /v2/commerce/prices
+- [x] /v2/commerce/transactions
+- [x] /v2/continents
+- [ ] /v2/createsubtoken
+- [x] /v2/currencies
+- [x] /v2/dailycrafting
+- [x] /v2/dungeons
+- [ ] /v2/emblem
+- [ ] /v2/emotes
+- [ ] /v2/events
+- [ ] /v2/events-state
+- [ ] /v2/files
+- [ ] /v2/finishers
+- [ ] /v2/gemstore/catalog
+- [ ] /v2/gliders
+- [ ] /v2/guild/:id
+- [ ] /v2/guild/:id/log
+- [ ] /v2/guild/:id/members
+- [ ] /v2/guild/:id/ranks
+- [ ] /v2/guild/:id/stash
+- [ ] /v2/guild/:id/storage
+- [ ] /v2/guild/:id/teams
+- [ ] /v2/guild/:id/treasury
+- [ ] /v2/guild/:id/upgrades
+- [ ] /v2/guild/permissions
+- [ ] /v2/guild/search
+- [ ] /v2/guild/upgrades
+- [ ] /v2/home
+- [ ] /v2/home/cats
+- [ ] /v2/home/nodes
+- [ ] /v2/items
+- [ ] /v2/itemstats
+- [ ] /v2/jadebots
+- [ ] /v2/legendaryarmory
+- [ ] /v2/legends
+- [ ] /v2/mailcarriers
+- [ ] /v2/mapchests
+- [ ] /v2/maps
+- [ ] /v2/masteries
+- [x] /v2/materials
+- [ ] /v2/minis
+- [ ] /v2/mounts
+- [ ] /v2/mounts/skins
+- [ ] /v2/mounts/types
+- [ ] /v2/novelties
+- [ ] /v2/outfits
+- [ ] /v2/pets
+- [ ] /v2/professions
+- [ ] /v2/pvp
+- [ ] /v2/pvp/amulets
+- [ ] /v2/pvp/games
+- [ ] /v2/pvp/heroes
+- [ ] /v2/pvp/ranks
+- [ ] /v2/pvp/rewardtracks
+- [ ] /v2/pvp/runes
+- [ ] /v2/pvp/seasons
+- [ ] /v2/pvp/seasons/:id/leaderboards
+- [ ] /v2/pvp/seasons/:id/leaderboards/:board/:region
+- [ ] /v2/pvp/sigils
+- [ ] /v2/pvp/standings
+- [ ] /v2/pvp/stats
+- [ ] /v2/quaggans
+- [ ] /v2/quests
+- [x] /v2/races
+- [ ] /v2/raids
+- [ ] /v2/recipes
+- [ ] /v2/recipes/search
+- [ ] /v2/skiffs
+- [ ] /v2/skills
+- [ ] /v2/skins
+- [x] /v2/specializations
+- [ ] /v2/stories
+- [ ] /v2/stories/seasons
+- [ ] /v2/titles
+- [ ] /v2/tokeninfo
+- [ ] /v2/traits
+- [ ] /v2/vendors
+- [ ] /v2/wizardsvault/listings
+- [ ] /v2/wizardsvault/objectives
+- [ ] /v2/worldbosses
+- [ ] /v2/worlds
+- [ ] /v2/wvw/abilities
+- [ ] /v2/wvw/matches
+- [ ] /v2/wvw/matches/overview
+- [ ] /v2/wvw/matches/scores
+- [ ] /v2/wvw/matches/stats
+- [ ] /v2/wvw/matches/stats/:id/guilds/:guild_id
+- [ ] /v2/wvw/matches/stats/:id/teams/:team/top/kdr
+- [ ] /v2/wvw/matches/stats/:id/teams/:team/top/kills
+- [ ] /v2/wvw/objectives
+- [ ] /v2/wvw/ranks
+- [ ] /v2/wvw/rewardtracks
+- [ ] /v2/wvw/upgrades
