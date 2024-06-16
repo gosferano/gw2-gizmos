@@ -20,6 +20,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         LegendaryArmory = new AccountLegendaryArmoryClient(httpClient);
         Luck = new AccountLuckClient(httpClient);
         MailCarriers = new AccountMailCarriersClient(httpClient);
+        MapChests = new AccountMapChestsClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
     }
 
@@ -40,5 +41,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }
     public IAccountLuckClient Luck { get; }
     public IAccountMailCarriersClient MailCarriers { get; }
+    public IAccountMapChestsClient MapChests { get; }
     public IAccountMaterialsClient Materials { get; }
 }
