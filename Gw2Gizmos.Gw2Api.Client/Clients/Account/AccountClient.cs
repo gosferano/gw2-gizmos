@@ -10,6 +10,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         DailyCrafting = new AccountDailyCraftingClient(apiClient);
         Dungeons = new AccountDungeonsClient(apiClient);
         Dyes = new AccountDyesClient(apiClient);
+        Emotes = new AccountEmotesClient(apiClient);
         Materials = new AccountMaterialsClient(apiClient);
     }
 
@@ -20,5 +21,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountDailyCraftingClient DailyCrafting { get; }
     public IAccountDungeonsClient Dungeons { get; }
     public IAccountDyesClient Dyes { get; }
+    public IAccountEmotesClient Emotes { get; }
     public IAccountMaterialsClient Materials { get; }
 }
