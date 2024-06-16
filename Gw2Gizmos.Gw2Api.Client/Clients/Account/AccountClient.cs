@@ -7,6 +7,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     {
         Achievements = new AccountAchievementsClient(httpClient);
         Bank = new AccountBankClient(httpClient);
+        BuildStorage = new AccountBuildStorageClient(httpClient);
         DailyCrafting = new AccountDailyCraftingClient(httpClient);
         Dungeons = new AccountDungeonsClient(httpClient);
         Dyes = new AccountDyesClient(httpClient);
@@ -21,6 +22,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
 
     public IAccountAchievementsClient Achievements { get; }
     public IAccountBankClient Bank { get; }
+    public IAccountBuildStorageClient BuildStorage { get; }
     public IAccountDailyCraftingClient DailyCrafting { get; }
     public IAccountDungeonsClient Dungeons { get; }
     public IAccountDyesClient Dyes { get; }

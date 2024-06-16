@@ -1,0 +1,11 @@
+﻿using Gw2Gizmos.Gw2Api.Contract.BuildStorage;
+
+namespace Gw2Gizmos.Gw2Api.Client.Clients.Account;
+
+public class AccountBuildStorageClient : BaseBulkAllClient<BuildStorageBuild, int>, IAccountBuildStorageClient
+{
+    internal AccountBuildStorageClient(HttpClient httpClient)
+        : base(httpClient) { }
+
+    protected override string UriPath => "/v2/account/buildstorage";
+}
