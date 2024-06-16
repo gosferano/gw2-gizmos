@@ -27,4 +27,5 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountProgressionClient Progression { get; }
     public IAccountPvpClient Pvp { get; }
     public IAccountRaidsClient Raids { get; }
+    public IAccountRecipesClient Recipes { get; }
 }
