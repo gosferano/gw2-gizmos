@@ -24,6 +24,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Masteries = new AccountMasteriesClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
         Minis = new AccountMinisClient(httpClient);
+        Mounts = new AccountMountsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -46,5 +47,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountMapChestsClient MapChests { get; }
     public IAccountMasteriesClient Masteries { get; }
     public IAccountMinisClient Minis { get; }
+    public IAccountMountsClient Mounts { get; }
     public IAccountMaterialsClient Materials { get; }
 }
