@@ -16,5 +16,6 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountJadeBotsClient JadeBots { get; }
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }
     public IAccountLuckClient Luck { get; }
+    public IAccountMailCarriersClient MailCarriers { get; }
     public IAccountMaterialsClient Materials { get; }
 }
