@@ -1,6 +1,7 @@
 ﻿using Gw2Gizmos.Gw2Api.Client.Clients.Account;
 using Gw2Gizmos.Gw2Api.Client.Clients.Achievements;
 using Gw2Gizmos.Gw2Api.Client.Clients.Backstory;
+using Gw2Gizmos.Gw2Api.Client.Clients.Build;
 using Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 using Gw2Gizmos.Gw2Api.Client.Clients.Colors;
 using Gw2Gizmos.Gw2Api.Client.Clients.Commerce;
@@ -21,6 +22,7 @@ public class Gw2ApiClient
     public IAccountClient Account { get; }
     public IAchievementsClient Achievements { get; }
     public IBackstoryClient Backstory { get; }
+    public IBuildClient Build { get; }
     public ICharactersClient Characters { get; }
     public IColorsClient Colors { get; }
     public ICommerceClient Commerce { get; }
@@ -35,6 +37,7 @@ public class Gw2ApiClient
         Account = new AccountClient(httpClient);
         Achievements = new AchievementsClient(httpClient);
         Backstory = new BackstoryClient(httpClient);
+        Build = new BuildClient(httpClient);
         Characters = new CharactersClient(httpClient);
         Colors = new ColorsClient(httpClient);
         Commerce = new CommerceClient(httpClient);
