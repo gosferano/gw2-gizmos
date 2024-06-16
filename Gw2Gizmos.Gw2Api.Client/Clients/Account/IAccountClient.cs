@@ -32,5 +32,6 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountSkinsClient Skins { get; }
     public IAccountTitlesClient Titles { get; }
     public IAccountWalletClient Wallet { get; }
+    public IAccountWizardsVaultClient WizardsVault { get; }
     public IAccountWorldBossesClient WorldBosses { get; }
 }

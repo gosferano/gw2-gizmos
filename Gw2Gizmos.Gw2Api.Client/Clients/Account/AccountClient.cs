@@ -35,6 +35,7 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
         Skins = new AccountSkinsClient(httpClient);
         Titles = new AccountTitlesClient(httpClient);
         Wallet = new AccountWalletClient(httpClient);
+        WizardsVault = new AccountWizardsVaultClient(httpClient);
         WorldBosses = new AccountWorldBossesClient(httpClient);
     }
 
@@ -70,5 +71,6 @@ public class AccountClient : BaseBlobClient<Contract.Account.Account>, IAccountC
     public IAccountSkinsClient Skins { get; }
     public IAccountTitlesClient Titles { get; }
     public IAccountWalletClient Wallet { get; }
+    public IAccountWizardsVaultClient WizardsVault { get; }
     public IAccountWorldBossesClient WorldBosses { get; }
 }
