@@ -23,4 +23,5 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountMountsClient Mounts { get; }
     public IAccountMaterialsClient Materials { get; }
     public IAccountNoveltiesClient Novelties { get; }
+    public IAccountOutfitsClient Outfits { get; }
 }
