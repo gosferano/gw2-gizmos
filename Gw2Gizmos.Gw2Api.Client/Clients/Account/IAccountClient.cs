@@ -10,5 +10,6 @@ public interface IAccountClient : IBlobClient<Contract.Account.Account>
     public IAccountEmotesClient Emotes { get; }
     public IAccountFinishersClient Finishers { get; }
     public IAccountGlidersClient Gliders { get; }
+    public IAccountHomeClient Home { get; }
     public IAccountMaterialsClient Materials { get; }
 }
