@@ -87,7 +87,7 @@
 - [ ] /v2/events - API not active
 - [ ] /v2/events-state - API not active
 - [x] /v2/files
-- [ ] /v2/finishers
+- [x] /v2/finishers
 - [ ] /v2/gemstore/catalog
 - [ ] /v2/gliders
 - [ ] /v2/guild/:id

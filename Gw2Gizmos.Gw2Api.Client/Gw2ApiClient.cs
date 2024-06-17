@@ -12,6 +12,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Dungeons;
 using Gw2Gizmos.Gw2Api.Client.Clients.Emblem;
 using Gw2Gizmos.Gw2Api.Client.Clients.Emotes;
 using Gw2Gizmos.Gw2Api.Client.Clients.Files;
+using Gw2Gizmos.Gw2Api.Client.Clients.Finishers;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
@@ -40,6 +41,7 @@ public class Gw2ApiClient
     public IEmblemClient Emblem { get; }
     public IEmotesClient Emotes { get; }
     public IFilesClient Files { get; }
+    public IFinishersClient Finishers { get; }
     public IItemsClient Items { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
@@ -62,6 +64,7 @@ public class Gw2ApiClient
         Emblem = new EmblemClient(httpClient);
         Emotes = new EmotesClient(httpClient);
         Files = new FilesClient(httpClient);
+        Finishers = new FinishersClient(httpClient);
         Items = new ItemsClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);
