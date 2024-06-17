@@ -2,4 +2,4 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 
-public interface ICharactersIdTrainingClient : IBlobClient<CharacterTraining> { }
+public interface ICharactersBuildTabsActiveClient : IBlobClient<CharacterBuildTab> { }

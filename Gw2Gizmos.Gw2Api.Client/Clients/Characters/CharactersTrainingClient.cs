@@ -2,11 +2,11 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 
-public class CharactersIdTrainingClient : BaseBlobClient<CharacterTraining>, ICharactersIdTrainingClient
+public class CharactersTrainingClient : BaseBlobClient<CharacterTraining>, ICharactersTrainingClient
 {
     private readonly string _characterId;
 
-    internal CharactersIdTrainingClient(HttpClient httpClient, string characterId)
+    internal CharactersTrainingClient(HttpClient httpClient, string characterId)
         : base(httpClient)
     {
         _characterId = characterId;

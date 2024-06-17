@@ -2,13 +2,13 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 
-public class CharactersIdEquipmentTabsClient
+public class CharactersEquipmentTabsClient
     : BaseBulkAllClient<CharacterEquipmentTab, int>,
-        ICharactersIdEquipmentTabsClient
+        ICharactersEquipmentTabsClient
 {
     private readonly string _characterId;
 
-    internal CharactersIdEquipmentTabsClient(HttpClient httpClient, string characterId)
+    internal CharactersEquipmentTabsClient(HttpClient httpClient, string characterId)
         : base(httpClient, "tabs")
     {
         _characterId = characterId;

@@ -2,16 +2,16 @@
 
 public interface ICharactersIdClient
 {
-    public ICharactersIdBackstoryClient Backstory { get; }
-    public ICharactersIdBuildTabsClient BuildTabs { get; }
-    public ICharactersIdCoreClient Core { get; }
-    public ICharactersIdCraftingClient Crafting { get; }
-    public ICharactersIdEquipmentClient Equipment { get; }
-    public ICharactersIdEquipmentTabsClient EquipmentTabs { get; }
-    public ICharactersIdHeroPointsClient HeroPoints { get; }
-    public ICharactersIdInventoryClient Inventory { get; set; }
-    public ICharactersIdQuestsClient Quests { get; }
-    public ICharactersIdRecipesClient Recipes { get; }
-    public ICharactersIdSabClient Sab { get; }
-    public ICharactersIdTrainingClient Training { get; }
+    public ICharactersBackstoryClient Backstory { get; }
+    public ICharactersBuildTabsClient BuildTabs { get; }
+    public ICharactersCoreClient Core { get; }
+    public ICharactersCraftingClient Crafting { get; }
+    public ICharactersEquipmentClient Equipment { get; }
+    public ICharactersEquipmentTabsClient EquipmentTabs { get; }
+    public ICharactersHeroPointsClient HeroPoints { get; }
+    public ICharactersInventoryClient Inventory { get; set; }
+    public ICharactersQuestsClient Quests { get; }
+    public ICharactersRecipesClient Recipes { get; }
+    public ICharactersSabClient Sab { get; }
+    public ICharactersTrainingClient Training { get; }
 }

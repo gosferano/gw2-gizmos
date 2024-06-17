@@ -2,4 +2,4 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 
-public interface ICharactersIdBackstoryClient : IBlobClient<CharacterBackstory> { }
+public interface ICharactersEquipmentClient : IBlobClient<CharacterEquipment>;
