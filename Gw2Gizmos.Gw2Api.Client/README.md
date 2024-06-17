@@ -84,8 +84,8 @@
 - [x] /v2/dungeons
 - [x] /v2/emblem
 - [x] /v2/emotes
-- [ ] /v2/events
-- [ ] /v2/events-state
+- [ ] /v2/events - API not active
+- [ ] /v2/events-state - API not active
 - [ ] /v2/files
 - [ ] /v2/finishers
 - [ ] /v2/gemstore/catalog
