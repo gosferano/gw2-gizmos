@@ -17,6 +17,7 @@ using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
+using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
@@ -81,6 +82,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Emblem[]))]
 // Emotes
 [JsonSerializable(typeof(Emote[]))]
+// Files
+[JsonSerializable(typeof(File[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
