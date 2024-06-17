@@ -62,7 +62,7 @@
 - [ ] /v2/characters/:id/dungeons
 - [x] /v2/characters/:id/equipment
 - [x] /v2/characters/:id/equipmenttabs
-- [ ] /v2/characters/:id/equipmenttabs/active
+- [x] /v2/characters/:id/equipmenttabs/active
 - [x] /v2/characters/:id/heropoints
 - [x] /v2/characters/:id/inventory
 - [x] /v2/characters/:id/quests

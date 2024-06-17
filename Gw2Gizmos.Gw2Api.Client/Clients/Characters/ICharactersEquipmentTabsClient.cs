@@ -5,4 +5,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Clients.Characters;
 public interface ICharactersEquipmentTabsClient
     : IAllExpandableClient<CharacterEquipmentTab>,
         IBulkExpandableClient<CharacterEquipmentTab, int>,
-        IPaginatedClient<CharacterEquipmentTab> { }
+        IPaginatedClient<CharacterEquipmentTab>
+{
+    ICharactersEquipmentTabsActiveClient Active { get; }
+}

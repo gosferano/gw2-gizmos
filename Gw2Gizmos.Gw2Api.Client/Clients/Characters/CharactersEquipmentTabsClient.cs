@@ -12,7 +12,10 @@ public class CharactersEquipmentTabsClient
         : base(httpClient, "tabs")
     {
         _characterId = characterId;
+        Active = new CharactersEquipmentTabsActiveClient(httpClient, characterId);
     }
 
     protected override string UriPath => $"/v2/characters/{_characterId}/equipmenttabs";
+
+    public ICharactersEquipmentTabsActiveClient Active { get; }
 }
