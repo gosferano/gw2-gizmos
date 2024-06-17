@@ -11,6 +11,7 @@ using Gw2Gizmos.Gw2Api.Contract.Continents;
 using Gw2Gizmos.Gw2Api.Contract.Currencies;
 using Gw2Gizmos.Gw2Api.Contract.DailyCrafting;
 using Gw2Gizmos.Gw2Api.Contract.Dungeons;
+using Gw2Gizmos.Gw2Api.Contract.Emblem;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
@@ -75,6 +76,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(DailyCrafting[]))]
 // Dungeons
 [JsonSerializable(typeof(Dungeon[]))]
+// Emblem
+[JsonSerializable(typeof(Emblem[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

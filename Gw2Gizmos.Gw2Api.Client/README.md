@@ -82,7 +82,7 @@
 - [x] /v2/currencies
 - [x] /v2/dailycrafting
 - [x] /v2/dungeons
-- [ ] /v2/emblem
+- [x] /v2/emblem
 - [ ] /v2/emotes
 - [ ] /v2/events
 - [ ] /v2/events-state
