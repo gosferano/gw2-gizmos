@@ -10,6 +10,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Currencies;
 using Gw2Gizmos.Gw2Api.Client.Clients.DailyCrafting;
 using Gw2Gizmos.Gw2Api.Client.Clients.Dungeons;
 using Gw2Gizmos.Gw2Api.Client.Clients.Emblem;
+using Gw2Gizmos.Gw2Api.Client.Clients.Emotes;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
@@ -36,6 +37,7 @@ public class Gw2ApiClient
     public IDailyCraftingClient DailyCrafting { get; }
     public IDungeonsClient Dungeons { get; }
     public IEmblemClient Emblem { get; }
+    public IEmotesClient Emotes { get; }
     public IItemsClient Items { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
@@ -56,6 +58,7 @@ public class Gw2ApiClient
         DailyCrafting = new DailyCraftingClient(httpClient);
         Dungeons = new DungeonsClient(httpClient);
         Emblem = new EmblemClient(httpClient);
+        Emotes = new EmotesClient(httpClient);
         Items = new ItemsClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);

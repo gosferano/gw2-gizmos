@@ -1,0 +1,11 @@
+﻿using Gw2Gizmos.Gw2Api.Contract.Emotes;
+
+namespace Gw2Gizmos.Gw2Api.Client.Clients.Emotes;
+
+public class EmotesClient : BaseBulkAllClient<Emote, string>, IEmotesClient
+{
+    internal EmotesClient(HttpClient httpClient)
+        : base(httpClient) { }
+
+    protected override string UriPath => "/v2/emotes";
+}

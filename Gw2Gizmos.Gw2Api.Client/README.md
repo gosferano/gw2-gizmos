@@ -83,7 +83,7 @@
 - [x] /v2/dailycrafting
 - [x] /v2/dungeons
 - [x] /v2/emblem
-- [ ] /v2/emotes
+- [x] /v2/emotes
 - [ ] /v2/events
 - [ ] /v2/events-state
 - [ ] /v2/files
