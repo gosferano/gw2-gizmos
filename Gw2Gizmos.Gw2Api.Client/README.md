@@ -17,7 +17,7 @@
 - [x] /v2/account/jadebots
 - [x] /v2/account/legendaryarmory
 - [x] /v2/account/luck
-- [ ] /v2/account/mail
+- [ ] /v2/account/mail - API not active
 - [x] /v2/account/mailcarriers
 - [x] /v2/account/mapchests
 - [x] /v2/account/masteries
@@ -44,12 +44,12 @@
 - [x] /v2/account/worldbosses
 - [x] /v2/achievements
 - [x] /v2/achievements/categories
-- [ ] /v2/achievements/daily
-- [ ] /v2/achievements/daily/tomorrow
+- [ ] /v2/achievements/daily - API not active
+- [ ] /v2/achievements/daily/tomorrow - API not active
 - [x] /v2/achievements/groups
-- [ ] /v2/adventures
-- [ ] /v2/adventures/:id/leaderboards
-- [ ] /v2/adventures/:id/leaderboards/:board/:region
+- [ ] /v2/adventures - API not active
+- [ ] /v2/adventures/:id/leaderboards - API not active
+- [ ] /v2/adventures/:id/leaderboards/:board/:region - API not active
 - [x] /v2/backstory/answers
 - [x] /v2/backstory/questions
 - [x] /v2/build
@@ -59,7 +59,7 @@
 - [x] /v2/characters/:id/buildtabs/active
 - [x] /v2/characters/:id/core
 - [x] /v2/characters/:id/crafting
-- [ ] /v2/characters/:id/dungeons
+- [ ] /v2/characters/:id/dungeons - API not active
 - [x] /v2/characters/:id/equipment
 - [x] /v2/characters/:id/equipmenttabs
 - [x] /v2/characters/:id/equipmenttabs/active
@@ -68,8 +68,8 @@
 - [x] /v2/characters/:id/quests
 - [x] /v2/characters/:id/recipes
 - [x] /v2/characters/:id/sab
-- [ ] /v2/characters/:id/skills
-- [ ] /v2/characters/:id/specializations
+- [ ] /v2/characters/:id/skills - use /v2/characters/:id/buildtabs instead
+- [ ] /v2/characters/:id/specializations - use /v2/characters/:id/buildtabs instead
 - [x] /v2/characters/:id/training
 - [x] /v2/colors
 - [x] /v2/commerce/delivery
