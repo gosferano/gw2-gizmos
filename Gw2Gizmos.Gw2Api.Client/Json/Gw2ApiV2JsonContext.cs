@@ -15,6 +15,7 @@ using Gw2Gizmos.Gw2Api.Contract.Emblem;
 using Gw2Gizmos.Gw2Api.Contract.Emotes;
 using Gw2Gizmos.Gw2Api.Contract.Finishers;
 using Gw2Gizmos.Gw2Api.Contract.Gliders;
+using Gw2Gizmos.Gw2Api.Contract.Guild;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
@@ -90,6 +91,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Finisher[]))]
 // Gliders
 [JsonSerializable(typeof(Glider[]))]
+// Guild
+[JsonSerializable(typeof(Guild))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
