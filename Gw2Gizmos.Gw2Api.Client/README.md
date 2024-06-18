@@ -89,7 +89,7 @@
 - [x] /v2/files
 - [x] /v2/finishers
 - [ ] /v2/gemstore/catalog - API not active
-- [ ] /v2/gliders
+- [x] /v2/gliders
 - [ ] /v2/guild/:id
 - [ ] /v2/guild/:id/log
 - [ ] /v2/guild/:id/members
