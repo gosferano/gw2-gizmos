@@ -10,7 +10,12 @@ public abstract class BaseClient
     private static readonly JsonSerializerOptions JsonSerializerOptions =
         new()
         {
-            Converters = { new StringValueStructConverterFactory(), new ItemJsonConverter() },
+            Converters =
+            {
+                new StringValueStructConverterFactory(),
+                new ItemJsonConverter(),
+                new GuildUpgradeJsonConverter()
+            },
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
             TypeInfoResolver = Gw2ApiV2JsonContext.Default

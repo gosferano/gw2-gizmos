@@ -1,0 +1,9 @@
+namespace Gw2Gizmos.Gw2Api.Contract.Guild;
+
+public class GuildUpgradeCost
+{
+    public GuildUpgradeCostType Type { get; set; }
+    public string? Name { get; set; }
+    public int Count { get; set; }
+    public int? ItemId { get; set; }
+}

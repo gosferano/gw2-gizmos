@@ -8,7 +8,22 @@ public class GuildIdClient : BaseBlobClient<Contract.Guild.Guild>, IGuildIdClien
         : base(httpClient)
     {
         _guildId = guildId;
+        Members = new GuildIdMembersClient(httpClient, guildId);
+        Ranks = new GuildIdRanksClient(httpClient, guildId);
+        Stash = new GuildIdStashClient(httpClient, guildId);
+        Storage = new GuildIdStorageClient(httpClient, guildId);
+        Teams = new GuildIdTeamsClient(httpClient, guildId);
+        Treasury = new GuildIdTreasuryClient(httpClient, guildId);
+        Upgrades = new GuildIdUpgradesClient(httpClient, guildId);
     }
 
     protected override string UriPath => $"/v2/guild/{_guildId}";
+
+    public IGuildIdMembersClient Members { get; }
+    public IGuildIdRanksClient Ranks { get; }
+    public IGuildIdStashClient Stash { get; }
+    public IGuildIdStorageClient Storage { get; }
+    public IGuildIdTeamsClient Teams { get; }
+    public IGuildIdTreasuryClient Treasury { get; }
+    public IGuildIdUpgradesClient Upgrades { get; }
 }

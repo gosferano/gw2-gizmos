@@ -93,6 +93,17 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Glider[]))]
 // Guild
 [JsonSerializable(typeof(Guild))]
+[JsonSerializable(typeof(GuildMember[]))]
+[JsonSerializable(typeof(GuildRank[]))]
+[JsonSerializable(typeof(GuildStashSection[]))]
+[JsonSerializable(typeof(GuildStorageItem[]))]
+[JsonSerializable(typeof(GuildTeam[]))]
+[JsonSerializable(typeof(GuildTreasuryItem[]))]
+[JsonSerializable(typeof(GuildPermission[]))]
+[JsonSerializable(typeof(GuildUpgrade))]
+[JsonSerializable(typeof(GuildUpgrade[]))]
+[JsonSerializable(typeof(GuildUpgradeBankBag))]
+[JsonSerializable(typeof(GuildUpgradeSimple))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]
