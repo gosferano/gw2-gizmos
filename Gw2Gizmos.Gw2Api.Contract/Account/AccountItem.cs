@@ -1,4 +1,6 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Account;
+﻿using Gw2Gizmos.Gw2Api.Contract.Characters;
+
+namespace Gw2Gizmos.Gw2Api.Contract.Account;
 
 public class AccountItem
 {
@@ -12,5 +14,5 @@ public class AccountItem
     public int[] Infusions { get; set; } = Array.Empty<int>();
     public ItemBinding? Binding { get; set; }
     public string? BoundTo { get; set; }
-    public ItemStats? Stats { get; set; }
+    public CharacterEquipmentItemStats? Stats { get; set; }
 }
