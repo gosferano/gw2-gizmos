@@ -110,6 +110,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(HomeNode[]))]
 // Items
 [JsonSerializable(typeof(Item))]
+[JsonSerializable(typeof(ItemSimple))]
 [JsonSerializable(typeof(Item[]))]
 [JsonSerializable(typeof(Armor))]
 [JsonSerializable(typeof(BackItem))]

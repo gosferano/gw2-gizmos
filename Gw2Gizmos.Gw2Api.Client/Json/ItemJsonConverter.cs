@@ -21,5 +21,12 @@ public class ItemJsonConverter : PolymorphicJsonConverter<Item>
             { ItemType.Trinket, typeof(Trinket) },
             { ItemType.UpgradeComponent, typeof(UpgradeComponent) },
             { ItemType.Weapon, typeof(Weapon) },
+            { ItemType.CraftingMaterial, typeof(ItemSimple) },
+            { ItemType.JadeTechModule, typeof(ItemSimple) },
+            { ItemType.Key, typeof(ItemSimple) },
+            { ItemType.PowerCore, typeof(ItemSimple) },
+            { ItemType.Relic, typeof(ItemSimple) },
+            { ItemType.Trait, typeof(ItemSimple) },
+            { ItemType.Trophy, typeof(ItemSimple) }
         };
 }
