@@ -16,6 +16,7 @@ using Gw2Gizmos.Gw2Api.Contract.Emotes;
 using Gw2Gizmos.Gw2Api.Contract.Finishers;
 using Gw2Gizmos.Gw2Api.Contract.Gliders;
 using Gw2Gizmos.Gw2Api.Contract.Guild;
+using Gw2Gizmos.Gw2Api.Contract.Home;
 using Gw2Gizmos.Gw2Api.Contract.Items;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
@@ -104,6 +105,9 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(GuildUpgrade[]))]
 [JsonSerializable(typeof(GuildUpgradeBankBag))]
 [JsonSerializable(typeof(GuildUpgradeSimple))]
+// Home
+[JsonSerializable(typeof(HomeCat[]))]
+[JsonSerializable(typeof(HomeNode[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(Item[]))]

@@ -15,6 +15,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Files;
 using Gw2Gizmos.Gw2Api.Client.Clients.Finishers;
 using Gw2Gizmos.Gw2Api.Client.Clients.Gliders;
 using Gw2Gizmos.Gw2Api.Client.Clients.Guild;
+using Gw2Gizmos.Gw2Api.Client.Clients.Home;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
@@ -46,6 +47,7 @@ public class Gw2ApiClient
     public IFinishersClient Finishers { get; }
     public IGlidersClient Gliders { get; }
     public IGuildClient Guild { get; }
+    public IHomeClient Home { get; }
     public IItemsClient Items { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
@@ -71,6 +73,7 @@ public class Gw2ApiClient
         Finishers = new FinishersClient(httpClient);
         Gliders = new GlidersClient(httpClient);
         Guild = new GuildClient(httpClient);
+        Home = new HomeClient(httpClient);
         Items = new ItemsClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);

@@ -102,9 +102,9 @@
 - [x] /v2/guild/permissions
 - [x] /v2/guild/search
 - [x] /v2/guild/upgrades
-- [ ] /v2/home
-- [ ] /v2/home/cats
-- [ ] /v2/home/nodes
+- [x] /v2/home
+- [x] /v2/home/cats
+- [x] /v2/home/nodes
 - [ ] /v2/items
 - [ ] /v2/itemstats
 - [ ] /v2/jadebots
