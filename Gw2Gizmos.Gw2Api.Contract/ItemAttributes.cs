@@ -8,7 +8,6 @@ public class ItemAttributes
     public decimal? ConditionDuration { get; set; }
     public decimal? CritDamage { get; set; }
     public decimal? Healing { get; set; }
-    public decimal? Ferocity { get; set; }
     public decimal? Power { get; set; }
     public decimal? Precision { get; set; }
     public decimal? Toughness { get; set; }
