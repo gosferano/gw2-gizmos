@@ -14,7 +14,8 @@ public abstract class BaseClient
             {
                 new StringValueStructConverterFactory(),
                 new ItemJsonConverter(),
-                new GuildUpgradeJsonConverter()
+                new GuildUpgradeJsonConverter(),
+                new ProfessionTrainingTrackStepJsonConverter(),
             },
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

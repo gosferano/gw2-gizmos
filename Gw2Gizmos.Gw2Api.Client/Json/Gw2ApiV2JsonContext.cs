@@ -32,6 +32,7 @@ using Gw2Gizmos.Gw2Api.Contract.Mounts;
 using Gw2Gizmos.Gw2Api.Contract.Novelties;
 using Gw2Gizmos.Gw2Api.Contract.Outfits;
 using Gw2Gizmos.Gw2Api.Contract.Pets;
+using Gw2Gizmos.Gw2Api.Contract.Professions;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
@@ -166,6 +167,11 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Outfit[]))]
 // Pets
 [JsonSerializable(typeof(Pet[]))]
+// Professions
+[JsonSerializable(typeof(Profession[]))]
+[JsonSerializable(typeof(ProfessionTrainingTrackStep))]
+[JsonSerializable(typeof(ProfessionTrainingTrackStepSkill))]
+[JsonSerializable(typeof(ProfessionTrainingTrackStepTrait))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations

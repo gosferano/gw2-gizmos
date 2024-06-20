@@ -31,6 +31,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Mounts;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Novelties;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Outfits;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Pets;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Professions;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
@@ -71,6 +72,7 @@ public interface IGw2ApiV2Client
     public INoveltiesClient Novelties { get; }
     public IOutfitsClient Outfits { get; }
     public IPetsClient Pets { get; }
+    public IProfessionsClient Professions { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
 }
