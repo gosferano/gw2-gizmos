@@ -9,6 +9,7 @@ public class PvpClient : BaseBlobClient<string[]>, IPvpClient
         Games = new PvpGamesClient(httpClient);
         Heroes = new PvpHeroesClient(httpClient);
         Ranks = new PvpRanksClient(httpClient);
+        Seasons = new PvpSeasonsClient(httpClient);
     }
 
     protected override string UriPath => "/v2/pvp";
@@ -17,4 +18,5 @@ public class PvpClient : BaseBlobClient<string[]>, IPvpClient
     public IPvpGamesClient Games { get; }
     public IPvpHeroesClient Heroes { get; }
     public IPvpRanksClient Ranks { get; }
+    public IPvpSeasonsClient Seasons { get; }
 }
