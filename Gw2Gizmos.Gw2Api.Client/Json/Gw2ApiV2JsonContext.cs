@@ -23,6 +23,7 @@ using Gw2Gizmos.Gw2Api.Contract.JadeBots;
 using Gw2Gizmos.Gw2Api.Contract.LegendaryArmory;
 using Gw2Gizmos.Gw2Api.Contract.Legends;
 using Gw2Gizmos.Gw2Api.Contract.MailCarriers;
+using Gw2Gizmos.Gw2Api.Contract.MapChests;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
@@ -139,6 +140,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Legend[]))]
 // Mail Carriers
 [JsonSerializable(typeof(MailCarrier[]))]
+// Map Chests
+[JsonSerializable(typeof(MapChest[]))]
 // Materials
 [JsonSerializable(typeof(MaterialCategory[]))]
 // Races

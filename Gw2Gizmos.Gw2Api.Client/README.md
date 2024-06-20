@@ -111,7 +111,7 @@
 - [x] /v2/legendaryarmory
 - [x] /v2/legends
 - [x] /v2/mailcarriers
-- [ ] /v2/mapchests
+- [x] /v2/mapchests
 - [ ] /v2/maps
 - [ ] /v2/masteries
 - [x] /v2/materials
