@@ -121,7 +121,7 @@
 - [x] /v2/mounts/types
 - [x] /v2/novelties
 - [x] /v2/outfits
-- [ ] /v2/pets
+- [x] /v2/pets
 - [ ] /v2/professions
 - [ ] /v2/pvp
 - [ ] /v2/pvp/amulets
