@@ -115,7 +115,7 @@
 - [x] /v2/maps
 - [x] /v2/masteries
 - [x] /v2/materials
-- [ ] /v2/minis
+- [x] /v2/minis
 - [ ] /v2/mounts
 - [ ] /v2/mounts/skins
 - [ ] /v2/mounts/types
