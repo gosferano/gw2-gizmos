@@ -1,0 +1,16 @@
+﻿using Gw2Gizmos.Gw2Api.Contract.Characters;
+
+namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
+
+public class CharactersBackstoryClient : BaseBlobClient<CharacterBackstory>, ICharactersBackstoryClient
+{
+    private readonly string _characterId;
+
+    internal CharactersBackstoryClient(HttpClient httpClient, string characterId)
+        : base(httpClient)
+    {
+        _characterId = characterId;
+    }
+
+    protected override string UriPath => $"/v2/characters/{_characterId}/backstory";
+}

@@ -1,0 +1,13 @@
+﻿using Gw2Gizmos.Gw2Api.Contract.Commerce;
+
+namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
+
+public class CommerceTransactionsCurrentSellsClient
+    : BasePaginatedBlobClient<CommerceTransaction>,
+        ICommerceTransactionsCurrentSellsClient
+{
+    internal CommerceTransactionsCurrentSellsClient(HttpClient httpClient)
+        : base(httpClient) { }
+
+    protected override string UriPath => "/v2/commerce/transactions/current/sells";
+}
