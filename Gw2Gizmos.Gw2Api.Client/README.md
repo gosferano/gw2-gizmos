@@ -122,11 +122,11 @@
 - [x] /v2/novelties
 - [x] /v2/outfits
 - [x] /v2/pets
-- [ ] /v2/professions
-- [ ] /v2/pvp
-- [ ] /v2/pvp/amulets
-- [ ] /v2/pvp/games
-- [ ] /v2/pvp/heroes
+- [x] /v2/professions
+- [x] /v2/pvp
+- [x] /v2/pvp/amulets
+- [x] /v2/pvp/games
+- [x] /v2/pvp/heroes
 - [ ] /v2/pvp/ranks
 - [ ] /v2/pvp/rewardtracks
 - [ ] /v2/pvp/runes
