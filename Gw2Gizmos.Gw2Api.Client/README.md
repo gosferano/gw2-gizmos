@@ -107,7 +107,7 @@
 - [x] /v2/home/nodes
 - [x] /v2/items
 - [x] /v2/itemstats
-- [ ] /v2/jadebots
+- [x] /v2/jadebots
 - [ ] /v2/legendaryarmory
 - [ ] /v2/legends
 - [ ] /v2/mailcarriers
