@@ -112,7 +112,7 @@
 - [x] /v2/legends
 - [x] /v2/mailcarriers
 - [x] /v2/mapchests
-- [ ] /v2/maps
+- [x] /v2/maps
 - [ ] /v2/masteries
 - [x] /v2/materials
 - [ ] /v2/minis
