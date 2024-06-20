@@ -8,8 +8,8 @@ public class GuildTeamGame
     public int MapId { get; set; }
     public DateTimeOffset Started { get; set; }
     public DateTimeOffset Ended { get; set; }
-    public string Result { get; set; }
-    public string Team { get; set; }
+    public PvpResult Result { get; set; }
+    public PvpTeam Team { get; set; }
     public PvpTeamScores Scores { get; set; }
     public PvpRatingType RatingType { get; set; }
 }
