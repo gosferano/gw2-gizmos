@@ -110,7 +110,7 @@
 - [x] /v2/jadebots
 - [x] /v2/legendaryarmory
 - [x] /v2/legends
-- [ ] /v2/mailcarriers
+- [x] /v2/mailcarriers
 - [ ] /v2/mapchests
 - [ ] /v2/maps
 - [ ] /v2/masteries
