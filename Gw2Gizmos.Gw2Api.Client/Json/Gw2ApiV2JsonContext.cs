@@ -175,6 +175,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(ProfessionTrainingTrackStepTrait))]
 // Pvp
 [JsonSerializable(typeof(PvpAmulet[]))]
+[JsonSerializable(typeof(PvpGame[]))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations

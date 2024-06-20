@@ -3,4 +3,5 @@
 public interface IPvpClient : IBlobClient<string[]>
 {
     IPvpAmuletsClient Amulets { get; }
+    IPvpGamesClient Games { get; }
 }

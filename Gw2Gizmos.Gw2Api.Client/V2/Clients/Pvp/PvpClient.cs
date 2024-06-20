@@ -6,9 +6,11 @@ public class PvpClient : BaseBlobClient<string[]>, IPvpClient
         : base(httpClient)
     {
         Amulets = new PvpAmuletsClient(httpClient);
+        Games = new PvpGamesClient(httpClient);
     }
 
     protected override string UriPath => "/v2/pvp";
 
     public IPvpAmuletsClient Amulets { get; }
+    public IPvpGamesClient Games { get; }
 }
