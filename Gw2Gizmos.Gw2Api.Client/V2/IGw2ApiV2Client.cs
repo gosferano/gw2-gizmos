@@ -28,6 +28,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Masteries;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Minis;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Mounts;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Novelties;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
@@ -65,6 +66,7 @@ public interface IGw2ApiV2Client
     public IMaterialsClient Materials { get; }
     public IMinisClient Minis { get; }
     public IMountsClient Mounts { get; }
+    public INoveltiesClient Novelties { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
 }

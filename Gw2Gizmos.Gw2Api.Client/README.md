@@ -119,7 +119,7 @@
 - [x] /v2/mounts
 - [x] /v2/mounts/skins
 - [x] /v2/mounts/types
-- [ ] /v2/novelties
+- [x] /v2/novelties
 - [ ] /v2/outfits
 - [ ] /v2/pets
 - [ ] /v2/professions
