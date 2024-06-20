@@ -28,6 +28,7 @@ using Gw2Gizmos.Gw2Api.Contract.Maps;
 using Gw2Gizmos.Gw2Api.Contract.Masteries;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Minis;
+using Gw2Gizmos.Gw2Api.Contract.Mounts;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
@@ -153,6 +154,9 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(MaterialCategory[]))]
 // Minis
 [JsonSerializable(typeof(Mini[]))]
+// Mounts
+[JsonSerializable(typeof(MountSkin[]))]
+[JsonSerializable(typeof(MountType[]))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations

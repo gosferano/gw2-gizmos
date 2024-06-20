@@ -116,9 +116,9 @@
 - [x] /v2/masteries
 - [x] /v2/materials
 - [x] /v2/minis
-- [ ] /v2/mounts
-- [ ] /v2/mounts/skins
-- [ ] /v2/mounts/types
+- [x] /v2/mounts
+- [x] /v2/mounts/skins
+- [x] /v2/mounts/types
 - [ ] /v2/novelties
 - [ ] /v2/outfits
 - [ ] /v2/pets

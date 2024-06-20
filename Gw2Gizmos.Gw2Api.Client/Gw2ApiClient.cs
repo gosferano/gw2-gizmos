@@ -27,6 +27,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Maps;
 using Gw2Gizmos.Gw2Api.Client.Clients.Masteries;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Minis;
+using Gw2Gizmos.Gw2Api.Client.Clients.Mounts;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.Clients.Specializations;
 
@@ -68,6 +69,7 @@ public class Gw2ApiClient
     public IMasteriesClient Masteries { get; }
     public IMaterialsClient Materials { get; }
     public IMinisClient Minis { get; }
+    public IMountsClient Mounts { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
 
@@ -103,6 +105,7 @@ public class Gw2ApiClient
         Masteries = new MasteriesClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Minis = new MinisClient(httpClient);
+        Mounts = new MountsClient(httpClient);
         Races = new RacesClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
     }
