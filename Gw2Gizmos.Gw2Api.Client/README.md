@@ -113,7 +113,7 @@
 - [x] /v2/mailcarriers
 - [x] /v2/mapchests
 - [x] /v2/maps
-- [ ] /v2/masteries
+- [x] /v2/masteries
 - [x] /v2/materials
 - [ ] /v2/minis
 - [ ] /v2/mounts

@@ -25,6 +25,7 @@ using Gw2Gizmos.Gw2Api.Contract.Legends;
 using Gw2Gizmos.Gw2Api.Contract.MailCarriers;
 using Gw2Gizmos.Gw2Api.Contract.MapChests;
 using Gw2Gizmos.Gw2Api.Contract.Maps;
+using Gw2Gizmos.Gw2Api.Contract.Masteries;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
@@ -145,6 +146,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(MapChest[]))]
 // Maps
 [JsonSerializable(typeof(Map[]))]
+// Masteries
+[JsonSerializable(typeof(Mastery[]))]
 // Materials
 [JsonSerializable(typeof(MaterialCategory[]))]
 // Races
