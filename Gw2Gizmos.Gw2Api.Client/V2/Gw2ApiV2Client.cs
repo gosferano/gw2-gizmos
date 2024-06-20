@@ -32,6 +32,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Novelties;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Outfits;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Pets;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Professions;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Pvp;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
@@ -75,6 +76,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         Outfits = new OutfitsClient(httpClient);
         Pets = new PetsClient(httpClient);
         Professions = new ProfessionsClient(httpClient);
+        Pvp = new PvpClient(httpClient);
         Races = new RacesClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
     }
@@ -113,6 +115,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public IOutfitsClient Outfits { get; }
     public IPetsClient Pets { get; }
     public IProfessionsClient Professions { get; }
+    public IPvpClient Pvp { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
 }
