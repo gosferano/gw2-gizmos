@@ -19,6 +19,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Home;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.Clients.ItemStats;
 using Gw2Gizmos.Gw2Api.Client.Clients.JadeBots;
+using Gw2Gizmos.Gw2Api.Client.Clients.LegendaryArmory;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.Clients.Specializations;
@@ -53,6 +54,7 @@ public class Gw2ApiClient
     public IItemsClient Items { get; }
     public IItemStatsClient ItemStats { get; }
     public IJadeBotsClient JadeBots { get; }
+    public ILegendaryArmoryClient LegendaryArmory { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
@@ -81,6 +83,7 @@ public class Gw2ApiClient
         Items = new ItemsClient(httpClient);
         ItemStats = new ItemStatsClient(httpClient);
         JadeBots = new JadeBotsClient(httpClient);
+        LegendaryArmory = new LegendaryArmoryClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
