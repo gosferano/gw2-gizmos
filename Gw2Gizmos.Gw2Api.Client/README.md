@@ -106,7 +106,7 @@
 - [x] /v2/home/cats
 - [x] /v2/home/nodes
 - [x] /v2/items
-- [ ] /v2/itemstats
+- [x] /v2/itemstats
 - [ ] /v2/jadebots
 - [ ] /v2/legendaryarmory
 - [ ] /v2/legends

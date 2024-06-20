@@ -18,6 +18,7 @@ using Gw2Gizmos.Gw2Api.Contract.Gliders;
 using Gw2Gizmos.Gw2Api.Contract.Guild;
 using Gw2Gizmos.Gw2Api.Contract.Home;
 using Gw2Gizmos.Gw2Api.Contract.Items;
+using Gw2Gizmos.Gw2Api.Contract.ItemStats;
 using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
@@ -124,6 +125,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Trinket))]
 [JsonSerializable(typeof(UpgradeComponent))]
 [JsonSerializable(typeof(Weapon))]
+// Item Stats
+[JsonSerializable(typeof(ItemStat[]))]
 // Materials
 [JsonSerializable(typeof(MaterialCategory[]))]
 // Races

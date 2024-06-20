@@ -17,6 +17,7 @@ using Gw2Gizmos.Gw2Api.Client.Clients.Gliders;
 using Gw2Gizmos.Gw2Api.Client.Clients.Guild;
 using Gw2Gizmos.Gw2Api.Client.Clients.Home;
 using Gw2Gizmos.Gw2Api.Client.Clients.Items;
+using Gw2Gizmos.Gw2Api.Client.Clients.ItemStats;
 using Gw2Gizmos.Gw2Api.Client.Clients.Materials;
 using Gw2Gizmos.Gw2Api.Client.Clients.Races;
 using Gw2Gizmos.Gw2Api.Client.Clients.Specializations;
@@ -49,6 +50,7 @@ public class Gw2ApiClient
     public IGuildClient Guild { get; }
     public IHomeClient Home { get; }
     public IItemsClient Items { get; }
+    public IItemStatsClient ItemStats { get; }
     public IMaterialsClient Materials { get; }
     public IRacesClient Races { get; }
     public ISpecializationsClient Specializations { get; }
@@ -75,6 +77,7 @@ public class Gw2ApiClient
         Guild = new GuildClient(httpClient);
         Home = new HomeClient(httpClient);
         Items = new ItemsClient(httpClient);
+        ItemStats = new ItemStatsClient(httpClient);
         Materials = new MaterialsClient(httpClient);
         Races = new RacesClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
