@@ -128,8 +128,8 @@
 - [x] /v2/pvp/games
 - [x] /v2/pvp/heroes
 - [x] /v2/pvp/ranks
-- [ ] /v2/pvp/rewardtracks
-- [ ] /v2/pvp/runes
+- [ ] /v2/pvp/rewardtracks - API not active
+- [ ] /v2/pvp/runes - API not active
 - [ ] /v2/pvp/seasons
 - [ ] /v2/pvp/seasons/:id/leaderboards
 - [ ] /v2/pvp/seasons/:id/leaderboards/:board/:region
