@@ -109,7 +109,7 @@
 - [x] /v2/itemstats
 - [x] /v2/jadebots
 - [x] /v2/legendaryarmory
-- [ ] /v2/legends
+- [x] /v2/legends
 - [ ] /v2/mailcarriers
 - [ ] /v2/mapchests
 - [ ] /v2/maps
