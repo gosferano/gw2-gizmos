@@ -1,0 +1,11 @@
+﻿using Gw2Gizmos.Gw2Api.Contract.Outfits;
+
+namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Outfits;
+
+public class OutfitsClient : BaseBulkAllClient<Outfit, int>, IOutfitsClient
+{
+    internal OutfitsClient(HttpClient httpClient)
+        : base(httpClient) { }
+
+    protected override string UriPath => "/v2/outfits";
+}

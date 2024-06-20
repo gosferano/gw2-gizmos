@@ -30,6 +30,7 @@ using Gw2Gizmos.Gw2Api.Contract.Materials;
 using Gw2Gizmos.Gw2Api.Contract.Minis;
 using Gw2Gizmos.Gw2Api.Contract.Mounts;
 using Gw2Gizmos.Gw2Api.Contract.Novelties;
+using Gw2Gizmos.Gw2Api.Contract.Outfits;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
@@ -160,6 +161,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(MountType[]))]
 // Novelties
 [JsonSerializable(typeof(Novelty[]))]
+// Outfits
+[JsonSerializable(typeof(Outfit[]))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations
