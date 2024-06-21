@@ -144,7 +144,7 @@
 - [x] /v2/recipes/search
 - [x] /v2/skiffs
 - [x] /v2/skills
-- [ ] /v2/skins
+- [x] /v2/skins
 - [x] /v2/specializations
 - [ ] /v2/stories
 - [ ] /v2/stories/seasons

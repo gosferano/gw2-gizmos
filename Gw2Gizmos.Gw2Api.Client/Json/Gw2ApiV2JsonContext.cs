@@ -40,6 +40,7 @@ using Gw2Gizmos.Gw2Api.Contract.Raids;
 using Gw2Gizmos.Gw2Api.Contract.Recipes;
 using Gw2Gizmos.Gw2Api.Contract.Skiffs;
 using Gw2Gizmos.Gw2Api.Contract.Skills;
+using Gw2Gizmos.Gw2Api.Contract.Skins;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
@@ -218,6 +219,12 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(SkillFactStunBreak))]
 [JsonSerializable(typeof(SkillFactTime))]
 [JsonSerializable(typeof(SkillFactUnblockable))]
+// Skins
+[JsonSerializable(typeof(Skin[]))]
+[JsonSerializable(typeof(SkinArmor))]
+[JsonSerializable(typeof(SkinBack))]
+[JsonSerializable(typeof(SkinGathering))]
+[JsonSerializable(typeof(SkinWeapon))]
 // Specializations
 [JsonSerializable(typeof(Specialization[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

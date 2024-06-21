@@ -21,6 +21,8 @@ public readonly struct ArmorWeightClass : IEquatable<ArmorWeightClass>
 
     public static implicit operator ArmorWeightClass(string value) => new(value);
 
+    public static implicit operator string(ArmorWeightClass value) => value.Value;
+
     public bool Equals(ArmorWeightClass other)
     {
         return Value == other.Value;

@@ -1,4 +1,4 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
+﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
 public readonly struct ItemRarity : IEquatable<ItemRarity>
 {
@@ -24,6 +24,8 @@ public readonly struct ItemRarity : IEquatable<ItemRarity>
     }
 
     public static implicit operator ItemRarity(string value) => new(value);
+
+    public static implicit operator string(ItemRarity value) => value.Value;
 
     public bool Equals(ItemRarity other)
     {

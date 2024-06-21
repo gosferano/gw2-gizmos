@@ -30,6 +30,8 @@ public readonly struct WeaponDamageType : IEquatable<WeaponDamageType>
 
     public static implicit operator WeaponDamageType(string value) => new(value);
 
+    public static implicit operator string(WeaponDamageType value) => value.Value;
+
     public bool Equals(WeaponDamageType other)
     {
         return Value == other.Value;

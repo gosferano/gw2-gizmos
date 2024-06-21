@@ -1,4 +1,4 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
+﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
 public readonly struct ArmorSlotType : IEquatable<ArmorSlotType>
 {
@@ -24,6 +24,8 @@ public readonly struct ArmorSlotType : IEquatable<ArmorSlotType>
     }
 
     public static implicit operator ArmorSlotType(string value) => new(value);
+
+    public static implicit operator string(ArmorSlotType value) => value.Value;
 
     public bool Equals(ArmorSlotType other)
     {

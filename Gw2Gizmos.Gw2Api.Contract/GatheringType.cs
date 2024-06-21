@@ -1,4 +1,4 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
+﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
 public readonly struct GatheringType : IEquatable<GatheringType>
 {

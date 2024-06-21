@@ -39,6 +39,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Raids;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Recipes;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skiffs;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skills;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
@@ -88,6 +89,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         Recipes = new RecipesClient(httpClient);
         Skiffs = new SkiffsClient(httpClient);
         Skills = new SkillsClient(httpClient);
+        Skins = new SkinsClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
     }
 
@@ -132,5 +134,6 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public IRecipesClient Recipes { get; }
     public ISkiffsClient Skiffs { get; }
     public ISkillsClient Skills { get; }
+    public ISkinsClient Skins { get; }
     public ISpecializationsClient Specializations { get; }
 }

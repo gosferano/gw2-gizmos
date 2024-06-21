@@ -32,6 +32,8 @@ public readonly struct ItemRestriction : IEquatable<ItemRestriction>
 
     public static implicit operator ItemRestriction(string value) => new(value);
 
+    public static implicit operator string(ItemRestriction value) => value.Value;
+
     public bool Equals(ItemRestriction other)
     {
         return Value == other.Value;
