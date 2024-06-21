@@ -34,6 +34,7 @@ using Gw2Gizmos.Gw2Api.Contract.Outfits;
 using Gw2Gizmos.Gw2Api.Contract.Pets;
 using Gw2Gizmos.Gw2Api.Contract.Professions;
 using Gw2Gizmos.Gw2Api.Contract.Pvp;
+using Gw2Gizmos.Gw2Api.Contract.Quests;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
@@ -182,6 +183,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(PvpSeasonLeaderboardEntry[]))]
 [JsonSerializable(typeof(PvpStanding[]))]
 [JsonSerializable(typeof(PvpStats))]
+// Quests
+[JsonSerializable(typeof(Quest[]))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations

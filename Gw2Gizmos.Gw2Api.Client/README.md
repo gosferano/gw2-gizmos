@@ -137,7 +137,7 @@
 - [x] /v2/pvp/standings
 - [x] /v2/pvp/stats
 - [ ] /v2/quaggans
-- [ ] /v2/quests
+- [x] /v2/quests
 - [x] /v2/races
 - [ ] /v2/raids
 - [ ] /v2/recipes
