@@ -142,7 +142,7 @@
 - [x] /v2/raids
 - [x] /v2/recipes
 - [x] /v2/recipes/search
-- [ ] /v2/skiffs
+- [x] /v2/skiffs
 - [ ] /v2/skills
 - [ ] /v2/skins
 - [x] /v2/specializations
