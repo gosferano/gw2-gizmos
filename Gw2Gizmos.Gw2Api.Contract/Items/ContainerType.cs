@@ -2,11 +2,10 @@
 
 public readonly struct ContainerType : IEquatable<ContainerType>
 {
-    public static readonly ContainerType Foraging = new("Foraging");
-    public static readonly ContainerType Logging = new("Logging");
-    public static readonly ContainerType Mining = new("Mining");
-    public static readonly ContainerType Bait = new("Bait");
-    public static readonly ContainerType Lure = new("Lure");
+    public static readonly ContainerType Default = new("Default");
+    public static readonly ContainerType GiftBox = new("GiftBox ");
+    public static readonly ContainerType Immediate = new("Immediate");
+    public static readonly ContainerType OpenUI = new("OpenUI");
 
     public string Value { get; }
 
