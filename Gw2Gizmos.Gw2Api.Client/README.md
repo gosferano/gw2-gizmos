@@ -141,7 +141,7 @@
 - [x] /v2/races
 - [x] /v2/raids
 - [x] /v2/recipes
-- [ ] /v2/recipes/search
+- [x] /v2/recipes/search
 - [ ] /v2/skiffs
 - [ ] /v2/skills
 - [ ] /v2/skins
