@@ -8,4 +8,5 @@ public interface IPvpClient : IBlobClient<string[]>
     IPvpRanksClient Ranks { get; }
     IPvpSeasonsClient Seasons { get; }
     IPvpStandingsClient Standings { get; }
+    IPvpStatsClient Stats { get; }
 }
