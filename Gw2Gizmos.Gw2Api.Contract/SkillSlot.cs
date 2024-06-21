@@ -19,6 +19,9 @@ public readonly struct SkillSlot : IEquatable<SkillSlot>
     public static readonly SkillSlot Downed2 = new("Downed_2");
     public static readonly SkillSlot Downed3 = new("Downed_3");
     public static readonly SkillSlot Downed4 = new("Downed_4");
+    public static readonly SkillSlot Pet = new("Pet");
+    public static readonly SkillSlot Toolbelt = new("Toolbelt");
+    public static readonly SkillSlot Transform1 = new("Transform_1");
 
     public string Value { get; }
 

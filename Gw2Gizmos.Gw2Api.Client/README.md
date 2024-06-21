@@ -143,7 +143,7 @@
 - [x] /v2/recipes
 - [x] /v2/recipes/search
 - [x] /v2/skiffs
-- [ ] /v2/skills
+- [x] /v2/skills
 - [ ] /v2/skins
 - [x] /v2/specializations
 - [ ] /v2/stories
