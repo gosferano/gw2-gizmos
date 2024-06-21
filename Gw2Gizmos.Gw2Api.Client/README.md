@@ -134,7 +134,7 @@
 - [x] /v2/pvp/seasons/:id/leaderboards
 - [x] /v2/pvp/seasons/:id/leaderboards/:board/:region
 - [ ] /v2/pvp/sigils - API not active
-- [ ] /v2/pvp/standings
+- [x] /v2/pvp/standings
 - [ ] /v2/pvp/stats
 - [ ] /v2/quaggans
 - [ ] /v2/quests
