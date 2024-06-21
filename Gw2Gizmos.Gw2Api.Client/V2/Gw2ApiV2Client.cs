@@ -35,6 +35,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Professions;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Pvp;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Quests;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Races;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Raids;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
@@ -80,6 +81,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         Pvp = new PvpClient(httpClient);
         Quests = new QuestsClient(httpClient);
         Races = new RacesClient(httpClient);
+        Raids = new RaidsClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
     }
 
@@ -120,5 +122,6 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public IPvpClient Pvp { get; }
     public IQuestsClient Quests { get; }
     public IRacesClient Races { get; }
+    public IRaidsClient Raids { get; }
     public ISpecializationsClient Specializations { get; }
 }

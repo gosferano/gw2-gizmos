@@ -139,7 +139,7 @@
 - [ ] /v2/quaggans
 - [x] /v2/quests
 - [x] /v2/races
-- [ ] /v2/raids
+- [x] /v2/raids
 - [ ] /v2/recipes
 - [ ] /v2/recipes/search
 - [ ] /v2/skiffs
