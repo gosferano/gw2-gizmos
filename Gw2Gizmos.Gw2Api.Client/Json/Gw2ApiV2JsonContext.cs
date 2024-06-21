@@ -37,6 +37,7 @@ using Gw2Gizmos.Gw2Api.Contract.Pvp;
 using Gw2Gizmos.Gw2Api.Contract.Quests;
 using Gw2Gizmos.Gw2Api.Contract.Races;
 using Gw2Gizmos.Gw2Api.Contract.Raids;
+using Gw2Gizmos.Gw2Api.Contract.Recipes;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
@@ -190,6 +191,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Race[]))]
 // Raids
 [JsonSerializable(typeof(Raid[]))]
+// Recipes
+[JsonSerializable(typeof(Recipe[]))]
 // Specializations
 [JsonSerializable(typeof(Specialization[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;
