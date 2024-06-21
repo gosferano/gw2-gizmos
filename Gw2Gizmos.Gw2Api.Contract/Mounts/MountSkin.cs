@@ -6,5 +6,5 @@ public class MountSkin
     public string Name { get; set; }
     public string Icon { get; set; }
     public string Mount { get; set; }
-    public MountSkinDyeSlot[] DyeSlots { get; set; } = Array.Empty<MountSkinDyeSlot>();
+    public SkinDyeSlot[] DyeSlots { get; set; } = Array.Empty<SkinDyeSlot>();
 }

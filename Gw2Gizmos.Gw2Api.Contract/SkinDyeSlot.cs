@@ -1,6 +1,6 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Mounts;
+﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
-public class MountSkinDyeSlot
+public class SkinDyeSlot
 {
     public int ColorId { get; set; }
     public string Material { get; set; }
