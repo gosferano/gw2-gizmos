@@ -1,7 +1,8 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Items;
+﻿namespace Gw2Gizmos.Gw2Api.Contract;
 
 public readonly struct WeaponType : IEquatable<WeaponType>
 {
+    public static readonly WeaponType None = new("None");
     public static readonly WeaponType Axe = new("Axe");
     public static readonly WeaponType Dagger = new("Dagger");
     public static readonly WeaponType Focus = new("Focus");
