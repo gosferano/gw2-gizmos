@@ -179,6 +179,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(PvpHero[]))]
 [JsonSerializable(typeof(PvpRank[]))]
 [JsonSerializable(typeof(PvpSeason[]))]
+[JsonSerializable(typeof(PvpSeasonLeaderboardEntry[]))]
 // Races
 [JsonSerializable(typeof(Race[]))]
 // Specializations

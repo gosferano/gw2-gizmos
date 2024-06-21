@@ -131,8 +131,8 @@
 - [ ] /v2/pvp/rewardtracks - API not active
 - [ ] /v2/pvp/runes - API not active
 - [x] /v2/pvp/seasons
-- [ ] /v2/pvp/seasons/:id/leaderboards
-- [ ] /v2/pvp/seasons/:id/leaderboards/:board/:region
+- [x] /v2/pvp/seasons/:id/leaderboards
+- [x] /v2/pvp/seasons/:id/leaderboards/:board/:region
 - [ ] /v2/pvp/sigils
 - [ ] /v2/pvp/standings
 - [ ] /v2/pvp/stats

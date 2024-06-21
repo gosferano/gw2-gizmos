@@ -8,4 +8,6 @@ public class PvpSeasonsClient : BaseBulkAllClient<PvpSeason, string>, IPvpSeason
         : base(httpClient) { }
 
     protected override string UriPath => "/v2/pvp/seasons";
+
+    public IPvpSeasonsIdClient this[string seasonId] => new PvpSeasonsIdClient(HttpClient, seasonId);
 }
