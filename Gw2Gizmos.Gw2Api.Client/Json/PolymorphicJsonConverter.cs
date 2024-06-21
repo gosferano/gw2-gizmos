@@ -13,6 +13,8 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
 
     protected abstract Dictionary<string, Type> TypeMap { get; }
 
+    protected virtual Type? FallbackType { get; } = null;
+
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.StartObject)
@@ -24,6 +26,11 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
 
         if (!doc.RootElement.TryGetProperty(TypePropertyName, out JsonElement typeProperty))
         {
+            if (FallbackType != null)
+            {
+                return (doc.RootElement.Deserialize(FallbackType, options) as T)!;
+            }
+
             throw new JsonException($"Expected '{TypePropertyName}' property");
         }
 
@@ -34,12 +41,17 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
             throw new JsonException($"Expected '{TypePropertyName}' property to to not be null or whitespace");
         }
 
-        if (!TypeMap.TryGetValue(itemType, out Type? type))
+        if (TypeMap.TryGetValue(itemType, out Type? type))
         {
-            throw new JsonException($"Unsupported type '{itemType}'");
+            return (doc.RootElement.Deserialize(type, options) as T)!;
         }
 
-        return (doc.RootElement.Deserialize(type, options) as T)!;
+        if (FallbackType != null)
+        {
+            return (doc.RootElement.Deserialize(FallbackType, options) as T)!;
+        }
+
+        throw new JsonException($"Unsupported type '{itemType}'");
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

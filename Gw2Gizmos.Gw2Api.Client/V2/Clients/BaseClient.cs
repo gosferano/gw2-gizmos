@@ -16,6 +16,7 @@ public abstract class BaseClient
                 new ItemJsonConverter(),
                 new GuildUpgradeJsonConverter(),
                 new ProfessionTrainingTrackStepJsonConverter(),
+                new SkillFactJsonConverter(),
             },
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
