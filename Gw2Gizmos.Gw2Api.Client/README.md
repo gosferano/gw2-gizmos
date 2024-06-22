@@ -156,7 +156,7 @@
 - [x] /v2/wizardsvault/listings
 - [x] /v2/wizardsvault/objectives
 - [x] /v2/worldbosses
-- [ ] /v2/worlds
+- [x] /v2/worlds
 - [ ] /v2/wvw/abilities
 - [ ] /v2/wvw/matches
 - [ ] /v2/wvw/matches/overview
