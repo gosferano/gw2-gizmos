@@ -12,7 +12,7 @@ public class Skill
     public ProfessionName Profession { get; set; }
     public SkillSlot? Slot { get; set; }
     public SkillFact[] Facts { get; set; } = Array.Empty<SkillFact>();
-    public SkillTraitedFact[] TraitedFacts { get; set; } = Array.Empty<SkillTraitedFact>();
+    public SkillFact[] TraitedFacts { get; set; } = Array.Empty<SkillFact>();
     public SkillCategory[] Categories { get; set; } = Array.Empty<SkillCategory>(); // Test it
     public string? Attunement { get; set; }
     public int? Cost { get; set; }
