@@ -44,6 +44,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -97,6 +98,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         Stories = new StoriesClient(httpClient);
         Titles = new TitlesClient(httpClient);
         Traits = new TraitsClient(httpClient);
+        WizardsVault = new WizardsVaultClient(httpClient);
     }
 
     public IAccountClient Account { get; }
@@ -145,4 +147,5 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public IStoriesClient Stories { get; }
     public ITitlesClient Titles { get; }
     public ITraitsClient Traits { get; }
+    public IWizardsVaultClient WizardsVault { get; }
 }

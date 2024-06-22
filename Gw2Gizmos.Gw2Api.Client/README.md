@@ -151,9 +151,10 @@
 - [x] /v2/titles
 - [ ] /v2/tokeninfo
 - [x] /v2/traits
-- [ ] /v2/vendors
-- [ ] /v2/wizardsvault/listings
-- [ ] /v2/wizardsvault/objectives
+- [ ] /v2/vendors - API not active
+- [x] /v2/wizardsvault
+- [x] /v2/wizardsvault/listings
+- [x] /v2/wizardsvault/objectives
 - [ ] /v2/worldbosses
 - [ ] /v2/worlds
 - [ ] /v2/wvw/abilities

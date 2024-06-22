@@ -45,6 +45,7 @@ using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using Gw2Gizmos.Gw2Api.Contract.Stories;
 using Gw2Gizmos.Gw2Api.Contract.Titles;
 using Gw2Gizmos.Gw2Api.Contract.Traits;
+using Gw2Gizmos.Gw2Api.Contract.WizardsVault;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -253,4 +254,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(TraitFactRecharge))]
 [JsonSerializable(typeof(TraitFactTime))]
 [JsonSerializable(typeof(TraitFactUnblockable))]
+// Wizards Vault
+[JsonSerializable(typeof(WizardsVaultSeason))]
+[JsonSerializable(typeof(WizardsVaultListing[]))]
+[JsonSerializable(typeof(WizardsVaultObjective[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;
