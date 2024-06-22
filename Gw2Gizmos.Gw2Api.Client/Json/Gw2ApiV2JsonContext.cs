@@ -43,6 +43,7 @@ using Gw2Gizmos.Gw2Api.Contract.Skills;
 using Gw2Gizmos.Gw2Api.Contract.Skins;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using Gw2Gizmos.Gw2Api.Contract.Stories;
+using Gw2Gizmos.Gw2Api.Contract.Titles;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -231,4 +232,6 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 // Stories
 [JsonSerializable(typeof(Story[]))]
 [JsonSerializable(typeof(StorySeason[]))]
+// Titles
+[JsonSerializable(typeof(Title[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

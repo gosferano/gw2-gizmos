@@ -42,6 +42,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skills;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -93,6 +94,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         Skins = new SkinsClient(httpClient);
         Specializations = new SpecializationsClient(httpClient);
         Stories = new StoriesClient(httpClient);
+        Titles = new TitlesClient(httpClient);
     }
 
     public IAccountClient Account { get; }
@@ -139,4 +141,5 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public ISkinsClient Skins { get; }
     public ISpecializationsClient Specializations { get; }
     public IStoriesClient Stories { get; }
+    public ITitlesClient Titles { get; }
 }

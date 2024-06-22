@@ -148,7 +148,7 @@
 - [x] /v2/specializations
 - [x] /v2/stories
 - [x] /v2/stories/seasons
-- [ ] /v2/titles
+- [x] /v2/titles
 - [ ] /v2/tokeninfo
 - [ ] /v2/traits
 - [ ] /v2/vendors
