@@ -146,7 +146,7 @@
 - [x] /v2/skills
 - [x] /v2/skins
 - [x] /v2/specializations
-- [ ] /v2/stories
+- [x] /v2/stories
 - [ ] /v2/stories/seasons
 - [ ] /v2/titles
 - [ ] /v2/tokeninfo

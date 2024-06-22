@@ -42,6 +42,7 @@ using Gw2Gizmos.Gw2Api.Contract.Skiffs;
 using Gw2Gizmos.Gw2Api.Contract.Skills;
 using Gw2Gizmos.Gw2Api.Contract.Skins;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
+using Gw2Gizmos.Gw2Api.Contract.Stories;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -227,4 +228,6 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(SkinWeapon))]
 // Specializations
 [JsonSerializable(typeof(Specialization[]))]
+// Stories
+[JsonSerializable(typeof(Story[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

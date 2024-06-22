@@ -41,6 +41,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skiffs;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skills;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -89,4 +90,5 @@ public interface IGw2ApiV2Client
     public ISkillsClient Skills { get; }
     public ISkinsClient Skins { get; }
     public ISpecializationsClient Specializations { get; }
+    public IStoriesClient Stories { get; }
 }
