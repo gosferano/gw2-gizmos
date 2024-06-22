@@ -7,14 +7,6 @@ public readonly struct WeaponDamageType : IEquatable<WeaponDamageType>
     public static readonly WeaponDamageType Lightning = new("Lightning");
     public static readonly WeaponDamageType Ice = new("Ice");
     public static readonly WeaponDamageType Choking = new("Choking");
-    public static readonly WeaponDamageType Ethereal = new("Ethereal");
-    public static readonly WeaponDamageType Dark = new("Dark");
-    public static readonly WeaponDamageType Divine = new("Divine");
-    public static readonly WeaponDamageType Poison = new("Poison");
-    public static readonly WeaponDamageType Bleeding = new("Bleeding");
-    public static readonly WeaponDamageType Condition = new("Condition");
-    public static readonly WeaponDamageType Magic = new("Magic");
-    public static readonly WeaponDamageType Unknown = new("Unknown");
 
     public string Value { get; }
 
