@@ -45,6 +45,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.WorldBosses;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -97,4 +98,5 @@ public interface IGw2ApiV2Client
     public ITitlesClient Titles { get; }
     public ITraitsClient Traits { get; }
     public IWizardsVaultClient WizardsVault { get; }
+    public IWorldBossesClient WorldBosses { get; }
 }
