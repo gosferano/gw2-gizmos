@@ -17,7 +17,8 @@ public abstract class BaseClient
                 new GuildUpgradeJsonConverter(),
                 new ProfessionTrainingTrackStepJsonConverter(),
                 new SkillFactJsonConverter(),
-                new SkinJsonConverter()
+                new SkinJsonConverter(),
+                new TraitFactJsonConverter(),
             },
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

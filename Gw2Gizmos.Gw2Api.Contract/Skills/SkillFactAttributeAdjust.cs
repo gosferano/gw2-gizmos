@@ -2,6 +2,6 @@
 
 public class SkillFactAttributeAdjust : SkillFact
 {
-    public string Target { get; set; } // test it whether using ItemAttribute is sufficient
+    public AttributeName Target { get; set; }
     public int Value { get; set; }
 }

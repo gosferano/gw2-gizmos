@@ -44,6 +44,7 @@ using Gw2Gizmos.Gw2Api.Contract.Skins;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using Gw2Gizmos.Gw2Api.Contract.Stories;
 using Gw2Gizmos.Gw2Api.Contract.Titles;
+using Gw2Gizmos.Gw2Api.Contract.Traits;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -234,4 +235,22 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(StorySeason[]))]
 // Titles
 [JsonSerializable(typeof(Title[]))]
+// Traits
+[JsonSerializable(typeof(Trait[]))]
+[JsonSerializable(typeof(TraitFactAttributeAdjust))]
+[JsonSerializable(typeof(TraitFactBuff))]
+[JsonSerializable(typeof(TraitFactBuffConversion))]
+[JsonSerializable(typeof(TraitFactComboField))]
+[JsonSerializable(typeof(TraitFactComboFinisher))]
+[JsonSerializable(typeof(TraitFactDamage))]
+[JsonSerializable(typeof(TraitFactDistance))]
+[JsonSerializable(typeof(TraitFactNoData))]
+[JsonSerializable(typeof(TraitFactNumber))]
+[JsonSerializable(typeof(TraitFactPercent))]
+[JsonSerializable(typeof(TraitFactPrefixedBuff))]
+[JsonSerializable(typeof(TraitFactRadius))]
+[JsonSerializable(typeof(TraitFactRange))]
+[JsonSerializable(typeof(TraitFactRecharge))]
+[JsonSerializable(typeof(TraitFactTime))]
+[JsonSerializable(typeof(TraitFactUnblockable))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

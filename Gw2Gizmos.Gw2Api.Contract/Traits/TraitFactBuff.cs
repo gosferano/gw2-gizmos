@@ -1,6 +1,6 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Skills;
+﻿namespace Gw2Gizmos.Gw2Api.Contract.Traits;
 
-public class SkillFactBuff : SkillFact
+public class TraitFactBuff : TraitFact
 {
     public int Duration { get; set; }
     public string Status { get; set; }

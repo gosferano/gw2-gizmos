@@ -13,7 +13,7 @@ public class Skill
     public SkillSlot? Slot { get; set; }
     public SkillFact[] Facts { get; set; } = Array.Empty<SkillFact>();
     public SkillFact[] TraitedFacts { get; set; } = Array.Empty<SkillFact>();
-    public SkillCategory[] Categories { get; set; } = Array.Empty<SkillCategory>(); // Test it
+    public SkillCategory[] Categories { get; set; } = Array.Empty<SkillCategory>();
     public string? Attunement { get; set; }
     public int? Cost { get; set; }
     public WeaponType? DualWield { get; set; }
@@ -24,5 +24,5 @@ public class Skill
     public int[] TransformSkills { get; set; } = Array.Empty<int>();
     public int[] BundleSkills { get; set; } = Array.Empty<int>();
     public int? ToolbeltSkill { get; set; }
-    public SkillFlag[] Flags { get; set; } = Array.Empty<SkillFlag>(); // test it
+    public SkillFlag[] Flags { get; set; } = Array.Empty<SkillFlag>();
 }

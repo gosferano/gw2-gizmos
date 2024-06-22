@@ -11,5 +11,5 @@ public class Story
     public int Order { get; set; }
     public StoryChapter[] Chapters { get; set; } = Array.Empty<StoryChapter>();
     public RaceName[] Races { get; set; } = Array.Empty<RaceName>();
-    public StoryFlag[] Flags { get; set; } = Array.Empty<StoryFlag>(); // test it
+    public StoryFlag[] Flags { get; set; } = Array.Empty<StoryFlag>();
 }

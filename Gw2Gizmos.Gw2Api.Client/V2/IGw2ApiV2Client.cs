@@ -43,6 +43,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -93,4 +94,5 @@ public interface IGw2ApiV2Client
     public ISpecializationsClient Specializations { get; }
     public IStoriesClient Stories { get; }
     public ITitlesClient Titles { get; }
+    public ITraitsClient Traits { get; }
 }

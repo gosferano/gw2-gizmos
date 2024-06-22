@@ -150,7 +150,7 @@
 - [x] /v2/stories/seasons
 - [x] /v2/titles
 - [ ] /v2/tokeninfo
-- [ ] /v2/traits
+- [x] /v2/traits
 - [ ] /v2/vendors
 - [ ] /v2/wizardsvault/listings
 - [ ] /v2/wizardsvault/objectives
