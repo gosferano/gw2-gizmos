@@ -147,7 +147,7 @@
 - [x] /v2/skins
 - [x] /v2/specializations
 - [x] /v2/stories
-- [ ] /v2/stories/seasons
+- [x] /v2/stories/seasons
 - [ ] /v2/titles
 - [ ] /v2/tokeninfo
 - [ ] /v2/traits

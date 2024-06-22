@@ -5,4 +5,7 @@ namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 public interface IStoriesClient
     : IAllExpandableClient<Story>,
         IBulkExpandableClient<Story, int>,
-        IPaginatedClient<Story>;
+        IPaginatedClient<Story>
+{
+    public IStoriesSeasonsClient Seasons { get; }
+}

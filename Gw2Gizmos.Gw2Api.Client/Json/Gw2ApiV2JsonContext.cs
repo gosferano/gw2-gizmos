@@ -230,4 +230,5 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(Specialization[]))]
 // Stories
 [JsonSerializable(typeof(Story[]))]
+[JsonSerializable(typeof(StorySeason[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;
