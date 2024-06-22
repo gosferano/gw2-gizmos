@@ -2,7 +2,7 @@
 
 public class TraitFactBuffConversion : TraitFact
 {
-    public string Source { get; set; }
-    public string Target { get; set; }
+    public AttributeName Source { get; set; }
+    public AttributeName Target { get; set; }
     public int Percent { get; set; }
 }
