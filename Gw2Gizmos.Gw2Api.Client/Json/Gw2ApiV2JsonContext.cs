@@ -48,6 +48,7 @@ using Gw2Gizmos.Gw2Api.Contract.Traits;
 using Gw2Gizmos.Gw2Api.Contract.WizardsVault;
 using Gw2Gizmos.Gw2Api.Contract.WorldBosses;
 using Gw2Gizmos.Gw2Api.Contract.Worlds;
+using Gw2Gizmos.Gw2Api.Contract.Wvw;
 using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
@@ -264,4 +265,13 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(WorldBoss[]))]
 // Worlds
 [JsonSerializable(typeof(World[]))]
+// Wvw
+[JsonSerializable(typeof(WvwAbility[]))]
+[JsonSerializable(typeof(WvwMatch[]))]
+[JsonSerializable(typeof(WvwMatchOverview[]))]
+[JsonSerializable(typeof(WvwMatchScores[]))]
+[JsonSerializable(typeof(WvwMatchStats[]))]
+[JsonSerializable(typeof(WvwObjective[]))]
+[JsonSerializable(typeof(WvwRank[]))]
+[JsonSerializable(typeof(WvwUpgrade[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

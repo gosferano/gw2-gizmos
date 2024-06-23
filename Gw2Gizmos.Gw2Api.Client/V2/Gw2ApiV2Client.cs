@@ -47,6 +47,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.WorldBosses;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Worlds;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
@@ -103,6 +104,7 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
         WizardsVault = new WizardsVaultClient(httpClient);
         WorldBosses = new WorldBossesClient(httpClient);
         Worlds = new WorldsClient(httpClient);
+        Wvw = new WvwClient(httpClient);
     }
 
     public IAccountClient Account { get; }
@@ -154,4 +156,5 @@ public class Gw2ApiV2Client : IGw2ApiV2Client
     public IWizardsVaultClient WizardsVault { get; }
     public IWorldBossesClient WorldBosses { get; }
     public IWorldsClient Worlds { get; }
+    public IWvwClient Wvw { get; }
 }
