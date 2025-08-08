@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{9137525A-4815-4796-9A8B-DFE309F3F6FD}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.csharpierignore = .csharpierignore
 	EndProjectSection
 EndProject
 Global
