@@ -6,6 +6,8 @@ public readonly struct AccountAccess : IEquatable<AccountAccess>
     public static readonly AccountAccess HeartOfThorns = new AccountAccess("HeartOfThorns");
     public static readonly AccountAccess PathOfFire = new AccountAccess("PathOfFire");
     public static readonly AccountAccess EndOfDragons = new AccountAccess("EndOfDragons");
+    public static readonly AccountAccess SecretsOfTheObscure = new AccountAccess("SecretsOfTheObscure");
+    public static readonly AccountAccess JanthirWilds = new AccountAccess("JanthirWilds");
 
     public string Value { get; }
 
