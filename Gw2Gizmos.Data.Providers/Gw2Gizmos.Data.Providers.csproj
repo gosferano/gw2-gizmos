@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>12</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Gw2Gizmos.Data.Model\Gw2Gizmos.Data.Model.csproj" />
+      <ProjectReference Include="..\Gw2Gizmos.Data.Repositories\Gw2Gizmos.Data.Repositories.csproj" />
+      <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Client\Gw2Gizmos.Gw2Api.Client.csproj" />
+    </ItemGroup>
+
+</Project>
