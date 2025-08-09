@@ -4,10 +4,10 @@ namespace Gw2Gizmos.Gw2Api.Client;
 
 public class Gw2ApiClient
 {
-    private const string BaseUrl = "https://api.guildwars2.com";
-    private const string AuthorizationHeaderName = "Authorization";
-    private const string AcceptLanguageHeaderName = "Accept-Language";
-    private const string UserAgentHeaderName = "User-Agent";
+    public const string BaseUrl = "https://api.guildwars2.com";
+    public const string AuthorizationHeaderName = "Authorization";
+    public const string AcceptLanguageHeaderName = "Accept-Language";
+    public const string UserAgentHeaderName = "User-Agent";
 
     public IGw2ApiV2Client V2 { get; }
 
