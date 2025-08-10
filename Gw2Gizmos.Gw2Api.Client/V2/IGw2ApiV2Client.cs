@@ -43,6 +43,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.TokenInfo;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.WorldBosses;
@@ -98,6 +99,7 @@ public interface IGw2ApiV2Client
     public ISpecializationsClient Specializations { get; }
     public IStoriesClient Stories { get; }
     public ITitlesClient Titles { get; }
+    public ITokenInfoClient TokenInfo { get; }
     public ITraitsClient Traits { get; }
     public IWizardsVaultClient WizardsVault { get; }
     public IWorldBossesClient WorldBosses { get; }

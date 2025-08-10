@@ -44,6 +44,7 @@ using Gw2Gizmos.Gw2Api.Contract.Skins;
 using Gw2Gizmos.Gw2Api.Contract.Specializations;
 using Gw2Gizmos.Gw2Api.Contract.Stories;
 using Gw2Gizmos.Gw2Api.Contract.Titles;
+using Gw2Gizmos.Gw2Api.Contract.TokenInfo;
 using Gw2Gizmos.Gw2Api.Contract.Traits;
 using Gw2Gizmos.Gw2Api.Contract.WizardsVault;
 using Gw2Gizmos.Gw2Api.Contract.WorldBosses;
@@ -239,6 +240,8 @@ namespace Gw2Gizmos.Gw2Api.Client.Json;
 [JsonSerializable(typeof(StorySeason[]))]
 // Titles
 [JsonSerializable(typeof(Title[]))]
+// Token Info
+[JsonSerializable(typeof(TokenInfo))]
 // Traits
 [JsonSerializable(typeof(Trait[]))]
 [JsonSerializable(typeof(TraitFactAttributeAdjust))]

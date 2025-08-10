@@ -149,7 +149,7 @@
 - [x] /v2/stories
 - [x] /v2/stories/seasons
 - [x] /v2/titles
-- [ ] /v2/tokeninfo
+- [x] /v2/tokeninfo
 - [x] /v2/traits
 - [ ] /v2/vendors - API not active
 - [x] /v2/wizardsvault
