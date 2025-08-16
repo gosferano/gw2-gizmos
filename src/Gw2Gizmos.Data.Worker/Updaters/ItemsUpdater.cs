@@ -35,14 +35,15 @@ public class ItemsUpdater
                 if (stoppingToken.IsCancellationRequested)
                     break;
 
+                int[] pageIds = allItemIds.Skip(i).Take(PageSize).ToArray();
+
                 _logger.LogInformation(
                     "Processing items {Start} to {End} of {Total}",
                     i + 1,
-                    Math.Min(i + PageSize, allItemIds.Length),
+                    i + pageIds.Length,
                     allItemIds.Length
                 );
 
-                int[] pageIds = allItemIds.Skip(i).Take(PageSize).ToArray();
                 Gw2Api.Contract.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(pageIds, stoppingToken);
 
                 foreach (Gw2Api.Contract.Items.Item apiItem in apiItems)
@@ -82,7 +83,7 @@ public class ItemsUpdater
                         }
                         else if (apiItem is Gw2Api.Contract.Items.Gizmo apiGizmo)
                         {
-                            Gizmo gizmoEntity = await MapToGizmoEntity(apiGizmo);
+                            Gizmo gizmoEntity = MapToGizmoEntity(apiGizmo);
                             await AddOrUpdateGizmo(gizmoEntity, stoppingToken);
                         }
                         else if (apiItem is Gw2Api.Contract.Items.MiniPet apiMiniPet)
@@ -102,14 +103,12 @@ public class ItemsUpdater
                         }
                         else if (apiItem is Gw2Api.Contract.Items.UpgradeComponent apiUpgradeComponent)
                         {
-                            UpgradeComponent upgradeComponentEntity = await MapToUpgradeComponentEntity(
-                                apiUpgradeComponent
-                            );
+                            UpgradeComponent upgradeComponentEntity = MapToUpgradeComponentEntity(apiUpgradeComponent);
                             await AddOrUpdateUpgradeComponent(upgradeComponentEntity, stoppingToken);
                         }
                         else if (apiItem is Gw2Api.Contract.Items.Weapon apiWeapon)
                         {
-                            Weapon weaponEntity = await MapToWeaponEntity(apiWeapon);
+                            Weapon weaponEntity = MapToWeaponEntity(apiWeapon);
                             await AddOrUpdateWeapon(weaponEntity, stoppingToken);
                         }
                         else
@@ -300,7 +299,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private Bag MapToBagEntity(Gw2Api.Contract.Items.Bag apiItem)
+    private static Bag MapToBagEntity(Gw2Api.Contract.Items.Bag apiItem)
     {
         return new Bag
         {
@@ -329,7 +328,7 @@ public class ItemsUpdater
         };
     }
 
-    private Consumable MapToConsumableEntity(Gw2Api.Contract.Items.Consumable apiItem)
+    private static Consumable MapToConsumableEntity(Gw2Api.Contract.Items.Consumable apiItem)
     {
         return new Consumable
         {
@@ -378,7 +377,7 @@ public class ItemsUpdater
         };
     }
 
-    private Container MapToContainerEntity(Gw2Api.Contract.Items.Container apiItem)
+    private static Container MapToContainerEntity(Gw2Api.Contract.Items.Container apiItem)
     {
         return new Container
         {
@@ -402,7 +401,7 @@ public class ItemsUpdater
         };
     }
 
-    private Gathering MapToGatheringEntity(Gw2Api.Contract.Items.Gathering apiItem)
+    private static Gathering MapToGatheringEntity(Gw2Api.Contract.Items.Gathering apiItem)
     {
         return new Gathering
         {
@@ -426,7 +425,7 @@ public class ItemsUpdater
         };
     }
 
-    private static async Task<Gizmo> MapToGizmoEntity(Gw2Api.Contract.Items.Gizmo apiItem)
+    private static Gizmo MapToGizmoEntity(Gw2Api.Contract.Items.Gizmo apiItem)
     {
         var entity = new Gizmo
         {
@@ -572,9 +571,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static async Task<UpgradeComponent> MapToUpgradeComponentEntity(
-        Gw2Api.Contract.Items.UpgradeComponent apiItem
-    )
+    private static UpgradeComponent MapToUpgradeComponentEntity(Gw2Api.Contract.Items.UpgradeComponent apiItem)
     {
         var entity = new UpgradeComponent
         {
@@ -626,7 +623,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static async Task<Weapon> MapToWeaponEntity(Gw2Api.Contract.Items.Weapon apiItem)
+    private static Weapon MapToWeaponEntity(Gw2Api.Contract.Items.Weapon apiItem)
     {
         var entity = new Weapon
         {
