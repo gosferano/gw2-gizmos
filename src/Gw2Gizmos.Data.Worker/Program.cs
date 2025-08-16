@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading.Channels;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Http;
@@ -47,6 +48,14 @@ builder.Services.AddHostedService<Worker>();
 // Updaters
 builder.Services.AddScoped<ItemsUpdater>();
 builder.Services.AddScoped<CommerceUpdater>();
+
+// Item added and missing updaters
+builder.Services.AddHostedService<ItemsAddedUpdater>();
+builder.Services.AddHostedService<ItemsMissingUpdater>();
+
+// Queues
+builder.Services.AddSingleton(Channel.CreateUnbounded<ItemAddedDto>());
+builder.Services.AddSingleton(Channel.CreateUnbounded<ItemMissingDto>());
 
 // Gw2ApiClient
 builder

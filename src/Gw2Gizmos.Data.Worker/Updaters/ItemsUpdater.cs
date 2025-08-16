@@ -1,4 +1,5 @@
-﻿using Gw2Gizmos.Data.EntityFramework;
+﻿using System.Threading.Channels;
+using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
@@ -8,14 +9,22 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 public class ItemsUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;
-    private readonly ILogger<Worker> _logger;
+    private readonly ILogger<ItemsUpdater> _logger;
+    private readonly ChannelWriter<ItemAddedDto> _itemsAddedWriter;
     private readonly Gw2ApiClient _apiClient;
     private const int PageSize = 50; // adjust as needed
 
-    public ItemsUpdater(Gw2GizmosDbContext dbContext, IGw2ApiClientFactory apiClientFactory, ILogger<Worker> logger)
+    public ItemsUpdater(
+        Gw2GizmosDbContext dbContext,
+        IGw2ApiClientFactory apiClientFactory,
+        ILogger<ItemsUpdater> logger,
+        Channel<ItemAddedDto> itemsAdded,
+        Channel<ItemMissingDto> itemsMissing
+    )
     {
         _dbContext = dbContext;
         _logger = logger;
+        _itemsAddedWriter = itemsAdded.Writer;
         _apiClient = apiClientFactory.Create(Locale.English);
     }
 
@@ -44,86 +53,7 @@ public class ItemsUpdater
                     allItemIds.Length
                 );
 
-                Gw2Api.Contract.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(pageIds, stoppingToken);
-
-                foreach (Gw2Api.Contract.Items.Item apiItem in apiItems)
-                {
-                    try
-                    {
-                        // Determine type and map
-                        if (apiItem is Gw2Api.Contract.Items.Armor apiArmor)
-                        {
-                            Armor armorEntity = MapToArmorEntity(apiArmor);
-                            await AddOrUpdateArmor(armorEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.BackItem apiBackItem)
-                        {
-                            BackItem backItemEntity = MapToBackItemEntity(apiBackItem);
-                            await AddOrUpdateBackItem(backItemEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Bag apiBag)
-                        {
-                            Bag bagEntity = MapToBagEntity(apiBag);
-                            await AddOrUpdateBag(bagEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Consumable apiConsumable)
-                        {
-                            Consumable consumableEntity = MapToConsumableEntity(apiConsumable);
-                            await AddOrUpdateConsumable(consumableEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Container apiContainer)
-                        {
-                            Container containerEntity = MapToContainerEntity(apiContainer);
-                            await AddOrUpdateContainer(containerEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Gathering apiGathering)
-                        {
-                            Gathering gatheringEntity = MapToGatheringEntity(apiGathering);
-                            await AddOrUpdateGathering(gatheringEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Gizmo apiGizmo)
-                        {
-                            Gizmo gizmoEntity = MapToGizmoEntity(apiGizmo);
-                            await AddOrUpdateGizmo(gizmoEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.MiniPet apiMiniPet)
-                        {
-                            MiniPet miniPetEntity = MapToMiniPetEntity(apiMiniPet);
-                            await AddOrUpdateMiniPet(miniPetEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Tool apiTool)
-                        {
-                            Tool toolEntity = MapToToolEntity(apiTool);
-                            await AddOrUpdateTool(toolEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Trinket apiTrinket)
-                        {
-                            Trinket trinketEntity = MapToTrinketEntity(apiTrinket);
-                            await AddOrUpdateTrinket(trinketEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.UpgradeComponent apiUpgradeComponent)
-                        {
-                            UpgradeComponent upgradeComponentEntity = MapToUpgradeComponentEntity(apiUpgradeComponent);
-                            await AddOrUpdateUpgradeComponent(upgradeComponentEntity, stoppingToken);
-                        }
-                        else if (apiItem is Gw2Api.Contract.Items.Weapon apiWeapon)
-                        {
-                            Weapon weaponEntity = MapToWeaponEntity(apiWeapon);
-                            await AddOrUpdateWeapon(weaponEntity, stoppingToken);
-                        }
-                        else
-                        {
-                            Item itemEntity = MapToItemEntity(apiItem);
-                            await AddOrUpdateItem(itemEntity, stoppingToken);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error processing item ID {ItemId}", apiItem.Id);
-                    }
-                }
-
-                await _dbContext.SaveChangesAsync(stoppingToken);
+                await UpdateItemsWithIds(pageIds, stoppingToken);
 
                 _logger.LogInformation(
                     "Processed items {Start} to {End}. Total processed: {Total}",
@@ -141,9 +71,97 @@ public class ItemsUpdater
         _logger.LogInformation("Items update completed.");
     }
 
+    public async Task UpdateItemsWithIds(int[] ids, CancellationToken stoppingToken)
+    {
+        Gw2Api.Contract.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
+
+        foreach (Gw2Api.Contract.Items.Item apiItem in apiItems)
+        {
+            try
+            {
+                // Determine type and map
+                if (apiItem is Gw2Api.Contract.Items.Armor apiArmor)
+                {
+                    Armor armorEntity = MapToArmorEntity(apiArmor);
+                    await AddOrUpdateArmor(armorEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.BackItem apiBackItem)
+                {
+                    BackItem backItemEntity = MapToBackItemEntity(apiBackItem);
+                    await AddOrUpdateBackItem(backItemEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Bag apiBag)
+                {
+                    Bag bagEntity = MapToBagEntity(apiBag);
+                    await AddOrUpdateBag(bagEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Consumable apiConsumable)
+                {
+                    Consumable consumableEntity = MapToConsumableEntity(apiConsumable);
+                    await AddOrUpdateConsumable(consumableEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Container apiContainer)
+                {
+                    Container containerEntity = MapToContainerEntity(apiContainer);
+                    await AddOrUpdateContainer(containerEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Gathering apiGathering)
+                {
+                    Gathering gatheringEntity = MapToGatheringEntity(apiGathering);
+                    await AddOrUpdateGathering(gatheringEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Gizmo apiGizmo)
+                {
+                    Gizmo gizmoEntity = MapToGizmoEntity(apiGizmo);
+                    await AddOrUpdateGizmo(gizmoEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.MiniPet apiMiniPet)
+                {
+                    MiniPet miniPetEntity = MapToMiniPetEntity(apiMiniPet);
+                    await AddOrUpdateMiniPet(miniPetEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Tool apiTool)
+                {
+                    Tool toolEntity = MapToToolEntity(apiTool);
+                    await AddOrUpdateTool(toolEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Trinket apiTrinket)
+                {
+                    Trinket trinketEntity = MapToTrinketEntity(apiTrinket);
+                    await AddOrUpdateTrinket(trinketEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.UpgradeComponent apiUpgradeComponent)
+                {
+                    UpgradeComponent upgradeComponentEntity = MapToUpgradeComponentEntity(apiUpgradeComponent);
+                    await AddOrUpdateUpgradeComponent(upgradeComponentEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.Weapon apiWeapon)
+                {
+                    Weapon weaponEntity = MapToWeaponEntity(apiWeapon);
+                    await AddOrUpdateWeapon(weaponEntity, stoppingToken);
+                }
+                else if (apiItem is Gw2Api.Contract.Items.ItemSimple apiItemSimple)
+                {
+                    Item itemEntity = MapToItemEntity(apiItemSimple);
+                    await AddOrUpdateItem(itemEntity, stoppingToken);
+                }
+                else
+                {
+                    _logger.LogWarning("Unknown item type for ID {ItemId}: {Type}", apiItem.Id, apiItem.GetType());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing item ID {ItemId}", apiItem.Id);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
+    }
+
     #region Mapping Methods
 
-    private static Item MapToItemEntity(Gw2Api.Contract.Items.Item apiItem)
+    private static Item MapToItemEntity(Gw2Api.Contract.Items.ItemSimple apiItem)
     {
         return new Item
         {
@@ -719,6 +737,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Armors.AddAsync(armor, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = armor.Id, }, ct);
         }
     }
 
@@ -746,6 +765,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.BackItems.AddAsync(backItem, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = backItem.Id, }, ct);
         }
     }
 
@@ -763,6 +783,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Bags.AddAsync(bag, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = bag.Id, }, ct);
         }
     }
 
@@ -782,6 +803,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Consumables.AddAsync(consumable, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = consumable.Id, }, ct);
         }
     }
 
@@ -799,6 +821,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Containers.AddAsync(container, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = container.Id, }, ct);
         }
     }
 
@@ -816,6 +839,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Gatherings.AddAsync(gathering, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = gathering.Id, }, ct);
         }
     }
 
@@ -829,6 +853,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Gizmos.AddAsync(gizmo, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = gizmo.Id, }, ct);
         }
     }
 
@@ -845,6 +870,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.MiniPets.AddAsync(miniPet, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = miniPet.Id, }, ct);
         }
     }
 
@@ -859,6 +885,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Tools.AddAsync(tool, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = tool.Id, }, ct);
         }
     }
 
@@ -886,6 +913,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Trinkets.AddAsync(trinket, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = trinket.Id, }, ct);
         }
     }
 
@@ -905,6 +933,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.UpgradeComponents.AddAsync(upgradeComponent, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = upgradeComponent.Id, }, ct);
         }
     }
 
@@ -930,6 +959,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Weapons.AddAsync(weapon, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = weapon.Id, }, ct);
         }
     }
 
@@ -943,6 +973,7 @@ public class ItemsUpdater
         else
         {
             await _dbContext.Items.AddAsync(item, ct);
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = item.Id, }, ct);
         }
     }
 

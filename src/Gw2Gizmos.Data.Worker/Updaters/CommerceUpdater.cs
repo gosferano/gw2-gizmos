@@ -1,4 +1,5 @@
-﻿using Gw2Gizmos.Data.EntityFramework;
+﻿using System.Threading.Channels;
+using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Gw2Api.Client;
 using Gw2Gizmos.Gw2Api.Contract.Commerce;
@@ -10,14 +11,21 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 public class CommerceUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;
-    private readonly ILogger<Worker> _logger;
+    private readonly ILogger<CommerceUpdater> _logger;
     private readonly Gw2ApiClient _apiClient;
+    private readonly ChannelWriter<ItemMissingDto> _itemsMissingWriter;
     private const int PageSize = 200;
 
-    public CommerceUpdater(Gw2GizmosDbContext dbContext, IGw2ApiClientFactory apiClientFactory, ILogger<Worker> logger)
+    public CommerceUpdater(
+        Gw2GizmosDbContext dbContext,
+        IGw2ApiClientFactory apiClientFactory,
+        ILogger<CommerceUpdater> logger,
+        Channel<ItemMissingDto> itemsMissing
+    )
     {
         _dbContext = dbContext;
         _logger = logger;
+        _itemsMissingWriter = itemsMissing.Writer;
         _apiClient = apiClientFactory.Create(Locale.English);
     }
 
@@ -30,44 +38,32 @@ public class CommerceUpdater
         int[] existingItemIds = await _dbContext.Items.Select(i => i.Id).ToArrayAsync(stoppingToken);
         int[] missingItemIds = itemIds.Except(existingItemIds).ToArray();
 
+        foreach (int missingItemId in missingItemIds)
+        {
+            await _itemsMissingWriter.WriteAsync(new ItemMissingDto { ItemId = missingItemId }, stoppingToken);
+        }
+
+        int[] remainingItemIds = itemIds.Intersect(existingItemIds).ToArray();
+
         _logger.LogInformation("Total items with commerce data: {Count}", itemIds.Length);
 
-        for (var i = 0; i < itemIds.Length; i += PageSize)
+        for (var i = 0; i < remainingItemIds.Length; i += PageSize)
         {
             try
             {
                 if (stoppingToken.IsCancellationRequested)
                     break;
 
-                int[] pageIds = itemIds.Skip(i).Take(PageSize).ToArray();
+                int[] pageIds = remainingItemIds.Skip(i).Take(PageSize).ToArray();
 
                 _logger.LogInformation(
                     "Processing items {Start} to {End} of {Total}",
                     i + 1,
                     i + pageIds.Length,
-                    itemIds.Length
+                    remainingItemIds.Length
                 );
 
-                // Fetch commerce data for the batch of items
-                CommerceListings[] apiListings = await _apiClient.V2.Commerce.Listings.GetByIds(pageIds, stoppingToken);
-
-                foreach (CommerceListings apiListing in apiListings)
-                {
-                    try
-                    {
-                        // Map API data to entity
-                        CommerceItemListing commerceItemListing = MapToCommerceItemListingEntity(apiListing);
-
-                        // Add or update in the database
-                        await AddOrUpdateCommerceItemListing(commerceItemListing, stoppingToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error processing commerce data for item ID {ItemId}", apiListing.Id);
-                    }
-                }
-
-                await _dbContext.SaveChangesAsync(stoppingToken);
+                await UpdateCommerceListingsForItems(pageIds, stoppingToken);
 
                 _logger.LogInformation(
                     "Processed items {Start} to {End}. Total processed: {Total}",
@@ -83,6 +79,30 @@ public class CommerceUpdater
         }
 
         _logger.LogInformation("Commerce listings update completed.");
+    }
+
+    public async Task UpdateCommerceListingsForItems(IEnumerable<int> itemIds, CancellationToken stoppingToken)
+    {
+        // Fetch commerce data for the batch of items
+        CommerceListings[] apiListings = await _apiClient.V2.Commerce.Listings.GetByIds(itemIds, stoppingToken);
+
+        foreach (CommerceListings apiListing in apiListings)
+        {
+            try
+            {
+                // Map API data to entity
+                CommerceItemListing commerceItemListing = MapToCommerceItemListingEntity(apiListing);
+
+                // Add or update in the database
+                await AddOrUpdateCommerceItemListing(commerceItemListing, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing commerce data for item ID {ItemId}", apiListing.Id);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
     }
 
     private static CommerceItemListing MapToCommerceItemListingEntity(CommerceListings apiListing)
