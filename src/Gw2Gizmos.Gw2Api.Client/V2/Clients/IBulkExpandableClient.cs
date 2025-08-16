@@ -2,7 +2,7 @@
 
 public interface IBulkExpandableClient<TResponse, TId>
 {
-    Task<TResponse> GetById(TId id, CancellationToken cancellationToken = default);
-    Task<TId[]> GetIds(CancellationToken cancellationToken = default);
-    Task<TResponse[]> GetByIds(IEnumerable<TId> ids, CancellationToken cancellationToken = default);
+    Task<Result<TResponse, Error>> GetById(TId id, CancellationToken cancellationToken = default);
+    Task<Result<TId[], Error>> GetIds(CancellationToken cancellationToken = default);
+    Task<Result<TResponse[], Error>> GetByIds(IEnumerable<TId> ids, CancellationToken cancellationToken = default);
 }

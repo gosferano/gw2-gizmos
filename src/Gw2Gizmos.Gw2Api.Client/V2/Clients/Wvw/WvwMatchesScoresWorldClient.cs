@@ -14,7 +14,7 @@ public class WvwMatchesScoresWorldClient : BaseClient, IWvwMatchesScoresWorldCli
 
     protected override string UriPath => $"/v2/wvw/matches/scores";
 
-    public Task<WvwMatchScores> GetBlob(CancellationToken cancellationToken = default)
+    public Task<Result<WvwMatchScores, Error>> GetBlob(CancellationToken cancellationToken = default)
     {
         return Get<WvwMatchScores>($"{UriPath}?world={_worldId}", SchemaVersion, cancellationToken);
     }

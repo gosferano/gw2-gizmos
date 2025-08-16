@@ -12,7 +12,7 @@ public class RecipesSearchInputClient : BaseClient, IRecipesSearchInputClient
 
     protected override string UriPath => "/v2/recipes/search";
 
-    public Task<int[]> GetBlob(CancellationToken cancellationToken = default)
+    public Task<Result<int[], Error>> GetBlob(CancellationToken cancellationToken = default)
     {
         return Get<int[]>($"{UriPath}?input={_inputItemId}", SchemaVersion, cancellationToken);
     }

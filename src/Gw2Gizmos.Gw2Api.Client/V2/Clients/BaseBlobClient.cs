@@ -5,7 +5,7 @@ public abstract class BaseBlobClient<TResponse> : BaseClient, IBlobClient<TRespo
     internal BaseBlobClient(HttpClient httpClient)
         : base(httpClient) { }
 
-    public Task<TResponse> GetBlob(CancellationToken cancellationToken = default)
+    public Task<Result<TResponse, Error>> GetBlob(CancellationToken cancellationToken = default)
     {
         return GetBlob<TResponse>(cancellationToken);
     }

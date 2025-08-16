@@ -12,7 +12,7 @@ public class GuildSearchNameClient : BaseClient, IGuildSearchNameClient
 
     protected override string UriPath => $"/v2/guild/search";
 
-    public Task<string[]> GetBlob(CancellationToken cancellationToken = default)
+    public Task<Result<string[], Error>> GetBlob(CancellationToken cancellationToken = default)
     {
         return Get<string[]>($"{UriPath}?name={_guildName}", SchemaVersion, cancellationToken);
     }

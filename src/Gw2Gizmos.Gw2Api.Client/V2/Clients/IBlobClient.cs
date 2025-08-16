@@ -2,5 +2,5 @@
 
 public interface IBlobClient<TResponse>
 {
-    Task<TResponse> GetBlob(CancellationToken cancellationToken = default);
+    Task<Result<TResponse, Error>> GetBlob(CancellationToken cancellationToken = default);
 }

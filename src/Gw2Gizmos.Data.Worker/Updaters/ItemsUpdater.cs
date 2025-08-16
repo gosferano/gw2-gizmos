@@ -43,7 +43,7 @@ public class ItemsUpdater
                 );
 
                 int[] pageIds = allItemIds.Skip(i).Take(PageSize).ToArray();
-                var apiItems = await _apiClient.V2.Items.GetByIds(pageIds, stoppingToken);
+                Gw2Api.Contract.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(pageIds, stoppingToken);
 
                 foreach (Gw2Api.Contract.Items.Item apiItem in apiItems)
                 {

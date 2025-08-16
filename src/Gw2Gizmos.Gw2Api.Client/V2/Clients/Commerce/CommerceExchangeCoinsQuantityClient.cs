@@ -14,7 +14,7 @@ public class CommerceExchangeCoinsQuantityClient : BaseClient, ICommerceExchange
 
     protected override string UriPath => "/v2/commerce/exchange/coins";
 
-    public Task<CommerceExchange> GetBlob(CancellationToken cancellationToken = default)
+    public Task<Result<CommerceExchange, Error>> GetBlob(CancellationToken cancellationToken = default)
     {
         return Get<CommerceExchange>($"{UriPath}?quantity={_quantity}", SchemaVersion, cancellationToken);
     }

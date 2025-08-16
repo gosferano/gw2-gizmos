@@ -42,22 +42,25 @@ public abstract class BaseClient
 
     protected abstract string UriPath { get; }
 
-    protected Task<TResponse> GetBlob<TResponse>(CancellationToken cancellationToken)
+    protected Task<Result<TResponse, Error>> GetBlob<TResponse>(CancellationToken cancellationToken)
     {
         return Get<TResponse>(UriPath, SchemaVersion, cancellationToken);
     }
 
-    protected Task<TResponse> GetById<TResponse, TId>(TId id, CancellationToken cancellationToken)
+    protected Task<Result<TResponse, Error>> GetById<TResponse, TId>(TId id, CancellationToken cancellationToken)
     {
         return Get<TResponse>($"{UriPath}/{id}", SchemaVersion, cancellationToken);
     }
 
-    protected Task<TId[]> GetIds<TId>(CancellationToken cancellationToken)
+    protected Task<Result<TId[], Error>> GetIds<TId>(CancellationToken cancellationToken)
     {
         return Get<TId[]>(UriPath, SchemaVersion, cancellationToken);
     }
 
-    protected Task<TResponse[]> GetByIds<TResponse, TId>(IEnumerable<TId> ids, CancellationToken cancellationToken)
+    protected Task<Result<TResponse[], Error>> GetByIds<TResponse, TId>(
+        IEnumerable<TId> ids,
+        CancellationToken cancellationToken
+    )
     {
         return Get<TResponse[]>(
             $"{UriPath}?{_idsParameterName}=" + string.Join(",", ids),
@@ -66,22 +69,26 @@ public abstract class BaseClient
         );
     }
 
-    protected Task<TResponse[]> GetPage<TResponse>(int page, CancellationToken cancellationToken)
+    protected Task<Result<TResponse[], Error>> GetPage<TResponse>(int page, CancellationToken cancellationToken)
     {
         return Get<TResponse[]>($"{UriPath}?page={page}", SchemaVersion, cancellationToken);
     }
 
-    protected Task<TResponse[]> GetPage<TResponse>(int page, int pageSize, CancellationToken cancellationToken)
+    protected Task<Result<TResponse[], Error>> GetPage<TResponse>(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
     {
         return Get<TResponse[]>($"{UriPath}?page={page}&page_size={pageSize}", SchemaVersion, cancellationToken);
     }
 
-    protected Task<TResponse[]> GetAll<TResponse>(CancellationToken cancellationToken)
+    protected Task<Result<TResponse[], Error>> GetAll<TResponse>(CancellationToken cancellationToken)
     {
         return Get<TResponse[]>($"{UriPath}?{_idsParameterName}=all", SchemaVersion, cancellationToken);
     }
 
-    protected async Task<TResponse> Get<TResponse>(
+    protected async Task<Result<TResponse, Error>> Get<TResponse>(
         string uri,
         string schemaVersion,
         CancellationToken cancellationToken
@@ -94,7 +101,33 @@ public abstract class BaseClient
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken
         );
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<TResponse>(JsonSerializerContext.Options, cancellationToken))!;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadFromJsonAsync<Error>(
+                JsonSerializerContext.Options,
+                cancellationToken
+            );
+            return new Result<TResponse, Error>(error!, response.StatusCode);
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<TResponse>(
+            JsonSerializerContext.Options,
+            cancellationToken
+        );
+        return new Result<TResponse, Error>(result!, response.StatusCode)
+        {
+            ResponseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
+            ResultTotal =
+                response.Headers.TryGetValues("X-Result-Total", out var values)
+                && int.TryParse(values.FirstOrDefault(), out int totalPages)
+                    ? totalPages
+                    : null,
+            ResultCount =
+                response.Headers.TryGetValues("X-Result-Count", out var countValues)
+                && int.TryParse(countValues.FirstOrDefault(), out int count)
+                    ? count
+                    : null,
+        };
     }
 }
