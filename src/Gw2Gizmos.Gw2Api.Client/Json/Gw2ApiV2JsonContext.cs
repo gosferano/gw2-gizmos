@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Gw2Gizmos.Gw2Api.Client.V2;
 using Gw2Gizmos.Gw2Api.Contract.Account;
 using Gw2Gizmos.Gw2Api.Contract.Achievements;
 using Gw2Gizmos.Gw2Api.Contract.Backstory;
@@ -54,6 +55,8 @@ using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
+// Error
+[JsonSerializable(typeof(Error))]
 // Account
 [JsonSerializable(typeof(Account))]
 [JsonSerializable(typeof(AccountAchievement[]))]
