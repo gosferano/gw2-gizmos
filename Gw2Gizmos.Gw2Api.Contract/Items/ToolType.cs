@@ -18,6 +18,8 @@ public readonly struct ToolType : IEquatable<ToolType>
 
     public static implicit operator ToolType(string value) => new(value);
 
+    public static implicit operator string(ToolType toolType) => toolType.Value;
+
     public bool Equals(ToolType other)
     {
         return Value == other.Value;

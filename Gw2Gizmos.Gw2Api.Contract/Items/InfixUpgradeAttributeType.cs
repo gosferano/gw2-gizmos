@@ -28,6 +28,8 @@ public readonly struct InfixUpgradeAttributeType : IEquatable<InfixUpgradeAttrib
 
     public static implicit operator InfixUpgradeAttributeType(string value) => new(value);
 
+    public static implicit operator string(InfixUpgradeAttributeType value) => value.Value;
+
     public bool Equals(InfixUpgradeAttributeType other)
     {
         return Value == other.Value;

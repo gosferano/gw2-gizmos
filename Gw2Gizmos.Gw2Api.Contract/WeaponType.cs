@@ -24,6 +24,11 @@ public readonly struct WeaponType : IEquatable<WeaponType>
     public static readonly WeaponType Trident = new("Trident");
     public static readonly WeaponType Warhorn = new("Warhorn");
 
+    public static readonly WeaponType LargeBundle = new("LargeBundle");
+    public static readonly WeaponType SmallBundle = new("SmallBundle");
+    public static readonly WeaponType Toy = new("Toy");
+    public static readonly WeaponType ToyTwoHanded = new("ToyTwoHanded");
+
     public string Value { get; }
 
     private WeaponType(string value)
@@ -37,6 +42,8 @@ public readonly struct WeaponType : IEquatable<WeaponType>
     }
 
     public static implicit operator WeaponType(string value) => new(value);
+
+    public static implicit operator string(WeaponType value) => value.Value;
 
     public bool Equals(WeaponType other)
     {

@@ -3,5 +3,5 @@
 public class InfixUpgradeBuff
 {
     public int SkillId { get; set; }
-    public string Description { get; set; }
+    public string? Description { get; set; }
 }
