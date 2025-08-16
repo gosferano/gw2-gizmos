@@ -1,4 +1,5 @@
-﻿using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+﻿using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.EntityFramework;
@@ -35,4 +36,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<TrinketDetails> TrinketDetails { get; set; }
     public DbSet<UpgradeComponentDetails> UpgradeComponentDetails { get; set; }
     public DbSet<WeaponDetails> WeaponDetails { get; set; }
+
+    // Commerce
+    public DbSet<CommerceItemListing> CommerceItemListings { get; set; }
+    public DbSet<BuyListing> BuyListings { get; set; }
+    public DbSet<SellListing> SellListings { get; set; }
 }

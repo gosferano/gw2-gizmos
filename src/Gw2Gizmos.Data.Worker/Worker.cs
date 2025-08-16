@@ -48,5 +48,7 @@ public class Worker : BackgroundService
         using IServiceScope scope = _scopeFactory.CreateScope();
         var itemsUpdater = scope.ServiceProvider.GetRequiredService<ItemsUpdater>();
         await itemsUpdater.UpdateItems(stoppingToken);
+        var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
+        await commerceUpdater.UpdateCommerceListings(stoppingToken);
     }
 }

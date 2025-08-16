@@ -46,6 +46,7 @@ builder.Services.AddHostedService<Worker>();
 
 // Updaters
 builder.Services.AddScoped<ItemsUpdater>();
+builder.Services.AddScoped<CommerceUpdater>();
 
 // Gw2ApiClient
 builder

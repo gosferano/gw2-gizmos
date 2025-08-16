@@ -173,6 +173,23 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CommerceItemListings",
+                columns: table => new
+                {
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommerceItemListings", x => x.ItemId);
+                    table.ForeignKey(
+                        name: "FK_CommerceItemListings_Items_ItemId",
+                        column: x => x.ItemId,
+                        principalTable: "Items",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Consumables",
                 columns: table => new
                 {
@@ -453,6 +470,50 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         column: x => x.ItemId,
                         principalTable: "Bags",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BuyListings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Listings = table.Column<int>(type: "INTEGER", nullable: false),
+                    UnitPrice = table.Column<int>(type: "INTEGER", nullable: false),
+                    Quantity = table.Column<int>(type: "INTEGER", nullable: false),
+                    CommerceItemListingId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BuyListings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BuyListings_CommerceItemListings_CommerceItemListingId",
+                        column: x => x.CommerceItemListingId,
+                        principalTable: "CommerceItemListings",
+                        principalColumn: "ItemId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SellListings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Listings = table.Column<int>(type: "INTEGER", nullable: false),
+                    UnitPrice = table.Column<int>(type: "INTEGER", nullable: false),
+                    Quantity = table.Column<int>(type: "INTEGER", nullable: false),
+                    CommerceItemListingId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SellListings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SellListings_CommerceItemListings_CommerceItemListingId",
+                        column: x => x.CommerceItemListingId,
+                        principalTable: "CommerceItemListings",
+                        principalColumn: "ItemId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -984,6 +1045,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 column: "BackItemDetailsId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BuyListings_CommerceItemListingId",
+                table: "BuyListings",
+                column: "CommerceItemListingId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ConsumableExtraRecipes_ConsumableId",
                 table: "ConsumableExtraRecipes",
                 column: "ConsumableId");
@@ -1023,6 +1089,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 name: "IX_ItemRestrictions_ItemId",
                 table: "ItemRestrictions",
                 column: "ItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SellListings_CommerceItemListingId",
+                table: "SellListings",
+                column: "CommerceItemListingId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TrinketInfixUpgrades_TrinketDetailsId",
@@ -1087,6 +1158,9 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 name: "BagDetails");
 
             migrationBuilder.DropTable(
+                name: "BuyListings");
+
+            migrationBuilder.DropTable(
                 name: "ConsumableExtraRecipes");
 
             migrationBuilder.DropTable(
@@ -1121,6 +1195,9 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
 
             migrationBuilder.DropTable(
                 name: "MiniPetDetails");
+
+            migrationBuilder.DropTable(
+                name: "SellListings");
 
             migrationBuilder.DropTable(
                 name: "ToolDetails");
@@ -1166,6 +1243,9 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
 
             migrationBuilder.DropTable(
                 name: "MiniPets");
+
+            migrationBuilder.DropTable(
+                name: "CommerceItemListings");
 
             migrationBuilder.DropTable(
                 name: "Tools");
