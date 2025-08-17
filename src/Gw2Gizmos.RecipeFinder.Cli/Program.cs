@@ -19,10 +19,13 @@ rootCommand.SetAction(
     {
         string connectionString = parseResult.GetRequiredValue(connectionStringArgument);
         int outputItemId = parseResult.GetRequiredValue(outputItemIdArgument);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         await BuildCraftingTree(connectionString, outputItemId, ct);
 
         await GetMostProfitableRecipesAsync(connectionString, ct);
+        stopwatch.Stop();
+        Console.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds} ms");
     }
 );
 
