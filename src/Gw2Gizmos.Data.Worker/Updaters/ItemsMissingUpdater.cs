@@ -8,6 +8,8 @@ public class ItemsMissingUpdater : BackgroundService
     private readonly Channel<ItemMissingDto> _itemsMissingChannel;
     private readonly ILogger<ItemsMissingUpdater> _logger;
 
+    private const int BatchSize = 50;
+
     public ItemsMissingUpdater(
         IServiceProvider serviceProvider,
         Channel<ItemMissingDto> itemsMissingChannel,
@@ -29,27 +31,25 @@ public class ItemsMissingUpdater : BackgroundService
             {
                 while (await _itemsMissingChannel.Reader.WaitToReadAsync(stoppingToken))
                 {
+                    var itemIds = new List<int>();
+
                     while (_itemsMissingChannel.Reader.TryRead(out ItemMissingDto? itemMissing))
                     {
-                        using IServiceScope scope = _serviceProvider.CreateScope();
-                        var itemsUpdater = scope.ServiceProvider.GetRequiredService<ItemsUpdater>();
+                        itemIds.Add(itemMissing.ItemId);
 
-                        try
+                        if (itemIds.Count == BatchSize)
                         {
-                            _logger.LogInformation("Processing missing item with ID: {ItemId}", itemMissing.ItemId);
-                            await itemsUpdater.UpdateItemsWithIds([itemMissing.ItemId], stoppingToken);
+                            break;
                         }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing missing item with ID: {ItemId}", itemMissing.ItemId);
-                        }
+                    }
+
+                    if (itemIds.Count != 0)
+                    {
+                        await ProcessBatchAsync(itemIds.ToArray(), stoppingToken);
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                break; // Graceful shutdown
-            }
+            catch (TaskCanceledException) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in items missing updater.");
@@ -57,5 +57,21 @@ public class ItemsMissingUpdater : BackgroundService
         }
 
         _logger.LogInformation("Items missing updater stopped.");
+    }
+
+    private async Task ProcessBatchAsync(int[] itemIds, CancellationToken stoppingToken)
+    {
+        try
+        {
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var itemsUpdater = scope.ServiceProvider.GetRequiredService<ItemsUpdater>();
+            _logger.LogInformation("Processing missing items with IDs: {ItemIds}", string.Join(", ", itemIds));
+            await itemsUpdater.UpdateItemsWithIds(itemIds, stoppingToken);
+        }
+        catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing missing items with IDs: {ItemIds}", string.Join(", ", itemIds));
+        }
     }
 }

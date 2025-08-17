@@ -8,6 +8,8 @@ public class ItemsAddedUpdater : BackgroundService
     private readonly Channel<ItemAddedDto> _itemsAddedChannel;
     private readonly ILogger<ItemsAddedUpdater> _logger;
 
+    private const int BatchSize = 50;
+
     public ItemsAddedUpdater(
         IServiceProvider serviceProvider,
         Channel<ItemAddedDto> itemsAddedChannel,
@@ -29,34 +31,47 @@ public class ItemsAddedUpdater : BackgroundService
             {
                 while (await _itemsAddedChannel.Reader.WaitToReadAsync(stoppingToken))
                 {
+                    var itemIds = new List<int>();
+
                     while (_itemsAddedChannel.Reader.TryRead(out ItemAddedDto? itemAdded))
                     {
-                        using IServiceScope scope = _serviceProvider.CreateScope();
-                        var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
-                        try
+                        itemIds.Add(itemAdded.ItemId);
+
+                        if (itemIds.Count == BatchSize)
                         {
-                            // Process the item
-                            _logger.LogInformation("Processing item with ID: {ItemId}", itemAdded.ItemId);
-                            await commerceUpdater.UpdateCommerceListingsForItems([itemAdded.ItemId], stoppingToken);
+                            break;
                         }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing item with ID: {ItemId}", itemAdded.ItemId);
-                        }
+                    }
+
+                    if (itemIds.Count != 0)
+                    {
+                        await ProcessBatchAsync(itemIds.ToArray(), stoppingToken);
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Graceful shutdown
-                break;
-            }
+            catch (TaskCanceledException) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in item processing worker.");
             }
         }
 
-        _logger.LogInformation("Item processing worker stopped.");
+        _logger.LogInformation("Item added updater stopped.");
+    }
+
+    private async Task ProcessBatchAsync(int[] itemIds, CancellationToken stoppingToken)
+    {
+        try
+        {
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
+            _logger.LogInformation("Processing items with IDs: {ItemIds}", string.Join(", ", itemIds));
+            await commerceUpdater.UpdateCommerceListingsForItems(itemIds, stoppingToken);
+        }
+        catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing items with IDs: {ItemIds}", string.Join(", ", itemIds));
+        }
     }
 }
