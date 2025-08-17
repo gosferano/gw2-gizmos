@@ -40,9 +40,16 @@ static async Task GetMostProfitableRecipesAsync(string connectionString, Cancell
     var priceService = new PriceService(dbContext);
     var recipeTreeBuilder = new RecipeTreeBuilder(recipeService, itemService, priceService);
 
-    var mostProfitableRecipes = await recipeTreeBuilder.GetMostProfitableRecipesAsync(10, ct);
+    var recipeTrees = await recipeTreeBuilder.GetRecipeTrees(ct);
 
+    var mostProfitableRecipes = recipeTreeBuilder.GetMostProfitableRecipesAsync(recipeTrees, 10);
     foreach (RecipeNode recipeTree in mostProfitableRecipes)
+    {
+        Display(recipeTree);
+    }
+
+    var mostProfitablePercentageRecipes = recipeTreeBuilder.GetMostProfitablePercentageRecipesAsync(recipeTrees, 10);
+    foreach (RecipeNode recipeTree in mostProfitablePercentageRecipes)
     {
         Display(recipeTree);
     }

@@ -13,14 +13,14 @@ public class RecipeTreeBuilder
         _itemService = itemService;
     }
 
-    public async Task<List<RecipeNode>> GetMostProfitableRecipesAsync(int topCount, CancellationToken ct)
+    public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
     {
-        var allRecipes = await _recipeService.GetAllRecipesAsync(ct);
-        var profitableRecipes = new List<RecipeNode>();
+        var allRecipes = await _recipeService.GetAllRecipesAsync(stoppingToken);
+        var recipeTrees = new List<RecipeNode>();
 
         for (var i = 0; i < allRecipes.Length; i++)
         {
-            if (ct.IsCancellationRequested)
+            if (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
@@ -31,17 +31,28 @@ public class RecipeTreeBuilder
                 Console.WriteLine($"Processing recipe {i + 1}/{allRecipes.Length}");
             }
 
-            RecipeNode rootNode = await BuildTreeAsync(allRecipes[i].OutputItemId, ct);
+            RecipeNode rootNode = await BuildTreeAsync(allRecipes[i].OutputItemId, stoppingToken);
 
-            if (rootNode.IsProfitable)
-            {
-                profitableRecipes.Add(rootNode);
-            }
+            recipeTrees.Add(rootNode);
         }
 
+        return recipeTrees;
+    }
+
+    public List<RecipeNode> GetMostProfitableRecipesAsync(List<RecipeNode> recipes, int topCount)
+    {
         // Sort by profit margin (SellPriceAfterFee - CraftingCostWithFee) and take the top results
-        return profitableRecipes
-            .OrderByDescending(node => (node.SellPrice * 0.85m) - (node.CraftingCost * 1.15m))
+        return recipes
+            .OrderByDescending(node => (node.SellPrice * 0.85m) - (node.CraftingCost))
+            .Take(topCount)
+            .ToList();
+    }
+
+    public List<RecipeNode> GetMostProfitablePercentageRecipesAsync(List<RecipeNode> recipes, int topCount)
+    {
+        // Sort by profitability percentage and take the top results
+        return recipes
+            .OrderByDescending(node => node.IsProfitable ? (node.SellPrice * 0.85m) / node.CraftingCost : 0)
             .Take(topCount)
             .ToList();
     }

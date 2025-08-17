@@ -13,13 +13,13 @@ public static class RecipeTreeDisplay
 
     public static string GetFlattenedStructure(RecipeNode rootNode)
     {
-        var itemCounts = new Dictionary<int, (string ItemName, int Count)>();
+        var itemCounts = new Dictionary<int, RecipeNode>();
         AggregateItems(rootNode, itemCounts);
 
         var result = new StringBuilder();
-        foreach (var (itemId, (itemName, count)) in itemCounts)
+        foreach ((int itemId, RecipeNode recipeNode) in itemCounts)
         {
-            result.AppendLine($"- {count}x {itemName} ({itemId})");
+            result.AppendLine($"- {recipeNode.Count}x {recipeNode.ItemName} ({itemId}) for {recipeNode.SellPrice}");
         }
 
         return result.ToString();
@@ -42,30 +42,39 @@ public static class RecipeTreeDisplay
             );
         }
 
-        foreach (var child in node.Ingredients)
+        foreach (RecipeNode child in node.Ingredients)
         {
             TraverseTree(child, result, depth + 1);
         }
     }
 
-    private static void AggregateItems(RecipeNode node, Dictionary<int, (string ItemName, int Count)> itemCounts)
+    private static void AggregateItems(RecipeNode node, Dictionary<int, RecipeNode> itemCounts)
     {
         // If the node is not profitable, treat it as a buyable item
         if (!node.IsProfitable)
         {
-            if (itemCounts.TryGetValue(node.ItemId, out (string ItemName, int Count) value))
+            if (itemCounts.TryGetValue(node.ItemId, out var existingNode))
             {
-                itemCounts[node.ItemId] = (node.ItemName, value.Count + node.Count);
+                existingNode.Count += node.Count;
+                existingNode.CraftingCost += node.CraftingCost;
+                existingNode.SellPrice += node.SellPrice;
             }
             else
             {
-                itemCounts[node.ItemId] = (node.ItemName, node.Count);
+                itemCounts[node.ItemId] = new RecipeNode
+                {
+                    ItemId = node.ItemId,
+                    ItemName = node.ItemName,
+                    Count = node.Count,
+                    CraftingCost = node.CraftingCost,
+                    SellPrice = node.SellPrice
+                };
             }
             return;
         }
 
         // If the node is profitable, process its children
-        foreach (var child in node.Ingredients)
+        foreach (RecipeNode child in node.Ingredients)
         {
             AggregateItems(child, itemCounts);
         }
