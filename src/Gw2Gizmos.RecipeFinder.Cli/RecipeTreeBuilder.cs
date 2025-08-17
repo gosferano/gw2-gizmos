@@ -62,12 +62,12 @@ public class RecipeTreeBuilder
     public async Task<RecipeNode> BuildTreeAsync(int rootItemId, CancellationToken ct, int parentMultiplier = 1)
     {
         var rootNode = new RecipeNode { ItemId = rootItemId, Count = parentMultiplier };
-        var stack = new Stack<(RecipeNode Node, int ItemId, int Multiplier, bool Processed)>();
-        stack.Push((rootNode, rootItemId, parentMultiplier, false));
+        var stack = new Stack<(RecipeNode Node, bool Processed)>();
+        stack.Push((rootNode, false));
 
         while (stack.Count > 0)
         {
-            var (currentNode, itemId, multiplier, processed) = stack.Pop();
+            var (currentNode, processed) = stack.Pop();
 
             if (processed)
             {
@@ -86,29 +86,31 @@ public class RecipeTreeBuilder
             }
 
             // Push the current node back as processed
-            stack.Push((currentNode, itemId, multiplier, true));
+            stack.Push((currentNode, true));
 
             // Fetch prices
-            TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(itemId, ct);
+            TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(currentNode.ItemId, ct);
             currentNode.BuyPricePerUnit = tradingPostPrices.SellOrderPrice;
             currentNode.SellPricePerUnit = tradingPostPrices.BuyOrderPrice;
 
             // Fetch item name with fallback
-            var itemName = await _itemService.GetItemNameAsync(itemId, ct);
-            currentNode.ItemName = !string.IsNullOrWhiteSpace(itemName) ? itemName : $"Unknown Item {itemId}";
+            var itemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
+            currentNode.ItemName = !string.IsNullOrWhiteSpace(itemName)
+                ? itemName
+                : $"Unknown Item {currentNode.ItemId}";
 
             // Fetch recipe
-            var recipe = await _recipeService.GetRecipeAsync(itemId, ct);
+            var recipe = await _recipeService.GetRecipeAsync(currentNode.ItemId, ct);
 
             if (recipe != null)
             {
                 foreach (var ingredient in recipe.Ingredients)
                 {
-                    int childMultiplier = ingredient.Count * multiplier;
+                    int childMultiplier = ingredient.Count * currentNode.Count;
 
                     var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
                     currentNode.Ingredients.Add(childNode);
-                    stack.Push((childNode, ingredient.Id, childMultiplier, false));
+                    stack.Push((childNode, false));
                 }
             }
         }
