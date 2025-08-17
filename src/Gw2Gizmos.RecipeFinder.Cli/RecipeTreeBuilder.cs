@@ -1,0 +1,110 @@
+﻿namespace Gw2Gizmos.RecipeFinder.Cli;
+
+public class RecipeTreeBuilder
+{
+    private readonly IRecipeService _recipeService;
+    private readonly IPriceService _priceService;
+    private readonly IItemService _itemService;
+
+    public RecipeTreeBuilder(IRecipeService recipeService, IItemService itemService, IPriceService priceService)
+    {
+        _recipeService = recipeService;
+        _priceService = priceService;
+        _itemService = itemService;
+    }
+
+    public async Task<List<RecipeNode>> GetMostProfitableRecipesAsync(int topCount, CancellationToken ct)
+    {
+        var allRecipes = await _recipeService.GetAllRecipesAsync(ct);
+        var profitableRecipes = new List<RecipeNode>();
+
+        for (var i = 0; i < allRecipes.Length; i++)
+        {
+            if (ct.IsCancellationRequested)
+            {
+                break;
+            }
+
+            // Report progress every 100 recipes
+            if (i % 100 == 0)
+            {
+                Console.WriteLine($"Processing recipe {i + 1}/{allRecipes.Length}");
+            }
+
+            RecipeNode rootNode = await BuildTreeAsync(allRecipes[i].OutputItemId, ct);
+
+            if (rootNode.IsProfitable)
+            {
+                profitableRecipes.Add(rootNode);
+            }
+        }
+
+        // Sort by profit margin (SellPriceAfterFee - CraftingCostWithFee) and take the top results
+        return profitableRecipes
+            .OrderByDescending(node => (node.SellPrice * 0.85m) - (node.CraftingCost * 1.15m))
+            .Take(topCount)
+            .ToList();
+    }
+
+    public async Task<RecipeNode> BuildTreeAsync(int rootItemId, CancellationToken ct, int parentMultiplier = 1)
+    {
+        var rootNode = new RecipeNode { ItemId = rootItemId, Count = parentMultiplier };
+        var stack = new Stack<(RecipeNode Node, int ItemId, int Multiplier, bool Processed)>();
+        stack.Push((rootNode, rootItemId, parentMultiplier, false));
+
+        while (stack.Count > 0)
+        {
+            var (currentNode, itemId, multiplier, processed) = stack.Pop();
+
+            if (processed)
+            {
+                // Calculate crafting cost after processing all children
+                if (currentNode.Ingredients.Count > 0)
+                {
+                    currentNode.CraftingCost = currentNode.Ingredients.Sum(child => child.CraftingCost);
+                }
+
+                // Calculate profitability
+                currentNode.CraftingCost = Math.Max(currentNode.CraftingCost, 0);
+                currentNode.IsProfitable =
+                    currentNode.CraftingCost > 0
+                    && (currentNode.CraftingCost < currentNode.SellPrice || currentNode.SellPrice == 0);
+                continue;
+            }
+
+            // Push the current node back as processed
+            stack.Push((currentNode, itemId, multiplier, true));
+
+            // Fetch prices
+            var (buyPrice, sellPrice) = await _priceService.GetPricesAsync(itemId, ct);
+            currentNode.CraftingCost = buyPrice * currentNode.Count;
+            currentNode.SellPrice = sellPrice * currentNode.Count;
+
+            // Fetch item name with fallback
+            var itemName = await _itemService.GetItemNameAsync(itemId, ct);
+            currentNode.ItemName = !string.IsNullOrWhiteSpace(itemName) ? itemName : $"Unknown Item {itemId}";
+
+            // Fetch recipe
+            var recipe = await _recipeService.GetRecipeAsync(itemId, ct);
+
+            if (recipe != null)
+            {
+                foreach (var ingredient in recipe.Ingredients)
+                {
+                    int childMultiplier = ingredient.Count * multiplier;
+
+                    if (childMultiplier < 0)
+                    {
+                        throw new OverflowException("Multiplier value exceeded the allowed range.");
+                    }
+
+                    var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
+                    currentNode.Ingredients.Add(childNode);
+                    stack.Push((childNode, ingredient.Id, childMultiplier, false));
+                }
+            }
+        }
+
+        return rootNode;
+    }
+}

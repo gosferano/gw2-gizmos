@@ -1,0 +1,11 @@
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Data Source=..\\..\\..\\..\\Gw2Gizmos.Data.Worker\\Data\\gw2gizmos.sqlite\" 95994",
+      "environmentVariables": {
+      }
+    }
+  }
+}
