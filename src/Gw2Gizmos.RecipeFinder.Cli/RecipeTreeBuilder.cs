@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 
@@ -60,25 +59,19 @@ public class RecipeTreeBuilder
             .ToList();
     }
 
-    private readonly ConcurrentDictionary<int, RecipeNode> _memoizationCache = new();
-
     public async Task<RecipeNode> BuildTreeAsync(int rootItemId, CancellationToken ct, int parentMultiplier = 1)
     {
-        if (_memoizationCache.TryGetValue(rootItemId, out RecipeNode? cachedNode))
-        {
-            return CopyMemo(cachedNode, parentMultiplier);
-        }
-
         var rootNode = new RecipeNode { ItemId = rootItemId, Count = parentMultiplier };
         var stack = new Stack<(RecipeNode Node, bool Processed)>();
         stack.Push((rootNode, false));
 
         while (stack.Count > 0)
         {
-            (RecipeNode currentNode, bool processed) = stack.Pop();
+            var (currentNode, processed) = stack.Pop();
 
             if (processed)
             {
+                // Calculate crafting cost per unit after processing all children
                 if (currentNode.Ingredients.Count > 0)
                 {
                     currentNode.CraftingCostPerUnit =
@@ -89,62 +82,40 @@ public class RecipeTreeBuilder
                         ) / currentNode.Count;
                 }
 
-                // Add the processed node to the cache
-                _memoizationCache[currentNode.ItemId] = currentNode;
-
                 continue;
             }
 
+            // Push the current node back as processed
             stack.Push((currentNode, true));
 
+            // Fetch prices
             TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(currentNode.ItemId, ct);
             currentNode.BuyPricePerUnit = tradingPostPrices.SellOrderPrice;
             currentNode.SellPricePerUnit = tradingPostPrices.BuyOrderPrice;
 
-            string itemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
+            // Fetch item name with fallback
+            var itemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
             currentNode.ItemName = !string.IsNullOrWhiteSpace(itemName)
                 ? itemName
                 : $"Unknown Item {currentNode.ItemId}";
 
-            Recipe? recipe = await _recipeService.GetRecipeAsync(currentNode.ItemId, ct);
+            // Fetch recipe
+            var recipe = await _recipeService.GetRecipeAsync(currentNode.ItemId, ct);
 
             if (recipe != null)
             {
-                foreach (RecipeIngredient ingredient in recipe.Ingredients)
+                foreach (var ingredient in recipe.Ingredients)
                 {
                     int childMultiplier = ingredient.Count * currentNode.Count;
 
-                    if (_memoizationCache.TryGetValue(ingredient.Id, out var cachedChildNode))
-                    {
-                        // Use the cached child node
-                        var childNode = CopyMemo(cachedChildNode, childMultiplier);
-                        currentNode.Ingredients.Add(childNode);
-                    }
-                    else
-                    {
-                        var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
-                        currentNode.Ingredients.Add(childNode);
-                        stack.Push((childNode, false));
-                    }
+                    var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
+                    currentNode.Ingredients.Add(childNode);
+                    stack.Push((childNode, false));
                 }
             }
         }
 
-        _memoizationCache[rootItemId] = rootNode;
+        // _memoizationCache[rootItemId] = rootNode;
         return rootNode;
-    }
-
-    private RecipeNode CopyMemo(RecipeNode memo, int multiplier)
-    {
-        return new RecipeNode
-        {
-            ItemId = memo.ItemId,
-            ItemName = memo.ItemName,
-            SellPricePerUnit = memo.SellPricePerUnit,
-            BuyPricePerUnit = memo.BuyPricePerUnit,
-            CraftingCostPerUnit = memo.CraftingCostPerUnit,
-            Count = multiplier,
-            Ingredients = memo.Ingredients.Select(i => CopyMemo(i, multiplier)).ToList()
-        };
     }
 }
