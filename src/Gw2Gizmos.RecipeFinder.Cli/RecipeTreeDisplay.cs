@@ -56,9 +56,6 @@ public static class RecipeTreeDisplay
             if (itemCounts.TryGetValue(node.ItemId, out var existingNode))
             {
                 existingNode.Count += node.Count;
-                existingNode.CraftingCost += node.CraftingCost;
-                existingNode.SellPrice += node.SellPrice;
-                existingNode.BuyPrice += node.BuyPrice;
             }
             else
             {
@@ -67,9 +64,9 @@ public static class RecipeTreeDisplay
                     ItemId = node.ItemId,
                     ItemName = node.ItemName,
                     Count = node.Count,
-                    CraftingCost = node.CraftingCost,
-                    SellPrice = node.SellPrice,
-                    BuyPrice = node.BuyPrice
+                    CraftingCostPerUnit = node.CraftingCostPerUnit,
+                    SellPricePerUnit = node.SellPricePerUnit,
+                    BuyPricePerUnit = node.BuyPricePerUnit
                 };
             }
             return;
