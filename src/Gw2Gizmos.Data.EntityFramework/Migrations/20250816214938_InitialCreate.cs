@@ -57,6 +57,25 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Recipes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Type = table.Column<string>(type: "TEXT", nullable: false),
+                    OutputItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    OutputItemCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    TimeToCraftMs = table.Column<int>(type: "INTEGER", nullable: false),
+                    MinRating = table.Column<int>(type: "INTEGER", nullable: false),
+                    OutputUpgradeId = table.Column<int>(type: "INTEGER", nullable: true),
+                    ChatLink = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Recipes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "InfixUpgradeAttributes",
                 columns: table => new
                 {
@@ -407,6 +426,66 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         name: "FK_Weapons_Items_Id",
                         column: x => x.Id,
                         principalTable: "Items",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RecipeDisciplines",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Value = table.Column<string>(type: "TEXT", nullable: false),
+                    RecipeId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RecipeDisciplines", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RecipeDisciplines_Recipes_RecipeId",
+                        column: x => x.RecipeId,
+                        principalTable: "Recipes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RecipeFlags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Value = table.Column<string>(type: "TEXT", nullable: false),
+                    RecipeId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RecipeFlags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RecipeFlags_Recipes_RecipeId",
+                        column: x => x.RecipeId,
+                        principalTable: "Recipes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RecipeIngredients",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false),
+                    RecipeId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false),
+                    Type = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RecipeIngredients", x => new { x.Id, x.RecipeId });
+                    table.ForeignKey(
+                        name: "FK_RecipeIngredients_Recipes_RecipeId",
+                        column: x => x.RecipeId,
+                        principalTable: "Recipes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1091,6 +1170,21 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 column: "ItemId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RecipeDisciplines_RecipeId",
+                table: "RecipeDisciplines",
+                column: "RecipeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RecipeFlags_RecipeId",
+                table: "RecipeFlags",
+                column: "RecipeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RecipeIngredients_RecipeId",
+                table: "RecipeIngredients",
+                column: "RecipeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_SellListings_CommerceItemListingId",
                 table: "SellListings",
                 column: "CommerceItemListingId");
@@ -1197,6 +1291,15 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 name: "MiniPetDetails");
 
             migrationBuilder.DropTable(
+                name: "RecipeDisciplines");
+
+            migrationBuilder.DropTable(
+                name: "RecipeFlags");
+
+            migrationBuilder.DropTable(
+                name: "RecipeIngredients");
+
+            migrationBuilder.DropTable(
                 name: "SellListings");
 
             migrationBuilder.DropTable(
@@ -1243,6 +1346,9 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
 
             migrationBuilder.DropTable(
                 name: "MiniPets");
+
+            migrationBuilder.DropTable(
+                name: "Recipes");
 
             migrationBuilder.DropTable(
                 name: "CommerceItemListings");

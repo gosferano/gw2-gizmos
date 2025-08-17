@@ -17,11 +17,13 @@ public class Worker : BackgroundService
     {
         using var commerceTimer = new PeriodicTimer(TimeSpan.FromHours(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
+        using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
 
-        // Run both tasks concurrently
+        // Run all tasks concurrently
         await Task.WhenAll(
             RunCommerceUpdater(commerceTimer, stoppingToken),
-            RunItemsUpdater(itemsTimer, stoppingToken)
+            RunItemsUpdater(itemsTimer, stoppingToken),
+            RunRecipesUpdater(recipesTimer, stoppingToken)
         );
     }
 
@@ -55,11 +57,26 @@ public class Worker : BackgroundService
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
+    private async Task RunRecipesUpdater(PeriodicTimer recipesTimer, CancellationToken stoppingToken)
+    {
+        do
+        {
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var recipesUpdater = scope.ServiceProvider.GetRequiredService<RecipesUpdater>();
+                    await recipesUpdater.UpdateRecipes(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await recipesTimer.WaitForNextTickAsync(stoppingToken));
+    }
+
     private async Task RunUpdateSafely(Func<IServiceScope, Task> updateAction, CancellationToken stoppingToken)
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
+            using IServiceScope scope = _scopeFactory.CreateScope();
             await updateAction(scope);
         }
         catch (Exception) when (stoppingToken.IsCancellationRequested)

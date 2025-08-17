@@ -48,6 +48,7 @@ builder.Services.AddHostedService<Worker>();
 // Updaters
 builder.Services.AddScoped<ItemsUpdater>();
 builder.Services.AddScoped<CommerceUpdater>();
+builder.Services.AddScoped<RecipesUpdater>();
 
 // Item added and missing updaters
 builder.Services.AddHostedService<ItemsAddedUpdater>();

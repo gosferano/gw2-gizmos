@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.EntityFramework.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20250816171550_InitialCreate")]
+    [Migration("20250816214938_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -650,6 +650,102 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.ToTable("WeaponStatChoices");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChatLink")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MinRating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OutputItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OutputItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("OutputUpgradeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TimeToCraftMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Recipes");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeDiscipline", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RecipeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeId");
+
+                    b.ToTable("RecipeDisciplines");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeFlag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RecipeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeId");
+
+                    b.ToTable("RecipeFlags");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeIngredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RecipeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id", "RecipeId");
+
+                    b.HasIndex("RecipeId");
+
+                    b.ToTable("RecipeIngredients");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorInfixUpgrade", b =>
                 {
                     b.HasBaseType("Gw2Gizmos.Data.EntityFramework.Entities.Items.InfixUpgrade");
@@ -1128,6 +1224,39 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.Navigation("WeaponDetails");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeDiscipline", b =>
+                {
+                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", "Recipe")
+                        .WithMany("Disciplines")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeFlag", b =>
+                {
+                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", "Recipe")
+                        .WithMany("Flags")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeIngredient", b =>
+                {
+                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", "Recipe")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorInfixUpgrade", b =>
                 {
                     b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorDetails", "ArmorDetails")
@@ -1441,6 +1570,15 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.Navigation("InfusionSlots");
 
                     b.Navigation("StatChoices");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", b =>
+                {
+                    b.Navigation("Disciplines");
+
+                    b.Navigation("Flags");
+
+                    b.Navigation("Ingredients");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.Armor", b =>
