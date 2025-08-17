@@ -147,23 +147,17 @@ public class RecipeTreeBuilder
     {
         // For recipes with OutputItemCount > 1, we need to scale based on actual crafts needed
         double scalingFactor;
-        if (node.Count > 0)
+
+        if (node.OutputItemCount > 1)
         {
-            if (node.OutputItemCount > 1)
-            {
-                // Calculate crafts needed for both cached node and target
-                int cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
-                int targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
-                scalingFactor = (double)targetCraftsNeeded / cachedCraftsNeeded;
-            }
-            else
-            {
-                scalingFactor = (double)targetCount / node.Count;
-            }
+            // Calculate crafts needed for both cached node and target
+            int cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
+            int targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
+            scalingFactor = (double)targetCraftsNeeded / cachedCraftsNeeded;
         }
         else
         {
-            scalingFactor = 1.0;
+            scalingFactor = (double)targetCount / node.Count;
         }
 
         return new RecipeNode
