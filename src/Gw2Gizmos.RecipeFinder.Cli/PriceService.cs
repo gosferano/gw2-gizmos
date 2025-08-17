@@ -12,20 +12,20 @@ public class PriceService : IPriceService
         _dbContext = dbContext;
     }
 
-    public async Task<(decimal BuyPrice, decimal SellPrice)> GetPricesAsync(int itemId, CancellationToken ct)
+    public async Task<TradingPostPrices> GetPricesAsync(int itemId, CancellationToken ct)
     {
-        int buyPrice = await _dbContext
-            .BuyListings.Where(bl => bl.CommerceItemListingId == itemId)
-            .OrderByDescending(bl => bl.UnitPrice)
-            .Select(bl => bl.UnitPrice)
-            .FirstOrDefaultAsync(ct);
-
         int sellPrice = await _dbContext
             .SellListings.Where(sl => sl.CommerceItemListingId == itemId)
             .OrderBy(sl => sl.UnitPrice)
             .Select(sl => sl.UnitPrice)
             .FirstOrDefaultAsync(ct);
 
-        return (buyPrice > 0 ? buyPrice : 0m, sellPrice > 0 ? sellPrice : 0m);
+        int buyPrice = await _dbContext
+            .BuyListings.Where(bl => bl.CommerceItemListingId == itemId)
+            .OrderByDescending(bl => bl.UnitPrice)
+            .Select(bl => bl.UnitPrice)
+            .FirstOrDefaultAsync(ct);
+
+        return new TradingPostPrices(sellPrice > 0 ? sellPrice : 0, buyPrice > 0 ? buyPrice : 0);
     }
 }

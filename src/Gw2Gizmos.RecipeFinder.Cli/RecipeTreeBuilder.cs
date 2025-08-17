@@ -72,14 +72,15 @@ public class RecipeTreeBuilder
                 // Calculate crafting cost after processing all children
                 if (currentNode.Ingredients.Count > 0)
                 {
-                    currentNode.CraftingCost = currentNode.Ingredients.Sum(child => child.CraftingCost);
+                    currentNode.CraftingCost = currentNode.Ingredients.Sum(child =>
+                        child.IsCraftable && child.CraftingCost < child.BuyPrice ? child.CraftingCost : child.BuyPrice
+                    );
                 }
 
                 // Calculate profitability
-                currentNode.CraftingCost = Math.Max(currentNode.CraftingCost, 0);
                 currentNode.IsProfitable =
                     currentNode.CraftingCost > 0
-                    && (currentNode.CraftingCost < currentNode.SellPrice || currentNode.SellPrice == 0);
+                    && (currentNode.CraftingCost < currentNode.BuyPrice || currentNode.SellPrice == 0);
                 continue;
             }
 
@@ -87,9 +88,9 @@ public class RecipeTreeBuilder
             stack.Push((currentNode, itemId, multiplier, true));
 
             // Fetch prices
-            var (buyPrice, sellPrice) = await _priceService.GetPricesAsync(itemId, ct);
-            currentNode.CraftingCost = buyPrice * currentNode.Count;
-            currentNode.SellPrice = sellPrice * currentNode.Count;
+            TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(itemId, ct);
+            currentNode.BuyPrice = tradingPostPrices.SellOrderPrice * currentNode.Count;
+            currentNode.SellPrice = tradingPostPrices.BuyOrderPrice * currentNode.Count;
 
             // Fetch item name with fallback
             var itemName = await _itemService.GetItemNameAsync(itemId, ct);
@@ -103,12 +104,6 @@ public class RecipeTreeBuilder
                 foreach (var ingredient in recipe.Ingredients)
                 {
                     int childMultiplier = ingredient.Count * multiplier;
-
-                    if (childMultiplier < 0)
-                    {
-                        throw new OverflowException("Multiplier value exceeded the allowed range.");
-                    }
-
                     var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
                     currentNode.Ingredients.Add(childNode);
                     stack.Push((childNode, ingredient.Id, childMultiplier, false));

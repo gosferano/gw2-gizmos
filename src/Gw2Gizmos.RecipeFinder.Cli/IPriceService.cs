@@ -2,5 +2,5 @@
 
 public interface IPriceService
 {
-    Task<(decimal BuyPrice, decimal SellPrice)> GetPricesAsync(int itemId, CancellationToken ct);
+    Task<TradingPostPrices> GetPricesAsync(int itemId, CancellationToken ct);
 }
