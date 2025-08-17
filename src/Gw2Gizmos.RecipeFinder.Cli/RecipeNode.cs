@@ -8,6 +8,7 @@ public class RecipeNode
     public int BuyPricePerUnit { get; set; }
     public decimal CraftingCostPerUnit { get; set; }
     public int Count { get; set; }
+    public int OutputItemCount { get; set; } = 1;
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
 

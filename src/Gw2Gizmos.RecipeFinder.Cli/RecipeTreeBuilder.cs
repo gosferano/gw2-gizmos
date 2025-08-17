@@ -104,9 +104,15 @@ public class RecipeTreeBuilder
 
             if (recipe != null)
             {
+                currentNode.OutputItemCount = recipe.OutputItemCount;
+
+                // Calculate how many complete recipe crafts are needed
+                int recipeCraftsNeeded = (currentNode.Count + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+
                 foreach (var ingredient in recipe.Ingredients)
                 {
-                    int childMultiplier = ingredient.Count * currentNode.Count;
+                    // Use the full ingredient count from complete recipe crafts
+                    int childMultiplier = ingredient.Count * recipeCraftsNeeded;
 
                     var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
                     currentNode.Ingredients.Add(childNode);
@@ -115,7 +121,6 @@ public class RecipeTreeBuilder
             }
         }
 
-        // _memoizationCache[rootItemId] = rootNode;
         return rootNode;
     }
 }
