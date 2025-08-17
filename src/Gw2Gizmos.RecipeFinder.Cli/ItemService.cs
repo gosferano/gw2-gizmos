@@ -14,6 +14,6 @@ public class ItemService : IItemService
     public async Task<string> GetItemNameAsync(int itemId, CancellationToken ct)
     {
         var item = await _dbContext.Items.FindAsync(new object[] { itemId }, ct);
-        return item?.Name ?? "Unknown Item";
+        return item?.Name ?? $"Unknown Item ({itemId})";
     }
 }

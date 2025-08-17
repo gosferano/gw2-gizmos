@@ -19,7 +19,7 @@ public static class RecipeTreeDisplay
         var result = new StringBuilder();
         foreach ((int itemId, RecipeNode recipeNode) in itemCounts)
         {
-            result.AppendLine($"- {recipeNode.Count}x {recipeNode.ItemName} ({itemId}) for {recipeNode.BuyPrice}");
+            result.AppendLine($"- {recipeNode.Count}x {recipeNode.ItemName} for {recipeNode.BuyPrice}");
         }
 
         return result.ToString();

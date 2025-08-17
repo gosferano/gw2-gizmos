@@ -94,10 +94,7 @@ public class RecipeTreeBuilder
             currentNode.SellPricePerUnit = tradingPostPrices.BuyOrderPrice;
 
             // Fetch item name with fallback
-            var itemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
-            currentNode.ItemName = !string.IsNullOrWhiteSpace(itemName)
-                ? itemName
-                : $"Unknown Item {currentNode.ItemId}";
+            currentNode.ItemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
 
             // Fetch recipe
             var recipe = await _recipeService.GetRecipeAsync(currentNode.ItemId, ct);
