@@ -82,11 +82,23 @@ public class RecipeTreeBuilder
                         ) / currentNode.Count;
                 }
 
+                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                 continue;
             }
 
-            // Push the current node back as processed
-            stack.Push((currentNode, true));
+            // CHECK CACHE FIRST - before any expensive operations
+            if (_memoizationCache.TryGetValue(currentNode.ItemId, out var cachedNode))
+            {
+                var scaledNode = CopyForMemo(cachedNode, currentNode.Count);
+
+                currentNode.ItemName = scaledNode.ItemName;
+                currentNode.SellPricePerUnit = scaledNode.SellPricePerUnit;
+                currentNode.BuyPricePerUnit = scaledNode.BuyPricePerUnit;
+                currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
+                currentNode.OutputItemCount = scaledNode.OutputItemCount;
+                currentNode.Ingredients = scaledNode.Ingredients;
+                continue;
+            }
 
             // Fetch prices
             TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(currentNode.ItemId, ct);
@@ -102,22 +114,74 @@ public class RecipeTreeBuilder
             if (recipe != null)
             {
                 currentNode.OutputItemCount = recipe.OutputItemCount;
-
-                // Calculate how many complete recipe crafts are needed
                 int recipeCraftsNeeded = (currentNode.Count + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
 
+                // Push this node as processed FIRST (it will be handled last due to stack LIFO)
+                stack.Push((currentNode, true));
+
+                // Then push all children (they will be processed first)
                 foreach (var ingredient in recipe.Ingredients)
                 {
-                    // Use the full ingredient count from complete recipe crafts
                     int childMultiplier = ingredient.Count * recipeCraftsNeeded;
+                    if (childMultiplier == 0)
+                        childMultiplier = 1; // Prevent zero counts
 
                     var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
                     currentNode.Ingredients.Add(childNode);
                     stack.Push((childNode, false));
                 }
             }
+            else
+            {
+                // Leaf node - no recipe, mark as processed to calculate costs and cache
+                stack.Push((currentNode, true));
+            }
         }
 
         return rootNode;
+    }
+
+    private readonly ConcurrentDictionary<int, RecipeNode> _memoizationCache = new();
+
+    private RecipeNode CopyForMemo(RecipeNode node, int targetCount)
+    {
+        // For recipes with OutputItemCount > 1, we need to scale based on actual crafts needed
+        double scalingFactor;
+        if (node.Count > 0)
+        {
+            if (node.OutputItemCount > 1)
+            {
+                // Calculate crafts needed for both cached node and target
+                int cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
+                int targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
+                scalingFactor = (double)targetCraftsNeeded / cachedCraftsNeeded;
+            }
+            else
+            {
+                scalingFactor = (double)targetCount / node.Count;
+            }
+        }
+        else
+        {
+            scalingFactor = 1.0;
+        }
+
+        return new RecipeNode
+        {
+            ItemId = node.ItemId,
+            ItemName = node.ItemName,
+            SellPricePerUnit = node.SellPricePerUnit,
+            BuyPricePerUnit = node.BuyPricePerUnit,
+            CraftingCostPerUnit = node.CraftingCostPerUnit,
+            Count = targetCount,
+            OutputItemCount = node.OutputItemCount,
+            Ingredients = node
+                .Ingredients.Select(ingredient =>
+                {
+                    int scaledCount = (int)Math.Round(ingredient.Count * scalingFactor);
+                    return CopyForMemo(ingredient, Math.Max(1, scaledCount)); // Ensure count is never 0
+                })
+                .ToList()
+        };
     }
 }
