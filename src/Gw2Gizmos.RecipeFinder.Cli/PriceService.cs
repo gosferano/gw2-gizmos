@@ -14,13 +14,13 @@ public class PriceService : IPriceService
 
     public async Task<(decimal BuyPrice, decimal SellPrice)> GetPricesAsync(int itemId, CancellationToken ct)
     {
-        int sellPrice = await _dbContext
+        int buyPrice = await _dbContext
             .BuyListings.Where(bl => bl.CommerceItemListingId == itemId)
             .OrderByDescending(bl => bl.UnitPrice)
             .Select(bl => bl.UnitPrice)
             .FirstOrDefaultAsync(ct);
 
-        int buyPrice = await _dbContext
+        int sellPrice = await _dbContext
             .SellListings.Where(sl => sl.CommerceItemListingId == itemId)
             .OrderBy(sl => sl.UnitPrice)
             .Select(sl => sl.UnitPrice)
