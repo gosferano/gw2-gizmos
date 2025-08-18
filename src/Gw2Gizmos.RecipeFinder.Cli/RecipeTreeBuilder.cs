@@ -10,12 +10,19 @@ public class RecipeTreeBuilder
     private readonly RecipeService _recipeService;
     private readonly PriceService _priceService;
     private readonly ItemService _itemService;
+    private readonly Configuration _priceConfiguration;
 
-    public RecipeTreeBuilder(RecipeService recipeService, ItemService itemService, PriceService priceService)
+    public RecipeTreeBuilder(
+        RecipeService recipeService,
+        ItemService itemService,
+        PriceService priceService,
+        Configuration priceConfiguration
+    )
     {
         _recipeService = recipeService;
         _priceService = priceService;
         _itemService = itemService;
+        _priceConfiguration = priceConfiguration;
     }
 
     public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
@@ -105,8 +112,14 @@ public class RecipeTreeBuilder
 
             // Fetch prices
             TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(currentNode.ItemId, ct);
-            currentNode.BuyPricePerUnit = tradingPostPrices.SellOrderPrice;
-            currentNode.SellPricePerUnit = tradingPostPrices.BuyOrderPrice;
+            currentNode.BuyPricePerUnit =
+                _priceConfiguration.BuyPriceType == PriceType.BuyOrder
+                    ? tradingPostPrices.BuyOrderPrice
+                    : tradingPostPrices.SellOrderPrice;
+            currentNode.SellPricePerUnit =
+                _priceConfiguration.SellPriceType == PriceType.BuyOrder
+                    ? tradingPostPrices.BuyOrderPrice
+                    : tradingPostPrices.SellOrderPrice;
 
             // Fetch item name with fallback
             currentNode.ItemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);

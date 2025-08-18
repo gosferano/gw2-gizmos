@@ -8,12 +8,24 @@ using Microsoft.EntityFrameworkCore;
 // Define options
 var connectionStringArgument = new Argument<string>("connection") { Description = "SQLite connection string" };
 var outputItemIdArgument = new Argument<int>("outputItemId") { Description = "Output item ID to filter recipes" };
+var sellPriceOption = new Option<PriceType>("--sell-price")
+{
+    Description = "Price type for selling items (default: BuyOrder)",
+    DefaultValueFactory = _ => PriceType.BuyOrder, // Use buy orders when selling (instant sale)
+};
+var buyPriceOption = new Option<PriceType>("--buy-price")
+{
+    Description = "Price type for buying items (default: SellOrder)",
+    DefaultValueFactory = _ => PriceType.SellOrder, // Use sell orders when buying (instant buy)
+};
 
 // Create the root command
 var rootCommand = new RootCommand("Build and display crafting recipe tree")
 {
     connectionStringArgument,
-    outputItemIdArgument
+    outputItemIdArgument,
+    sellPriceOption,
+    buyPriceOption,
 };
 
 rootCommand.SetAction(
@@ -23,9 +35,15 @@ rootCommand.SetAction(
         int outputItemId = parseResult.GetRequiredValue(outputItemIdArgument);
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
+        var configuration = new Configuration
+        {
+            BuyPriceType = parseResult.GetValue(buyPriceOption),
+            SellPriceType = parseResult.GetValue(sellPriceOption)
+        };
+
         await BuildCraftingTree(connectionString, outputItemId, ct);
 
-        await GetMostProfitableRecipesAsync(connectionString, ct);
+        await GetMostProfitableRecipesAsync(configuration, connectionString, ct);
         stopwatch.Stop();
         Console.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds} ms");
     }
@@ -34,7 +52,11 @@ rootCommand.SetAction(
 ParseResult parseResult = rootCommand.Parse(args);
 return parseResult.Invoke();
 
-static async Task GetMostProfitableRecipesAsync(string connectionString, CancellationToken ct)
+static async Task GetMostProfitableRecipesAsync(
+    Configuration configuration,
+    string connectionString,
+    CancellationToken ct
+)
 {
     await using var dbContext = new Gw2GizmosDbContext(
         new DbContextOptionsBuilder<Gw2GizmosDbContext>().UseSqlite(connectionString).Options
@@ -43,7 +65,7 @@ static async Task GetMostProfitableRecipesAsync(string connectionString, Cancell
     var recipeService = new RecipeService(dbContext);
     var itemService = new ItemService(dbContext);
     var priceService = new PriceService(dbContext);
-    var recipeTreeBuilder = new RecipeTreeBuilder(recipeService, itemService, priceService);
+    var recipeTreeBuilder = new RecipeTreeBuilder(recipeService, itemService, priceService, configuration);
 
     var recipeTrees = await recipeTreeBuilder.GetRecipeTrees(ct);
 
@@ -69,7 +91,7 @@ static async Task BuildCraftingTree(string connectionString, int outputItemId, C
     var recipeService = new RecipeService(dbContext);
     var itemService = new ItemService(dbContext);
     var priceService = new PriceService(dbContext);
-    var recipeTreeBuilder = new RecipeTreeBuilder(recipeService, itemService, priceService);
+    var recipeTreeBuilder = new RecipeTreeBuilder(recipeService, itemService, priceService, Configuration.Default);
 
     RecipeNode recipeTree = await recipeTreeBuilder.BuildTreeAsync(outputItemId, ct);
     Display(recipeTree);
