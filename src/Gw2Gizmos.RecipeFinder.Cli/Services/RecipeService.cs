@@ -13,15 +13,16 @@ public class RecipeService
         _dbContext = dbContext;
     }
 
-    public async Task<Recipe?> GetRecipeAsync(int itemId, CancellationToken ct)
-    {
-        return await _dbContext
-            .Recipes.Include(r => r.Ingredients)
-            .FirstOrDefaultAsync(r => r.OutputItemId == itemId, ct);
-    }
-
     public async Task<Recipe[]> GetAllRecipesAsync(CancellationToken ct)
     {
         return await _dbContext.Recipes.Include(r => r.Ingredients).ToArrayAsync(ct);
+    }
+
+    public async Task<ICollection<Recipe>> GetRecipesAsync(int itemId, CancellationToken ct)
+    {
+        return await _dbContext
+            .Recipes.Include(r => r.Ingredients)
+            .Where(r => r.OutputItemId == itemId)
+            .ToListAsync(ct);
     }
 }

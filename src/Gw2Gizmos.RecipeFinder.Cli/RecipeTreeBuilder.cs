@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Gw2Gizmos.RecipeFinder.Cli.Model;
 using Gw2Gizmos.RecipeFinder.Cli.Services;
 
@@ -110,32 +111,40 @@ public class RecipeTreeBuilder
             // Fetch item name with fallback
             currentNode.ItemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
 
-            // Fetch recipe
-            var recipe = await _recipeService.GetRecipeAsync(currentNode.ItemId, ct);
+            // Fetch ALL recipes for this item
+            var recipes = await _recipeService.GetRecipesAsync(currentNode.ItemId, ct);
 
-            if (recipe != null)
+            if (recipes is { Count: > 0 })
             {
-                currentNode.OutputItemCount = recipe.OutputItemCount;
-                int recipeCraftsNeeded = (currentNode.Count + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+                RecipeNode? bestRecipeTree = null;
+                var lowestCraftingCost = decimal.MaxValue;
 
-                // Push this node as processed FIRST (it will be handled last due to stack LIFO)
-                stack.Push((currentNode, true));
-
-                // Then push all children (they will be processed first)
-                foreach (var ingredient in recipe.Ingredients)
+                foreach (Recipe recipe in recipes)
                 {
-                    int childMultiplier = ingredient.Count * recipeCraftsNeeded;
-                    if (childMultiplier == 0)
-                        childMultiplier = 1; // Prevent zero counts
+                    // Build a separate tree for each recipe
+                    RecipeNode recipeTree = await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct);
 
-                    var childNode = new RecipeNode { ItemId = ingredient.Id, Count = childMultiplier };
-                    currentNode.Ingredients.Add(childNode);
-                    stack.Push((childNode, false));
+                    if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                    {
+                        lowestCraftingCost = recipeTree.CraftingCostPerUnit;
+                        bestRecipeTree = recipeTree;
+                    }
+                }
+
+                if (bestRecipeTree != null)
+                {
+                    // Copy the best recipe's data to current node
+                    currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
+                    currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                    currentNode.Ingredients = bestRecipeTree.Ingredients;
+
+                    // Mark as processed since we've built the complete subtree
+                    _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                 }
             }
             else
             {
-                // Leaf node - no recipe, mark as processed to calculate costs and cache
+                // Leaf node - no recipe, mark as processed
                 stack.Push((currentNode, true));
             }
         }
@@ -169,5 +178,38 @@ public class RecipeTreeBuilder
                 })
                 .ToList()
         };
+    }
+
+    private async Task<RecipeNode> BuildRecipeTreeForComparison(Recipe recipe, int targetCount, CancellationToken ct)
+    {
+        var recipeNode = new RecipeNode
+        {
+            ItemId = recipe.OutputItemId,
+            Count = targetCount,
+            OutputItemCount = recipe.OutputItemCount
+        };
+
+        int recipeCraftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+
+        // Build ingredient trees recursively
+        foreach (var ingredient in recipe.Ingredients)
+        {
+            int requiredCount = ingredient.Count * recipeCraftsNeeded;
+            if (requiredCount == 0)
+                requiredCount = 1;
+
+            var ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount);
+            recipeNode.Ingredients.Add(ingredientTree);
+        }
+
+        // Calculate crafting cost
+        recipeNode.CraftingCostPerUnit =
+            recipeNode.Ingredients.Sum(child =>
+                child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
+                    ? child.CraftingCost
+                    : child.BuyPrice
+            ) / targetCount;
+
+        return recipeNode;
     }
 }
