@@ -1,4 +1,5 @@
 ﻿using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<CommerceItemListing> CommerceItemListings { get; set; }
     public DbSet<BuyListing> BuyListings { get; set; }
     public DbSet<SellListing> SellListings { get; set; }
+
+    // Currencies
+    public DbSet<Currency> Currencies { get; set; }
 
     // Recipes
     public DbSet<Recipe> Recipes { get; set; }

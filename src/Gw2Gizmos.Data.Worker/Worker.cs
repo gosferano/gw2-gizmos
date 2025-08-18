@@ -16,12 +16,14 @@ public class Worker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var commerceTimer = new PeriodicTimer(TimeSpan.FromHours(1));
+        using var currenciesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
 
         // Run all tasks concurrently
         await Task.WhenAll(
             RunCommerceUpdater(commerceTimer, stoppingToken),
+            RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken)
         );
@@ -36,6 +38,21 @@ public class Worker : BackgroundService
                 {
                     var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
                     await commerceUpdater.UpdateCommerceListings(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    private async Task RunCurrenciesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        do
+        {
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var currenciesUpdater = scope.ServiceProvider.GetRequiredService<CurrenciesUpdater>();
+                    await currenciesUpdater.UpdateCurrencies(stoppingToken);
                 },
                 stoppingToken
             );
