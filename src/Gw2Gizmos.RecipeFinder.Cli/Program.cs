@@ -1,6 +1,8 @@
 ﻿using System.CommandLine;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.RecipeFinder.Cli;
+using Gw2Gizmos.RecipeFinder.Cli.Model;
+using Gw2Gizmos.RecipeFinder.Cli.Services;
 using Microsoft.EntityFrameworkCore;
 
 // Define options

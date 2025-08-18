@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Gw2Gizmos.RecipeFinder.Cli.Model;
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 

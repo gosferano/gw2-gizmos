@@ -1,7 +1,8 @@
 ﻿using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.RecipeFinder.Cli.Model;
 using Microsoft.EntityFrameworkCore;
 
-namespace Gw2Gizmos.RecipeFinder.Cli;
+namespace Gw2Gizmos.RecipeFinder.Cli.Services;
 
 public class PriceService
 {

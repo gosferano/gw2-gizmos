@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using Gw2Gizmos.RecipeFinder.Cli.Model;
+using Gw2Gizmos.RecipeFinder.Cli.Services;
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 

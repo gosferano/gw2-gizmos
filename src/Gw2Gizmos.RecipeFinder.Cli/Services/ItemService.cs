@@ -1,6 +1,6 @@
 ﻿using Gw2Gizmos.Data.EntityFramework;
 
-namespace Gw2Gizmos.RecipeFinder.Cli;
+namespace Gw2Gizmos.RecipeFinder.Cli.Services;
 
 public class ItemService
 {
