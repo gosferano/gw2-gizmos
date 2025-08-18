@@ -4,11 +4,11 @@ namespace Gw2Gizmos.RecipeFinder.Cli;
 
 public class RecipeTreeBuilder
 {
-    private readonly IRecipeService _recipeService;
-    private readonly IPriceService _priceService;
-    private readonly IItemService _itemService;
+    private readonly RecipeService _recipeService;
+    private readonly PriceService _priceService;
+    private readonly ItemService _itemService;
 
-    public RecipeTreeBuilder(IRecipeService recipeService, IItemService itemService, IPriceService priceService)
+    public RecipeTreeBuilder(RecipeService recipeService, ItemService itemService, PriceService priceService)
     {
         _recipeService = recipeService;
         _priceService = priceService;

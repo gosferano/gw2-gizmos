@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 
-public class PriceService : IPriceService
+public class PriceService
 {
     private readonly Gw2GizmosDbContext _dbContext;
 

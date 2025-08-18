@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 
-public class RecipeService : IRecipeService
+public class RecipeService
 {
     private readonly Gw2GizmosDbContext _dbContext;
 

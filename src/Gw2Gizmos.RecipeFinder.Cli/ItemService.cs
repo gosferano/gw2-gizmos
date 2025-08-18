@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.RecipeFinder.Cli;
 
-public class ItemService : IItemService
+public class ItemService
 {
     private readonly Gw2GizmosDbContext _dbContext;
 
