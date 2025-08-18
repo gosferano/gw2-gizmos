@@ -103,4 +103,6 @@ static void Display(RecipeNode recipeTree)
     Console.WriteLine(display);
     string flattenedDisplay = RecipeTreeDisplay.GetFlattenedStructure(recipeTree);
     Console.WriteLine(flattenedDisplay);
+    string craftingPlan = RecipeTreeDisplay.GetCraftingPlan(recipeTree);
+    Console.WriteLine(craftingPlan);
 }
