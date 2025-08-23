@@ -2,7 +2,7 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Gw2Api.Client;
-using Gw2Gizmos.Gw2Api.Contract.Commerce;
+using Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
 using Microsoft.EntityFrameworkCore;
 using CommerceListing = Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceListing;
 

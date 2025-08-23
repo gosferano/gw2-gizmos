@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.LegendaryArmory;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.LegendaryArmory;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.LegendaryArmory;
 

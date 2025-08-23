@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Home;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Home;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Home;
 

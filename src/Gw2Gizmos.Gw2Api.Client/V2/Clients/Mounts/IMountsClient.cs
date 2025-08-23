@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Mounts;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Mounts;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Mounts;
 

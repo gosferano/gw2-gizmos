@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Currencies;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Currencies;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Currencies;
 

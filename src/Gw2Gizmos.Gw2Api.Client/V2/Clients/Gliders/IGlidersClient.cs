@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Gliders;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Gliders;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Gliders;
 

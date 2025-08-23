@@ -26,7 +26,7 @@ public class CurrenciesUpdater
     {
         _logger.LogInformation("Starting currencies update...");
 
-        Gw2Api.Contract.Currencies.Currency[] currencies = await _apiClient.V2.Currencies.GetAll(stoppingToken);
+        Gw2Api.Contract.V2.Currencies.Currency[] currencies = await _apiClient.V2.Currencies.GetAll(stoppingToken);
         var existingCurrencies = await _dbContext.Currencies.ToListAsync(stoppingToken);
 
         foreach (var currency in currencies)

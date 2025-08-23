@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Skills;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Skills;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Skills;
 

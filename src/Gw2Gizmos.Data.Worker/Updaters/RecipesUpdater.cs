@@ -49,12 +49,12 @@ public class RecipesUpdater
                     recipeIds.Length
                 );
 
-                Gw2Api.Contract.Recipes.Recipe[] apiRecipes = await _apiClient.V2.Recipes.GetByIds(
+                Gw2Api.Contract.V2.Recipes.Recipe[] apiRecipes = await _apiClient.V2.Recipes.GetByIds(
                     pageIds,
                     stoppingToken
                 );
 
-                foreach (Gw2Api.Contract.Recipes.Recipe apiRecipe in apiRecipes)
+                foreach (Gw2Api.Contract.V2.Recipes.Recipe apiRecipe in apiRecipes)
                 {
                     Recipe recipe = MapToRecipeEntity(apiRecipe);
                     await AddOrUpdateRecipe(recipe, stoppingToken);
@@ -78,7 +78,7 @@ public class RecipesUpdater
         _logger.LogInformation("Recipes update completed.");
     }
 
-    private static Recipe MapToRecipeEntity(Gw2Api.Contract.Recipes.Recipe apiRecipe)
+    private static Recipe MapToRecipeEntity(Gw2Api.Contract.V2.Recipes.Recipe apiRecipe)
     {
         return new Recipe
         {

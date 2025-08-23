@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Maps;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Maps;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Maps;
 

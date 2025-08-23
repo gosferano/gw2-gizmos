@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Emblem;
 
 public interface IEmblemBackgroundsClient
-    : IAllExpandableClient<Contract.Emblem.Emblem>,
-        IBulkExpandableClient<Contract.Emblem.Emblem, int>,
-        IPaginatedClient<Contract.Emblem.Emblem>;
+    : IAllExpandableClient<Contract.V2.Emblem.Emblem>,
+        IBulkExpandableClient<Contract.V2.Emblem.Emblem, int>,
+        IPaginatedClient<Contract.V2.Emblem.Emblem>;

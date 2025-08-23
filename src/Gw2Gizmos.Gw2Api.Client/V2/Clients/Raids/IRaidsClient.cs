@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Raids;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Raids;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Raids;
 

@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Pets;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Pets;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Pets;
 

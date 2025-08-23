@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.WizardsVault;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.WizardsVault;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
 

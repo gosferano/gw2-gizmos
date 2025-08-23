@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Outfits;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Outfits;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Outfits;
 

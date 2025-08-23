@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.MailCarriers;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.MailCarriers;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.MailCarriers;
 

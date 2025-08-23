@@ -1,4 +1,4 @@
-﻿using File = Gw2Gizmos.Gw2Api.Contract.Files.File;
+﻿using File = Gw2Gizmos.Gw2Api.Contract.V2.Files.File;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Files;
 

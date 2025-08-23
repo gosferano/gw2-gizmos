@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Skins;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Skins;
 

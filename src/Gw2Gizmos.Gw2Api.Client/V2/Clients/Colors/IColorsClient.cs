@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Colors;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Colors;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Colors;
 

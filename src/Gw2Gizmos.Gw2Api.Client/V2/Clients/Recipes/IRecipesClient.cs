@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Recipes;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Recipes;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Recipes;
 

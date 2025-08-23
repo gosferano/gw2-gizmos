@@ -73,74 +73,74 @@ public class ItemsUpdater
 
     public async Task UpdateItemsWithIds(int[] ids, CancellationToken stoppingToken)
     {
-        Gw2Api.Contract.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
+        Gw2Api.Contract.V2.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
 
-        foreach (Gw2Api.Contract.Items.Item apiItem in apiItems)
+        foreach (Gw2Api.Contract.V2.Items.Item apiItem in apiItems)
         {
             try
             {
                 // Determine type and map
-                if (apiItem is Gw2Api.Contract.Items.Armor apiArmor)
+                if (apiItem is Gw2Api.Contract.V2.Items.Armor apiArmor)
                 {
                     Armor armorEntity = MapToArmorEntity(apiArmor);
                     await AddOrUpdateArmor(armorEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.BackItem apiBackItem)
+                else if (apiItem is Gw2Api.Contract.V2.Items.BackItem apiBackItem)
                 {
                     BackItem backItemEntity = MapToBackItemEntity(apiBackItem);
                     await AddOrUpdateBackItem(backItemEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Bag apiBag)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Bag apiBag)
                 {
                     Bag bagEntity = MapToBagEntity(apiBag);
                     await AddOrUpdateBag(bagEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Consumable apiConsumable)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Consumable apiConsumable)
                 {
                     Consumable consumableEntity = MapToConsumableEntity(apiConsumable);
                     await AddOrUpdateConsumable(consumableEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Container apiContainer)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Container apiContainer)
                 {
                     Container containerEntity = MapToContainerEntity(apiContainer);
                     await AddOrUpdateContainer(containerEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Gathering apiGathering)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Gathering apiGathering)
                 {
                     Gathering gatheringEntity = MapToGatheringEntity(apiGathering);
                     await AddOrUpdateGathering(gatheringEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Gizmo apiGizmo)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Gizmo apiGizmo)
                 {
                     Gizmo gizmoEntity = MapToGizmoEntity(apiGizmo);
                     await AddOrUpdateGizmo(gizmoEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.MiniPet apiMiniPet)
+                else if (apiItem is Gw2Api.Contract.V2.Items.MiniPet apiMiniPet)
                 {
                     MiniPet miniPetEntity = MapToMiniPetEntity(apiMiniPet);
                     await AddOrUpdateMiniPet(miniPetEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Tool apiTool)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Tool apiTool)
                 {
                     Tool toolEntity = MapToToolEntity(apiTool);
                     await AddOrUpdateTool(toolEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Trinket apiTrinket)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Trinket apiTrinket)
                 {
                     Trinket trinketEntity = MapToTrinketEntity(apiTrinket);
                     await AddOrUpdateTrinket(trinketEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.UpgradeComponent apiUpgradeComponent)
+                else if (apiItem is Gw2Api.Contract.V2.Items.UpgradeComponent apiUpgradeComponent)
                 {
                     UpgradeComponent upgradeComponentEntity = MapToUpgradeComponentEntity(apiUpgradeComponent);
                     await AddOrUpdateUpgradeComponent(upgradeComponentEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.Weapon apiWeapon)
+                else if (apiItem is Gw2Api.Contract.V2.Items.Weapon apiWeapon)
                 {
                     Weapon weaponEntity = MapToWeaponEntity(apiWeapon);
                     await AddOrUpdateWeapon(weaponEntity, stoppingToken);
                 }
-                else if (apiItem is Gw2Api.Contract.Items.ItemSimple apiItemSimple)
+                else if (apiItem is Gw2Api.Contract.V2.Items.ItemSimple apiItemSimple)
                 {
                     Item itemEntity = MapToItemEntity(apiItemSimple);
                     await AddOrUpdateItem(itemEntity, stoppingToken);
@@ -161,7 +161,7 @@ public class ItemsUpdater
 
     #region Mapping Methods
 
-    private static Item MapToItemEntity(Gw2Api.Contract.Items.ItemSimple apiItem)
+    private static Item MapToItemEntity(Gw2Api.Contract.V2.Items.ItemSimple apiItem)
     {
         return new Item
         {
@@ -184,7 +184,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Armor MapToArmorEntity(Gw2Api.Contract.Items.Armor apiItem)
+    private static Armor MapToArmorEntity(Gw2Api.Contract.V2.Items.Armor apiItem)
     {
         var entity = new Armor
         {
@@ -230,7 +230,7 @@ public class ItemsUpdater
         // Map InfixUpgrade if exists
         if (apiItem.Details.InfixUpgrade != null)
         {
-            Gw2Api.Contract.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
+            Gw2Api.Contract.V2.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
             entity.Details.InfixUpgrade = new ArmorInfixUpgrade
             {
                 Attributes = infix
@@ -250,7 +250,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static BackItem MapToBackItemEntity(Gw2Api.Contract.Items.BackItem apiItem)
+    private static BackItem MapToBackItemEntity(Gw2Api.Contract.V2.Items.BackItem apiItem)
     {
         var entity = new BackItem
         {
@@ -297,7 +297,7 @@ public class ItemsUpdater
         // Map InfixUpgrade if exists
         if (apiItem.Details.InfixUpgrade != null)
         {
-            Gw2Api.Contract.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
+            Gw2Api.Contract.V2.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
             entity.Details.InfixUpgrade = new BackItemInfixUpgrade
             {
                 Attributes = infix
@@ -317,7 +317,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static Bag MapToBagEntity(Gw2Api.Contract.Items.Bag apiItem)
+    private static Bag MapToBagEntity(Gw2Api.Contract.V2.Items.Bag apiItem)
     {
         return new Bag
         {
@@ -346,7 +346,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Consumable MapToConsumableEntity(Gw2Api.Contract.Items.Consumable apiItem)
+    private static Consumable MapToConsumableEntity(Gw2Api.Contract.V2.Items.Consumable apiItem)
     {
         return new Consumable
         {
@@ -395,7 +395,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Container MapToContainerEntity(Gw2Api.Contract.Items.Container apiItem)
+    private static Container MapToContainerEntity(Gw2Api.Contract.V2.Items.Container apiItem)
     {
         return new Container
         {
@@ -419,7 +419,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Gathering MapToGatheringEntity(Gw2Api.Contract.Items.Gathering apiItem)
+    private static Gathering MapToGatheringEntity(Gw2Api.Contract.V2.Items.Gathering apiItem)
     {
         return new Gathering
         {
@@ -443,7 +443,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Gizmo MapToGizmoEntity(Gw2Api.Contract.Items.Gizmo apiItem)
+    private static Gizmo MapToGizmoEntity(Gw2Api.Contract.V2.Items.Gizmo apiItem)
     {
         var entity = new Gizmo
         {
@@ -468,7 +468,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static MiniPet MapToMiniPetEntity(Gw2Api.Contract.Items.MiniPet apiItem)
+    private static MiniPet MapToMiniPetEntity(Gw2Api.Contract.V2.Items.MiniPet apiItem)
     {
         return new MiniPet
         {
@@ -492,7 +492,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Tool MapToToolEntity(Gw2Api.Contract.Items.Tool apiItem)
+    private static Tool MapToToolEntity(Gw2Api.Contract.V2.Items.Tool apiItem)
     {
         return new Tool
         {
@@ -521,7 +521,7 @@ public class ItemsUpdater
         };
     }
 
-    private static Trinket MapToTrinketEntity(Gw2Api.Contract.Items.Trinket apiItem)
+    private static Trinket MapToTrinketEntity(Gw2Api.Contract.V2.Items.Trinket apiItem)
     {
         var entity = new Trinket
         {
@@ -569,7 +569,7 @@ public class ItemsUpdater
         // Map InfixUpgrade if exists
         if (apiItem.Details.InfixUpgrade != null)
         {
-            Gw2Api.Contract.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
+            Gw2Api.Contract.V2.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
             entity.Details.InfixUpgrade = new TrinketInfixUpgrade
             {
                 Attributes = infix
@@ -589,7 +589,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static UpgradeComponent MapToUpgradeComponentEntity(Gw2Api.Contract.Items.UpgradeComponent apiItem)
+    private static UpgradeComponent MapToUpgradeComponentEntity(Gw2Api.Contract.V2.Items.UpgradeComponent apiItem)
     {
         var entity = new UpgradeComponent
         {
@@ -641,7 +641,7 @@ public class ItemsUpdater
         return entity;
     }
 
-    private static Weapon MapToWeaponEntity(Gw2Api.Contract.Items.Weapon apiItem)
+    private static Weapon MapToWeaponEntity(Gw2Api.Contract.V2.Items.Weapon apiItem)
     {
         var entity = new Weapon
         {
@@ -689,7 +689,7 @@ public class ItemsUpdater
         // Map InfixUpgrade if exists
         if (apiItem.Details.InfixUpgrade != null)
         {
-            Gw2Api.Contract.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
+            Gw2Api.Contract.V2.Items.InfixUpgrade? infix = apiItem.Details.InfixUpgrade;
             entity.Details.InfixUpgrade = new WeaponInfixUpgrade
             {
                 Attributes = infix

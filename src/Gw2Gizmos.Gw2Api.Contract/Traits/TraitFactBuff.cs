@@ -1,9 +1,0 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.Traits;
-
-public class TraitFactBuff : TraitFact
-{
-    public int Duration { get; set; }
-    public string Status { get; set; }
-    public string Description { get; set; }
-    public int ApplyCount { get; set; }
-}

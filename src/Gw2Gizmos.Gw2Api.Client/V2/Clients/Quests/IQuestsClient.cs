@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Quests;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Quests;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Quests;
 

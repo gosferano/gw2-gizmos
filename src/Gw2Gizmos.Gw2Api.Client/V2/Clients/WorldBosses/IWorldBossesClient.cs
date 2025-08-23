@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.WorldBosses;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.WorldBosses;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.WorldBosses;
 

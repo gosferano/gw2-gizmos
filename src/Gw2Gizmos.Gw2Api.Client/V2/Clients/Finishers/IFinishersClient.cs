@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Finishers;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Finishers;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Finishers;
 

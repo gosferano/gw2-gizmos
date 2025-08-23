@@ -1,4 +1,4 @@
-﻿using Gw2Gizmos.Gw2Api.Contract.Stories;
+﻿using Gw2Gizmos.Gw2Api.Contract.V2.Stories;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 
