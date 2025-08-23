@@ -9,6 +9,7 @@ public class RecipeTreeBuilder
 {
     private readonly RecipeService _recipeService;
     private readonly PriceService _priceService;
+    private readonly CurrencyService _currencyService;
     private readonly ItemService _itemService;
     private readonly Configuration _priceConfiguration;
 
@@ -16,11 +17,13 @@ public class RecipeTreeBuilder
         RecipeService recipeService,
         ItemService itemService,
         PriceService priceService,
+        CurrencyService currencyService,
         Configuration priceConfiguration
     )
     {
         _recipeService = recipeService;
         _priceService = priceService;
+        _currencyService = currencyService;
         _itemService = itemService;
         _priceConfiguration = priceConfiguration;
     }
@@ -85,11 +88,13 @@ public class RecipeTreeBuilder
                 if (currentNode.Ingredients.Count > 0)
                 {
                     currentNode.CraftingCostPerUnit =
-                        currentNode.Ingredients.Sum(child =>
-                            child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
-                                ? child.CraftingCost
-                                : child.BuyPrice
-                        ) / currentNode.Count;
+                        currentNode
+                            .Ingredients.Where(child => !child.IsCurrency)
+                            .Sum(child =>
+                                child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
+                                    ? child.CraftingCost
+                                    : child.BuyPrice
+                            ) / currentNode.Count;
                 }
 
                 _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
@@ -211,17 +216,39 @@ public class RecipeTreeBuilder
             if (requiredCount == 0)
                 requiredCount = 1;
 
-            var ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount);
+            RecipeNode ingredientTree;
+
+            // Check if this ingredient is a currency
+            if (ingredient.Type == "Currency")
+            {
+                ingredientTree = new RecipeNode
+                {
+                    ItemId = ingredient.Id,
+                    Count = requiredCount,
+                    IsCurrency = true,
+                    BuyPricePerUnit = 0,
+                    SellPricePerUnit = 0,
+                    CraftingCostPerUnit = 0,
+                    ItemName = await _currencyService.GetCurrencyNameAsync(ingredient.Id, ct)
+                };
+            }
+            else
+            {
+                ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount);
+            }
+
             recipeNode.Ingredients.Add(ingredientTree);
         }
 
         // Calculate crafting cost
         recipeNode.CraftingCostPerUnit =
-            recipeNode.Ingredients.Sum(child =>
-                child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
-                    ? child.CraftingCost
-                    : child.BuyPrice
-            ) / targetCount;
+            recipeNode
+                .Ingredients.Where(child => !child.IsCurrency)
+                .Sum(child =>
+                    child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
+                        ? child.CraftingCost
+                        : child.BuyPrice
+                ) / targetCount;
 
         return recipeNode;
     }

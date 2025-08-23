@@ -35,7 +35,6 @@ public static class RecipeTreeDisplay
         var sortedSteps = SortCraftingStepsByDependency(craftingSteps);
 
         var result = new StringBuilder();
-        result.AppendLine("=== CRAFTING PLAN ===");
 
         foreach (var step in sortedSteps)
         {
@@ -124,13 +123,13 @@ public static class RecipeTreeDisplay
         if (node.IsProfitable)
         {
             result.AppendLine(
-                $"{indent}- Craft {node.Count}x {node.ItemName} ({node.ItemId}) (Crafting Cost: {node.CraftingCost}, Sell Price: {node.SellPrice}, Buy Price: {node.BuyPrice})"
+                $"{indent}- Craft {node.Count}x {node.ItemName} ({node.ItemId}) (Crafting Cost: {node.CraftingCost}; Sell Price: {node.SellPrice}; Buy Price: {node.BuyPrice})"
             );
         }
         else
         {
             result.AppendLine(
-                $"{indent}- Buy {node.Count}x {node.ItemName} ({node.ItemId}) (Crafting Cost: {node.CraftingCost}, Sell Price: {node.SellPrice}, Buy Price: {node.BuyPrice})"
+                $"{indent}- Buy {node.Count}x {node.ItemName} ({node.ItemId}) (Crafting Cost: {node.CraftingCost}; Sell Price: {node.SellPrice}; Buy Price: {node.BuyPrice})"
             );
         }
 
