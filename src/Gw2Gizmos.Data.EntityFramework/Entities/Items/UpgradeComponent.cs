@@ -24,5 +24,9 @@ public class UpgradeComponentDetails
     public List<string> Flags { get; set; } = [];
     public List<string> InfusionUpgradeFlags { get; set; } = [];
     public List<string> Bonuses { get; set; } = [];
-    public InfixUpgrade InfixUpgrade { get; set; }
+
+    // FK lives on the InfixUpgrade side (UpgradeComponentInfixUpgrade.UpgradeComponentDetailsId),
+    // consistent with the gear types — so removing the Details cascades to the InfixUpgrade.
+    [InverseProperty(nameof(InfixUpgrade.UpgradeComponentDetails))]
+    public UpgradeComponentInfixUpgrade? InfixUpgrade { get; set; }
 }

@@ -596,9 +596,6 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("InfixUpgradeId")
-                        .HasColumnType("INTEGER");
-
                     b.PrimitiveCollection<string>("InfusionUpgradeFlags")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -612,8 +609,6 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("ItemId");
-
-                    b.HasIndex("InfixUpgradeId");
 
                     b.ToTable("UpgradeComponentDetails");
                 });
@@ -806,6 +801,19 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         .IsUnique();
 
                     b.ToTable("TrinketInfixUpgrades");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentInfixUpgrade", b =>
+                {
+                    b.HasBaseType("Gw2Gizmos.Data.EntityFramework.Entities.Items.InfixUpgrade");
+
+                    b.Property<int>("UpgradeComponentDetailsId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasIndex("UpgradeComponentDetailsId")
+                        .IsUnique();
+
+                    b.ToTable("UpgradeComponentInfixUpgrades");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.WeaponInfixUpgrade", b =>
@@ -1208,19 +1216,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentDetails", b =>
                 {
-                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.InfixUpgrade", "InfixUpgrade")
-                        .WithMany()
-                        .HasForeignKey("InfixUpgradeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponent", "UpgradeComponent")
                         .WithOne("Details")
                         .HasForeignKey("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentDetails", "ItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("InfixUpgrade");
 
                     b.Navigation("UpgradeComponent");
                 });
@@ -1329,6 +1329,23 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                         .IsRequired();
 
                     b.Navigation("TrinketDetails");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentInfixUpgrade", b =>
+                {
+                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.InfixUpgrade", null)
+                        .WithOne()
+                        .HasForeignKey("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentInfixUpgrade", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentDetails", "UpgradeComponentDetails")
+                        .WithOne("InfixUpgrade")
+                        .HasForeignKey("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentInfixUpgrade", "UpgradeComponentDetailsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("UpgradeComponentDetails");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.WeaponInfixUpgrade", b =>
@@ -1584,6 +1601,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.Navigation("InfusionSlots");
 
                     b.Navigation("StatChoices");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.UpgradeComponentDetails", b =>
+                {
+                    b.Navigation("InfixUpgrade");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.WeaponDetails", b =>

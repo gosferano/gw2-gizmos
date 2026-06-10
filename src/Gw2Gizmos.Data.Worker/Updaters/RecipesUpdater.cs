@@ -76,10 +76,13 @@ public class RecipesUpdater
                 List<Recipe> mapped = apiRecipes.Select(MapToRecipeEntity).ToList();
                 List<int> ids = mapped.Select(r => r.Id).ToList();
 
-                // One existence query for the whole page instead of one per recipe. Single
-                // collection include (Ingredients), so no split query is needed.
+                // One existence query for the whole page instead of one per recipe. Multiple
+                // sibling collections → split query to avoid a cartesian product across the batch.
                 Dictionary<int, Recipe> existingById = await _dbContext
                     .Recipes.Include(r => r.Ingredients)
+                    .Include(r => r.Disciplines)
+                    .Include(r => r.Flags)
+                    .AsSplitQuery()
                     .Where(r => ids.Contains(r.Id))
                     .ToDictionaryAsync(r => r.Id, stoppingToken);
 
@@ -89,14 +92,11 @@ public class RecipesUpdater
                     {
                         _dbContext.Entry(existing).CurrentValues.SetValues(recipe);
 
-                        // Ingredients are reconciled by clear-and-re-add. Disciplines and Flags
-                        // are not reloaded or updated here (SetValues copies scalars only),
-                        // matching prior behavior.
-                        existing.Ingredients.Clear();
-                        foreach (RecipeIngredient ingredient in recipe.Ingredients)
-                        {
-                            existing.Ingredients.Add(ingredient);
-                        }
+                        // SetValues copies scalars only, so the child collections are reconciled
+                        // explicitly to match the API snapshot (full clear-and-re-add).
+                        ReplaceCollection(existing.Ingredients, recipe.Ingredients);
+                        ReplaceCollection(existing.Disciplines, recipe.Disciplines);
+                        ReplaceCollection(existing.Flags, recipe.Flags);
                     }
                     else
                     {
@@ -150,4 +150,14 @@ public class RecipesUpdater
         };
     }
 
+    // Replaces a tracked child collection with the incoming snapshot: clearing orphans the old
+    // rows (cascade-deleted via their required FK) and the incoming children are inserted.
+    private static void ReplaceCollection<TChild>(ICollection<TChild> existing, ICollection<TChild> incoming)
+    {
+        existing.Clear();
+        foreach (TChild child in incoming)
+        {
+            existing.Add(child);
+        }
+    }
 }

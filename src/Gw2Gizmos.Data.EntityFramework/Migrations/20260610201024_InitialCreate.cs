@@ -742,18 +742,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     Suffix = table.Column<string>(type: "TEXT", nullable: false),
                     Flags = table.Column<string>(type: "TEXT", nullable: false),
                     InfusionUpgradeFlags = table.Column<string>(type: "TEXT", nullable: false),
-                    Bonuses = table.Column<string>(type: "TEXT", nullable: false),
-                    InfixUpgradeId = table.Column<int>(type: "INTEGER", nullable: false)
+                    Bonuses = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_UpgradeComponentDetails", x => x.ItemId);
-                    table.ForeignKey(
-                        name: "FK_UpgradeComponentDetails_InfixUpgrade_InfixUpgradeId",
-                        column: x => x.InfixUpgradeId,
-                        principalTable: "InfixUpgrade",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_UpgradeComponentDetails_UpgradeComponents_ItemId",
                         column: x => x.ItemId,
@@ -1038,6 +1031,31 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UpgradeComponentInfixUpgrades",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UpgradeComponentDetailsId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UpgradeComponentInfixUpgrades", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UpgradeComponentInfixUpgrades_InfixUpgrade_Id",
+                        column: x => x.Id,
+                        principalTable: "InfixUpgrade",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UpgradeComponentInfixUpgrades_UpgradeComponentDetails_UpgradeComponentDetailsId",
+                        column: x => x.UpgradeComponentDetailsId,
+                        principalTable: "UpgradeComponentDetails",
+                        principalColumn: "ItemId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "WeaponInfixUpgrades",
                 columns: table => new
                 {
@@ -1222,9 +1240,10 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 column: "TrinketDetailsId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UpgradeComponentDetails_InfixUpgradeId",
-                table: "UpgradeComponentDetails",
-                column: "InfixUpgradeId");
+                name: "IX_UpgradeComponentInfixUpgrades_UpgradeComponentDetailsId",
+                table: "UpgradeComponentInfixUpgrades",
+                column: "UpgradeComponentDetailsId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_WeaponInfixUpgrades_WeaponDetailsId",
@@ -1334,7 +1353,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 name: "TrinketStatChoices");
 
             migrationBuilder.DropTable(
-                name: "UpgradeComponentDetails");
+                name: "UpgradeComponentInfixUpgrades");
 
             migrationBuilder.DropTable(
                 name: "WeaponInfixUpgrades");
@@ -1379,7 +1398,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                 name: "TrinketDetails");
 
             migrationBuilder.DropTable(
-                name: "UpgradeComponents");
+                name: "UpgradeComponentDetails");
 
             migrationBuilder.DropTable(
                 name: "InfixUpgrade");
@@ -1401,6 +1420,9 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
 
             migrationBuilder.DropTable(
                 name: "Trinkets");
+
+            migrationBuilder.DropTable(
+                name: "UpgradeComponents");
 
             migrationBuilder.DropTable(
                 name: "Weapons");

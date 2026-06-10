@@ -127,8 +127,27 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.Armors,
                 mapped.OfType<Armor>().ToList(),
-                q => q.Include(a => a.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(a => a.Details)
+                        .ThenInclude(d => d.InfusionSlots)
+                        .ThenInclude(s => s.Flags)
+                        .Include(a => a.Details)
+                        .ThenInclude(d => d.StatChoices)
+                        .Include(a => a.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Attributes)
+                        .Include(a => a.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Buff),
+                (e, i) =>
+                {
+                    // Replace the whole Details subtree. The full graph is loaded above so EF
+                    // tracks every child as a delete and orders the deletes before the inserts
+                    // (the new subtree reuses the same ItemId/FKs), instead of relying on a DB
+                    // cascade that doesn't fire for a same-PK 1:1 replacement.
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -136,8 +155,23 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.BackItems,
                 mapped.OfType<BackItem>().ToList(),
-                q => q.Include(b => b.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(b => b.Details)
+                        .ThenInclude(d => d.InfusionSlots)
+                        .ThenInclude(s => s.Flags)
+                        .Include(b => b.Details)
+                        .ThenInclude(d => d.StatChoices)
+                        .Include(b => b.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Attributes)
+                        .Include(b => b.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Buff),
+                (e, i) =>
+                {
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -154,8 +188,16 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.Consumables,
                 mapped.OfType<Consumable>().ToList(),
-                q => q.Include(c => c.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(c => c.Details)
+                        .ThenInclude(d => d.ExtraRecipes)
+                        .Include(c => c.Details)
+                        .ThenInclude(d => d.Skins),
+                (e, i) =>
+                {
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -199,8 +241,23 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.Trinkets,
                 mapped.OfType<Trinket>().ToList(),
-                q => q.Include(t => t.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(t => t.Details)
+                        .ThenInclude(d => d.InfusionSlots)
+                        .ThenInclude(s => s.Flags)
+                        .Include(t => t.Details)
+                        .ThenInclude(d => d.StatChoices)
+                        .Include(t => t.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Attributes)
+                        .Include(t => t.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Buff),
+                (e, i) =>
+                {
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -208,8 +265,18 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.UpgradeComponents,
                 mapped.OfType<UpgradeComponent>().ToList(),
-                q => q.Include(u => u.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(u => u.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Attributes)
+                        .Include(u => u.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Buff),
+                (e, i) =>
+                {
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -217,8 +284,23 @@ public class ItemsUpdater
             await BatchUpsert(
                 _dbContext.Weapons,
                 mapped.OfType<Weapon>().ToList(),
-                q => q.Include(w => w.Details),
-                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                q =>
+                    q.Include(w => w.Details)
+                        .ThenInclude(d => d.InfusionSlots)
+                        .ThenInclude(s => s.Flags)
+                        .Include(w => w.Details)
+                        .ThenInclude(d => d.StatChoices)
+                        .Include(w => w.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Attributes)
+                        .Include(w => w.Details)
+                        .ThenInclude(d => d.InfixUpgrade!)
+                        .ThenInclude(iu => iu.Buff),
+                (e, i) =>
+                {
+                    _dbContext.Remove(e.Details);
+                    e.Details = i.Details;
+                },
                 stoppingToken
             )
         );
@@ -275,7 +357,7 @@ public class ItemsUpdater
         DbSet<TEntity> set,
         IReadOnlyList<TEntity> mapped,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeConfig,
-        Action<TEntity, TEntity>? copyChildScalars,
+        Action<TEntity, TEntity>? reconcileDetails,
         CancellationToken ct
     )
         where TEntity : Item
@@ -286,8 +368,16 @@ public class ItemsUpdater
         }
 
         List<int> ids = mapped.Select(e => e.Id).ToList();
-        IQueryable<TEntity> query = includeConfig?.Invoke(set) ?? set;
+
+        // Base Item collections are reconciled for every type, so always load them. Multiple
+        // sibling collections → split query to avoid a cartesian product across the batch.
+        IQueryable<TEntity> query = set.Include(e => e.Flags).Include(e => e.GameTypes).Include(e => e.Restrictions);
+        if (includeConfig != null)
+        {
+            query = includeConfig(query);
+        }
         Dictionary<int, TEntity> existingById = await query
+            .AsSplitQuery()
             .Where(e => ids.Contains(e.Id))
             .ToDictionaryAsync(e => e.Id, ct);
 
@@ -297,14 +387,15 @@ public class ItemsUpdater
             if (existingById.TryGetValue(incoming.Id, out TEntity? existing))
             {
                 _dbContext.Entry(existing).CurrentValues.SetValues(incoming);
-                // SetValues copies scalar columns only, never navigations. copyChildScalars
-                // likewise copies the Details row's own scalars. So on update the nested Details
-                // collections (InfusionSlots, StatChoices, InfixUpgrade) are left as first
-                // inserted — preserving prior behavior, but going stale if the game ever changes
-                // them in a balance patch.
-                // TODO: reconcile nested Details collections on update (mirror the clear-and-re-add
-                // pattern used for Recipe ingredients) so updated items match the API snapshot.
-                copyChildScalars?.Invoke(existing, incoming);
+
+                // SetValues copies scalar columns only, never navigations, so child collections
+                // are reconciled explicitly to match the API snapshot (full clear-and-re-add).
+                ReplaceCollection(existing.Flags, incoming.Flags);
+                ReplaceCollection(existing.GameTypes, incoming.GameTypes);
+                ReplaceCollection(existing.Restrictions, incoming.Restrictions);
+
+                // Details (scalars + its own nested collections) are reconciled per type.
+                reconcileDetails?.Invoke(existing, incoming);
             }
             else
             {
@@ -314,6 +405,18 @@ public class ItemsUpdater
         }
 
         return newlyAddedIds;
+    }
+
+    // Replaces a tracked child collection with the incoming snapshot: clearing orphans the old
+    // rows (cascade-deleted via their required FK) and the incoming children (new, Id == 0) are
+    // inserted. Used for the full-snapshot child collections that the API returns each refresh.
+    private static void ReplaceCollection<TChild>(ICollection<TChild> existing, ICollection<TChild> incoming)
+    {
+        existing.Clear();
+        foreach (TChild child in incoming)
+        {
+            existing.Add(child);
+        }
     }
 
     #region Mapping Methods
