@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Full-refresh ingester for the currency master data from <c>/v2/currencies</c>.
+/// </summary>
 public class CurrenciesUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;

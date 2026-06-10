@@ -6,6 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Full-refresh ingester for the item master data. Pulls all item ids from <c>/v2/items</c>,
+/// fetches them in pages, maps each polymorphic API item to its concrete EF entity
+/// (Armor, Weapon, Consumable, …) and upserts it. Signals newly-added items on the
+/// <see cref="ItemAddedDto"/> channel so commerce data can be backfilled for them.
+/// </summary>
 public class ItemsUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;

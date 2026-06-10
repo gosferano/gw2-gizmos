@@ -2,6 +2,11 @@
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Background consumer of the <see cref="ItemMissingDto"/> channel. Batches item ids that appear
+/// on the market but are absent from the items table and triggers <see cref="ItemsUpdater"/> to
+/// fetch their full item data.
+/// </summary>
 public class ItemsMissingUpdater : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;

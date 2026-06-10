@@ -8,6 +8,11 @@ using CommerceListing = Gw2Gizmos.Data.EntityFramework.Entities.Commerce.Commerc
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Refreshes trading-post buy/sell listings from <c>/v2/commerce/listings</c>. Detects ids
+/// present on the market but missing from the items table and signals them on the
+/// <see cref="ItemMissingDto"/> channel; upserts listings for items that already exist.
+/// </summary>
 public class CommerceUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;

@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Full-refresh ingester for crafting recipes from <c>/v2/recipes</c>, including their
+/// ingredients, disciplines, and flags.
+/// </summary>
 public class RecipesUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;

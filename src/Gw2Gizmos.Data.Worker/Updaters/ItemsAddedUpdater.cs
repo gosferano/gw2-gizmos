@@ -2,6 +2,10 @@
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
+/// <summary>
+/// Background consumer of the <see cref="ItemAddedDto"/> channel. Batches newly-added item ids
+/// and triggers <see cref="CommerceUpdater"/> to backfill their trading-post listings.
+/// </summary>
 public class ItemsAddedUpdater : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
