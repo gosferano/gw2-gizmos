@@ -29,7 +29,14 @@ public class CurrenciesUpdater
     {
         _logger.LogInformation("Starting currencies update...");
 
-        Gw2Api.Contract.V2.Currencies.Currency[] currencies = await _apiClient.V2.Currencies.GetAll(stoppingToken);
+        Gw2Api.Contract.V2.Currencies.Currency[]? currencies = await _apiClient.V2.Currencies.GetAll(stoppingToken);
+
+        if (currencies is null || currencies.Length == 0)
+        {
+            _logger.LogWarning("Currencies API returned no data; skipping currencies update.");
+            return;
+        }
+
         var existingCurrencies = await _dbContext.Currencies.ToListAsync(stoppingToken);
 
         foreach (var currency in currencies)

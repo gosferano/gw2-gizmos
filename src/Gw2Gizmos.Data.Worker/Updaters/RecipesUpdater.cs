@@ -33,7 +33,13 @@ public class RecipesUpdater
         _logger.LogInformation("Starting recipes update...");
 
         // Fetch all recipe IDs from the API
-        int[] recipeIds = await _apiClient.V2.Recipes.GetIds(stoppingToken);
+        int[]? recipeIds = await _apiClient.V2.Recipes.GetIds(stoppingToken);
+
+        if (recipeIds is null || recipeIds.Length == 0)
+        {
+            _logger.LogWarning("Recipes API returned no ids; skipping recipes update.");
+            return;
+        }
 
         _logger.LogInformation("Total recipes with data: {Count}", recipeIds.Length);
 
@@ -53,10 +59,19 @@ public class RecipesUpdater
                     recipeIds.Length
                 );
 
-                Gw2Api.Contract.V2.Recipes.Recipe[] apiRecipes = await _apiClient.V2.Recipes.GetByIds(
+                Gw2Api.Contract.V2.Recipes.Recipe[]? apiRecipes = await _apiClient.V2.Recipes.GetByIds(
                     pageIds,
                     stoppingToken
                 );
+
+                if (apiRecipes is null || apiRecipes.Length == 0)
+                {
+                    _logger.LogWarning(
+                        "Recipes API returned no data for {Count} id(s); they may have been removed.",
+                        pageIds.Length
+                    );
+                    continue;
+                }
 
                 foreach (Gw2Api.Contract.V2.Recipes.Recipe apiRecipe in apiRecipes)
                 {

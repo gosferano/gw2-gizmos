@@ -39,7 +39,13 @@ public class ItemsUpdater
         _logger.LogInformation("Starting items update...");
 
         // Get all item IDs from API
-        int[] allItemIds = await _apiClient.V2.Items.GetIds(stoppingToken);
+        int[]? allItemIds = await _apiClient.V2.Items.GetIds(stoppingToken);
+
+        if (allItemIds is null || allItemIds.Length == 0)
+        {
+            _logger.LogWarning("Items API returned no ids; skipping items update.");
+            return;
+        }
 
         _logger.LogInformation("Starting item import. Total items to process: {Count}", allItemIds.Length);
 
@@ -79,7 +85,16 @@ public class ItemsUpdater
 
     public async Task UpdateItemsWithIds(int[] ids, CancellationToken stoppingToken)
     {
-        Gw2Api.Contract.V2.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
+        Gw2Api.Contract.V2.Items.Item[]? apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
+
+        // The API returns null (404 "all ids provided are invalid") when every requested id has
+        // been removed from the game — common for the missing-item backfill, which retries ids
+        // that are referenced elsewhere but no longer exist as items. Nothing to upsert.
+        if (apiItems is null || apiItems.Length == 0)
+        {
+            _logger.LogWarning("Items API returned no data for {Count} id(s); they may have been removed.", ids.Length);
+            return;
+        }
 
         // Map the whole page up front so existence can be checked one query per type-group
         // (see BatchUpsert) instead of one query per item.

@@ -39,7 +39,14 @@ public class CommerceUpdater
         _logger.LogInformation("Starting commerce listings update...");
 
         // Fetch all item IDs with commerce data from the API
-        int[] itemIds = await _apiClient.V2.Commerce.Listings.GetIds(stoppingToken);
+        int[]? itemIds = await _apiClient.V2.Commerce.Listings.GetIds(stoppingToken);
+
+        if (itemIds is null || itemIds.Length == 0)
+        {
+            _logger.LogWarning("Commerce listings API returned no ids; skipping commerce listings update.");
+            return;
+        }
+
         int[] existingItemIds = await _dbContext.Items.Select(i => i.Id).ToArrayAsync(stoppingToken);
         int[] missingItemIds = itemIds.Except(existingItemIds).ToArray();
 
@@ -89,7 +96,13 @@ public class CommerceUpdater
     public async Task UpdateCommerceListingsForItems(IEnumerable<int> itemIds, CancellationToken stoppingToken)
     {
         // Fetch commerce data for the batch of items
-        CommerceListings[] apiListings = await _apiClient.V2.Commerce.Listings.GetByIds(itemIds, stoppingToken);
+        CommerceListings[]? apiListings = await _apiClient.V2.Commerce.Listings.GetByIds(itemIds, stoppingToken);
+
+        if (apiListings is null || apiListings.Length == 0)
+        {
+            _logger.LogWarning("Commerce listings API returned no data for the requested id batch; they may have been removed.");
+            return;
+        }
 
         foreach (CommerceListings apiListing in apiListings)
         {
