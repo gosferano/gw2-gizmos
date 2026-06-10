@@ -140,37 +140,48 @@ public class CommerceUpdater
         {
             _dbContext.Entry(existing).CurrentValues.SetValues(listing);
 
-            // Update Buys
-            foreach (BuyListing buy in listing.Buys)
-            {
-                CommerceListing? existingBuy = existing.Buys.FirstOrDefault(b => b.Id == buy.Id);
-                if (existingBuy != null)
-                {
-                    _dbContext.Entry(existingBuy).CurrentValues.SetValues(buy);
-                }
-                else
-                {
-                    existing.Buys.Add(buy);
-                }
-            }
-
-            // Update Sells
-            foreach (SellListing sell in listing.Sells)
-            {
-                CommerceListing? existingSell = existing.Sells.FirstOrDefault(s => s.Id == sell.Id);
-                if (existingSell != null)
-                {
-                    _dbContext.Entry(existingSell).CurrentValues.SetValues(sell);
-                }
-                else
-                {
-                    existing.Sells.Add(sell);
-                }
-            }
+            // Trading-post listings are an ordered full snapshot each refresh, and the
+            // mapped listings carry no stable Id to match existing rows on. Reconcile in
+            // place: overwrite the overlapping rows, then add or remove only the count
+            // delta. This avoids the unbounded accumulation of the old Id-based merge
+            // (incoming Ids are always 0, so nothing ever matched and every listing was
+            // appended), without churning primary keys for unchanged rows. The whole
+            // reconciliation is persisted by a single SaveChangesAsync, so it is atomic.
+            ReconcileListings(existing.Buys, listing.Buys);
+            ReconcileListings(existing.Sells, listing.Sells);
         }
         else
         {
             await _dbContext.CommerceItemListings.AddAsync(listing, ct);
+        }
+    }
+
+    // Reconciles an existing listing collection to match the incoming snapshot in place:
+    // updates the overlap, appends extras, and removes the surplus (orphaned rows are
+    // cascade-deleted via the required FK). Scalar fields only are copied so tracked
+    // primary keys are never modified.
+    private static void ReconcileListings<T>(ICollection<T> existing, ICollection<T> incoming)
+        where T : CommerceListing
+    {
+        List<T> existingList = existing.ToList();
+        List<T> incomingList = incoming.ToList();
+        int common = Math.Min(existingList.Count, incomingList.Count);
+
+        for (var i = 0; i < common; i++)
+        {
+            existingList[i].Listings = incomingList[i].Listings;
+            existingList[i].UnitPrice = incomingList[i].UnitPrice;
+            existingList[i].Quantity = incomingList[i].Quantity;
+        }
+
+        for (int i = common; i < incomingList.Count; i++)
+        {
+            existing.Add(incomingList[i]);
+        }
+
+        for (int i = common; i < existingList.Count; i++)
+        {
+            existing.Remove(existingList[i]);
         }
     }
 }
