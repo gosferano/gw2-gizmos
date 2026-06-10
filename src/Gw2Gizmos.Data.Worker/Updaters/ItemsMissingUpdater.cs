@@ -3,9 +3,11 @@
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
 /// <summary>
-/// Background consumer of the <see cref="ItemMissingDto"/> channel. Batches item ids that appear
-/// on the market but are absent from the items table and triggers <see cref="ItemsUpdater"/> to
-/// fetch their full item data.
+/// Single background consumer of the <see cref="ItemMissingDto"/> channel — the only path that
+/// upserts items. Batches queued ids and calls <see cref="ItemsUpdater.UpdateItemsWithIds"/> to
+/// fetch and persist them. Ids are produced both by the scheduled refresh
+/// (<see cref="ItemsUpdater.UpdateItems"/>) and by the commerce updater when it finds market ids
+/// absent from the items table. As the sole writer, these producers never collide on the Items key.
 /// </summary>
 public class ItemsMissingUpdater : BackgroundService
 {

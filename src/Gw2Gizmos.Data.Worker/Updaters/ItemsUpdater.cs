@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
 /// <summary>
-/// Full-refresh ingester for the item master data. Pulls all item ids from <c>/v2/items</c>,
-/// fetches them in pages, maps each polymorphic API item to its concrete EF entity
-/// (Armor, Weapon, Consumable, …) and upserts it. Signals newly-added items on the
+/// Item master-data ingester. The scheduled refresh (<see cref="UpdateItems"/>) only *enqueues*
+/// item ids onto the items channel; the single consumer (<see cref="ItemsMissingUpdater"/>) is the
+/// only path that calls <see cref="UpdateItemsWithIds"/> to fetch and upsert them. Because there is
+/// one consumer, the scheduled refresh and the commerce-driven backfill (which also enqueues ids)
+/// can never insert the same id concurrently. Newly-added items are signalled on the
 /// <see cref="ItemAddedDto"/> channel so commerce data can be backfilled for them.
 /// </summary>
 public class ItemsUpdater
@@ -17,8 +19,8 @@ public class ItemsUpdater
     private readonly Gw2GizmosDbContext _dbContext;
     private readonly ILogger<ItemsUpdater> _logger;
     private readonly ChannelWriter<ItemAddedDto> _itemsAddedWriter;
+    private readonly ChannelWriter<ItemMissingDto> _itemsMissingWriter;
     private readonly Gw2ApiClient _apiClient;
-    private const int PageSize = 50; // adjust as needed
 
     public ItemsUpdater(
         Gw2GizmosDbContext dbContext,
@@ -31,9 +33,14 @@ public class ItemsUpdater
         _dbContext = dbContext;
         _logger = logger;
         _itemsAddedWriter = itemsAdded.Writer;
+        _itemsMissingWriter = itemsMissing.Writer;
         _apiClient = apiClientFactory.Create(Locale.English);
     }
 
+    /// <summary>
+    /// Enqueues every item id onto the items channel for the single consumer to upsert, rather than
+    /// writing directly — so the scheduled refresh never races the commerce-driven backfill.
+    /// </summary>
     public async Task UpdateItems(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Starting items update...");
@@ -47,43 +54,17 @@ public class ItemsUpdater
             return;
         }
 
-        _logger.LogInformation("Starting item import. Total items to process: {Count}", allItemIds.Length);
+        _logger.LogInformation("Queueing {Count} item ids for upsert.", allItemIds.Length);
 
-        for (var i = 0; i < allItemIds.Length; i += PageSize)
+        foreach (int itemId in allItemIds)
         {
-            try
-            {
-                if (stoppingToken.IsCancellationRequested)
-                    break;
-
-                int[] pageIds = allItemIds.Skip(i).Take(PageSize).ToArray();
-
-                _logger.LogInformation(
-                    "Processing items {Start} to {End} of {Total}",
-                    i + 1,
-                    i + pageIds.Length,
-                    allItemIds.Length
-                );
-
-                await UpdateItemsWithIds(pageIds, stoppingToken);
-
-                _logger.LogInformation(
-                    "Processed items {Start} to {End}. Total processed: {Total}",
-                    i + 1,
-                    Math.Min(i + PageSize, allItemIds.Length),
-                    i + PageSize
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing items {Start} to {End}", i + 1, i + PageSize);
-            }
+            await _itemsMissingWriter.WriteAsync(new ItemMissingDto { ItemId = itemId }, stoppingToken);
         }
 
-        _logger.LogInformation("Items update completed.");
+        _logger.LogInformation("Items update queued.");
     }
 
-    public async Task UpdateItemsWithIds(int[] ids, CancellationToken stoppingToken)
+    internal async Task UpdateItemsWithIds(int[] ids, CancellationToken stoppingToken)
     {
         Gw2Api.Contract.V2.Items.Item[]? apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
 
