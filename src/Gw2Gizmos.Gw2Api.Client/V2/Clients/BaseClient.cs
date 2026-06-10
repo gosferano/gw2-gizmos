@@ -13,6 +13,7 @@ public abstract class BaseClient
             Converters =
             {
                 new StringValueStructConverterFactory(),
+                new NullableInt32Converter(),
                 new ItemJsonConverter(),
                 new GuildUpgradeJsonConverter(),
                 new ProfessionTrainingTrackStepJsonConverter(),
