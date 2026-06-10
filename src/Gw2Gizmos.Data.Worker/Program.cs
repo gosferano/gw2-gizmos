@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Http;
+using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,10 @@ builder.Services.AddScoped<RecipesUpdater>();
 // Item added and missing updaters
 builder.Services.AddHostedService<ItemsAddedUpdater>();
 builder.Services.AddHostedService<ItemsMissingUpdater>();
+
+// Trading-post delivery notifications
+builder.Services.AddSingleton<INotifier, LogNotifier>();
+builder.Services.AddHostedService<CommerceDeliveryUpdater>();
 
 // Queues
 builder.Services.AddSingleton(Channel.CreateUnbounded<ItemAddedDto>());
