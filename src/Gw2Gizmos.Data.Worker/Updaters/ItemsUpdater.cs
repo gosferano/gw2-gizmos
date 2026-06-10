@@ -81,75 +81,17 @@ public class ItemsUpdater
     {
         Gw2Api.Contract.V2.Items.Item[] apiItems = await _apiClient.V2.Items.GetByIds(ids, stoppingToken);
 
+        // Map the whole page up front so existence can be checked one query per type-group
+        // (see BatchUpsert) instead of one query per item.
+        var mapped = new List<Item>(apiItems.Length);
         foreach (Gw2Api.Contract.V2.Items.Item apiItem in apiItems)
         {
             try
             {
-                // Determine type and map
-                if (apiItem is Gw2Api.Contract.V2.Items.Armor apiArmor)
+                Item? entity = MapApiItem(apiItem);
+                if (entity != null)
                 {
-                    Armor armorEntity = MapToArmorEntity(apiArmor);
-                    await AddOrUpdateArmor(armorEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.BackItem apiBackItem)
-                {
-                    BackItem backItemEntity = MapToBackItemEntity(apiBackItem);
-                    await AddOrUpdateBackItem(backItemEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Bag apiBag)
-                {
-                    Bag bagEntity = MapToBagEntity(apiBag);
-                    await AddOrUpdateBag(bagEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Consumable apiConsumable)
-                {
-                    Consumable consumableEntity = MapToConsumableEntity(apiConsumable);
-                    await AddOrUpdateConsumable(consumableEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Container apiContainer)
-                {
-                    Container containerEntity = MapToContainerEntity(apiContainer);
-                    await AddOrUpdateContainer(containerEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Gathering apiGathering)
-                {
-                    Gathering gatheringEntity = MapToGatheringEntity(apiGathering);
-                    await AddOrUpdateGathering(gatheringEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Gizmo apiGizmo)
-                {
-                    Gizmo gizmoEntity = MapToGizmoEntity(apiGizmo);
-                    await AddOrUpdateGizmo(gizmoEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.MiniPet apiMiniPet)
-                {
-                    MiniPet miniPetEntity = MapToMiniPetEntity(apiMiniPet);
-                    await AddOrUpdateMiniPet(miniPetEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Tool apiTool)
-                {
-                    Tool toolEntity = MapToToolEntity(apiTool);
-                    await AddOrUpdateTool(toolEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Trinket apiTrinket)
-                {
-                    Trinket trinketEntity = MapToTrinketEntity(apiTrinket);
-                    await AddOrUpdateTrinket(trinketEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.UpgradeComponent apiUpgradeComponent)
-                {
-                    UpgradeComponent upgradeComponentEntity = MapToUpgradeComponentEntity(apiUpgradeComponent);
-                    await AddOrUpdateUpgradeComponent(upgradeComponentEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.Weapon apiWeapon)
-                {
-                    Weapon weaponEntity = MapToWeaponEntity(apiWeapon);
-                    await AddOrUpdateWeapon(weaponEntity, stoppingToken);
-                }
-                else if (apiItem is Gw2Api.Contract.V2.Items.ItemSimple apiItemSimple)
-                {
-                    Item itemEntity = MapToItemEntity(apiItemSimple);
-                    await AddOrUpdateItem(itemEntity, stoppingToken);
+                    mapped.Add(entity);
                 }
                 else
                 {
@@ -162,7 +104,201 @@ public class ItemsUpdater
             }
         }
 
+        var newlyAddedIds = new List<int>();
+
+        // One batched upsert per concrete type. Types with a 1:1 Details row include it so its
+        // scalar values can be copied; Gizmo and simple Item have none.
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Armors,
+                mapped.OfType<Armor>().ToList(),
+                q => q.Include(a => a.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.BackItems,
+                mapped.OfType<BackItem>().ToList(),
+                q => q.Include(b => b.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Bags,
+                mapped.OfType<Bag>().ToList(),
+                q => q.Include(b => b.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Consumables,
+                mapped.OfType<Consumable>().ToList(),
+                q => q.Include(c => c.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Containers,
+                mapped.OfType<Container>().ToList(),
+                q => q.Include(c => c.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Gatherings,
+                mapped.OfType<Gathering>().ToList(),
+                q => q.Include(g => g.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.MiniPets,
+                mapped.OfType<MiniPet>().ToList(),
+                q => q.Include(m => m.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Tools,
+                mapped.OfType<Tool>().ToList(),
+                q => q.Include(t => t.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Trinkets,
+                mapped.OfType<Trinket>().ToList(),
+                q => q.Include(t => t.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.UpgradeComponents,
+                mapped.OfType<UpgradeComponent>().ToList(),
+                q => q.Include(u => u.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Weapons,
+                mapped.OfType<Weapon>().ToList(),
+                q => q.Include(w => w.Details),
+                (e, i) => _dbContext.Entry(e.Details).CurrentValues.SetValues(i.Details),
+                stoppingToken
+            )
+        );
+        newlyAddedIds.AddRange(
+            await BatchUpsert(_dbContext.Gizmos, mapped.OfType<Gizmo>().ToList(), null, null, stoppingToken)
+        );
+
+        // Simple items are the base type. OfType<Item>() would match every subtype (they all
+        // derive from Item), so filter to the exact runtime type.
+        newlyAddedIds.AddRange(
+            await BatchUpsert(
+                _dbContext.Items,
+                mapped.Where(e => e.GetType() == typeof(Item)).ToList(),
+                null,
+                null,
+                stoppingToken
+            )
+        );
+
         await _dbContext.SaveChangesAsync(stoppingToken);
+
+        // Signal newly-added items only after the page has been persisted, so a failed save
+        // never emits a phantom "added" event.
+        foreach (int id in newlyAddedIds)
+        {
+            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = id }, stoppingToken);
+        }
+    }
+
+    private static Item? MapApiItem(Gw2Api.Contract.V2.Items.Item apiItem) =>
+        apiItem switch
+        {
+            Gw2Api.Contract.V2.Items.Armor a => MapToArmorEntity(a),
+            Gw2Api.Contract.V2.Items.BackItem b => MapToBackItemEntity(b),
+            Gw2Api.Contract.V2.Items.Bag b => MapToBagEntity(b),
+            Gw2Api.Contract.V2.Items.Consumable c => MapToConsumableEntity(c),
+            Gw2Api.Contract.V2.Items.Container c => MapToContainerEntity(c),
+            Gw2Api.Contract.V2.Items.Gathering g => MapToGatheringEntity(g),
+            Gw2Api.Contract.V2.Items.Gizmo g => MapToGizmoEntity(g),
+            Gw2Api.Contract.V2.Items.MiniPet m => MapToMiniPetEntity(m),
+            Gw2Api.Contract.V2.Items.Tool t => MapToToolEntity(t),
+            Gw2Api.Contract.V2.Items.Trinket t => MapToTrinketEntity(t),
+            Gw2Api.Contract.V2.Items.UpgradeComponent u => MapToUpgradeComponentEntity(u),
+            Gw2Api.Contract.V2.Items.Weapon w => MapToWeaponEntity(w),
+            Gw2Api.Contract.V2.Items.ItemSimple s => MapToItemEntity(s),
+            _ => null
+        };
+
+    /// <summary>
+    /// Upserts a batch of already-mapped entities of a single concrete type using one existence
+    /// query for the whole batch. Returns the ids of rows that were newly inserted.
+    /// </summary>
+    private async Task<List<int>> BatchUpsert<TEntity>(
+        DbSet<TEntity> set,
+        IReadOnlyList<TEntity> mapped,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>>? includeConfig,
+        Action<TEntity, TEntity>? copyChildScalars,
+        CancellationToken ct
+    )
+        where TEntity : Item
+    {
+        if (mapped.Count == 0)
+        {
+            return [];
+        }
+
+        List<int> ids = mapped.Select(e => e.Id).ToList();
+        IQueryable<TEntity> query = includeConfig?.Invoke(set) ?? set;
+        Dictionary<int, TEntity> existingById = await query
+            .Where(e => ids.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, ct);
+
+        var newlyAddedIds = new List<int>();
+        foreach (TEntity incoming in mapped)
+        {
+            if (existingById.TryGetValue(incoming.Id, out TEntity? existing))
+            {
+                _dbContext.Entry(existing).CurrentValues.SetValues(incoming);
+                // SetValues copies scalar columns only, never navigations. copyChildScalars
+                // likewise copies the Details row's own scalars. So on update the nested Details
+                // collections (InfusionSlots, StatChoices, InfixUpgrade) are left as first
+                // inserted — preserving prior behavior, but going stale if the game ever changes
+                // them in a balance patch.
+                // TODO: reconcile nested Details collections on update (mirror the clear-and-re-add
+                // pattern used for Recipe ingredients) so updated items match the API snapshot.
+                copyChildScalars?.Invoke(existing, incoming);
+            }
+            else
+            {
+                await set.AddAsync(incoming, ct);
+                newlyAddedIds.Add(incoming.Id);
+            }
+        }
+
+        return newlyAddedIds;
     }
 
     #region Mapping Methods
@@ -717,271 +853,4 @@ public class ItemsUpdater
 
     #endregion
 
-    #region AddOrUpdate Methods
-
-    private async Task AddOrUpdateArmor(Armor armor, CancellationToken ct)
-    {
-        Armor? existing = await _dbContext
-            .Armors.Include(a => a.Details)
-            .ThenInclude(d => d.InfusionSlots)
-            .ThenInclude(s => s.Flags)
-            .Include(a => a.Details.InfusionSlots)
-            .ThenInclude(i => i.Flags)
-            .Include(a => a.Details.StatChoices)
-            .Include(w => w.Details.InfixUpgrade)
-            .ThenInclude(i => i.Attributes)
-            .Include(w => w.Details.InfixUpgrade.Buff)
-            .FirstOrDefaultAsync(a => a.Id == armor.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(armor);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(armor.Details);
-
-            // TODO: handle properties nested in Details
-        }
-        else
-        {
-            await _dbContext.Armors.AddAsync(armor, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = armor.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateBackItem(BackItem backItem, CancellationToken ct)
-    {
-        BackItem? existing = await _dbContext
-            .BackItems.Include(b => b.Details)
-            .ThenInclude(d => d.InfusionSlots)
-            .ThenInclude(s => s.Flags)
-            .Include(b => b.Details.InfusionSlots)
-            .ThenInclude(i => i.Flags)
-            .Include(b => b.Details.StatChoices)
-            .Include(w => w.Details.InfixUpgrade)
-            .ThenInclude(i => i.Attributes)
-            .Include(w => w.Details.InfixUpgrade.Buff)
-            .FirstOrDefaultAsync(b => b.Id == backItem.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(backItem);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(backItem.Details);
-
-            // TODO: handle properties nested in Details
-        }
-        else
-        {
-            await _dbContext.BackItems.AddAsync(backItem, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = backItem.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateBag(Bag bag, CancellationToken ct)
-    {
-        Bag? existing = await _dbContext.Bags.Include(b => b.Details).FirstOrDefaultAsync(b => b.Id == bag.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(bag);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(bag.Details);
-
-            // TODO: handle properties nested in Details
-        }
-        else
-        {
-            await _dbContext.Bags.AddAsync(bag, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = bag.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateConsumable(Consumable consumable, CancellationToken ct)
-    {
-        Consumable? existing = await _dbContext
-            .Consumables.Include(c => c.Details)
-            .ThenInclude(d => d.ExtraRecipes)
-            .Include(c => c.Details.Skins)
-            .FirstOrDefaultAsync(c => c.Id == consumable.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(consumable);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(consumable.Details);
-        }
-        else
-        {
-            await _dbContext.Consumables.AddAsync(consumable, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = consumable.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateContainer(Container container, CancellationToken ct)
-    {
-        Container? existing = await _dbContext
-            .Containers.Include(c => c.Details)
-            .FirstOrDefaultAsync(c => c.Id == container.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(container);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(container.Details);
-        }
-        else
-        {
-            await _dbContext.Containers.AddAsync(container, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = container.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateGathering(Gathering gathering, CancellationToken ct)
-    {
-        Gathering? existing = await _dbContext
-            .Gatherings.Include(g => g.Details)
-            .FirstOrDefaultAsync(g => g.Id == gathering.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(gathering);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(gathering.Details);
-        }
-        else
-        {
-            await _dbContext.Gatherings.AddAsync(gathering, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = gathering.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateGizmo(Gizmo gizmo, CancellationToken ct)
-    {
-        Gizmo? existing = await _dbContext.Gizmos.FirstOrDefaultAsync(g => g.Id == gizmo.Id, ct);
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(gizmo);
-        }
-        else
-        {
-            await _dbContext.Gizmos.AddAsync(gizmo, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = gizmo.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateMiniPet(MiniPet miniPet, CancellationToken ct)
-    {
-        MiniPet? existing = await _dbContext
-            .MiniPets.Include(m => m.Details)
-            .FirstOrDefaultAsync(t => t.Id == miniPet.Id, ct);
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(miniPet);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(miniPet.Details);
-        }
-        else
-        {
-            await _dbContext.MiniPets.AddAsync(miniPet, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = miniPet.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateTool(Tool tool, CancellationToken ct)
-    {
-        Tool? existing = await _dbContext.Tools.Include(t => t.Details).FirstOrDefaultAsync(t => t.Id == tool.Id, ct);
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(tool);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(tool.Details);
-        }
-        else
-        {
-            await _dbContext.Tools.AddAsync(tool, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = tool.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateTrinket(Trinket trinket, CancellationToken ct)
-    {
-        Trinket? existing = await _dbContext
-            .Trinkets.Include(t => t.Details)
-            .ThenInclude(d => d.InfusionSlots)
-            .ThenInclude(s => s.Flags)
-            .Include(t => t.Details.InfusionSlots)
-            .ThenInclude(i => i.Flags)
-            .Include(t => t.Details.StatChoices)
-            .Include(w => w.Details.InfixUpgrade)
-            .ThenInclude(i => i.Attributes)
-            .Include(w => w.Details.InfixUpgrade.Buff)
-            .FirstOrDefaultAsync(t => t.Id == trinket.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(trinket);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(trinket.Details);
-
-            // TODO: handle properties nested in Details
-        }
-        else
-        {
-            await _dbContext.Trinkets.AddAsync(trinket, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = trinket.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateUpgradeComponent(UpgradeComponent upgradeComponent, CancellationToken ct)
-    {
-        UpgradeComponent? existing = await _dbContext
-            .UpgradeComponents.Include(u => u.Details)
-            .FirstOrDefaultAsync(u => u.Id == upgradeComponent.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(upgradeComponent);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(upgradeComponent.Details);
-
-            // TODO: handle properties nested in Details
-        }
-        else
-        {
-            await _dbContext.UpgradeComponents.AddAsync(upgradeComponent, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = upgradeComponent.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateWeapon(Weapon weapon, CancellationToken ct)
-    {
-        Weapon? existing = await _dbContext
-            .Weapons.Include(w => w.Details)
-            .ThenInclude(d => d.InfusionSlots)
-            .ThenInclude(s => s.Flags)
-            .Include(a => a.Details.InfusionSlots)
-            .ThenInclude(i => i.Flags)
-            .Include(w => w.Details.StatChoices)
-            .Include(w => w.Details.InfixUpgrade)
-            .ThenInclude(i => i.Attributes)
-            .Include(w => w.Details.InfixUpgrade.Buff)
-            .FirstOrDefaultAsync(w => w.Id == weapon.Id, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(weapon);
-            _dbContext.Entry(existing.Details).CurrentValues.SetValues(weapon.Details);
-        }
-        else
-        {
-            await _dbContext.Weapons.AddAsync(weapon, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = weapon.Id, }, ct);
-        }
-    }
-
-    private async Task AddOrUpdateItem(Item item, CancellationToken ct)
-    {
-        Item? existing = await _dbContext.Items.FirstOrDefaultAsync(i => i.Id == item.Id, ct);
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(item);
-        }
-        else
-        {
-            await _dbContext.Items.AddAsync(item, ct);
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = item.Id, }, ct);
-        }
-    }
-
-    #endregion
 }
