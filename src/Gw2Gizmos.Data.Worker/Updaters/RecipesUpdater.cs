@@ -73,10 +73,35 @@ public class RecipesUpdater
                     continue;
                 }
 
-                foreach (Gw2Api.Contract.V2.Recipes.Recipe apiRecipe in apiRecipes)
+                List<Recipe> mapped = apiRecipes.Select(MapToRecipeEntity).ToList();
+                List<int> ids = mapped.Select(r => r.Id).ToList();
+
+                // One existence query for the whole page instead of one per recipe. Single
+                // collection include (Ingredients), so no split query is needed.
+                Dictionary<int, Recipe> existingById = await _dbContext
+                    .Recipes.Include(r => r.Ingredients)
+                    .Where(r => ids.Contains(r.Id))
+                    .ToDictionaryAsync(r => r.Id, stoppingToken);
+
+                foreach (Recipe recipe in mapped)
                 {
-                    Recipe recipe = MapToRecipeEntity(apiRecipe);
-                    await AddOrUpdateRecipe(recipe, stoppingToken);
+                    if (existingById.TryGetValue(recipe.Id, out Recipe? existing))
+                    {
+                        _dbContext.Entry(existing).CurrentValues.SetValues(recipe);
+
+                        // Ingredients are reconciled by clear-and-re-add. Disciplines and Flags
+                        // are not reloaded or updated here (SetValues copies scalars only),
+                        // matching prior behavior.
+                        existing.Ingredients.Clear();
+                        foreach (RecipeIngredient ingredient in recipe.Ingredients)
+                        {
+                            existing.Ingredients.Add(ingredient);
+                        }
+                    }
+                    else
+                    {
+                        await _dbContext.Recipes.AddAsync(recipe, stoppingToken);
+                    }
                 }
 
                 await _dbContext.SaveChangesAsync(stoppingToken);
@@ -125,26 +150,4 @@ public class RecipesUpdater
         };
     }
 
-    private async Task AddOrUpdateRecipe(Recipe recipe, CancellationToken stoppingToken)
-    {
-        Recipe? existingRecipe = await _dbContext
-            .Recipes.Include(r => r.Ingredients)
-            .FirstOrDefaultAsync(r => r.Id == recipe.Id, stoppingToken);
-
-        if (existingRecipe != null)
-        {
-            // Update existing recipe
-            _dbContext.Entry(existingRecipe).CurrentValues.SetValues(recipe);
-            existingRecipe.Ingredients.Clear();
-            foreach (RecipeIngredient ingredient in recipe.Ingredients)
-            {
-                existingRecipe.Ingredients.Add(ingredient);
-            }
-        }
-        else
-        {
-            // Add new recipe
-            await _dbContext.Recipes.AddAsync(recipe, stoppingToken);
-        }
-    }
 }
