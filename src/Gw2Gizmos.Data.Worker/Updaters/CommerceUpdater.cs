@@ -104,19 +104,40 @@ public class CommerceUpdater
             return;
         }
 
-        foreach (CommerceListings apiListing in apiListings)
+        List<CommerceItemListing> mapped = apiListings.Select(MapToCommerceItemListingEntity).ToList();
+        List<int> ids = mapped.Select(m => m.ItemId).ToList();
+
+        // One existence query for the whole page instead of one per item. Split query because
+        // two sibling collections (Buys, Sells) are included — a single query would produce
+        // their cartesian product across up to PageSize roots.
+        Dictionary<int, CommerceItemListing> existingById = await _dbContext
+            .CommerceItemListings.Include(l => l.Buys)
+            .Include(l => l.Sells)
+            .AsSplitQuery()
+            .Where(l => ids.Contains(l.ItemId))
+            .ToDictionaryAsync(l => l.ItemId, stoppingToken);
+
+        foreach (CommerceItemListing listing in mapped)
         {
             try
             {
-                // Map API data to entity
-                CommerceItemListing commerceItemListing = MapToCommerceItemListingEntity(apiListing);
+                if (existingById.TryGetValue(listing.ItemId, out CommerceItemListing? existing))
+                {
+                    _dbContext.Entry(existing).CurrentValues.SetValues(listing);
 
-                // Add or update in the database
-                await AddOrUpdateCommerceItemListing(commerceItemListing, stoppingToken);
+                    // Listings are an ordered full snapshot with no stable Id to match on, so
+                    // reconcile them in place rather than merging by Id (see ReconcileListings).
+                    ReconcileListings(existing.Buys, listing.Buys);
+                    ReconcileListings(existing.Sells, listing.Sells);
+                }
+                else
+                {
+                    await _dbContext.CommerceItemListings.AddAsync(listing, stoppingToken);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing commerce data for item ID {ItemId}", apiListing.Id);
+                _logger.LogError(ex, "Error processing commerce data for item ID {ItemId}", listing.ItemId);
             }
         }
 
@@ -147,37 +168,13 @@ public class CommerceUpdater
         };
     }
 
-    private async Task AddOrUpdateCommerceItemListing(CommerceItemListing listing, CancellationToken ct)
-    {
-        CommerceItemListing? existing = await _dbContext
-            .CommerceItemListings.Include(l => l.Buys)
-            .Include(l => l.Sells)
-            .FirstOrDefaultAsync(l => l.ItemId == listing.ItemId, ct);
-
-        if (existing != null)
-        {
-            _dbContext.Entry(existing).CurrentValues.SetValues(listing);
-
-            // Trading-post listings are an ordered full snapshot each refresh, and the
-            // mapped listings carry no stable Id to match existing rows on. Reconcile in
-            // place: overwrite the overlapping rows, then add or remove only the count
-            // delta. This avoids the unbounded accumulation of the old Id-based merge
-            // (incoming Ids are always 0, so nothing ever matched and every listing was
-            // appended), without churning primary keys for unchanged rows. The whole
-            // reconciliation is persisted by a single SaveChangesAsync, so it is atomic.
-            ReconcileListings(existing.Buys, listing.Buys);
-            ReconcileListings(existing.Sells, listing.Sells);
-        }
-        else
-        {
-            await _dbContext.CommerceItemListings.AddAsync(listing, ct);
-        }
-    }
-
     // Reconciles an existing listing collection to match the incoming snapshot in place:
     // updates the overlap, appends extras, and removes the surplus (orphaned rows are
     // cascade-deleted via the required FK). Scalar fields only are copied so tracked
-    // primary keys are never modified.
+    // primary keys are never modified. The mapped listings carry no stable Id to match on
+    // (incoming Ids are always 0), which is why they are reconciled by position rather than
+    // merged by Id — the old Id-based merge never matched and appended every listing on every
+    // refresh, growing the tables without bound.
     private static void ReconcileListings<T>(ICollection<T> existing, ICollection<T> incoming)
         where T : CommerceListing
     {
