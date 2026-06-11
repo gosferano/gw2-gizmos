@@ -22,10 +22,26 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- Build the worker CLI alongside, but don't reference its assembly — Herald launches it as a
+         separate process so its heavy ingestion can't stall the UI thread. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\herald.png" />
   </ItemGroup>
+
+  <!-- Copy the worker CLI's output into a Worker/ subfolder so Herald can spawn it at runtime. -->
+  <Target Name="CopyWorkerCli" AfterTargets="Build">
+    <ItemGroup>
+      <WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net8.0\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WorkerCliFiles)"
+          DestinationFiles="@(WorkerCliFiles->'$(OutDir)Worker\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

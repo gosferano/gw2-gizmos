@@ -26,6 +26,8 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.8" />
         <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+        <!-- DPAPI for at-rest encryption of the user's API key. Windows-only at runtime. -->
+        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
     </ItemGroup>
 
     <ItemGroup>

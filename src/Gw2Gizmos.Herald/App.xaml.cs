@@ -17,14 +17,17 @@ using Serilog.Events;
 namespace Gw2Gizmos.Herald;
 
 /// <summary>
-/// Application entry point. Runs as a tray app: hosts the GW2 data-ingestion engine (with Windows
-/// toasts and the user-entered API key wired in) plus a window that hides to the system tray on close.
+/// Application entry point. Runs as a tray app that hosts the lightweight delivery-notification
+/// poller (with Windows toasts) in-process, and launches the heavy ingestion engine as a separate
+/// worker process so it can't stall the UI. Both share the same database and API key.
 /// </summary>
 public partial class App : Application
 {
     private TaskbarIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
+    private Process? _workerProcess;
+    private readonly ChildProcessJob _workerJob = new();
     private bool _isExiting;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -33,11 +36,20 @@ public partial class App : Application
 
         ToastService.RegisterAppId();
 
-        _host = BuildHost();
+        string dataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Gw2Gizmos"
+        );
+        Directory.CreateDirectory(dataDir);
+        string dbPath = Path.Combine(dataDir, "herald.sqlite");
+
+        _host = BuildHost(dataDir, dbPath);
         _host.Services.MigrateGw2GizmosDb();
         await _host.StartAsync();
 
-        var apiKeyStore = _host.Services.GetRequiredService<HeraldApiKeyStore>();
+        StartWorkerProcess(dataDir, dbPath);
+
+        var apiKeyStore = _host.Services.GetRequiredService<AppStateApiKeyStore>();
 
         _window = new MainWindow(apiKeyStore);
         _window.Closing += (_, args) =>
@@ -54,21 +66,13 @@ public partial class App : Application
         SetupTrayIcon();
     }
 
-    private static IHost BuildHost()
+    private static IHost BuildHost(string dataDir, string dbPath)
     {
-        string dataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Gw2Gizmos"
-        );
-        Directory.CreateDirectory(dataDir);
-        string dbPath = Path.Combine(dataDir, "herald.sqlite");
-
         HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
         string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
 
-        // Serilog, configured as the worker had it — notably Microsoft -> Warning, which keeps the
-        // EF Core SQL firehose out of the logs during ingestion.
+        // Serilog, configured as the worker had it — notably Microsoft -> Warning.
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -86,13 +90,42 @@ public partial class App : Application
         builder.Logging.AddSerilog();
 
         // Herald's implementations, registered before the engine so its TryAdd defaults are skipped.
-        builder.Services.AddSingleton<HeraldApiKeyStore>();
-        builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<HeraldApiKeyStore>());
+        builder.Services.AddSingleton<AppStateApiKeyStore>();
+        builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());
         builder.Services.AddSingleton<INotifier, ToastNotifier>();
 
-        builder.Services.AddGw2GizmosDataWorker($"Data Source={dbPath}");
+        // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
+        builder.Services.AddGw2GizmosDeliveryNotifications($"Data Source={dbPath}");
 
         return builder.Build();
+    }
+
+    private void StartWorkerProcess(string dataDir, string dbPath)
+    {
+        string workerExe = Path.Combine(AppContext.BaseDirectory, "Worker", "Gw2Gizmos.Data.Worker.Cli.exe");
+        if (!File.Exists(workerExe))
+        {
+            Log.Warning("Worker process not found at {Path}; data ingestion will not run.", workerExe);
+            return;
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = workerExe,
+            WorkingDirectory = dataDir,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb=Data Source={dbPath}");
+
+        _workerProcess = Process.Start(startInfo);
+
+        // Bind the worker to a kill-on-close job so it can never outlive Herald (even on a crash).
+        if (_workerProcess is not null)
+        {
+            _workerJob.AddProcess(_workerProcess);
+            Log.Information("Started ingestion worker process (pid {Pid}).", _workerProcess.Id);
+        }
     }
 
     private void SetupTrayIcon()
@@ -137,12 +170,28 @@ public partial class App : Application
     {
         _trayIcon?.Dispose();
 
+        try
+        {
+            if (_workerProcess is { HasExited: false })
+            {
+                _workerProcess.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to stop the worker process.");
+        }
+
+        // Closing the job is the backstop that guarantees the worker is gone.
+        _workerJob.Dispose();
+
         if (_host is not null)
         {
             await _host.StopAsync(TimeSpan.FromSeconds(2));
             _host.Dispose();
         }
 
+        await Log.CloseAndFlushAsync();
         base.OnExit(e);
     }
 }

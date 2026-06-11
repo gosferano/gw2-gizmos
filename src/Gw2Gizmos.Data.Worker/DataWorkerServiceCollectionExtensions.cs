@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Threading.Channels;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Configuration;
@@ -13,67 +12,85 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Gw2Gizmos.Data.Worker;
 
 /// <summary>
-/// Composes the GW2 data-ingestion engine (background updaters, the API client, EF Core, and the
-/// work queues) into a host. Both the headless CLI and the Herald desktop app build on this; each
-/// supplies its own logging, configuration, and <see cref="INotifier"/>.
+/// Composes the GW2 data engine into a host. The work splits by weight so a UI host and a background
+/// host can take different pieces:
+/// <list type="bullet">
+/// <item><see cref="AddGw2GizmosIngestion"/> — the heavy bulk sync (items, commerce, recipes; account
+/// data later). Belongs in a background process.</item>
+/// <item><see cref="AddGw2GizmosDeliveryNotifications"/> — the lightweight trading-post delivery poller.
+/// Cheap enough to live in the UI process so notifications need no cross-process plumbing.</item>
+/// </list>
+/// Each consumer supplies its own logging and <see cref="INotifier"/>; both read the API key through
+/// <see cref="IGw2ApiKeyProvider"/> (configuration by default; Herald registers an AppState-backed one).
 /// </summary>
 public static class DataWorkerServiceCollectionExtensions
 {
-    public static IServiceCollection AddGw2GizmosDataWorker(this IServiceCollection services, string connectionString)
+    /// <summary>The heavy bulk-ingestion engine. Intended for the background worker process.</summary>
+    public static IServiceCollection AddGw2GizmosIngestion(this IServiceCollection services, string connectionString)
     {
-        // Top-level scheduler that drives the periodic updaters.
-        services.AddHostedService<Worker>();
+        AddCore(services, connectionString);
 
-        // Updaters (resolved per-scope by the scheduler / channel consumers).
+        services.AddHostedService<Worker>();
         services.AddScoped<ItemsUpdater>();
         services.AddScoped<CommerceUpdater>();
         services.AddScoped<CurrenciesUpdater>();
         services.AddScoped<RecipesUpdater>();
 
-        // Channel consumers.
+        // Channel consumers + queues that connect the ingestion updaters.
         services.AddHostedService<ItemsAddedUpdater>();
         services.AddHostedService<ItemsMissingUpdater>();
-
-        // Trading-post delivery notifications. LogNotifier and the configuration-backed key provider
-        // are defaults; a consumer (e.g. Herald) can register its own INotifier / IGw2ApiKeyProvider
-        // before calling this to override them.
-        services.TryAddSingleton<INotifier, LogNotifier>();
-        services.TryAddSingleton<IGw2ApiKeyProvider, ConfigurationGw2ApiKeyProvider>();
-        services.AddHostedService<CommerceDeliveryUpdater>();
-
-        // Work queues.
         services.AddSingleton(Channel.CreateUnbounded<ItemAddedDto>());
         services.AddSingleton(Channel.CreateUnbounded<ItemMissingDto>());
 
-        // GW2 API client.
+        return services;
+    }
+
+    /// <summary>The lightweight trading-post delivery poller. Cheap enough for the UI process.</summary>
+    public static IServiceCollection AddGw2GizmosDeliveryNotifications(
+        this IServiceCollection services,
+        string connectionString
+    )
+    {
+        AddCore(services, connectionString);
+
+        // LogNotifier is the default; a consumer (e.g. Herald) registers its own INotifier first.
+        services.TryAddSingleton<INotifier, LogNotifier>();
+        services.AddHostedService<CommerceDeliveryUpdater>();
+
+        return services;
+    }
+
+    /// <summary>Shared dependencies: the API client, EF Core, and the default API-key provider.</summary>
+    private static void AddCore(IServiceCollection services, string connectionString)
+    {
+        // Configuration-backed key provider is the default; consumers can register their own first.
+        services.TryAddSingleton<IGw2ApiKeyProvider, ConfigurationGw2ApiKeyProvider>();
+
         services
             .AddHttpClient("Gw2Api")
             .AddPolicyHandler(Policies.GetRetryPolicy())
             .AddPolicyHandler(Policies.GetTimeoutPolicy());
         services.AddSingleton<IGw2ApiClientFactory, Gw2ApiClientFactory>();
 
-        // Entity Framework Core. EF picks up the host's ILoggerFactory automatically.
+        // EF Core picks up the host's ILoggerFactory automatically.
         services.AddDbContext<Gw2GizmosDbContext>(
             options =>
-            {
-                bool enableSensitiveDataLogging = Debugger.IsAttached;
-                options
-                    .UseSqlite(connectionString)
-                    .EnableSensitiveDataLogging(enableSensitiveDataLogging)
-                    .EnableDetailedErrors(enableSensitiveDataLogging);
-            },
+                options.UseSqlite(connectionString),
             contextLifetime: ServiceLifetime.Scoped,
             optionsLifetime: ServiceLifetime.Singleton
         );
-
-        return services;
     }
 
-    /// <summary>Applies any pending EF Core migrations. Call once after building the host.</summary>
+    /// <summary>
+    /// Applies pending EF Core migrations and switches the database to WAL journaling so the UI and
+    /// background processes can share it (concurrent readers alongside a writer). Call once after
+    /// building the host.
+    /// </summary>
     public static void MigrateGw2GizmosDb(this IServiceProvider serviceProvider)
     {
         using IServiceScope scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
         dbContext.Database.Migrate();
+        dbContext.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
     }
 }

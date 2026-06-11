@@ -1,16 +1,17 @@
 using System.Windows;
+using Gw2Gizmos.Data.Worker.Configuration;
 
 namespace Gw2Gizmos.Herald;
 
 /// <summary>
-/// Settings window: lets the user enter the GW2 API key the delivery poller uses. The key is stored
-/// DPAPI-encrypted via <see cref="HeraldApiKeyStore"/>.
+/// Settings window: lets the user enter the GW2 API key the engine uses. The key is stored
+/// DPAPI-encrypted in the shared database via <see cref="AppStateApiKeyStore"/>.
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly HeraldApiKeyStore _apiKeyStore;
+    private readonly AppStateApiKeyStore _apiKeyStore;
 
-    public MainWindow(HeraldApiKeyStore apiKeyStore)
+    public MainWindow(AppStateApiKeyStore apiKeyStore)
     {
         InitializeComponent();
         _apiKeyStore = apiKeyStore;

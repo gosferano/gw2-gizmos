@@ -1,12 +1,12 @@
-using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Gw2Gizmos.Herald;
+namespace Gw2Gizmos.Data.Worker.Configuration;
 
 /// <summary>
 /// Encrypts/decrypts small secrets with Windows DPAPI (per-user). The ciphertext can only be read
 /// back by the same Windows user on the same machine; copying it elsewhere makes it useless.
+/// Windows-only at runtime.
 /// </summary>
 internal static class ProtectedDataHelper
 {
