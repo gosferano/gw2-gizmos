@@ -3,6 +3,8 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>Gw2Gizmos.Gw2Api.Contract</PackageId>
+    <!-- 0.0.0 is an unreleased baseline (its tag suppresses the first auto-release); bump to ship. -->
+    <Version>0.0.0</Version>
     <Description>Request/response contract types (DTOs) for the Guild Wars 2 API (v2).</Description>
     <PackageTags>guildwars2;gw2;api;contract;dto</PackageTags>
   </PropertyGroup>

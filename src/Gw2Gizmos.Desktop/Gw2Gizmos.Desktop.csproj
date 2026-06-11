@@ -8,6 +8,8 @@
     <UseWPF>true</UseWPF>
     <!-- User-facing brand name; project stays Gw2Gizmos.Desktop. -->
     <AssemblyName>Gw2Gizmos</AssemblyName>
+    <!-- 0.0.0 is an unreleased baseline (its tag suppresses the first auto-release); bump to ship. -->
+    <Version>0.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
