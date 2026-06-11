@@ -1,0 +1,10 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- Default target for all projects; Windows-desktop projects (Herald) override this. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

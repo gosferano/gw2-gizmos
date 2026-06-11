@@ -1,42 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <!-- Library: the data-ingestion engine. Hosted by Herald (and a future Data.Worker.Cli),
-         which supply their own logging and configuration. -->
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
+  <!-- Library: the data-ingestion engine. Hosted by Herald and Data.Worker.Cli, which supply
+       their own logging and configuration. -->
 
-    <!-- Global usings the Worker SDK previously provided implicitly. -->
-    <ItemGroup>
-        <Using Include="Microsoft.Extensions.Configuration" />
-        <Using Include="Microsoft.Extensions.DependencyInjection" />
-        <Using Include="Microsoft.Extensions.Hosting" />
-        <Using Include="Microsoft.Extensions.Logging" />
-    </ItemGroup>
+  <!-- Global usings the Worker SDK previously provided implicitly. -->
+  <ItemGroup>
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.8" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
-        <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.8" />
-        <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
-        <!-- DPAPI for at-rest encryption of the user's API key. Windows-only at runtime. -->
-        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" />
+    <PackageReference Include="Polly.Extensions.Http" />
+    <!-- DPAPI for at-rest encryption of the user's API key. Windows-only at runtime. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Gw2Gizmos.Data.EntityFramework\Gw2Gizmos.Data.EntityFramework.csproj" />
-      <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Client\Gw2Gizmos.Gw2Api.Client.csproj" />
-      <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Gw2Gizmos.Data.EntityFramework\Gw2Gizmos.Data.EntityFramework.csproj" />
+    <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Client\Gw2Gizmos.Gw2Api.Client.csproj" />
+    <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Data\" />
-    </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\" />
+  </ItemGroup>
+
 </Project>
