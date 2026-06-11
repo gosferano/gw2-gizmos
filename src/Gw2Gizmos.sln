@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Utilities.SqliteT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.RecipeFinder.Cli", "Gw2Gizmos.RecipeFinder.Cli\Gw2Gizmos.RecipeFinder.Cli.csproj", "{E5CCFC20-6604-44B5-9848-FF774F0DC12C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Herald", "Gw2Gizmos.Herald\Gw2Gizmos.Herald.csproj", "{54103421-3A95-4B7D-AD4B-F8DDB492F18C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,5 +62,9 @@ Global
 		{E5CCFC20-6604-44B5-9848-FF774F0DC12C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5CCFC20-6604-44B5-9848-FF774F0DC12C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5CCFC20-6604-44B5-9848-FF774F0DC12C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54103421-3A95-4B7D-AD4B-F8DDB492F18C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54103421-3A95-4B7D-AD4B-F8DDB492F18C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54103421-3A95-4B7D-AD4B-F8DDB492F18C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54103421-3A95-4B7D-AD4B-F8DDB492F18C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

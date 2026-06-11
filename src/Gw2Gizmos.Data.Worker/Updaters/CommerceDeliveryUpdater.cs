@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.State;
+using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Gw2Api.Client;
 using Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
@@ -28,11 +29,15 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
     private sealed record DeliveryBaseline(int Coins, Dictionary<int, int> Items);
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IGw2ApiClientFactory _apiClientFactory;
+    private readonly IGw2ApiKeyProvider _apiKeyProvider;
     private readonly INotifier _notifier;
     private readonly ILogger<CommerceDeliveryUpdater> _logger;
-    private readonly Gw2ApiClient? _apiClient;
     private readonly TimeSpan _pollInterval;
 
+    private Gw2ApiClient? _apiClient;
+    private string? _currentApiKey;
+    private bool _warnedNoKey;
     private bool _baselineEstablished;
     private int _lastCoins;
     private Dictionary<int, int> _lastItemCounts = new();
@@ -40,32 +45,24 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
     public CommerceDeliveryUpdater(
         IServiceScopeFactory scopeFactory,
         IGw2ApiClientFactory apiClientFactory,
+        IGw2ApiKeyProvider apiKeyProvider,
         IConfiguration configuration,
         INotifier notifier,
         ILogger<CommerceDeliveryUpdater> logger
     )
     {
         _scopeFactory = scopeFactory;
+        _apiClientFactory = apiClientFactory;
+        _apiKeyProvider = apiKeyProvider;
         _notifier = notifier;
         _logger = logger;
 
         int pollSeconds = Math.Max(MinPollSeconds, configuration.GetValue("Gw2:DeliveryPollSeconds", DefaultPollSeconds));
         _pollInterval = TimeSpan.FromSeconds(pollSeconds);
-
-        // Key needs the 'account' + 'tradingpost' scopes. Set it in user-secrets ("Gw2:ApiKey")
-        // or via the GW2_API_KEY environment variable.
-        string? apiKey = configuration["Gw2:ApiKey"] ?? configuration["GW2_API_KEY"];
-        _apiClient = string.IsNullOrWhiteSpace(apiKey) ? null : apiClientFactory.Create(apiKey, Locale.English);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_apiClient is null)
-        {
-            _logger.LogWarning("No GW2 API key configured; trading-post delivery notifications are disabled.");
-            return;
-        }
-
         await LoadBaselineAsync(stoppingToken);
 
         using var timer = new PeriodicTimer(_pollInterval);
@@ -83,9 +80,51 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
+    /// <summary>
+    /// Returns the API client for the current key, rebuilding it when the key changes and returning
+    /// null when no key is available yet — so the poller simply idles until the user provides one
+    /// (no restart needed).
+    /// </summary>
+    private Gw2ApiClient? ResolveApiClient()
+    {
+        string? apiKey = _apiKeyProvider.GetApiKey();
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            if (!_warnedNoKey)
+            {
+                _logger.LogInformation(
+                    "No GW2 API key available; trading-post delivery notifications are idle until one is provided."
+                );
+                _warnedNoKey = true;
+            }
+
+            _apiClient = null;
+            _currentApiKey = null;
+            return null;
+        }
+
+        if (!string.Equals(apiKey, _currentApiKey, StringComparison.Ordinal))
+        {
+            // Key needs the 'account' + 'tradingpost' scopes.
+            _apiClient = _apiClientFactory.Create(apiKey, Locale.English);
+            _currentApiKey = apiKey;
+            _warnedNoKey = false;
+            _logger.LogInformation("GW2 API key detected; trading-post delivery notifications are active.");
+        }
+
+        return _apiClient;
+    }
+
     private async Task PollDeliveryAsync(CancellationToken stoppingToken)
     {
-        CommerceDelivery? delivery = await _apiClient!.V2.Commerce.Delivery.GetBlob(stoppingToken);
+        Gw2ApiClient? apiClient = ResolveApiClient();
+        if (apiClient is null)
+        {
+            return;
+        }
+
+        CommerceDelivery? delivery = await apiClient.V2.Commerce.Delivery.GetBlob(stoppingToken);
         if (delivery is null)
         {
             _logger.LogWarning(
