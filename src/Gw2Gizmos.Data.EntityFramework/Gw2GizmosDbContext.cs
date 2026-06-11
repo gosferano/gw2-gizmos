@@ -2,6 +2,7 @@
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.EntityFramework.Entities.State;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.EntityFramework;
@@ -50,4 +51,7 @@ public class Gw2GizmosDbContext : DbContext
     // Recipes
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
+
+    // Application/runtime state (key-value)
+    public DbSet<AppState> AppState { get; set; }
 }
