@@ -11,19 +11,19 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// </summary>
 public class RecipesUpdater
 {
-    private readonly Gw2GizmosDbContext _dbContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RecipesUpdater> _logger;
     private readonly Gw2ApiClient _apiClient;
 
     private const int PageSize = 200;
 
     public RecipesUpdater(
-        Gw2GizmosDbContext dbContext,
+        IServiceScopeFactory scopeFactory,
         IGw2ApiClientFactory apiClientFactory,
         ILogger<RecipesUpdater> logger
     )
     {
-        _dbContext = dbContext;
+        _scopeFactory = scopeFactory;
         _apiClient = apiClientFactory.Create(Locale.English);
         _logger = logger;
     }
@@ -76,9 +76,14 @@ public class RecipesUpdater
                 List<Recipe> mapped = apiRecipes.Select(MapToRecipeEntity).ToList();
                 List<int> ids = mapped.Select(r => r.Id).ToList();
 
+                // Fresh scope (and DbContext) per page, disposed at the end of the iteration — bounds
+                // the change tracker to one page rather than accumulating every recipe for the cycle.
+                using IServiceScope scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
                 // One existence query for the whole page instead of one per recipe. Multiple
                 // sibling collections → split query to avoid a cartesian product across the batch.
-                Dictionary<int, Recipe> existingById = await _dbContext
+                Dictionary<int, Recipe> existingById = await dbContext
                     .Recipes.Include(r => r.Ingredients)
                     .Include(r => r.Disciplines)
                     .Include(r => r.Flags)
@@ -90,7 +95,7 @@ public class RecipesUpdater
                 {
                     if (existingById.TryGetValue(recipe.Id, out Recipe? existing))
                     {
-                        _dbContext.Entry(existing).CurrentValues.SetValues(recipe);
+                        dbContext.Entry(existing).CurrentValues.SetValues(recipe);
 
                         // SetValues copies scalars only, so the child collections are reconciled
                         // explicitly to match the API snapshot (full clear-and-re-add).
@@ -100,11 +105,11 @@ public class RecipesUpdater
                     }
                     else
                     {
-                        await _dbContext.Recipes.AddAsync(recipe, stoppingToken);
+                        await dbContext.Recipes.AddAsync(recipe, stoppingToken);
                     }
                 }
 
-                await _dbContext.SaveChangesAsync(stoppingToken);
+                await dbContext.SaveChangesAsync(stoppingToken);
 
                 _logger.LogInformation(
                     "Processed items {Start} to {End}. Total processed: {Total}",

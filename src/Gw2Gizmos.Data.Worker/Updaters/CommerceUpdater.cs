@@ -15,20 +15,20 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// </summary>
 public class CommerceUpdater
 {
-    private readonly Gw2GizmosDbContext _dbContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CommerceUpdater> _logger;
     private readonly Gw2ApiClient _apiClient;
     private readonly ChannelWriter<ItemMissingDto> _itemsMissingWriter;
     private const int PageSize = 200;
 
     public CommerceUpdater(
-        Gw2GizmosDbContext dbContext,
+        IServiceScopeFactory scopeFactory,
         IGw2ApiClientFactory apiClientFactory,
         ILogger<CommerceUpdater> logger,
         Channel<ItemMissingDto> itemsMissing
     )
     {
-        _dbContext = dbContext;
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _itemsMissingWriter = itemsMissing.Writer;
         _apiClient = apiClientFactory.Create(Locale.English);
@@ -47,7 +47,13 @@ public class CommerceUpdater
             return;
         }
 
-        int[] existingItemIds = await _dbContext.Items.Select(i => i.Id).ToArrayAsync(stoppingToken);
+        int[] existingItemIds;
+        using (IServiceScope scope = _scopeFactory.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            existingItemIds = await dbContext.Items.Select(i => i.Id).ToArrayAsync(stoppingToken);
+        }
+
         int[] missingItemIds = itemIds.Except(existingItemIds).ToArray();
 
         foreach (int missingItemId in missingItemIds)
@@ -107,10 +113,16 @@ public class CommerceUpdater
         List<CommerceItemListing> mapped = apiListings.Select(MapToCommerceItemListingEntity).ToList();
         List<int> ids = mapped.Select(m => m.ItemId).ToList();
 
+        // Fresh scope (and DbContext) per page, disposed at the end. That bounds the change tracker
+        // to one page's worth of entities — the full-cycle caller pages over the whole market, so a
+        // reused context would otherwise accumulate every listing (and its Buys/Sells) for the run.
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
         // One existence query for the whole page instead of one per item. Split query because
         // two sibling collections (Buys, Sells) are included — a single query would produce
         // their cartesian product across up to PageSize roots.
-        Dictionary<int, CommerceItemListing> existingById = await _dbContext
+        Dictionary<int, CommerceItemListing> existingById = await dbContext
             .CommerceItemListings.Include(l => l.Buys)
             .Include(l => l.Sells)
             .AsSplitQuery()
@@ -123,7 +135,7 @@ public class CommerceUpdater
             {
                 if (existingById.TryGetValue(listing.ItemId, out CommerceItemListing? existing))
                 {
-                    _dbContext.Entry(existing).CurrentValues.SetValues(listing);
+                    dbContext.Entry(existing).CurrentValues.SetValues(listing);
 
                     // Listings are an ordered full snapshot with no stable Id to match on, so
                     // reconcile them in place rather than merging by Id (see ReconcileListings).
@@ -132,7 +144,7 @@ public class CommerceUpdater
                 }
                 else
                 {
-                    await _dbContext.CommerceItemListings.AddAsync(listing, stoppingToken);
+                    await dbContext.CommerceItemListings.AddAsync(listing, stoppingToken);
                 }
             }
             catch (Exception ex)
@@ -141,7 +153,7 @@ public class CommerceUpdater
             }
         }
 
-        await _dbContext.SaveChangesAsync(stoppingToken);
+        await dbContext.SaveChangesAsync(stoppingToken);
     }
 
     private static CommerceItemListing MapToCommerceItemListingEntity(CommerceListings apiListing)
