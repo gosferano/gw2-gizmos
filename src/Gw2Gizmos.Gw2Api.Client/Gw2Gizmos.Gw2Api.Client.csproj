@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Gw2Gizmos.Gw2Api.Client</PackageId>
+    <Description>A typed HTTP client for the Guild Wars 2 API (v2). Depends on the contract package for its DTOs.</Description>
+    <PackageTags>guildwars2;gw2;api;client</PackageTags>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
   </ItemGroup>

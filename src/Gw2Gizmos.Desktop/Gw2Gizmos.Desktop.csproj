@@ -19,6 +19,7 @@
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="WPF-UI" />
+    <PackageReference Include="Velopack" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,12 +36,25 @@
     <Resource Include="Assets\gw2gizmos.png" />
   </ItemGroup>
 
-  <!-- Copy the worker CLI's output into a Worker/ subfolder so the app can spawn it at runtime. -->
+  <!-- Dev (F5/run-from-bin): copy the worker CLI's build output into a Worker/ subfolder so the app
+       can spawn it. The * matches the CLI's TFM folder, so this isn't pinned to a framework. -->
   <Target Name="CopyWorkerCli" AfterTargets="Build">
     <ItemGroup>
-      <WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
+      <WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\*\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(WorkerCliFiles)" DestinationFiles="@(WorkerCliFiles->'$(OutDir)Worker\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Publish: publish the worker CLI into the Worker/ subfolder of the app's publish output, matching
+       the app's publish settings (self-contained / RID) so the shipped/installed app can spawn it. -->
+  <Target Name="PublishWorkerCli" AfterTargets="Publish">
+    <PropertyGroup>
+      <_AppPublishFull Condition="$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$(PublishDir)</_AppPublishFull>
+      <_AppPublishFull Condition="!$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(PublishDir)'))\</_AppPublishFull>
+    </PropertyGroup>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);PublishDir=$(_AppPublishFull)Worker\;SelfContained=$(SelfContained);RuntimeIdentifier=$(RuntimeIdentifier)" />
   </Target>
 
 </Project>

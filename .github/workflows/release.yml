@@ -1,0 +1,119 @@
+name: release
+
+# On every push to main, release any component whose csproj <Version> has no matching tag yet:
+#   - Gw2Api.Contract / Gw2Api.Client -> NuGet.org (Trusted Publishing, OIDC; no API-key secret)
+#   - the desktop app                 -> a GitHub Release carrying the Velopack Windows installer
+# Each component is tagged independently (gw2-api-contract-<v>, gw2-api-client-<v>, gw2gizmos-desktop-<v>).
+on:
+  push:
+    branches: [main]
+    # Only spin up the runner when something releasable changed; the version-gate below still
+    # decides what actually publishes. workflow_dispatch ignores this filter (always available).
+    paths:
+      - "src/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # create tags + GitHub Releases
+  id-token: write # OIDC token for NuGet Trusted Publishing
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so existing tags can be detected
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install vpk (Velopack CLI)
+        shell: bash
+        run: |
+          dotnet tool install -g vpk
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # Read each csproj <Version>; a component is "new" when its tag doesn't exist yet.
+      - name: Detect new versions
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          contract_v=$(dotnet msbuild src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj -getProperty:Version)
+          client_v=$(dotnet msbuild src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj -getProperty:Version)
+          desktop_v=$(dotnet msbuild src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -getProperty:Version)
+          is_new() { if git rev-parse "$1" >/dev/null 2>&1; then echo false; else echo true; fi; }
+          {
+            echo "contract_v=$contract_v"
+            echo "contract_new=$(is_new "gw2-api-contract-$contract_v")"
+            echo "client_v=$client_v"
+            echo "client_new=$(is_new "gw2-api-client-$client_v")"
+            echo "desktop_v=$desktop_v"
+            echo "desktop_new=$(is_new "gw2gizmos-desktop-$desktop_v")"
+          } >> "$GITHUB_OUTPUT"
+
+      # Mint a short-lived NuGet API key via OIDC (only when a library is being published).
+      - name: NuGet login (Trusted Publishing)
+        if: steps.detect.outputs.contract_new == 'true' || steps.detect.outputs.client_new == 'true'
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }} # nuget.org profile name (not email)
+
+      # --- Contract (pushed before Client, which depends on it) ---
+      - name: Pack & push Contract
+        if: steps.detect.outputs.contract_new == 'true'
+        shell: bash
+        run: |
+          dotnet pack src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj -c Release -o dist/contract
+          dotnet nuget push "dist/contract/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Release Contract
+        if: steps.detect.outputs.contract_new == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: gw2-api-contract-${{ steps.detect.outputs.contract_v }}
+          name: GW2 API Contract ${{ steps.detect.outputs.contract_v }}
+          generate_release_notes: true
+          files: dist/contract/*.nupkg
+
+      # --- Client ---
+      - name: Pack & push Client
+        if: steps.detect.outputs.client_new == 'true'
+        shell: bash
+        run: |
+          dotnet pack src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj -c Release -o dist/client
+          dotnet nuget push "dist/client/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Release Client
+        if: steps.detect.outputs.client_new == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: gw2-api-client-${{ steps.detect.outputs.client_v }}
+          name: GW2 API Client ${{ steps.detect.outputs.client_v }}
+          generate_release_notes: true
+          files: dist/client/*.nupkg
+
+      # --- Desktop app: self-contained publish (incl. Worker/) -> Velopack installer + update feed ---
+      - name: Publish & pack desktop app
+        if: steps.detect.outputs.desktop_new == 'true'
+        shell: bash
+        run: |
+          dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ steps.detect.outputs.desktop_v }}" --packDir publish/desktop --mainExe Gw2Gizmos.exe --outputDir Releases
+
+      - name: Release desktop app
+        if: steps.detect.outputs.desktop_new == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: gw2gizmos-desktop-${{ steps.detect.outputs.desktop_v }}
+          name: Gw2Gizmos ${{ steps.detect.outputs.desktop_v }}
+          generate_release_notes: true
+          files: Releases/*

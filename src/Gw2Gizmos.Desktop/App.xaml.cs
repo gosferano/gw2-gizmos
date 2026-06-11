@@ -13,6 +13,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Velopack;
+using Velopack.Sources;
 using Wpf.Ui.Abstractions;
 
 namespace Gw2Gizmos.Desktop;
@@ -33,6 +35,10 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Must run before anything else: processes Velopack install/update/uninstall hooks (and exits
+        // for those), then returns for a normal launch.
+        VelopackApp.Build().Run();
+
         base.OnStartup(e);
 
         ToastService.RegisterAppId();
@@ -63,6 +69,35 @@ public partial class App : Application
         _window.Show();
 
         SetupTrayIcon();
+
+        // Check for updates in the background; no-op when run from bin (not Velopack-installed).
+        _ = CheckForUpdatesAsync();
+    }
+
+    private static async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var updateManager = new UpdateManager(
+                new GithubSource("https://github.com/gosferano/gw2-gizmos", null, prerelease: false)
+            );
+
+            if (!updateManager.IsInstalled)
+            {
+                return;
+            }
+
+            UpdateInfo? update = await updateManager.CheckForUpdatesAsync();
+            if (update is not null)
+            {
+                // Download now; Velopack applies it on the next restart so the session isn't interrupted.
+                await updateManager.DownloadUpdatesAsync(update);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Update check failed.");
+        }
     }
 
     private static IHost BuildHost(string dataDir, string dbPath)

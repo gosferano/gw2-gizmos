@@ -1,0 +1,4 @@
+# Local packaging / release output (also produced by the release workflow on CI).
+publish/
+Releases/
+dist/

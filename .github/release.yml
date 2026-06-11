@@ -1,0 +1,10 @@
+# Controls GitHub's auto-generated release notes (used by generate_release_notes in the workflow).
+# Categories apply to merged PRs by label; with direct-to-main commits the notes list commit subjects.
+changelog:
+  categories:
+    - title: Features
+      labels: [feature, enhancement]
+    - title: Fixes
+      labels: [fix, bug]
+    - title: Other changes
+      labels: ["*"]

@@ -1,11 +1,29 @@
 <Project>
 
   <PropertyGroup>
-    <!-- Default target for all projects; Windows-desktop projects (Herald) override this. -->
+    <!-- Default target for all projects; the Windows desktop app overrides this. -->
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <WarningsAsErrors>$(WarningsAsErrors);Nullable</WarningsAsErrors>
+    <!-- Nothing is packed unless a project opts in (only the API libraries ship as NuGet today). -->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <!-- Shared package metadata + SourceLink (used only when a project sets IsPackable=true). -->
+  <PropertyGroup>
+    <Authors>gosferano</Authors>
+    <Company>gosferano</Company>
+    <PackageProjectUrl>https://github.com/gosferano/gw2-gizmos</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/gosferano/gw2-gizmos.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
 
 </Project>
