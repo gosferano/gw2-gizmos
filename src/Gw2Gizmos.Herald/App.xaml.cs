@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Wpf.Ui.Abstractions;
 
 namespace Gw2Gizmos.Herald;
 
@@ -49,9 +50,7 @@ public partial class App : Application
 
         StartWorkerProcess(dataDir, dbPath);
 
-        var apiKeyStore = _host.Services.GetRequiredService<AppStateApiKeyStore>();
-
-        _window = new MainWindow(apiKeyStore);
+        _window = _host.Services.GetRequiredService<MainWindow>();
         _window.Closing += (_, args) =>
         {
             if (!_isExiting)
@@ -74,6 +73,9 @@ public partial class App : Application
         const string logOutputTemplate =
             "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}";
 
+        // Shared, UI-bindable buffer feeding the in-app log viewer (this process's events).
+        var logStore = new LogStore();
+
         // Serilog, configured as the worker had it — notably Microsoft -> Warning.
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
@@ -88,6 +90,7 @@ public partial class App : Application
                 outputTemplate: logOutputTemplate,
                 rollingInterval: RollingInterval.Day
             )
+            .WriteTo.Sink(new InMemoryLogSink(logStore))
             .CreateLogger();
 
         builder.Logging.ClearProviders();
@@ -96,7 +99,34 @@ public partial class App : Application
         // Herald's implementations, registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton<AppStateApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());
-        builder.Services.AddSingleton<INotifier, ToastNotifier>();
+
+        // Notifications fan out through a composite: persist to the shared table (+ in-app feed) and
+        // fire a Windows toast. NotificationWatcher surfaces the worker's cross-process notifications.
+        builder.Services.AddSingleton<NotificationHub>();
+        builder.Services.AddSingleton<DbNotifier>();
+        builder.Services.AddSingleton<ToastNotifier>();
+        builder.Services.AddSingleton<INotifier>(sp => new CompositeNotifier(
+            sp.GetRequiredService<DbNotifier>(),
+            sp.GetRequiredService<ToastNotifier>()
+        ));
+        builder.Services.AddHostedService<NotificationWatcher>();
+
+        // In-app log viewer: this process's events (the sink above) + the worker's (tailed file).
+        builder.Services.AddSingleton(logStore);
+        builder.Services.AddHostedService<WorkerLogTailer>();
+
+        // UI shell: the navigation page provider, the window, pages, and their view-models.
+        builder.Services.AddSingleton<INavigationViewPageProvider, PageProvider>();
+        builder.Services.AddSingleton<MainWindow>();
+        builder.Services.AddTransient<DashboardViewModel>();
+        builder.Services.AddSingleton<NotificationsViewModel>();
+        builder.Services.AddSingleton<LogsViewModel>();
+        builder.Services.AddSingleton<SettingsViewModel>();
+        builder.Services.AddTransient<DashboardPage>();
+        builder.Services.AddTransient<NotificationsPage>();
+        // Cached so its heavy live list is built once, not rebuilt on every navigation.
+        builder.Services.AddSingleton<LogsPage>();
+        builder.Services.AddTransient<SettingsPage>();
 
         // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
         builder.Services.AddGw2GizmosDeliveryNotifications($"Data Source={dbPath}");

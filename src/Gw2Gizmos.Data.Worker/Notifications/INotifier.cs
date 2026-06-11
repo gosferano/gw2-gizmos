@@ -7,5 +7,6 @@ namespace Gw2Gizmos.Data.Worker.Notifications;
 /// </summary>
 public interface INotifier
 {
-    void Notify(string title, string message);
+    /// <param name="category">Groups the notification for filtering/display (e.g. "Delivery", "Account").</param>
+    void Notify(string title, string message, string category = "General");
 }

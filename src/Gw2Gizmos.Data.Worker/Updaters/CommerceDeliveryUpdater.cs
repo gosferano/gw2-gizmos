@@ -178,7 +178,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         }
 
         string message = await BuildMessageAsync(coinsDelta, addedItems, stoppingToken);
-        _notifier.Notify("Trading post delivery", message);
+        _notifier.Notify("Trading post delivery", message, "Delivery");
     }
 
     private async Task LoadBaselineAsync(CancellationToken stoppingToken)

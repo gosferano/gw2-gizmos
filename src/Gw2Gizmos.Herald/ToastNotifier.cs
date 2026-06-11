@@ -7,5 +7,6 @@ namespace Gw2Gizmos.Herald;
 /// </summary>
 public sealed class ToastNotifier : INotifier
 {
-    public void Notify(string title, string message) => ToastService.Show(title, message);
+    public void Notify(string title, string message, string category = "General") =>
+        ToastService.Show(title, message);
 }

@@ -1,46 +1,20 @@
-using System.Windows;
-using Gw2Gizmos.Data.Worker.Configuration;
+using Wpf.Ui.Abstractions;
+using Wpf.Ui.Controls;
 
 namespace Gw2Gizmos.Herald;
 
 /// <summary>
-/// Settings window: lets the user enter the GW2 API key the engine uses. The key is stored
-/// DPAPI-encrypted in the shared database via <see cref="AppStateApiKeyStore"/>.
+/// The app shell: a Fluent window with a navigation rail. Each feature is a page resolved from DI
+/// via the <see cref="INavigationViewPageProvider"/>; new features are new pages.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : FluentWindow
 {
-    private readonly AppStateApiKeyStore _apiKeyStore;
-
-    public MainWindow(AppStateApiKeyStore apiKeyStore)
+    public MainWindow(INavigationViewPageProvider pageProvider)
     {
         InitializeComponent();
-        _apiKeyStore = apiKeyStore;
-        UpdateStatus();
-    }
+        RootNavigation.SetPageProviderService(pageProvider);
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
-    {
-        string key = ApiKeyBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            StatusText.Text = "Enter a key first.";
-            return;
-        }
-
-        _apiKeyStore.SetApiKey(key);
-        ApiKeyBox.Clear();
-        UpdateStatus();
-    }
-
-    private void ClearButton_Click(object sender, RoutedEventArgs e)
-    {
-        _apiKeyStore.SetApiKey(null);
-        ApiKeyBox.Clear();
-        UpdateStatus();
-    }
-
-    private void UpdateStatus()
-    {
-        StatusText.Text = _apiKeyStore.HasApiKey ? "API key configured ✓" : "No API key set.";
+        // Navigate once the control's visual tree is ready (navigating in the ctor NREs).
+        Loaded += (_, _) => RootNavigation.Navigate(typeof(NotificationsPage));
     }
 }

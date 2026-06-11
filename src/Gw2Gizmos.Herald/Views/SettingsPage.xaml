@@ -1,0 +1,22 @@
+<Page x:Class="Gw2Gizmos.Herald.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      Title="Settings">
+    <StackPanel Margin="24" MaxWidth="540" HorizontalAlignment="Left">
+        <TextBlock Text="Settings" FontSize="22" FontWeight="Medium" Margin="0,0,0,16" />
+
+        <TextBlock Text="GW2 API key" FontWeight="Medium" />
+        <TextBlock Text="Needs the 'account' and 'tradingpost' scopes. Create one at account.arena.net."
+                   Opacity="0.7" Margin="0,2,0,8" TextWrapping="Wrap" />
+        <ui:TextBox Text="{Binding ApiKeyInput, UpdateSourceTrigger=PropertyChanged}"
+                    PlaceholderText="paste key here" FontFamily="Consolas" />
+
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <ui:Button Content="Save key" Command="{Binding SaveCommand}" Appearance="Primary" />
+            <ui:Button Content="Clear" Command="{Binding ClearCommand}" Margin="8,0,0,0" />
+            <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="14,0,0,0" Opacity="0.8" />
+        </StackPanel>
+    </StackPanel>
+</Page>

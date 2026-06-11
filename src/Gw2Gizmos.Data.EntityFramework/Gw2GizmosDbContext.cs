@@ -1,6 +1,7 @@
 ﻿using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Notifications;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Gw2Gizmos.Data.EntityFramework.Entities.State;
 using Microsoft.EntityFrameworkCore;
@@ -54,4 +55,7 @@ public class Gw2GizmosDbContext : DbContext
 
     // Application/runtime state (key-value)
     public DbSet<AppState> AppState { get; set; }
+
+    // User-facing notifications (shared in-app feed + cross-process)
+    public DbSet<Notification> Notifications { get; set; }
 }

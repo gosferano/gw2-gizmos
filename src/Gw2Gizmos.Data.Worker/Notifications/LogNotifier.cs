@@ -13,8 +13,8 @@ public sealed class LogNotifier : INotifier
         _logger = logger;
     }
 
-    public void Notify(string title, string message)
+    public void Notify(string title, string message, string category = "General")
     {
-        _logger.LogInformation("[NOTIFY] {Title}: {Message}", title, message);
+        _logger.LogInformation("[NOTIFY:{Category}] {Title}: {Message}", category, title, message);
     }
 }
