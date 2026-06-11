@@ -71,6 +71,8 @@ public partial class App : Application
         HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
         string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
+        const string logOutputTemplate =
+            "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}";
 
         // Serilog, configured as the worker had it — notably Microsoft -> Warning.
         Log.Logger = new LoggerConfiguration()
@@ -80,10 +82,12 @@ public partial class App : Application
             .MinimumLevel.Override("System", LogEventLevel.Warning)
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Environment", environment)
-            .WriteTo.Console(
-                outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}"
+            .WriteTo.Console(outputTemplate: logOutputTemplate)
+            .WriteTo.File(
+                Path.Combine(dataDir, "Logs", "log-.txt"),
+                outputTemplate: logOutputTemplate,
+                rollingInterval: RollingInterval.Day
             )
-            .WriteTo.File(Path.Combine(dataDir, "Logs", "log-.txt"), rollingInterval: RollingInterval.Day)
             .CreateLogger();
 
         builder.Logging.ClearProviders();
