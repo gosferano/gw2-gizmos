@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Configuration;
-using Gw2Gizmos.Data.Worker.Http;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Gw2Api.Client;
@@ -66,11 +65,8 @@ public static class DataWorkerServiceCollectionExtensions
         // Configuration-backed key provider is the default; consumers can register their own first.
         services.TryAddSingleton<IGw2ApiKeyProvider, ConfigurationGw2ApiKeyProvider>();
 
-        services
-            .AddHttpClient("Gw2Api")
-            .AddPolicyHandler(Policies.GetRetryPolicy())
-            .AddPolicyHandler(Policies.GetTimeoutPolicy());
-        services.AddSingleton<IGw2ApiClientFactory, Gw2ApiClientFactory>();
+        // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
+        services.AddGw2ApiClient();
 
         // EF Core picks up the host's ILoggerFactory automatically.
         services.AddDbContext<Gw2GizmosDbContext>(
