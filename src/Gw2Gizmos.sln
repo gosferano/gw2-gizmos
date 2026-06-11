@@ -25,7 +25,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Utilities.SqliteT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.RecipeFinder.Cli", "Gw2Gizmos.RecipeFinder.Cli\Gw2Gizmos.RecipeFinder.Cli.csproj", "{E5CCFC20-6604-44B5-9848-FF774F0DC12C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Herald", "Gw2Gizmos.Herald\Gw2Gizmos.Herald.csproj", "{54103421-3A95-4B7D-AD4B-F8DDB492F18C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop", "Gw2Gizmos.Desktop\Gw2Gizmos.Desktop.csproj", "{54103421-3A95-4B7D-AD4B-F8DDB492F18C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Data.Worker.Cli", "Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj", "{2F264A51-D7F2-49C5-AD37-B18D223CA0D2}"
 EndProject
