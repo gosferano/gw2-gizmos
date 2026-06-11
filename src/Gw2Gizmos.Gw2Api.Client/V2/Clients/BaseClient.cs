@@ -106,11 +106,8 @@ public abstract class BaseClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = await response.Content.ReadFromJsonAsync<Error>(
-                JsonSerializerContext.Options,
-                cancellationToken
-            );
-            return new Result<TResponse, Error>(error!, response.StatusCode)
+            Error error = await ReadErrorAsync(response, cancellationToken);
+            return new Result<TResponse, Error>(error, response.StatusCode)
             {
                 ResponseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
             };
@@ -134,5 +131,34 @@ public abstract class BaseClient
                     ? count
                     : null,
         };
+    }
+
+    /// <summary>
+    /// Reads the error body without throwing. GW2 returns a JSON <c>{"text": ...}</c> on failure, but
+    /// a 5xx or an intermediary proxy can return HTML, an empty body, or nothing — in which case a
+    /// status-based message is synthesized so the caller always gets a populated <see cref="Error"/>.
+    /// </summary>
+    private static async Task<Error> ReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            Error? error = await response.Content.ReadFromJsonAsync<Error>(
+                JsonSerializerContext.Options,
+                cancellationToken
+            );
+            if (error is not null && !string.IsNullOrWhiteSpace(error.Text))
+            {
+                return error;
+            }
+        }
+        catch (Exception ex)
+            when (ex is JsonException or NotSupportedException or HttpRequestException or IOException)
+        {
+            // Unparseable or unreadable error body (malformed JSON, an HTML 5xx page, a mid-stream
+            // network drop) — fall through to the status-based message. Cancellation/timeout
+            // (OperationCanceledException) is intentionally NOT caught and propagates to the caller.
+        }
+
+        return new Error { Text = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".Trim() };
     }
 }
