@@ -7,24 +7,23 @@ namespace Gw2Gizmos.Gw2Api.Client.V2.Clients;
 
 public abstract class BaseClient
 {
-    private static readonly JsonSerializerOptions JsonSerializerOptions =
-        new()
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        Converters =
         {
-            Converters =
-            {
-                new StringValueStructConverterFactory(),
-                new NullableInt32Converter(),
-                new ItemJsonConverter(),
-                new GuildUpgradeJsonConverter(),
-                new ProfessionTrainingTrackStepJsonConverter(),
-                new SkillFactJsonConverter(),
-                new SkinJsonConverter(),
-                new TraitFactJsonConverter(),
-            },
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            TypeInfoResolver = Gw2ApiV2JsonContext.Default
-        };
+            new StringValueStructConverterFactory(),
+            new NullableInt32Converter(),
+            new ItemJsonConverter(),
+            new GuildUpgradeJsonConverter(),
+            new ProfessionTrainingTrackStepJsonConverter(),
+            new SkillFactJsonConverter(),
+            new SkinJsonConverter(),
+            new TraitFactJsonConverter(),
+        },
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        TypeInfoResolver = Gw2ApiV2JsonContext.Default,
+    };
     private static readonly JsonSerializerContext JsonSerializerContext = new Gw2ApiV2JsonContext(
         JsonSerializerOptions
     );
@@ -95,8 +94,10 @@ public abstract class BaseClient
         CancellationToken cancellationToken
     )
     {
-        HttpRequestMessage request =
-            new(HttpMethod.Get, uri) { Headers = { { SchemaVersionHeaderName, schemaVersion } } };
+        HttpRequestMessage request = new(HttpMethod.Get, uri)
+        {
+            Headers = { { SchemaVersionHeaderName, schemaVersion } },
+        };
         using HttpResponseMessage response = await HttpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
@@ -109,7 +110,10 @@ public abstract class BaseClient
                 JsonSerializerContext.Options,
                 cancellationToken
             );
-            return new Result<TResponse, Error>(error!, response.StatusCode);
+            return new Result<TResponse, Error>(error!, response.StatusCode)
+            {
+                ResponseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
+            };
         }
 
         var result = await response.Content.ReadFromJsonAsync<TResponse>(
