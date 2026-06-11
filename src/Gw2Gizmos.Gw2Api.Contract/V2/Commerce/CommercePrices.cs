@@ -4,6 +4,6 @@ public class CommercePrices
 {
     public int Id { get; set; }
     public bool Whitelisted { get; set; }
-    public CommercePrice Buys { get; set; }
-    public CommercePrice Sells { get; set; }
+    public CommercePrice Buys { get; set; } = null!;
+    public CommercePrice Sells { get; set; } = null!;
 }

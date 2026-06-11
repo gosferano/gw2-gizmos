@@ -2,8 +2,8 @@
 
 public class Account
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public long Age { get; set; }
     public int World { get; set; }
     public string[] Guilds { get; set; } = Array.Empty<string>();

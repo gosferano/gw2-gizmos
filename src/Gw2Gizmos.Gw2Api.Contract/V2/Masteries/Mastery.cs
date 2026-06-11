@@ -3,7 +3,7 @@
 public class Mastery
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public string Requirement { get; set; } = string.Empty;
     public int Order { get; set; }
     public string Background { get; set; } = string.Empty;

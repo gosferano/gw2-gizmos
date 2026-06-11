@@ -2,5 +2,5 @@
 
 public class SkinGathering : Skin
 {
-    public SkinGatheringDetails Details { get; set; }
+    public SkinGatheringDetails Details { get; set; } = null!;
 }

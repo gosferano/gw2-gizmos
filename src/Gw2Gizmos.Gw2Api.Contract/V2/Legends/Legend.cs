@@ -2,7 +2,7 @@
 
 public class Legend
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public int Swap { get; set; }
     public int Heal { get; set; }
     public int Elite { get; set; }

@@ -6,7 +6,7 @@ using ClosedXML.Excel;
 // Define options
 var connectionStringArgument = new Argument<string>("connection") { Description = "SQLite connection string" };
 
-var outputFilePathArgument = new Argument<string>("output") { Description = "Output file path for the Excel file", };
+var outputFilePathArgument = new Argument<string>("output") { Description = "Output file path for the Excel file" };
 
 // Create the root command
 var rootCommand = new RootCommand("Export SQLite data to Excel") { connectionStringArgument, outputFilePathArgument };
@@ -69,7 +69,7 @@ static string[] GetTableNames(SQLiteConnection connection)
     var names = new string[tableNames.Rows.Count];
     for (var i = 0; i < tableNames.Rows.Count; i++)
     {
-        names[i] = tableNames.Rows[i]["name"].ToString();
+        names[i] = tableNames.Rows[i]["name"].ToString() ?? string.Empty;
     }
     return names;
 }

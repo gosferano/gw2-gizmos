@@ -6,7 +6,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 [Table("Bags")]
 public class Bag : Item
 {
-    public BagDetails Details { get; set; }
+    public BagDetails Details { get; set; } = null!;
 }
 
 [Table("BagDetails")]
@@ -18,5 +18,5 @@ public class BagDetails
     public bool NoSellOrSort { get; set; }
 
     // Navigation
-    public Bag Bag { get; set; }
+    public Bag Bag { get; set; } = null!;
 }

@@ -2,7 +2,7 @@
 
 public class WvwUpgradeTier
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public int YaksRequired { get; set; }
     public WvwUpgradeTierUpgrade[] Upgrades { get; set; } = Array.Empty<WvwUpgradeTierUpgrade>();
 }

@@ -2,7 +2,7 @@
 
 public class Trinket : Item
 {
-    public TrinketDetails Details { get; set; }
+    public TrinketDetails Details { get; set; } = null!;
 }
 
 public class TrinketDetails

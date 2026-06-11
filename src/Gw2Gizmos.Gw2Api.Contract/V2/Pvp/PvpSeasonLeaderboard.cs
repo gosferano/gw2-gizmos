@@ -2,6 +2,6 @@
 
 public class PvpSeasonLeaderboard
 {
-    public PvpSeasonLeaderboardSettings Settings { get; set; }
+    public PvpSeasonLeaderboardSettings Settings { get; set; } = null!;
     public PvpSeasonLeaderboardScoring[] Scorings { get; set; } = Array.Empty<PvpSeasonLeaderboardScoring>();
 }

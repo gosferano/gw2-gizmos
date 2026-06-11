@@ -3,5 +3,5 @@
 public class TraitFactAttributeAdjust : TraitFact
 {
     public int Value { get; set; }
-    public string Target { get; set; }
+    public string Target { get; set; } = null!;
 }

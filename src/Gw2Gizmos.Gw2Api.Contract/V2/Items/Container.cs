@@ -2,7 +2,7 @@
 
 public class Container : Item
 {
-    public ContainerDetails Details { get; set; }
+    public ContainerDetails Details { get; set; } = null!;
 }
 
 public class ContainerDetails

@@ -2,7 +2,7 @@
 
 public class CharacterCore
 {
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public RaceName Race { get; set; }
     public Gender Gender { get; set; }
     public ProfessionName Profession { get; set; }

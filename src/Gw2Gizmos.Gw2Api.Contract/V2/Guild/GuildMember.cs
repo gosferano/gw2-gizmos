@@ -2,7 +2,7 @@
 
 public class GuildMember
 {
-    public string Name { get; set; }
-    public string Rank { get; set; }
+    public string Name { get; set; } = null!;
+    public string Rank { get; set; } = null!;
     public DateTimeOffset Joined { get; set; }
 }

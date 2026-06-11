@@ -2,5 +2,5 @@
 
 public class SkillFactPrefixedBuff : SkillFactBuff
 {
-    public SkillFactPrefixedBuffPrefix Prefix { get; set; }
+    public SkillFactPrefixedBuffPrefix Prefix { get; set; } = null!;
 }

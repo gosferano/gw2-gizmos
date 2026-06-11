@@ -2,5 +2,5 @@
 
 public class SkinArmor : Skin
 {
-    public SkinArmorDetails Details { get; set; }
+    public SkinArmorDetails Details { get; set; } = null!;
 }

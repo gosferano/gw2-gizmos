@@ -4,7 +4,7 @@ public class ProfessionWeaponSkill
 {
     public int Id { get; set; }
     public SkillSlot Slot { get; set; }
-    public string Offhand { get; set; }
-    public string Attunement { get; set; }
-    public string Source { get; set; }
+    public string Offhand { get; set; } = null!;
+    public string Attunement { get; set; } = null!;
+    public string Source { get; set; } = null!;
 }

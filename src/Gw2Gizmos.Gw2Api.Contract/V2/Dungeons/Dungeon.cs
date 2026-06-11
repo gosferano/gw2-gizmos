@@ -2,6 +2,6 @@
 
 public class Dungeon
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public DungeonPath[] Paths { get; set; } = Array.Empty<DungeonPath>();
 }

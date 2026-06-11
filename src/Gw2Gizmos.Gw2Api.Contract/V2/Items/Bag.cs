@@ -2,7 +2,7 @@
 
 public class Bag : Item
 {
-    public BagDetails Details { get; set; }
+    public BagDetails Details { get; set; } = null!;
 }
 
 public class BagDetails

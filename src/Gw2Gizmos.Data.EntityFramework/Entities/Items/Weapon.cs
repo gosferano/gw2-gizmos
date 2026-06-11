@@ -6,7 +6,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 [Table("Weapons")]
 public class Weapon : Item
 {
-    public WeaponDetails Details { get; set; }
+    public WeaponDetails Details { get; set; } = null!;
 }
 
 [Table("WeaponDetails")]
@@ -27,7 +27,7 @@ public class WeaponDetails
     public int? SecondarySuffixItemId { get; set; }
 
     // Navigation
-    public Weapon Weapon { get; set; }
+    public Weapon Weapon { get; set; } = null!;
 
     // Navigation properties
     public List<WeaponInfusionSlot> InfusionSlots { get; set; } = [];

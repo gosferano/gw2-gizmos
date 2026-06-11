@@ -3,7 +3,7 @@
 public class PvpAmulet
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Icon { get; set; }
-    public ItemAttributes Attributes { get; set; }
+    public string Name { get; set; } = null!;
+    public string Icon { get; set; } = null!;
+    public ItemAttributes Attributes { get; set; } = null!;
 }

@@ -3,5 +3,5 @@
 public class HomeCat
 {
     public int Id { get; set; }
-    public string Hint { get; set; }
+    public string Hint { get; set; } = null!;
 }

@@ -2,9 +2,9 @@
 
 public class PvpSeasonLeaderboardScoring
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public PvpSeasonLeaderboardScoringType Type { get; set; }
-    public string Description { get; set; }
-    public string Name { get; set; }
+    public string Description { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public PvpSeasonLeaderboardScoringOrder Ordering { get; set; }
 }

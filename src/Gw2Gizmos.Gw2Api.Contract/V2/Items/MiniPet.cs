@@ -2,7 +2,7 @@
 
 public class MiniPet : Item
 {
-    public MiniPetDetails Details { get; set; }
+    public MiniPetDetails Details { get; set; } = null!;
 }
 
 public class MiniPetDetails

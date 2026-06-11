@@ -2,7 +2,7 @@
 
 public class Gathering : Item
 {
-    public GatheringDetails Details { get; set; }
+    public GatheringDetails Details { get; set; } = null!;
 }
 
 public class GatheringDetails

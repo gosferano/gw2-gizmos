@@ -3,6 +3,6 @@
 public class World
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public WorldPopulation Population { get; set; }
 }

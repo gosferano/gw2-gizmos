@@ -2,8 +2,8 @@
 
 public class WvwMatchStats
 {
-    public string Id { get; set; }
-    public WvwMatchTeamValues<int> Kills { get; set; }
-    public WvwMatchTeamValues<int> Deaths { get; set; }
+    public string Id { get; set; } = null!;
+    public WvwMatchTeamValues<int> Kills { get; set; } = null!;
+    public WvwMatchTeamValues<int> Deaths { get; set; } = null!;
     public WvwMatchStatsMap[] Maps { get; set; } = Array.Empty<WvwMatchStatsMap>();
 }

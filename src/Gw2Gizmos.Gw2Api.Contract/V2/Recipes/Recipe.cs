@@ -12,5 +12,5 @@ public class Recipe
     public RecipeFlag[] Flags { get; set; } = Array.Empty<RecipeFlag>();
     public RecipeIngredient[] Ingredients { get; set; } = Array.Empty<RecipeIngredient>();
     public int? OutputUpgradeId { get; set; }
-    public string ChatLink { get; set; }
+    public string ChatLink { get; set; } = null!;
 }

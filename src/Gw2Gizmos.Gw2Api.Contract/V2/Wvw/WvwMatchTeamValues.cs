@@ -3,7 +3,7 @@
 public class WvwMatchTeamValues<T>
     where T : notnull
 {
-    public T Red { get; set; }
-    public T Blue { get; set; }
-    public T Green { get; set; }
+    public T Red { get; set; } = default!;
+    public T Blue { get; set; } = default!;
+    public T Green { get; set; } = default!;
 }

@@ -2,5 +2,5 @@
 
 public class CharacterInventory
 {
-    public CharacterInventoryBag[] Bags { get; set; }
+    public CharacterInventoryBag[] Bags { get; set; } = [];
 }

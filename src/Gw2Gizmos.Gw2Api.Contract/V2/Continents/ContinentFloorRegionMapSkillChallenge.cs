@@ -2,6 +2,6 @@
 
 public class ContinentFloorRegionMapSkillChallenge
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public decimal[] Coord { get; set; } = Array.Empty<decimal>();
 }

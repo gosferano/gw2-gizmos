@@ -2,7 +2,7 @@
 
 public class WvwMatchMapObjective
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public WvwObjectiveType Type { get; set; }
     public WvwOwner Owner { get; set; }
     public DateTimeOffset LastFlipped { get; set; }

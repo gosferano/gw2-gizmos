@@ -2,9 +2,9 @@
 
 public class PvpStanding
 {
-    public string SeasonId { get; set; }
-    public PvpStandingCurrent Current { get; set; }
-    public PvpStandingBest Best { get; set; }
+    public string SeasonId { get; set; } = null!;
+    public PvpStandingCurrent Current { get; set; } = null!;
+    public PvpStandingBest Best { get; set; } = null!;
 }
 
 public class PvpStandingBest

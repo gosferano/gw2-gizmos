@@ -3,8 +3,8 @@
 public class Item
 {
     public int Id { get; set; }
-    public string ChatLink { get; set; }
-    public string Name { get; set; }
+    public string ChatLink { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public string? Icon { get; set; }
     public string? Description { get; set; }
     public ItemType Type { get; set; }

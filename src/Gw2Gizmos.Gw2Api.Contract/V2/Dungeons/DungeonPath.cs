@@ -2,6 +2,6 @@
 
 public class DungeonPath
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public DungeonPathType Type { get; set; }
 }

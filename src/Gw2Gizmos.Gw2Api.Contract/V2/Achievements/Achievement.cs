@@ -4,10 +4,10 @@ public class Achievement
 {
     public int Id { get; set; }
     public string? Icon { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Requirement { get; set; }
-    public string LockedText { get; set; }
+    public string Name { get; set; } = null!;
+    public string Description { get; set; } = null!;
+    public string Requirement { get; set; } = null!;
+    public string LockedText { get; set; } = null!;
     public AchievementType Type { get; set; }
     public AchievementFlag[] Flags { get; set; } = Array.Empty<AchievementFlag>();
     public AchievementTier[] Tiers { get; set; } = Array.Empty<AchievementTier>();

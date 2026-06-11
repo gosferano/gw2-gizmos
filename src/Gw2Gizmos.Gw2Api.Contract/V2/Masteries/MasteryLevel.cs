@@ -2,10 +2,10 @@
 
 public class MasteryLevel
 {
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public string Instruction { get; set; }
-    public string Icon { get; set; }
+    public string Name { get; set; } = null!;
+    public string Description { get; set; } = null!;
+    public string Instruction { get; set; } = null!;
+    public string Icon { get; set; } = null!;
     public int PointCost { get; set; }
     public int ExpCost { get; set; }
 }

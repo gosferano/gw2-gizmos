@@ -3,6 +3,6 @@
 public class InfixUpgrade
 {
     public int Id { get; set; }
-    public InfixUpgradeAttribute[] Attributes { get; set; }
+    public InfixUpgradeAttribute[] Attributes { get; set; } = [];
     public InfixUpgradeBuff? Buff { get; set; }
 }

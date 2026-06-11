@@ -3,5 +3,5 @@
 public class WvwUpgrade
 {
     public int Id { get; set; }
-    public WvwUpgradeTier[] Tiers { get; set; }
+    public WvwUpgradeTier[] Tiers { get; set; } = [];
 }

@@ -2,9 +2,9 @@
 
 public class WvwMatchOverview
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public DateTimeOffset StartTime { get; set; }
     public DateTimeOffset EndTime { get; set; }
-    public WvwMatchTeamValues<int> Worlds { get; set; }
-    public WvwMatchTeamValues<int[]> AllWorlds { get; set; }
+    public WvwMatchTeamValues<int> Worlds { get; set; } = null!;
+    public WvwMatchTeamValues<int[]> AllWorlds { get; set; } = null!;
 }

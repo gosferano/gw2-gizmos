@@ -2,6 +2,6 @@
 
 public class TraitFactComboFinisher : TraitFact
 {
-    public string FinisherType { get; set; }
+    public string FinisherType { get; set; } = null!;
     public int Percent { get; set; }
 }

@@ -7,7 +7,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 public class MiniPet : Item
 {
     // Navigation
-    public MiniPetDetails Details { get; set; }
+    public MiniPetDetails Details { get; set; } = null!;
 }
 
 [Table("MiniPetDetails")]
@@ -18,5 +18,5 @@ public class MiniPetDetails
     public int MinipetId { get; set; }
 
     // Navigation
-    public MiniPet MiniPet { get; set; }
+    public MiniPet MiniPet { get; set; } = null!;
 }

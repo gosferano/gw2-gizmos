@@ -2,6 +2,6 @@
 
 public class Raid
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public RaidWing[] Wings { get; set; } = Array.Empty<RaidWing>();
 }

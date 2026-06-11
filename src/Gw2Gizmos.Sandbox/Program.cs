@@ -7,7 +7,11 @@ using Gw2Gizmos.Gw2Api.Contract.V2.Account;
 var gw2ApiClient = new Gw2ApiClient(Environment.GetEnvironmentVariable("GW2_API_KEY"));
 var characters = await gw2ApiClient.V2.Characters.GetByIds(["Gosferano"]);
 var tokenInfo = await gw2ApiClient.V2.TokenInfo.GetBlob();
-Account account = await gw2ApiClient.V2.Account.GetBlob();
+Account? account = await gw2ApiClient.V2.Account.GetBlob();
+if (account is null)
+{
+    return;
+}
 
 foreach (var guildId in account.GuildLeader)
 {

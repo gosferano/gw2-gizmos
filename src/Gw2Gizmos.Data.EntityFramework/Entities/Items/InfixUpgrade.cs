@@ -19,7 +19,7 @@ public class ArmorInfixUpgrade : InfixUpgrade
     public int ArmorDetailsId { get; set; }
 
     [ForeignKey(nameof(ArmorDetailsId))]
-    public ArmorDetails ArmorDetails { get; set; }
+    public ArmorDetails ArmorDetails { get; set; } = null!;
 }
 
 [Table("BackItemInfixUpgrades")]
@@ -28,7 +28,7 @@ public class BackItemInfixUpgrade : InfixUpgrade
     public int BackItemDetailsId { get; set; }
 
     [ForeignKey(nameof(BackItemDetailsId))]
-    public BackItemDetails BackItemDetails { get; set; }
+    public BackItemDetails BackItemDetails { get; set; } = null!;
 }
 
 [Table("TrinketInfixUpgrades")]
@@ -37,7 +37,7 @@ public class TrinketInfixUpgrade : InfixUpgrade
     public int TrinketDetailsId { get; set; }
 
     [ForeignKey(nameof(TrinketDetailsId))]
-    public TrinketDetails TrinketDetails { get; set; }
+    public TrinketDetails TrinketDetails { get; set; } = null!;
 }
 
 [Table("UpgradeComponentInfixUpgrades")]
@@ -46,7 +46,7 @@ public class UpgradeComponentInfixUpgrade : InfixUpgrade
     public int UpgradeComponentDetailsId { get; set; }
 
     [ForeignKey(nameof(UpgradeComponentDetailsId))]
-    public UpgradeComponentDetails UpgradeComponentDetails { get; set; }
+    public UpgradeComponentDetails UpgradeComponentDetails { get; set; } = null!;
 }
 
 [Table("WeaponInfixUpgrades")]
@@ -55,5 +55,5 @@ public class WeaponInfixUpgrade : InfixUpgrade
     public int WeaponDetailsId { get; set; }
 
     [ForeignKey(nameof(WeaponDetailsId))]
-    public WeaponDetails WeaponDetails { get; set; }
+    public WeaponDetails WeaponDetails { get; set; } = null!;
 }

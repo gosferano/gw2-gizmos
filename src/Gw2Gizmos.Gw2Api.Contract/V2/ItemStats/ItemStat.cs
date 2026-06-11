@@ -3,6 +3,6 @@
 public class ItemStat
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public ItemStatAttribute[] Attributes { get; set; } = Array.Empty<ItemStatAttribute>();
 }

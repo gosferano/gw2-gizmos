@@ -2,6 +2,6 @@
 
 public class File
 {
-    public string Id { get; set; }
-    public string Icon { get; set; }
+    public string Id { get; set; } = null!;
+    public string Icon { get; set; } = null!;
 }

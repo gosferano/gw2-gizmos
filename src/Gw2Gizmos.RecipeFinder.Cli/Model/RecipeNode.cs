@@ -3,7 +3,7 @@
 public class RecipeNode
 {
     public int ItemId { get; set; }
-    public string ItemName { get; set; }
+    public string ItemName { get; set; } = null!;
     public int SellPricePerUnit { get; set; }
     public int BuyPricePerUnit { get; set; }
     public decimal CraftingCostPerUnit { get; set; }

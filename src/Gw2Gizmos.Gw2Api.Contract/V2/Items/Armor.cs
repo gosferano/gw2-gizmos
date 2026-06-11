@@ -2,7 +2,7 @@
 
 public class Armor : Item
 {
-    public ArmorDetails Details { get; set; }
+    public ArmorDetails Details { get; set; } = null!;
 }
 
 public class ArmorDetails

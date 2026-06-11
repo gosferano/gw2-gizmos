@@ -6,12 +6,12 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 public class Item
 {
     public int Id { get; set; }
-    public string ChatLink { get; set; }
-    public string Name { get; set; }
+    public string ChatLink { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public string? Icon { get; set; }
     public string? Description { get; set; }
-    public string Type { get; set; }
-    public string Rarity { get; set; }
+    public string Type { get; set; } = null!;
+    public string Rarity { get; set; } = null!;
     public int Level { get; set; }
     public int VendorValue { get; set; }
     public int? DefaultSkin { get; set; }

@@ -6,7 +6,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 [Table("Consumables")]
 public class Consumable : Item
 {
-    public ConsumableDetails Details { get; set; }
+    public ConsumableDetails Details { get; set; } = null!;
 }
 
 [Table("ConsumableDetails")]
@@ -14,7 +14,7 @@ public class ConsumableDetails
 {
     [Key, ForeignKey(nameof(Consumable))]
     public int ItemId { get; set; }
-    public string Type { get; set; }
+    public string Type { get; set; } = null!;
     public string? Description { get; set; }
     public int? DurationMs { get; set; }
     public string? UnlockType { get; set; }
@@ -26,7 +26,7 @@ public class ConsumableDetails
     public string? Icon { get; set; }
 
     // Navigation
-    public Consumable Consumable { get; set; }
+    public Consumable Consumable { get; set; } = null!;
     public List<ConsumableExtraRecipe> ExtraRecipes { get; set; } = [];
     public List<ConsumableSkin> Skins { get; set; } = [];
 }
@@ -40,7 +40,7 @@ public class ConsumableExtraRecipe
     public int RecipeId { get; set; }
 
     [ForeignKey(nameof(ConsumableId))]
-    public ConsumableDetails ConsumableDetails { get; set; }
+    public ConsumableDetails ConsumableDetails { get; set; } = null!;
 }
 
 [Table("ConsumableSkins")]
@@ -52,5 +52,5 @@ public class ConsumableSkin
     public int SkinId { get; set; }
 
     [ForeignKey(nameof(ConsumableId))]
-    public ConsumableDetails ConsumableDetails { get; set; }
+    public ConsumableDetails ConsumableDetails { get; set; } = null!;
 }

@@ -14,26 +14,26 @@ public abstract class ItemStatChoiceBase
 public class ArmorStatChoice : ItemStatChoiceBase
 {
     public int ArmorDetailsId { get; set; }
-    public ArmorDetails ArmorDetails { get; set; }
+    public ArmorDetails ArmorDetails { get; set; } = null!;
 }
 
 [Table("BackItemStatChoices")]
 public class BackItemStatChoice : ItemStatChoiceBase
 {
     public int BackItemDetailsId { get; set; }
-    public BackItemDetails BackItemDetails { get; set; }
+    public BackItemDetails BackItemDetails { get; set; } = null!;
 }
 
 [Table("TrinketStatChoices")]
 public class TrinketStatChoice : ItemStatChoiceBase
 {
     public int TrinketDetailsId { get; set; }
-    public TrinketDetails TrinketDetails { get; set; }
+    public TrinketDetails TrinketDetails { get; set; } = null!;
 }
 
 [Table("WeaponStatChoices")]
 public class WeaponStatChoice : ItemStatChoiceBase
 {
     public int WeaponDetailsId { get; set; }
-    public WeaponDetails WeaponDetails { get; set; }
+    public WeaponDetails WeaponDetails { get; set; } = null!;
 }

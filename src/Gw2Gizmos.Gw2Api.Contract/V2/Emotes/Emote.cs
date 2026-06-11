@@ -3,6 +3,6 @@
 public class Emote
 {
     public string[] Commands { get; set; } = Array.Empty<string>();
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
     public int[] UnlockItems { get; set; } = Array.Empty<int>();
 }

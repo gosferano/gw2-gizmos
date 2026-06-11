@@ -2,7 +2,7 @@
 
 public class BackItem : Item
 {
-    public BackItemDetails Details { get; set; }
+    public BackItemDetails Details { get; set; } = null!;
 }
 
 public class BackItemDetails

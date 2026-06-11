@@ -7,7 +7,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 public class Trinket : Item
 {
     // Navigation
-    public TrinketDetails Details { get; set; }
+    public TrinketDetails Details { get; set; } = null!;
 }
 
 [Table("TrinketDetails")]
@@ -15,13 +15,13 @@ public class TrinketDetails
 {
     [Key, ForeignKey(nameof(Trinket))]
     public int ItemId { get; set; }
-    public string Type { get; set; }
+    public string Type { get; set; } = null!;
     public decimal AttributeAdjustment { get; set; }
     public int? SuffixItemId { get; set; }
     public int? SecondarySuffixItemId { get; set; }
 
     // Navigation
-    public Trinket Trinket { get; set; }
+    public Trinket Trinket { get; set; } = null!;
 
     public List<TrinketInfusionSlot> InfusionSlots { get; set; } = new();
     public List<TrinketStatChoice> StatChoices { get; set; } = new();

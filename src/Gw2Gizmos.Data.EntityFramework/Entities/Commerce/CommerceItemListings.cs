@@ -15,5 +15,5 @@ public class CommerceItemListing
     public ICollection<SellListing> Sells { get; set; } = new List<SellListing>();
 
     // Navigation
-    public Item Item { get; set; }
+    public Item Item { get; set; } = null!;
 }

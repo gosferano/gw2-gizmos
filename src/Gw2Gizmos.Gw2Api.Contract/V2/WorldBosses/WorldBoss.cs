@@ -2,5 +2,5 @@
 
 public class WorldBoss
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
 }

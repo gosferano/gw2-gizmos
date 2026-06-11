@@ -2,12 +2,12 @@
 
 public class Guild
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Tag { get; set; }
-    public GuildEmblem Emblem { get; set; }
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public string Tag { get; set; } = null!;
+    public GuildEmblem Emblem { get; set; } = null!;
     public int Level { get; set; }
-    public string Motd { get; set; }
+    public string Motd { get; set; } = null!;
     public int Influence { get; set; }
     public int Aetherium { get; set; }
     public int Favor { get; set; }

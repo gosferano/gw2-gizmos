@@ -2,5 +2,5 @@
 
 public class SkinWeapon : Skin
 {
-    public SkinWeaponDetails Details { get; set; }
+    public SkinWeaponDetails Details { get; set; } = null!;
 }

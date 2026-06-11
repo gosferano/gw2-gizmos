@@ -2,8 +2,8 @@
 
 public class SkillFactPrefixedBuffPrefix
 {
-    public string Text { get; set; }
-    public string Icon { get; set; }
-    public string Status { get; set; }
-    public string Description { get; set; }
+    public string Text { get; set; } = null!;
+    public string Icon { get; set; } = null!;
+    public string Status { get; set; } = null!;
+    public string Description { get; set; } = null!;
 }

@@ -2,5 +2,5 @@
 
 public class HomeNode
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
 }

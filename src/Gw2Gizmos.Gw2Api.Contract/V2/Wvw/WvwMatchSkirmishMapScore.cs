@@ -3,5 +3,5 @@
 public class WvwMatchSkirmishMapScore
 {
     public WvwMapType Type { get; set; }
-    public WvwMatchTeamValues<int> Scores { get; set; }
+    public WvwMatchTeamValues<int> Scores { get; set; } = null!;
 }

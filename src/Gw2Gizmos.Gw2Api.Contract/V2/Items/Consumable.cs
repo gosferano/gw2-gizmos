@@ -2,7 +2,7 @@
 
 public class Consumable : Item
 {
-    public ConsumableDetails Details { get; set; }
+    public ConsumableDetails Details { get; set; } = null!;
 }
 
 public class ConsumableDetails

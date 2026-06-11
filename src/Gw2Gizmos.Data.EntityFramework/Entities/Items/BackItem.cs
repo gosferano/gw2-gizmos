@@ -6,7 +6,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 [Table("BackItems")]
 public class BackItem : Item
 {
-    public BackItemDetails Details { get; set; }
+    public BackItemDetails Details { get; set; } = null!;
 }
 
 [Table("BackItemDetails")]
@@ -16,7 +16,7 @@ public class BackItemDetails
     public int ItemId { get; set; }
 
     // Navigation
-    public BackItem BackItem { get; set; }
+    public BackItem BackItem { get; set; } = null!;
 
     // Properties from contract
     public decimal AttributeAdjustment { get; set; }

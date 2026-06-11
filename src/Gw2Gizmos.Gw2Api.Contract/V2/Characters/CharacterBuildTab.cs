@@ -6,5 +6,5 @@ public class CharacterBuildTab
 {
     public int Tab { get; set; }
     public bool IsActive { get; set; }
-    public BuildStorageBuild Build { get; set; }
+    public BuildStorageBuild Build { get; set; } = null!;
 }

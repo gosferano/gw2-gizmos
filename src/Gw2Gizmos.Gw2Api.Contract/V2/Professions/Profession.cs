@@ -2,11 +2,11 @@
 
 public class Profession
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
     public int Code { get; set; }
-    public string Icon { get; set; }
-    public string IconBig { get; set; }
+    public string Icon { get; set; } = null!;
+    public string IconBig { get; set; } = null!;
     public int[] Specializations { get; set; } = Array.Empty<int>();
     public ProfessionTraining[] Training { get; set; } = Array.Empty<ProfessionTraining>();
     public Dictionary<string, ProfessionWeapon> Weapons { get; set; } = new Dictionary<string, ProfessionWeapon>();

@@ -3,5 +3,5 @@
 public class SkinDyeSlot
 {
     public int ColorId { get; set; }
-    public string Material { get; set; }
+    public string Material { get; set; } = null!;
 }

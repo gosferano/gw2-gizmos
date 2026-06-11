@@ -2,5 +2,5 @@
 
 public class TraitFactComboField : TraitFact
 {
-    public string FieldType { get; set; }
+    public string FieldType { get; set; } = null!;
 }

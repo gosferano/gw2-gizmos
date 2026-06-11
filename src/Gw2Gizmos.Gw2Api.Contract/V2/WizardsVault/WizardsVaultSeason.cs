@@ -2,7 +2,7 @@
 
 public class WizardsVaultSeason
 {
-    public string Title { get; set; }
+    public string Title { get; set; } = null!;
     public DateTimeOffset Start { get; set; }
     public DateTimeOffset End { get; set; }
     public int[] Listings { get; set; } = Array.Empty<int>();

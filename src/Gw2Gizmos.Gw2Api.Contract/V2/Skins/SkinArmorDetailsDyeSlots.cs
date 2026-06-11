@@ -3,5 +3,5 @@
 public class SkinArmorDetailsDyeSlots
 {
     public SkinDyeSlot[] Default { get; set; } = Array.Empty<SkinDyeSlot>();
-    public SkinArmorDetailsDyeSlotsOverrides Overrides { get; set; }
+    public SkinArmorDetailsDyeSlotsOverrides Overrides { get; set; } = null!;
 }

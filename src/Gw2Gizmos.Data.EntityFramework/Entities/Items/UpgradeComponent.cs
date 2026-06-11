@@ -7,7 +7,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 public class UpgradeComponent : Item
 {
     // Navigation
-    public UpgradeComponentDetails Details { get; set; }
+    public UpgradeComponentDetails Details { get; set; } = null!;
 }
 
 [Table("UpgradeComponentDetails")]
@@ -15,11 +15,11 @@ public class UpgradeComponentDetails
 {
     [Key, ForeignKey(nameof(UpgradeComponent))]
     public int ItemId { get; set; }
-    public string Type { get; set; }
-    public string Suffix { get; set; }
+    public string Type { get; set; } = null!;
+    public string Suffix { get; set; } = null!;
 
     // Navigation
-    public UpgradeComponent UpgradeComponent { get; set; }
+    public UpgradeComponent UpgradeComponent { get; set; } = null!;
 
     public List<string> Flags { get; set; } = [];
     public List<string> InfusionUpgradeFlags { get; set; } = [];

@@ -9,5 +9,5 @@ public class ItemRestriction
     public int ItemId { get; set; }
     public string Value { get; set; } = "";
 
-    public Item Item { get; set; }
+    public Item Item { get; set; } = null!;
 }

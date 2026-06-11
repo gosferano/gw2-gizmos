@@ -7,7 +7,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Items;
 public class Gathering : Item
 {
     // Navigation
-    public GatheringDetails Details { get; set; }
+    public GatheringDetails Details { get; set; } = null!;
 }
 
 [Table("GatheringDetails")]
@@ -15,8 +15,8 @@ public class GatheringDetails
 {
     [Key, ForeignKey(nameof(Gathering))]
     public int ItemId { get; set; }
-    public string Type { get; set; }
+    public string Type { get; set; } = null!;
 
     // Navigation
-    public Gathering Gathering { get; set; }
+    public Gathering Gathering { get; set; } = null!;
 }

@@ -17,26 +17,26 @@ public abstract class ItemInfusionSlot
 public class ArmorInfusionSlot : ItemInfusionSlot
 {
     public int ArmorDetailsId { get; set; }
-    public ArmorDetails ArmorDetails { get; set; }
+    public ArmorDetails ArmorDetails { get; set; } = null!;
 }
 
 [Table("BackItemInfusionSlots")]
 public class BackItemInfusionSlot : ItemInfusionSlot
 {
     public int BackItemDetailsId { get; set; }
-    public BackItemDetails BackItemDetails { get; set; }
+    public BackItemDetails BackItemDetails { get; set; } = null!;
 }
 
 [Table("TrinketInfusionSlots")]
 public class TrinketInfusionSlot : ItemInfusionSlot
 {
     public int TrinketDetailsId { get; set; }
-    public TrinketDetails TrinketDetails { get; set; }
+    public TrinketDetails TrinketDetails { get; set; } = null!;
 }
 
 [Table("WeaponInfusionSlots")]
 public class WeaponInfusionSlot : ItemInfusionSlot
 {
     public int WeaponDetailsId { get; set; }
-    public WeaponDetails WeaponDetails { get; set; }
+    public WeaponDetails WeaponDetails { get; set; } = null!;
 }

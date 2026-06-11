@@ -6,5 +6,5 @@ public class SkinArmorDetails
 {
     public ArmorSlotType Type { get; set; }
     public ArmorWeightClass WeightClass { get; set; }
-    public SkinArmorDetailsDyeSlots DyeSlots { get; set; }
+    public SkinArmorDetailsDyeSlots DyeSlots { get; set; } = null!;
 }
