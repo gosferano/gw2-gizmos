@@ -98,25 +98,22 @@ public abstract class BaseClient
         {
             Headers = { { SchemaVersionHeaderName, schemaVersion } },
         };
-        using HttpResponseMessage response = await HttpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken
-        );
+        using HttpResponseMessage response = await HttpClient
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
-            Error error = await ReadErrorAsync(response, cancellationToken);
+            Error error = await ReadErrorAsync(response, cancellationToken).ConfigureAwait(false);
             return new Result<TResponse, Error>(error, response.StatusCode)
             {
                 ResponseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
             };
         }
 
-        var result = await response.Content.ReadFromJsonAsync<TResponse>(
-            JsonSerializerContext.Options,
-            cancellationToken
-        );
+        var result = await response
+            .Content.ReadFromJsonAsync<TResponse>(JsonSerializerContext.Options, cancellationToken)
+            .ConfigureAwait(false);
         return new Result<TResponse, Error>(result!, response.StatusCode)
         {
             ResponseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
@@ -142,17 +139,15 @@ public abstract class BaseClient
     {
         try
         {
-            Error? error = await response.Content.ReadFromJsonAsync<Error>(
-                JsonSerializerContext.Options,
-                cancellationToken
-            );
+            Error? error = await response
+                .Content.ReadFromJsonAsync<Error>(JsonSerializerContext.Options, cancellationToken)
+                .ConfigureAwait(false);
             if (error is not null && !string.IsNullOrWhiteSpace(error.Text))
             {
                 return error;
             }
         }
-        catch (Exception ex)
-            when (ex is JsonException or NotSupportedException or HttpRequestException or IOException)
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or HttpRequestException or IOException)
         {
             // Unparseable or unreadable error body (malformed JSON, an HTML 5xx page, a mid-stream
             // network drop) — fall through to the status-based message. Cancellation/timeout
