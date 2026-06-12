@@ -62,13 +62,45 @@ foreach (string endpoint in endpoints)
             continue;
         }
 
+        // An array root is either an id list (game data: bulk-expand via ?ids=) or already-expanded
+        // objects (many token-gated endpoints, e.g. account/bank, account/achievements). Peek the first
+        // element to tell them apart.
+        JsonElement first = default;
+        bool any = false;
+        foreach (JsonElement e in idsDoc.RootElement.EnumerateArray())
+        {
+            (first, any) = (e, true);
+            break;
+        }
+
+        if (!any)
+        {
+            report[endpoint] = Summarize(stats, 0);
+            Console.Error.WriteLine($"[{endpoint}] empty");
+            continue;
+        }
+
+        if (first.ValueKind == JsonValueKind.Object)
+        {
+            int walked = 0;
+            foreach (JsonElement obj in idsDoc.RootElement.EnumerateArray())
+            {
+                Walk(obj, "", stats); // Walk ignores null/non-object slots (e.g. empty bank slots)
+                walked++;
+            }
+
+            report[endpoint] = Summarize(stats, walked);
+            Console.Error.WriteLine($"[{endpoint}] inline objects, {walked}");
+            continue;
+        }
+
         List<string> ids = idsDoc.RootElement.EnumerateArray().Select(e => e.ToString()).ToList();
         List<string> sample = Stride(ids, MaxObjectsPerEndpoint);
 
         int sampled = 0;
         foreach (string[] chunk in sample.Chunk(ChunkSize))
         {
-            string url = $"/v2/{endpoint}?ids={string.Join(",", chunk)}";
+            string url = $"/v2/{endpoint}?ids={string.Join(",", chunk.Select(Uri.EscapeDataString))}";
             try
             {
                 string body = await http.GetStringAsync(url);

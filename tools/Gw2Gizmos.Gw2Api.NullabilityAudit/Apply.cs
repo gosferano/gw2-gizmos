@@ -61,6 +61,14 @@ internal static class Apply
         ["wvw/upgrades"] = "V2.Wvw.WvwUpgrade",
         ["guild/upgrades"] = "V2.Guild.GuildUpgrade",
         ["guild/permissions"] = "V2.Guild.GuildPermission",
+        // Token-gated (sampled with GW2_API_KEY). Array endpoints map to their element type.
+        ["account"] = "V2.Account.Account",
+        ["account/achievements"] = "V2.Account.AccountAchievement",
+        ["account/bank"] = "V2.Account.AccountItem",
+        ["account/inventory"] = "V2.Account.AccountItem",
+        ["account/materials"] = "V2.Account.AccountMaterial",
+        ["account/wallet"] = "V2.Account.AccountWalletCurrency",
+        ["characters"] = "V2.Characters.Character",
     };
 
     public static void Run(string[] args)
