@@ -5,4 +5,5 @@ public sealed class AccountMaterial
     public int Id { get; set; }
     public int Category { get; set; }
     public int Count { get; set; }
+    public ItemBinding? Binding { get; set; }
 }
