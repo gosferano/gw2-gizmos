@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Gw2Gizmos.Gw2Api.Client.Json;
-using Gw2Gizmos.Gw2Api.Client.V2.Clients;
+using Gw2Gizmos.Gw2Api.Contract.Json;
+using Gw2Gizmos.Gw2Api.Contract;
 using Gw2Gizmos.Gw2Api.Contract.V2;
 using Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 using Gw2Gizmos.Gw2Api.Contract.V2.Items;
@@ -14,7 +14,7 @@ namespace Gw2Gizmos.Gw2Api.Client.Tests;
 public class ConverterTests
 {
     // The exact serializer config the client uses in production (all converters + source-gen context).
-    private static readonly JsonSerializerOptions Options = BaseClient.SerializerOptions;
+    private static readonly JsonSerializerOptions Options = Gw2ApiContractJson.Options;
 
     [Theory]
     [InlineData("Armor", typeof(Armor))]

@@ -19,7 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Gw2Gizmos.Gw2Api.Client.Tests" />
+    <!-- Error now lives in the contract package; this import lets the client's Result&lt;T, Error&gt;
+         return types resolve Error without adding a using to every client file. -->
+    <Using Include="Gw2Gizmos.Gw2Api.Contract.V2" />
   </ItemGroup>
 
   <ItemGroup>

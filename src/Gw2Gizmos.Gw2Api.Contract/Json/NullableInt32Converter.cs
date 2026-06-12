@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 /// <summary>
 /// Reads a nullable int that the GW2 API sometimes returns as a string. The clearest case is

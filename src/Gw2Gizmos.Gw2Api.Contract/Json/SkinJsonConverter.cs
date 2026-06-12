@@ -1,6 +1,6 @@
 ﻿using Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 public sealed class SkinJsonConverter : PolymorphicJsonConverter<Skin>
 {

@@ -1,6 +1,6 @@
 ﻿using Gw2Gizmos.Gw2Api.Contract.V2.Skills;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 public sealed class SkillFactJsonConverter : PolymorphicJsonConverter<SkillFact>
 {

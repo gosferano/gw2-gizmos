@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 public sealed class StringValueStructConverter<T> : JsonConverter<T>
     where T : struct

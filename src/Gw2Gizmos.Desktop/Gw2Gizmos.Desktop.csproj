@@ -40,8 +40,10 @@
 
   <!-- Dev (F5/run-from-bin): merge the worker CLI's build output into the app's output dir so the app
        can spawn it as a sibling exe, sharing the runtime + common dependencies (one copy each). Only
-       files the app doesn't already emit are copied, so the app always wins on shared assemblies. -->
-  <Target Name="CopyWorkerCli" AfterTargets="Build">
+       files the app doesn't already emit are copied, so the app always wins on shared assemblies.
+       Skipped for RID builds — those go through publish (PublishWorkerCli); running here too would let
+       the net10.0\**\* glob recurse into the worker's RID-nested output and re-nest it under win-x64\. -->
+  <Target Name="CopyWorkerCli" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
     <ItemGroup>
       <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
       <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
@@ -67,6 +69,10 @@
       <_WorkerPublishedNew Include="@(_WorkerPublished)" Condition="!Exists('$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Copy SourceFiles="@(_WorkerPublishedNew)" DestinationFiles="@(_WorkerPublishedNew->'$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <!-- The staging publish is a full (self-contained) copy used only to extract the worker's unique
+         files + its self-contained host/runtimeconfig; drop it so it doesn't leave ~90 MB of duplicated
+         DLLs behind in obj/. -->
+    <RemoveDir Directories="$(_WorkerStage)" />
   </Target>
 
 </Project>

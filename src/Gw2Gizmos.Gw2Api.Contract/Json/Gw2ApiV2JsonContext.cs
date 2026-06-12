@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using Gw2Gizmos.Gw2Api.Client.V2;
+using Gw2Gizmos.Gw2Api.Contract.V2;
 using Gw2Gizmos.Gw2Api.Contract.V2.Account;
 using Gw2Gizmos.Gw2Api.Contract.V2.Achievements;
 using Gw2Gizmos.Gw2Api.Contract.V2.Backstory;
@@ -53,7 +53,7 @@ using Gw2Gizmos.Gw2Api.Contract.V2.Worlds;
 using Gw2Gizmos.Gw2Api.Contract.V2.Wvw;
 using File = Gw2Gizmos.Gw2Api.Contract.V2.Files.File;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 // Error
 [JsonSerializable(typeof(Error))]

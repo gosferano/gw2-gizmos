@@ -1,6 +1,6 @@
 ﻿using Gw2Gizmos.Gw2Api.Contract.V2.Professions;
 
-namespace Gw2Gizmos.Gw2Api.Client.Json;
+namespace Gw2Gizmos.Gw2Api.Contract.Json;
 
 public sealed class ProfessionTrainingTrackStepJsonConverter : PolymorphicJsonConverter<ProfessionTrainingTrackStep>
 {

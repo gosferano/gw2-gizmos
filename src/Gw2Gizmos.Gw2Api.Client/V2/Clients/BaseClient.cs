@@ -1,36 +1,11 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using Gw2Gizmos.Gw2Api.Client.Json;
+using Gw2Gizmos.Gw2Api.Contract;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients;
 
 public abstract class BaseClient
 {
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
-        Converters =
-        {
-            new StringValueStructConverterFactory(),
-            new NullableInt32Converter(),
-            new ItemJsonConverter(),
-            new GuildUpgradeJsonConverter(),
-            new ProfessionTrainingTrackStepJsonConverter(),
-            new SkillFactJsonConverter(),
-            new SkinJsonConverter(),
-            new TraitFactJsonConverter(),
-        },
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        TypeInfoResolver = Gw2ApiV2JsonContext.Default,
-    };
-    private static readonly JsonSerializerContext JsonSerializerContext = new Gw2ApiV2JsonContext(
-        JsonSerializerOptions
-    );
-
-    /// <summary>The exact serializer options used for all API (de)serialization. Internal for tests.</summary>
-    internal static JsonSerializerOptions SerializerOptions => JsonSerializerContext.Options;
-
     protected readonly HttpClient HttpClient;
     private readonly string _idsParameterName;
 
@@ -115,7 +90,7 @@ public abstract class BaseClient
         }
 
         var result = await response
-            .Content.ReadFromJsonAsync<TResponse>(JsonSerializerContext.Options, cancellationToken)
+            .Content.ReadFromJsonAsync<TResponse>(Gw2ApiContractJson.Options, cancellationToken)
             .ConfigureAwait(false);
         return new Result<TResponse, Error>(result!, response.StatusCode)
         {
@@ -143,7 +118,7 @@ public abstract class BaseClient
         try
         {
             Error? error = await response
-                .Content.ReadFromJsonAsync<Error>(JsonSerializerContext.Options, cancellationToken)
+                .Content.ReadFromJsonAsync<Error>(Gw2ApiContractJson.Options, cancellationToken)
                 .ConfigureAwait(false);
             if (error is not null && !string.IsNullOrWhiteSpace(error.Text))
             {
