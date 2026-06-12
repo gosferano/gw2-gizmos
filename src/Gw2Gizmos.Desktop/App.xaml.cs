@@ -224,8 +224,11 @@ public partial class App : Application
         builder.Services.AddSingleton<NotificationsViewModel>();
         builder.Services.AddSingleton<LogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
+        // Transient so the feed re-reads the worker's latest snapshot on each navigation.
+        builder.Services.AddTransient<ProfitableRecipesViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
+        builder.Services.AddTransient<ProfitableRecipesPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<SettingsPage>();

@@ -1,0 +1,81 @@
+<Page x:Class="Gw2Gizmos.Desktop.ProfitableRecipesPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
+      xmlns:model="clr-namespace:Gw2Gizmos.RecipeFinder.Model;assembly=Gw2Gizmos.RecipeFinder"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Profitable">
+    <c:PageShell Title="Profitable" Scrollable="False">
+        <c:PageShell.Resources>
+            <conv:CoinConverter x:Key="Coin" />
+        </c:PageShell.Resources>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="2*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Margin="0,0,0,8" Opacity="0.7">
+                <Run Text="Craft-to-sell margins after the 15% trading-post fee." />
+                <Run Text="Updated" />
+                <Run Text="{Binding ComputedAtUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm} UTC', Mode=OneWay}" />
+            </TextBlock>
+
+            <DataGrid Grid.Row="1" x:Name="RecipeList" ItemsSource="{Binding Recipes}"
+                      SelectedItem="{Binding SelectedRecipe}" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserAddRows="False" CanUserResizeRows="False" CanUserSortColumns="True" SelectionMode="Single"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent"
+                      FontSize="13"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Item" Width="*" Binding="{Binding OutputItemName}" />
+                    <DataGridTextColumn Header="Craft cost" Width="120"
+                                        Binding="{Binding CraftingCost, Converter={StaticResource Coin}}" />
+                    <DataGridTextColumn Header="Sell" Width="120"
+                                        Binding="{Binding SellPrice, Converter={StaticResource Coin}}" />
+                    <DataGridTextColumn Header="Profit" Width="120"
+                                        Binding="{Binding Profit, Converter={StaticResource Coin}}" />
+                    <DataGridTextColumn Header="Margin" Width="80"
+                                        Binding="{Binding MarginPercent, StringFormat='{}{0:F0}%'}" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Center" Background="Transparent" />
+
+            <Border Grid.Row="3" BorderThickness="1" CornerRadius="6"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}" Padding="6">
+                <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0">
+                    <TreeView.ItemContainerStyle>
+                        <!-- BasedOn the WPF-UI implicit style so the tree keeps the themed foreground and
+                             accent selection; without it, a bare TreeViewItem style reverts to black text
+                             and the default blue highlight. -->
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                            <Setter Property="IsExpanded" Value="True" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.Resources>
+                        <HierarchicalDataTemplate DataType="{x:Type model:RecipeNode}"
+                                                  ItemsSource="{Binding Ingredients}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Count}" FontWeight="Medium" />
+                                <TextBlock Text="x " FontWeight="Medium" />
+                                <TextBlock Text="{Binding ItemName}" FontWeight="Medium" />
+                                <TextBlock Text="  ·  craft " Opacity="0.6" />
+                                <TextBlock Text="{Binding CraftingCost, Converter={StaticResource Coin}}" Opacity="0.6" />
+                                <TextBlock Text="  buy " Opacity="0.6" />
+                                <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6" />
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.Resources>
+                </TreeView>
+            </Border>
+        </Grid>
+    </c:PageShell>
+</Page>

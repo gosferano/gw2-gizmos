@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- The crafting engine: its tree serializer + RecipeNode model render the profitable-recipe detail. -->
+    <ProjectReference Include="..\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj" />
     <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a
          separate process so its heavy ingestion can't stall the UI thread. -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj">
@@ -49,8 +51,14 @@
     <ItemGroup>
       <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
       <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+      <!-- The worker's loader metadata (deps.json / runtimeconfig.json) must always be refreshed, not
+           just copied when absent: when the worker gains a dependency (e.g. a new project reference) its
+           deps.json changes but the file already exists here, so !Exists would skip it — leaving the
+           spawned worker unable to bind the new assembly. -->
+      <_WorkerCliMeta Include="@(_WorkerCliFiles)" Condition="'%(Extension)' == '.json'" />
     </ItemGroup>
     <Copy SourceFiles="@(_WorkerCliNew)" DestinationFiles="@(_WorkerCliNew->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WorkerCliMeta)" DestinationFiles="@(_WorkerCliMeta->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
   <!-- Publish: stage the worker CLI's publish (matching the app's self-contained / RID settings), then

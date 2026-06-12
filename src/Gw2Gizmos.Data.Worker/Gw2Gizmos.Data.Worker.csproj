@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Gw2Gizmos.Data.EntityFramework\Gw2Gizmos.Data.EntityFramework.csproj" />
     <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Client\Gw2Gizmos.Gw2Api.Client.csproj" />
     <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
+    <ProjectReference Include="..\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj" />
   </ItemGroup>
 
   <ItemGroup>

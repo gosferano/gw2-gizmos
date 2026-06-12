@@ -53,6 +53,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
 
+    // Precomputed "profitable to craft" snapshot for the desktop feed (replaced wholesale each refresh).
+    public DbSet<ProfitableRecipe> ProfitableRecipes { get; set; }
+
     // Application/runtime state (key-value)
     public DbSet<AppState> AppState { get; set; }
 

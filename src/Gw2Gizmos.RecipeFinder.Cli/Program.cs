@@ -1,9 +1,8 @@
 ﻿using System.CommandLine;
 using ClosedXML.Excel;
 using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.RecipeFinder.Cli;
-using Gw2Gizmos.RecipeFinder.Cli.Model;
-using Gw2Gizmos.RecipeFinder.Cli.Services;
+using Gw2Gizmos.RecipeFinder;
+using Gw2Gizmos.RecipeFinder.Model;
 using Microsoft.EntityFrameworkCore;
 
 // Define options
@@ -112,17 +111,7 @@ static async Task<RecipeNode[]> GetRecipeTrees(
         new DbContextOptionsBuilder<Gw2GizmosDbContext>().UseSqlite(connectionString).Options
     );
 
-    var recipeService = new RecipeService(dbContext);
-    var itemService = new ItemService(dbContext);
-    var priceService = new PriceService(dbContext);
-    var currencyService = new CurrencyService(dbContext);
-    var recipeTreeBuilder = new RecipeTreeBuilder(
-        recipeService,
-        itemService,
-        priceService,
-        currencyService,
-        configuration
-    );
+    var recipeTreeBuilder = new RecipeTreeBuilder(dbContext, configuration);
 
     var result = await recipeTreeBuilder.GetRecipeTrees(ct);
     return result.ToArray();

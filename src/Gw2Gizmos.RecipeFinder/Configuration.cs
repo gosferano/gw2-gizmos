@@ -1,6 +1,6 @@
-﻿using Gw2Gizmos.RecipeFinder.Cli.Model;
+﻿using Gw2Gizmos.RecipeFinder.Model;
 
-namespace Gw2Gizmos.RecipeFinder.Cli;
+namespace Gw2Gizmos.RecipeFinder;
 
 public class Configuration
 {

@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using Gw2Gizmos.RecipeFinder.Cli.Model;
+using Gw2Gizmos.RecipeFinder.Model;
 
-namespace Gw2Gizmos.RecipeFinder.Cli;
+namespace Gw2Gizmos.RecipeFinder;
 
 public static class RecipeTreeDisplay
 {

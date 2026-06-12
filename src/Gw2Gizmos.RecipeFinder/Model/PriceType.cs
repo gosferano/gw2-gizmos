@@ -1,4 +1,4 @@
-﻿namespace Gw2Gizmos.RecipeFinder.Cli.Model;
+﻿namespace Gw2Gizmos.RecipeFinder.Model;
 
 public enum PriceType
 {

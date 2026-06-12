@@ -1,36 +1,25 @@
 ﻿using System.Collections.Concurrent;
+using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
-using Gw2Gizmos.RecipeFinder.Cli.Model;
-using Gw2Gizmos.RecipeFinder.Cli.Services;
+using Gw2Gizmos.RecipeFinder.Model;
+using Microsoft.EntityFrameworkCore;
 
-namespace Gw2Gizmos.RecipeFinder.Cli;
+namespace Gw2Gizmos.RecipeFinder;
 
 public class RecipeTreeBuilder
 {
-    private readonly RecipeService _recipeService;
-    private readonly PriceService _priceService;
-    private readonly CurrencyService _currencyService;
-    private readonly ItemService _itemService;
+    private readonly Gw2GizmosDbContext _dbContext;
     private readonly Configuration _priceConfiguration;
 
-    public RecipeTreeBuilder(
-        RecipeService recipeService,
-        ItemService itemService,
-        PriceService priceService,
-        CurrencyService currencyService,
-        Configuration priceConfiguration
-    )
+    public RecipeTreeBuilder(Gw2GizmosDbContext dbContext, Configuration priceConfiguration)
     {
-        _recipeService = recipeService;
-        _priceService = priceService;
-        _currencyService = currencyService;
-        _itemService = itemService;
+        _dbContext = dbContext;
         _priceConfiguration = priceConfiguration;
     }
 
     public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
     {
-        var allRecipes = await _recipeService.GetAllRecipesAsync(stoppingToken);
+        var allRecipes = await _dbContext.Recipes.Include(r => r.Ingredients).ToArrayAsync(stoppingToken);
         var recipeTrees = new List<RecipeNode>();
 
         for (var i = 0; i < allRecipes.Length; i++)
@@ -88,13 +77,8 @@ public class RecipeTreeBuilder
                 if (currentNode.Ingredients.Count > 0)
                 {
                     currentNode.CraftingCostPerUnit =
-                        currentNode
-                            .Ingredients.Where(child => !child.IsCurrency)
-                            .Sum(child =>
-                                child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
-                                    ? child.CraftingCost
-                                    : child.BuyPrice
-                            ) / currentNode.Count;
+                        currentNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost)
+                        / currentNode.Count;
                 }
 
                 _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
@@ -116,7 +100,7 @@ public class RecipeTreeBuilder
             }
 
             // Fetch prices
-            TradingPostPrices tradingPostPrices = await _priceService.GetPricesAsync(currentNode.ItemId, ct);
+            TradingPostPrices tradingPostPrices = await GetPricesAsync(currentNode.ItemId, ct);
             currentNode.BuyPricePerUnit =
                 _priceConfiguration.BuyPriceType == PriceType.BuyOrder
                     ? tradingPostPrices.BuyOrderPrice
@@ -127,10 +111,13 @@ public class RecipeTreeBuilder
                     : tradingPostPrices.SellOrderPrice;
 
             // Fetch item name with fallback
-            currentNode.ItemName = await _itemService.GetItemNameAsync(currentNode.ItemId, ct);
+            currentNode.ItemName = await GetItemNameAsync(currentNode.ItemId, ct);
 
             // Fetch ALL recipes for this item
-            var recipes = await _recipeService.GetRecipesAsync(currentNode.ItemId, ct);
+            var recipes = await _dbContext
+                .Recipes.Include(r => r.Ingredients)
+                .Where(r => r.OutputItemId == currentNode.ItemId)
+                .ToListAsync(ct);
 
             if (recipes is { Count: > 0 })
             {
@@ -229,7 +216,7 @@ public class RecipeTreeBuilder
                     BuyPricePerUnit = 0,
                     SellPricePerUnit = 0,
                     CraftingCostPerUnit = 0,
-                    ItemName = await _currencyService.GetCurrencyNameAsync(ingredient.Id, ct)
+                    ItemName = await GetCurrencyNameAsync(ingredient.Id, ct)
                 };
             }
             else
@@ -242,14 +229,38 @@ public class RecipeTreeBuilder
 
         // Calculate crafting cost
         recipeNode.CraftingCostPerUnit =
-            recipeNode
-                .Ingredients.Where(child => !child.IsCurrency)
-                .Sum(child =>
-                    child.IsCraftable && child.CraftingCostPerUnit < child.BuyPricePerUnit
-                        ? child.CraftingCost
-                        : child.BuyPrice
-                ) / targetCount;
+            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / targetCount;
 
         return recipeNode;
+    }
+
+    /// <summary>The best trading-post buy/sell unit prices for an item, or 0 when it isn't listed.</summary>
+    private async Task<TradingPostPrices> GetPricesAsync(int itemId, CancellationToken ct)
+    {
+        int sellPrice = await _dbContext
+            .SellListings.Where(sl => sl.CommerceItemListingId == itemId)
+            .OrderBy(sl => sl.UnitPrice)
+            .Select(sl => sl.UnitPrice)
+            .FirstOrDefaultAsync(ct);
+
+        int buyPrice = await _dbContext
+            .BuyListings.Where(bl => bl.CommerceItemListingId == itemId)
+            .OrderByDescending(bl => bl.UnitPrice)
+            .Select(bl => bl.UnitPrice)
+            .FirstOrDefaultAsync(ct);
+
+        return new TradingPostPrices(sellPrice > 0 ? sellPrice : 0, buyPrice > 0 ? buyPrice : 0);
+    }
+
+    private async Task<string> GetItemNameAsync(int itemId, CancellationToken ct)
+    {
+        var item = await _dbContext.Items.FindAsync(new object[] { itemId }, ct);
+        return item?.Name ?? $"Unknown Item ({itemId})";
+    }
+
+    private async Task<string> GetCurrencyNameAsync(int currencyId, CancellationToken ct)
+    {
+        var currency = await _dbContext.Currencies.FirstOrDefaultAsync(c => c.Id == currencyId, ct);
+        return currency?.Name ?? $"Unknown Currency ({currencyId})";
     }
 }

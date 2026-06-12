@@ -26,6 +26,13 @@
                     <TextBlock Text="{Binding NotificationCount}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
                 </StackPanel>
             </ui:Card>
+            <ui:Card Margin="0,0,12,12" Padding="18" Width="170">
+                <StackPanel>
+                    <TextBlock Text="Profitable now" Opacity="0.7" />
+                    <TextBlock Text="{Binding ProfitableRecipeCount}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
+                    <TextBlock Text="{Binding BestMargin}" Opacity="0.6" FontSize="12" Margin="0,2,0,0" />
+                </StackPanel>
+            </ui:Card>
         </WrapPanel>
     </c:PageShell>
 </Page>
