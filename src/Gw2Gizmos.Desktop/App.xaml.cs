@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,7 +8,6 @@ using System.Windows.Media.Imaging;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
-using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +16,7 @@ using Serilog.Events;
 using Velopack;
 using Velopack.Sources;
 using Wpf.Ui.Abstractions;
+using Wpf.Ui.Tray.Controls;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -29,7 +30,7 @@ public partial class App : Application
     /// <summary>Item-icon cache, exposed statically so the lightweight <c>ItemImage</c> control can reach it.</summary>
     public static IconProvider? Icons { get; private set; }
 
-    private TaskbarIcon? _trayIcon;
+    private NotifyIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
     private Process? _workerProcess;
@@ -292,7 +293,7 @@ public partial class App : Application
         exitItem.Click += (_, _) =>
         {
             _isExiting = true;
-            _trayIcon?.Dispose();
+            _trayIcon?.Unregister();
             Shutdown();
         };
 
@@ -300,14 +301,21 @@ public partial class App : Application
         menu.Items.Add(showItem);
         menu.Items.Add(exitItem);
 
-        _trayIcon = new TaskbarIcon
+        _trayIcon = new NotifyIcon
         {
-            ToolTipText = "Gw2Gizmos",
-            IconSource = new BitmapImage(new Uri("pack://application:,,,/Assets/gw2gizmos.png")),
-            ContextMenu = menu,
+            TooltipText = "Gw2Gizmos",
+            Icon = new BitmapImage(new Uri("pack://application:,,,/Assets/gw2gizmos.png")),
+            Menu = menu,
+            FocusOnLeftClick = false,
+            MenuOnRightClick = true,
         };
-        _trayIcon.TrayLeftMouseDown += (_, _) => ShowWindow();
+        _trayIcon.LeftClick += OnTrayLeftClick;
+        _trayIcon.Register();
     }
+
+    // Signature mirrors WPF-UI's RoutedNotifyIconEvent (its sender is [NotNull]); matching the annotation
+    // keeps the conversion warning-free without a suppression.
+    private void OnTrayLeftClick([NotNull] NotifyIcon sender, RoutedEventArgs e) => ShowWindow();
 
     private void ShowWindow()
     {
