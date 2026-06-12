@@ -21,13 +21,13 @@ public sealed class EventsViewModel : ViewModelBase
     private readonly List<EventRowViewModel> _rows;
     private readonly DispatcherTimer _timer;
 
-    public EventsViewModel()
+    public EventsViewModel(EventSubscriptionStore subscriptions)
     {
         _rows = WorldBosses.All
             .Concat(MetaEvents.All)
             .Concat(PublicInstances.All)
             .Concat(Invasions.All)
-            .Select(e => new EventRowViewModel(e))
+            .Select(e => new EventRowViewModel(e, subscriptions))
             .ToList();
 
         Refresh();

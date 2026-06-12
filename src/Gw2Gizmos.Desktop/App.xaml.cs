@@ -218,6 +218,11 @@ public partial class App : Application
         ));
         builder.Services.AddHostedService<NotificationWatcher>();
 
+        // Event reminders: the per-event opt-in store (shared by the Events screen + the scheduler) and the
+        // scheduler that toasts a subscribed event shortly before it begins.
+        builder.Services.AddSingleton<EventSubscriptionStore>();
+        builder.Services.AddHostedService<EventReminderService>();
+
         // In-app log viewer: this process's events (the sink above) + the worker's (tailed file).
         builder.Services.AddSingleton(logStore);
         builder.Services.AddHostedService<WorkerLogTailer>();

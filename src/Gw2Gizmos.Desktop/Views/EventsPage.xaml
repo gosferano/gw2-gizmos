@@ -25,6 +25,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Kind tag -->
@@ -68,6 +69,13 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
+
+                                <!-- Reminder opt-in -->
+                                <ToggleButton Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center"
+                                              Padding="8" IsChecked="{Binding IsSubscribed, Mode=TwoWay}"
+                                              ToolTip="Remind me 5 minutes before this event">
+                                    <ui:SymbolIcon Symbol="Alert24" FontSize="18" />
+                                </ToggleButton>
                             </Grid>
                         </ui:Card>
                     </DataTemplate>

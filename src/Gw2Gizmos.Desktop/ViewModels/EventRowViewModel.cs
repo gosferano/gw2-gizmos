@@ -11,12 +11,16 @@ namespace Gw2Gizmos.Desktop;
 public sealed class EventRowViewModel : ViewModelBase
 {
     private readonly ScheduledEvent _event;
+    private readonly EventSubscriptionStore _subscriptions;
     private string _countdown = string.Empty;
     private bool _isActive;
+    private bool _isSubscribed;
 
-    public EventRowViewModel(ScheduledEvent scheduledEvent)
+    public EventRowViewModel(ScheduledEvent scheduledEvent, EventSubscriptionStore subscriptions)
     {
         _event = scheduledEvent;
+        _subscriptions = subscriptions;
+        _isSubscribed = subscriptions.IsSubscribed(scheduledEvent.Id);
     }
 
     public string Name => _event.Name;
@@ -39,6 +43,19 @@ public sealed class EventRowViewModel : ViewModelBase
     {
         get => _isActive;
         private set => SetProperty(ref _isActive, value);
+    }
+
+    /// <summary>Whether the user wants a reminder before this event; persisted on change.</summary>
+    public bool IsSubscribed
+    {
+        get => _isSubscribed;
+        set
+        {
+            if (SetProperty(ref _isSubscribed, value))
+            {
+                _subscriptions.SetSubscribed(_event.Id, value);
+            }
+        }
     }
 
     /// <summary>"in 1h 23m" / "5:30" when upcoming, "active · 12m left" when running.</summary>
