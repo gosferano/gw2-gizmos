@@ -28,7 +28,7 @@
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="Market" TargetPageType="{x:Type local:MarketPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Money24" />
+                        <ui:SymbolIcon Symbol="Scales24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
