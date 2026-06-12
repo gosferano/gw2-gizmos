@@ -3,36 +3,90 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
       Title="Dashboard">
     <c:PageShell Title="Dashboard">
-        <WrapPanel HorizontalAlignment="Center">
-            <ui:Card Margin="0,0,12,12" Padding="18" Width="170">
+        <c:PageShell.Resources>
+            <conv:WidthToColumnsConverter x:Key="WidthToColumns" />
+            <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
+            <conv:BoolToStatusBrushConverter x:Key="StatusBrush" />
+        </c:PageShell.Resources>
+
+        <!-- Columns collapse 3 -> 2 -> 1 with width; UniformGrid keeps every cell the same size. The -6
+             margin cancels the cards' 6px edge insets so the outer edge lines up with the page header. -->
+        <UniformGrid VerticalAlignment="Top" Margin="-6"
+                     Columns="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource WidthToColumns}}">
+
+            <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="API key" Opacity="0.7" />
-                    <TextBlock Text="{Binding ApiKeyStatus}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
+                    <DockPanel>
+                        <Ellipse DockPanel.Dock="Right" Width="9" Height="9" VerticalAlignment="Center"
+                                 Fill="{Binding ApiKeyConfigured, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="API key" Opacity="0.7" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding ApiKeyStatus}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <ItemsControl ItemsSource="{Binding Scopes}" Margin="0,10,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="10" Padding="9,3" Margin="0,0,6,6" BorderThickness="1"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" FontSize="12" />
+                                        <TextBlock Text="  missing" FontSize="12" Opacity="0.6"
+                                                   Visibility="{Binding IsGranted, Converter={StaticResource InverseBool}}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </ui:Card>
-            <ui:Card Margin="0,0,12,12" Padding="18" Width="170">
+
+            <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="Items synced" Opacity="0.7" />
-                    <TextBlock Text="{Binding ItemCount}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
+                    <DockPanel Margin="0,0,0,10">
+                        <Ellipse DockPanel.Dock="Right" Width="9" Height="9" VerticalAlignment="Center"
+                                 Fill="{Binding WorkerOperational, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="Worker" Opacity="0.7" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding ItemCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Items" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding RecipeCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Recipes" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding TradeableItemCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Tradeable items" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding CurrencyCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Currencies" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding PriceSnapshotCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Price points" Opacity="0.8" />
+                    </DockPanel>
                 </StackPanel>
             </ui:Card>
-            <ui:Card Margin="0,0,12,12" Padding="18" Width="170">
-                <StackPanel>
-                    <TextBlock Text="Notifications" Opacity="0.7" />
-                    <TextBlock Text="{Binding NotificationCount}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
-                </StackPanel>
-            </ui:Card>
-            <ui:Card Margin="0,0,12,12" Padding="18" Width="170">
-                <StackPanel>
-                    <TextBlock Text="Profitable now" Opacity="0.7" />
-                    <TextBlock Text="{Binding ProfitableRecipeCount}" FontSize="20" FontWeight="Medium" Margin="0,4,0,0" />
-                    <TextBlock Text="{Binding BestMargin}" Opacity="0.6" FontSize="12" Margin="0,2,0,0" />
-                </StackPanel>
-            </ui:Card>
-        </WrapPanel>
+
+            <c:StatCard Margin="6" Title="Notifications" Value="{Binding NotificationCount}" />
+        </UniformGrid>
     </c:PageShell>
 </Page>
