@@ -36,10 +36,7 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
-        // Must run before anything else: processes Velopack install/update/uninstall hooks (and exits
-        // for those), then returns for a normal launch.
-        VelopackApp.Build().Run();
-
+        // Velopack's hooks run in Program.Main (before WPF starts); here we just begin a normal launch.
         base.OnStartup(e);
 
         // One instance per user: a second launch (Start-menu + tray, or a Velopack post-update relaunch
