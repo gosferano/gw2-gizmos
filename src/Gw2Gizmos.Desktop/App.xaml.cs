@@ -41,6 +41,22 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        RegisterGlobalExceptionHandlers();
+
+        // OnStartup is async void, so an unhandled throw here would tear the process down silently —
+        // the class of failure a missing tray-icon resource once caused. Surface it instead.
+        try
+        {
+            await StartApplicationAsync();
+        }
+        catch (Exception ex)
+        {
+            HandleFatal(ex, "startup");
+        }
+    }
+
+    private async Task StartApplicationAsync()
+    {
         ToastService.RegisterAppId();
 
         string dataDir = Path.Combine(
@@ -72,6 +88,50 @@ public partial class App : Application
 
         // Check for updates in the background; no-op when run from bin (not Velopack-installed).
         _ = CheckForUpdatesAsync();
+    }
+
+    private void RegisterGlobalExceptionHandlers()
+    {
+        // Nothing should crash without a trace. A UI-thread fault is recoverable to a dialog + log;
+        // the AppDomain/Task handlers are last-resort logging for background-thread failures.
+        DispatcherUnhandledException += (_, args) =>
+        {
+            HandleFatal(args.Exception, "the UI thread");
+            args.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            Log.Fatal(args.ExceptionObject as Exception, "Unhandled exception; the process is terminating.");
+            Log.CloseAndFlush();
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log.Error(args.Exception, "Unobserved task exception.");
+            args.SetObserved();
+        };
+    }
+
+    /// <summary>Logs a fatal error, tells the user, and exits — so a failure is never silent.</summary>
+    private void HandleFatal(Exception? ex, string origin)
+    {
+        Log.Fatal(ex, "Fatal error during {Origin}; Gw2Gizmos will close.", origin);
+        Log.CloseAndFlush();
+
+        try
+        {
+            MessageBox.Show(
+                $"Gw2Gizmos hit a fatal error and needs to close.\n\n{ex?.Message}",
+                "Gw2Gizmos",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
+        }
+        catch
+        {
+            // A dialog may not be possible this early; the log above is the fallback.
+        }
+
+        Shutdown(1);
     }
 
     private static async Task CheckForUpdatesAsync()
