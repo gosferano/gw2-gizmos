@@ -20,7 +20,7 @@ namespace Gw2Gizmos.Data.Worker;
 /// Cheap enough to live in the UI process so notifications need no cross-process plumbing.</item>
 /// </list>
 /// Each consumer supplies its own logging and <see cref="INotifier"/>; both read the API key through
-/// <see cref="IGw2ApiKeyProvider"/> (configuration by default; Herald registers an AppState-backed one).
+/// <see cref="IGw2ApiKeyProvider"/> (configuration by default; Gw2Gizmos registers an AppState-backed one).
 /// </summary>
 public static class DataWorkerServiceCollectionExtensions
 {
@@ -52,7 +52,7 @@ public static class DataWorkerServiceCollectionExtensions
     {
         AddCore(services, connectionString);
 
-        // LogNotifier is the default; a consumer (e.g. Herald) registers its own INotifier first.
+        // LogNotifier is the default; a consumer (e.g. Gw2Gizmos) registers its own INotifier first.
         services.TryAddSingleton<INotifier, LogNotifier>();
         services.AddHostedService<CommerceDeliveryUpdater>();
 

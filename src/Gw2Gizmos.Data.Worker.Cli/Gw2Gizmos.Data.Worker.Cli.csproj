@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Headless host for the heavy ingestion engine. Launched as a background process by Herald
+  <!-- Headless host for the heavy ingestion engine. Launched as a background process by Gw2Gizmos
        (and runnable standalone). Reads the shared DB + the user's API key from AppState. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>

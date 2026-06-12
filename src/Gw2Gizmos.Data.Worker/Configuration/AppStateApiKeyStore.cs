@@ -5,13 +5,13 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 
 /// <summary>
 /// API-key store backed by the shared <see cref="AppState"/> table, DPAPI-encrypted at rest. Written
-/// by Herald's settings UI and read by every engine consumer — Herald's in-process delivery poller
+/// by Gw2Gizmos's settings UI and read by every engine consumer — Gw2Gizmos's in-process delivery poller
 /// and the background worker process alike — since they share the same database. Reads hit the DB on
 /// each call, so a key changed in one process is picked up by the other without a restart.
 /// </summary>
 public sealed class AppStateApiKeyStore : IGw2ApiKeyProvider
 {
-    private const string StateKey = "herald.apikey";
+    private const string StateKey = "gw2gizmos.apikey";
 
     private readonly IServiceScopeFactory _scopeFactory;
 

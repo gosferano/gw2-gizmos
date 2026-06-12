@@ -11,7 +11,7 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 internal static class ProtectedDataHelper
 {
     // Extra entropy tied to this app; not a secret, just domain separation from other DPAPI blobs.
-    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Gw2Gizmos.Herald");
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Gw2Gizmos");
 
     public static string Protect(string plaintext)
     {

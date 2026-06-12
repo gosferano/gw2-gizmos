@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Library: the data-ingestion engine. Hosted by Herald and Data.Worker.Cli, which supply
+  <!-- Library: the data-ingestion engine. Hosted by Gw2Gizmos and Data.Worker.Cli, which supply
        their own logging and configuration. -->
 
   <!-- Global usings the Worker SDK previously provided implicitly. -->

@@ -28,7 +28,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
 
-// Shares the database with Herald. Herald passes the connection string when it launches this
+// Shares the database with Gw2Gizmos. Gw2Gizmos passes the connection string when it launches this
 // process: --ConnectionStrings:Gw2GizmosDb="Data Source=...".
 string? connectionString = builder.Configuration.GetConnectionString("Gw2GizmosDb");
 if (string.IsNullOrEmpty(connectionString))
@@ -38,7 +38,7 @@ if (string.IsNullOrEmpty(connectionString))
     );
 }
 
-// The user enters the API key in Herald; it's shared via AppState. Ingestion uses public endpoints
+// The user enters the API key in Gw2Gizmos; it's shared via AppState. Ingestion uses public endpoints
 // today, but account-data sync (planned) will authenticate with this key.
 builder.Services.AddSingleton<AppStateApiKeyStore>();
 builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());

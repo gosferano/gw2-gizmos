@@ -6,8 +6,8 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Notifications;
 
 /// <summary>
 /// A user-facing notification, persisted so the in-app feed has history and so a notification
-/// produced by one process (e.g. the ingestion worker) can be surfaced by another (Herald). Written
-/// by every notifier producer; read by the Herald UI. <see cref="Source"/> identifies the producing
+/// produced by one process (e.g. the ingestion worker) can be surfaced by another (Gw2Gizmos). Written
+/// by every notifier producer; read by the Gw2Gizmos UI. <see cref="Source"/> identifies the producing
 /// process so a consumer can tell its own notifications apart from another process's.
 /// </summary>
 [Table("Notifications")]

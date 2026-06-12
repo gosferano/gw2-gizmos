@@ -48,7 +48,7 @@ public partial class App : Application
             "Gw2Gizmos"
         );
         Directory.CreateDirectory(dataDir);
-        string dbPath = Path.Combine(dataDir, "herald.sqlite");
+        string dbPath = Path.Combine(dataDir, "gw2gizmos.sqlite");
 
         _host = BuildHost(dataDir, dbPath);
         _host.Services.MigrateGw2GizmosDb();
