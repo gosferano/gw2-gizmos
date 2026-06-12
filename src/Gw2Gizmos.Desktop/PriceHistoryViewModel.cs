@@ -277,16 +277,6 @@ public sealed class PriceHistoryViewModel : ViewModelBase
         return time.ToString(time.TimeOfDay == TimeSpan.Zero ? "MM-dd" : "MM-dd HH:mm");
     }
 
-    private static string GoldLabeler(double copper)
-    {
-        if (copper <= 0)
-        {
-            return "0";
-        }
-
-        long total = (long)copper;
-        long gold = total / 10000;
-        long silver = total % 10000 / 100;
-        return gold > 0 ? $"{gold}g {silver}s" : $"{silver}s";
-    }
+    private static string GoldLabeler(double copper) =>
+        Converters.Coin.Format((long)Math.Round(copper));
 }
