@@ -1,6 +1,6 @@
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Desktop.Mvvm;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,9 +18,12 @@ public sealed class DashboardViewModel : ViewModelBase
         ItemCount = dbContext.Items.Count();
         NotificationCount = dbContext.Notifications.Count();
 
-        ProfitableRecipeCount = dbContext.ProfitableRecipes.Count();
-        ProfitableRecipe? best = dbContext.ProfitableRecipes.OrderByDescending(r => r.Profit).FirstOrDefault();
-        BestMargin = best is null ? "—" : $"best {best.MarginPercent:F0}% margin";
+        ProfitableRecipeCount = dbContext.MarketItems.Count(m => m.Profit > 0);
+        MarketItem? best = dbContext.MarketItems
+            .Where(m => m.Profit > 0)
+            .OrderByDescending(m => m.Profit)
+            .FirstOrDefault();
+        BestMargin = best?.MarginPercent is double margin ? $"best {margin:F0}% margin" : "—";
     }
 
     public string ApiKeyStatus { get; }

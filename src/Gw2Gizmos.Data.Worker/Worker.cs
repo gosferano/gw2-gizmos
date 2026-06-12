@@ -19,8 +19,8 @@ public class Worker : BackgroundService
         using var currenciesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        // Profit moves with the trading post, so recompute on the commerce cadence.
-        using var profitableRecipesTimer = new PeriodicTimer(TimeSpan.FromHours(1));
+        // Prices move with the trading post, so recompute the market snapshot on the commerce cadence.
+        using var marketTimer = new PeriodicTimer(TimeSpan.FromHours(1));
 
         // Run all tasks concurrently
         await Task.WhenAll(
@@ -28,7 +28,7 @@ public class Worker : BackgroundService
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
-            RunProfitableRecipesUpdater(profitableRecipesTimer, stoppingToken)
+            RunMarketUpdater(marketTimer, stoppingToken)
         );
     }
 
@@ -92,16 +92,15 @@ public class Worker : BackgroundService
         } while (await recipesTimer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task RunProfitableRecipesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    private async Task RunMarketUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
         do
         {
             await RunUpdateSafely(
                 async scope =>
                 {
-                    var profitableRecipesUpdater =
-                        scope.ServiceProvider.GetRequiredService<ProfitableRecipesUpdater>();
-                    await profitableRecipesUpdater.UpdateProfitableRecipes(stoppingToken);
+                    var marketUpdater = scope.ServiceProvider.GetRequiredService<MarketUpdater>();
+                    await marketUpdater.UpdateMarket(stoppingToken);
                 },
                 stoppingToken
             );

@@ -26,7 +26,7 @@
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Profitable" TargetPageType="{x:Type local:ProfitableRecipesPage}">
+                <ui:NavigationViewItem Content="Market" TargetPageType="{x:Type local:MarketPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Money24" />
                     </ui:NavigationViewItem.Icon>

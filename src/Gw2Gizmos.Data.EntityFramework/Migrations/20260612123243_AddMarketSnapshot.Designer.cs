@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.EntityFramework.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260612110224_AddProfitableRecipe")]
-    partial class AddProfitableRecipe
+    [Migration("20260612123243_AddMarketSnapshot")]
+    partial class AddMarketSnapshot
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,6 +53,48 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.HasKey("ItemId");
 
                     b.ToTable("CommerceItemListings");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.MarketItem", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Buy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("ComputedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("CraftingCost")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Demand")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCraftable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("MarginPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Profit")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Sell")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Supply")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ItemId");
+
+                    b.ToTable("MarketItems");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.SellListing", b =>
@@ -706,47 +748,6 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.ProfitableRecipe", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BuyPrice")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("ComputedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<double>("CraftingCost")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("MarginPercent")
-                        .HasColumnType("REAL");
-
-                    b.Property<int>("OutputItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("OutputItemName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<double>("Profit")
-                        .HasColumnType("REAL");
-
-                    b.Property<int>("SellPrice")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TreeJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ProfitableRecipes");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", b =>

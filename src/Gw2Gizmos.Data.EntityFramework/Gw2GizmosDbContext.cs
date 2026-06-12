@@ -46,15 +46,15 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<BuyListing> BuyListings { get; set; }
     public DbSet<SellListing> SellListings { get; set; }
 
+    // Precomputed per-item market snapshot (best buy/sell + craft cost) for the desktop Market grid.
+    public DbSet<MarketItem> MarketItems { get; set; }
+
     // Currencies
     public DbSet<Currency> Currencies { get; set; }
 
     // Recipes
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
-
-    // Precomputed "profitable to craft" snapshot for the desktop feed (replaced wholesale each refresh).
-    public DbSet<ProfitableRecipe> ProfitableRecipes { get; set; }
 
     // Application/runtime state (key-value)
     public DbSet<AppState> AppState { get; set; }

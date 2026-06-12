@@ -34,7 +34,7 @@ public static class DataWorkerServiceCollectionExtensions
         services.AddScoped<CommerceUpdater>();
         services.AddScoped<CurrenciesUpdater>();
         services.AddScoped<RecipesUpdater>();
-        services.AddScoped<ProfitableRecipesUpdater>();
+        services.AddScoped<MarketUpdater>();
 
         // Channel consumers + queues that connect the ingestion updaters.
         services.AddHostedService<ItemsAddedUpdater>();
