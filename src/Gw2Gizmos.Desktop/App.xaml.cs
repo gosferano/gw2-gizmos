@@ -31,6 +31,7 @@ public partial class App : Application
     private IHost? _host;
     private Process? _workerProcess;
     private readonly ChildProcessJob _workerJob = new();
+    private Mutex? _singleInstanceMutex;
     private bool _isExiting;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -40,6 +41,15 @@ public partial class App : Application
         VelopackApp.Build().Run();
 
         base.OnStartup(e);
+
+        // One instance per user: a second launch (Start-menu + tray, or a Velopack post-update relaunch
+        // racing the old process) would spawn a duplicate worker and double every toast. Bail if held.
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, @"Local\Gw2Gizmos.SingleInstance", out bool isPrimary);
+        if (!isPrimary)
+        {
+            Shutdown(0);
+            return;
+        }
 
         RegisterGlobalExceptionHandlers();
 
@@ -299,6 +309,8 @@ public partial class App : Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        // Released as the handle closes, freeing the single-instance slot for the next launch.
+        _singleInstanceMutex?.Dispose();
         _trayIcon?.Dispose();
 
         try
