@@ -171,7 +171,9 @@ public partial class App : Application
 
     private void StartWorkerProcess(string dataDir, string dbPath)
     {
-        string workerExe = Path.Combine(AppContext.BaseDirectory, "Worker", "Gw2Gizmos.Data.Worker.Cli.exe");
+        // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
+        // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
+        string workerExe = Path.Combine(AppContext.BaseDirectory, "Gw2Gizmos.Data.Worker.Cli.exe");
         if (!File.Exists(workerExe))
         {
             Log.Warning("Worker process not found at {Path}; data ingestion will not run.", workerExe);

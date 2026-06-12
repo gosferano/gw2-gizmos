@@ -38,25 +38,35 @@
     <Resource Include="Assets\gw2gizmos.png" />
   </ItemGroup>
 
-  <!-- Dev (F5/run-from-bin): copy the worker CLI's build output into a Worker/ subfolder so the app
-       can spawn it. The * matches the CLI's TFM folder, so this isn't pinned to a framework. -->
+  <!-- Dev (F5/run-from-bin): merge the worker CLI's build output into the app's output dir so the app
+       can spawn it as a sibling exe, sharing the runtime + common dependencies (one copy each). Only
+       files the app doesn't already emit are copied, so the app always wins on shared assemblies. -->
   <Target Name="CopyWorkerCli" AfterTargets="Build">
     <ItemGroup>
-      <WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\*\**\*" />
+      <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
+      <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
-    <Copy SourceFiles="@(WorkerCliFiles)" DestinationFiles="@(WorkerCliFiles->'$(OutDir)Worker\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WorkerCliNew)" DestinationFiles="@(_WorkerCliNew->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Publish: publish the worker CLI into the Worker/ subfolder of the app's publish output, matching
-       the app's publish settings (self-contained / RID) so the shipped/installed app can spawn it. -->
+  <!-- Publish: stage the worker CLI's publish (matching the app's self-contained / RID settings), then
+       merge it into the app's publish root, copying only files the app doesn't already emit. The app
+       must win on shared assemblies: its WindowsDesktop runtime is a superset that satisfies the worker
+       (net10.0), whereas the worker's variants (e.g. WindowsBase) could break the WPF app. -->
   <Target Name="PublishWorkerCli" AfterTargets="Publish">
     <PropertyGroup>
       <_AppPublishFull Condition="$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$(PublishDir)</_AppPublishFull>
       <_AppPublishFull Condition="!$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(PublishDir)'))\</_AppPublishFull>
+      <_WorkerStage>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)WorkerPublish'))\</_WorkerStage>
     </PropertyGroup>
     <MSBuild Projects="$(MSBuildThisFileDirectory)..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj"
              Targets="Publish"
-             Properties="Configuration=$(Configuration);PublishDir=$(_AppPublishFull)Worker\;SelfContained=$(SelfContained);RuntimeIdentifier=$(RuntimeIdentifier)" />
+             Properties="Configuration=$(Configuration);PublishDir=$(_WorkerStage);SelfContained=$(SelfContained);RuntimeIdentifier=$(RuntimeIdentifier)" />
+    <ItemGroup>
+      <_WorkerPublished Include="$(_WorkerStage)**\*" />
+      <_WorkerPublishedNew Include="@(_WorkerPublished)" Condition="!Exists('$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WorkerPublishedNew)" DestinationFiles="@(_WorkerPublishedNew->'$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
