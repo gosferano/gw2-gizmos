@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
-public class Result<TResult, TError>
+public sealed class Result<TResult, TError>
 {
     public TResult? Content { get; }
     public HttpStatusCode StatusCode { get; }

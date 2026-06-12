@@ -2,7 +2,7 @@ using Gw2Gizmos.Gw2Api.Client.V2;
 
 namespace Gw2Gizmos.Gw2Api.Client;
 
-public class Gw2ApiClient
+public sealed class Gw2ApiClient
 {
     internal const string BaseUrl = "https://api.guildwars2.com";
     internal const string AuthorizationHeaderName = "Authorization";

@@ -52,7 +52,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
 namespace Gw2Gizmos.Gw2Api.Client.V2;
 
-public class Gw2ApiV2Client : IGw2ApiV2Client
+public sealed class Gw2ApiV2Client : IGw2ApiV2Client
 {
     internal Gw2ApiV2Client(HttpClient httpClient)
     {

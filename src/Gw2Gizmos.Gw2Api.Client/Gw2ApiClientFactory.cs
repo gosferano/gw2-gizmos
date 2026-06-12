@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Gw2Gizmos.Gw2Api.Client;
 
-public class Gw2ApiClientFactory : IGw2ApiClientFactory
+public sealed class Gw2ApiClientFactory : IGw2ApiClientFactory
 {
     /// <summary>Name of the HttpClient configured by AddGw2ApiClient. Single source for both sides.</summary>
     internal const string HttpClientName = "Gw2Gizmos.Gw2Api";
