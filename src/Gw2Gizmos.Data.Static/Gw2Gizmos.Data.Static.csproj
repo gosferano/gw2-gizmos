@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Hardcoded reference data the GW2 API doesn't expose: world-boss / meta-event schedules (no timer
+       endpoint exists), and later things like Mystic Forge recipes. Pure data + models, no dependencies. -->
+
+</Project>
