@@ -112,7 +112,7 @@ jobs:
 
       - name: Release desktop app
         if: steps.detect.outputs.desktop_new == 'true'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: gw2gizmos-desktop-${{ steps.detect.outputs.desktop_v }}
           name: Gw2Gizmos ${{ steps.detect.outputs.desktop_v }}
