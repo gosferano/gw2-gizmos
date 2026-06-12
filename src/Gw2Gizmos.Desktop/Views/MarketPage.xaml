@@ -4,6 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
       xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
+      xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
       xmlns:model="clr-namespace:Gw2Gizmos.RecipeFinder.Model;assembly=Gw2Gizmos.RecipeFinder"
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
@@ -11,6 +12,8 @@
     <c:PageShell Title="Market" Scrollable="False">
         <c:PageShell.Resources>
             <conv:CoinConverter x:Key="Coin" />
+            <conv:BoolToVisibilityConverter x:Key="Bool" />
+            <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
         </c:PageShell.Resources>
         <Grid>
             <Grid.RowDefinitions>
@@ -33,7 +36,8 @@
                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
 
-            <DataGrid Grid.Row="1" ItemsSource="{Binding View}"
+            <ui:Card Grid.Row="1" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <DataGrid ItemsSource="{Binding View}"
                       SelectedItem="{Binding SelectedItem}" AutoGenerateColumns="False" IsReadOnly="True"
                       CanUserAddRows="False" CanUserResizeRows="False" CanUserSortColumns="True" SelectionMode="Single"
                       EnableRowVirtualization="True" EnableColumnVirtualization="True"
@@ -59,34 +63,67 @@
                                         Binding="{Binding MarginPercent, StringFormat='{}{0:F0}%'}" />
                 </DataGrid.Columns>
             </DataGrid>
+            </ui:Card>
 
-            <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch"
+            <GridSplitter Grid.Row="2" Height="8" HorizontalAlignment="Stretch"
                           VerticalAlignment="Center" Background="Transparent" />
 
-            <Border Grid.Row="3" BorderThickness="1" CornerRadius="6"
-                    BorderBrush="{DynamicResource ControlElevationBorderBrush}" Padding="6">
-                <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0">
-                    <TreeView.ItemContainerStyle>
-                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                            <Setter Property="IsExpanded" Value="True" />
-                        </Style>
-                    </TreeView.ItemContainerStyle>
-                    <TreeView.Resources>
-                        <HierarchicalDataTemplate DataType="{x:Type model:RecipeNode}"
-                                                  ItemsSource="{Binding Ingredients}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Count}" FontWeight="Medium" />
-                                <TextBlock Text="x " FontWeight="Medium" />
-                                <TextBlock Text="{Binding ItemName}" FontWeight="Medium" />
-                                <TextBlock Text="  ·  craft " Opacity="0.6" />
-                                <TextBlock Text="{Binding CraftingCost, Converter={StaticResource Coin}}" Opacity="0.6" />
-                                <TextBlock Text="  buy " Opacity="0.6" />
-                                <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6" />
-                            </StackPanel>
-                        </HierarchicalDataTemplate>
-                    </TreeView.Resources>
-                </TreeView>
-            </Border>
+            <ui:Card Grid.Row="3" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <TabControl Background="Transparent" BorderThickness="0">
+                    <TabItem Header="History">
+                        <Grid Margin="0,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="70" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Select an item to see its price history."
+                                       Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding History.HasData, Converter={StaticResource InverseBool}}" />
+
+                            <!-- Detail chart: buy/sell lines + volume columns; X range driven by the navigator. -->
+                            <lvc:CartesianChart Grid.Row="0" Series="{Binding History.Series}"
+                                                XAxes="{Binding History.TimeAxes}" YAxes="{Binding History.ValueAxes}"
+                                                TooltipPosition="Top" ZoomMode="None"
+                                                FindingStrategy="CompareOnlyXTakeClosest"
+                                                Visibility="{Binding History.HasData, Converter={StaticResource Bool}}" />
+
+                            <!-- Navigator: full history with a draggable window that sets the detail range. -->
+                            <lvc:CartesianChart Grid.Row="1" Series="{Binding History.NavigatorSeries}"
+                                                XAxes="{Binding History.NavigatorTimeAxes}" YAxes="{Binding History.NavigatorValueAxes}"
+                                                Sections="{Binding History.Sections}" TooltipPosition="Hidden"
+                                                PointerPressedCommand="{Binding History.PointerDownCommand}"
+                                                PointerMoveCommand="{Binding History.PointerMoveCommand}"
+                                                PointerReleasedCommand="{Binding History.PointerUpCommand}"
+                                                Visibility="{Binding History.HasData, Converter={StaticResource Bool}}" />
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Craft tree">
+                        <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
+                                  Margin="0,8,0,0">
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                    <Setter Property="IsExpanded" Value="True" />
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                            <TreeView.Resources>
+                                <HierarchicalDataTemplate DataType="{x:Type model:RecipeNode}"
+                                                          ItemsSource="{Binding Ingredients}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Count}" FontWeight="Medium" />
+                                        <TextBlock Text="x " FontWeight="Medium" />
+                                        <TextBlock Text="{Binding ItemName}" FontWeight="Medium" />
+                                        <TextBlock Text="  ·  craft " Opacity="0.6" />
+                                        <TextBlock Text="{Binding CraftingCost, Converter={StaticResource Coin}}" Opacity="0.6" />
+                                        <TextBlock Text="  buy " Opacity="0.6" />
+                                        <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6" />
+                                    </StackPanel>
+                                </HierarchicalDataTemplate>
+                            </TreeView.Resources>
+                        </TreeView>
+                    </TabItem>
+                </TabControl>
+            </ui:Card>
         </Grid>
     </c:PageShell>
 </Page>

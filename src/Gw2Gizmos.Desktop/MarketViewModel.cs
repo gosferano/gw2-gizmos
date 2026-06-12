@@ -75,7 +75,7 @@ public sealed class MarketViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedItem, value))
             {
-                _ = UpdateTreeAsync(value);
+                _ = LoadDetailsAsync(value);
             }
         }
     }
@@ -87,9 +87,44 @@ public sealed class MarketViewModel : ViewModelBase
         private set => SetProperty(ref _selectedTree, value);
     }
 
+    /// <summary>The selected item's trading-post price/volume history charts.</summary>
+    public PriceHistoryViewModel History { get; } = new();
+
     private bool MatchesFilter(object obj) =>
         string.IsNullOrWhiteSpace(_filterText)
         || (obj is MarketItem item && item.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Loads the selected row's detail panes (craft tree + price history) as fire-and-forget work, but
+    /// observes any failure here so a detail-load error degrades the pane gracefully instead of surfacing
+    /// as an unobserved task exception.
+    /// </summary>
+    private async Task LoadDetailsAsync(MarketItem? item)
+    {
+        try
+        {
+            await UpdateTreeAsync(item);
+        }
+        catch
+        {
+            if (_selectedItem?.ItemId == item?.ItemId)
+            {
+                SelectedTree = Array.Empty<RecipeNode>();
+            }
+        }
+
+        try
+        {
+            await UpdateHistoryAsync(item);
+        }
+        catch
+        {
+            if (_selectedItem?.ItemId == item?.ItemId)
+            {
+                History.Load(Array.Empty<HistoryPoint>());
+            }
+        }
+    }
 
     private async Task UpdateTreeAsync(MarketItem? item)
     {
@@ -112,6 +147,40 @@ public sealed class MarketViewModel : ViewModelBase
         if (_selectedItem?.ItemId == item.ItemId)
         {
             SelectedTree = new[] { root };
+        }
+    }
+
+    private async Task UpdateHistoryAsync(MarketItem? item)
+    {
+        if (item is null)
+        {
+            History.Load(Array.Empty<HistoryPoint>());
+            return;
+        }
+
+        HistoryPoint[] points = await Task.Run(() =>
+        {
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            // Order by Id, not TimestampUtc: SQLite can't ORDER BY a DateTimeOffset, and Id is monotonic
+            // with insertion time (and stays so through downsampling, which keeps each bucket's latest Id).
+            return dbContext
+                .PriceSnapshots.AsNoTracking()
+                .Where(snapshot => snapshot.ItemId == item.ItemId)
+                .OrderBy(snapshot => snapshot.Id)
+                .Select(snapshot => new HistoryPoint(
+                    snapshot.TimestampUtc.LocalDateTime,
+                    snapshot.Buy,
+                    snapshot.Sell,
+                    snapshot.Sold + snapshot.Bought
+                ))
+                .ToArray();
+        });
+
+        // Ignore a stale load if the selection moved on while querying.
+        if (_selectedItem?.ItemId == item.ItemId)
+        {
+            History.Load(points);
         }
     }
 }

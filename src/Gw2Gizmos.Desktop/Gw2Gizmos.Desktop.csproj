@@ -23,6 +23,7 @@
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="WPF-UI" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
     <PackageReference Include="Velopack" />
   </ItemGroup>
 
