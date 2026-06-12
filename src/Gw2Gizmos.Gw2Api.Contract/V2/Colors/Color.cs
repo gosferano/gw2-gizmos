@@ -9,6 +9,6 @@ public sealed class Color
     public ColorMaterial Leather { get; set; } = null!;
     public ColorMaterial Metal { get; set; } = null!;
     public ColorMaterial Fur { get; set; } = null!;
-    public int Item { get; set; }
+    public int? Item { get; set; }
     public ColorCategory[] Categories { get; set; } = Array.Empty<ColorCategory>();
 }

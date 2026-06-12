@@ -2,8 +2,8 @@
 
 public class SkillFactBuff : SkillFact
 {
-    public int Duration { get; set; }
     public string Status { get; set; } = null!;
-    public string Description { get; set; } = null!;
-    public int ApplyCount { get; set; }
+    public int? Duration { get; set; }
+    public string? Description { get; set; }
+    public int? ApplyCount { get; set; }
 }

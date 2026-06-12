@@ -5,5 +5,5 @@ public sealed class ProfessionSkill
     public int Id { get; set; }
     public SkillSlot Slot { get; set; }
     public SkillType Type { get; set; }
-    public string Source { get; set; } = null!;
+    public string? Source { get; set; }
 }

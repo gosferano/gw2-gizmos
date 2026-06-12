@@ -11,6 +11,6 @@ public sealed class UpgradeComponentDetails
     public UpgradeComponentFlag[] Flags { get; set; } = Array.Empty<UpgradeComponentFlag>();
     public InfusionSlotFlag[] InfusionUpgradeFlags { get; set; } = Array.Empty<InfusionSlotFlag>();
     public string Suffix { get; set; } = null!;
-    public InfixUpgrade InfixUpgrade { get; set; } = null!;
+    public InfixUpgrade? InfixUpgrade { get; set; }
     public string[]? Bonuses { get; set; } = Array.Empty<string>();
 }

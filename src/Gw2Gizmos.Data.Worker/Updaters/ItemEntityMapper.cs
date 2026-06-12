@@ -23,7 +23,7 @@ internal static class ItemEntityMapper
             Gw2Api.Contract.V2.Items.UpgradeComponent u => MapToUpgradeComponentEntity(u),
             Gw2Api.Contract.V2.Items.Weapon w => MapToWeaponEntity(w),
             Gw2Api.Contract.V2.Items.ItemSimple s => MapToItemEntity(s),
-            _ => null
+            _ => null,
         };
 
     private static Item MapToItemEntity(Gw2Api.Contract.V2.Items.ItemSimple apiItem)
@@ -83,13 +83,13 @@ internal static class ItemEntityMapper
                     {
                         ArmorDetailsId = apiItem.Id,
                         Flags = s.Flags.Select(f => new ItemInfusionSlotFlag { Flag = f.Value }).ToList(),
-                        ItemId = s.ItemId
+                        ItemId = s.ItemId,
                     })
                     .ToList(),
                 StatChoices = apiItem
                     .Details.StatChoices.Select(s => new ArmorStatChoice { StatId = s, ArmorDetailsId = apiItem.Id })
-                    .ToList()
-            }
+                    .ToList(),
+            },
         };
 
         // Map InfixUpgrade if exists
@@ -102,13 +102,13 @@ internal static class ItemEntityMapper
                     .Attributes.Select(a => new InfixUpgradeAttribute
                     {
                         Attribute = a.Attribute,
-                        Modifier = a.Modifier
+                        Modifier = a.Modifier,
                     })
                     .ToList(),
                 Buff =
                     infix.Buff == null
                         ? null
-                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description }
+                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description },
             };
         }
 
@@ -153,9 +153,9 @@ internal static class ItemEntityMapper
                     .Details.StatChoices.Select(s => new BackItemStatChoice
                     {
                         StatId = s,
-                        BackItemDetailsId = apiItem.Id
+                        BackItemDetailsId = apiItem.Id,
                     })
-                    .ToList()
+                    .ToList(),
             },
         };
 
@@ -169,13 +169,13 @@ internal static class ItemEntityMapper
                     .Attributes.Select(a => new InfixUpgradeAttribute
                     {
                         Attribute = a.Attribute,
-                        Modifier = a.Modifier
+                        Modifier = a.Modifier,
                     })
                     .ToList(),
                 Buff =
                     infix.Buff == null
                         ? null
-                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description }
+                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description },
             };
         }
 
@@ -206,8 +206,8 @@ internal static class ItemEntityMapper
             {
                 ItemId = apiItem.Id,
                 Size = apiItem.Details.Size,
-                NoSellOrSort = apiItem.Details.NoSellOrSort
-            }
+                NoSellOrSort = apiItem.Details.NoSellOrSort,
+            },
         };
     }
 
@@ -249,14 +249,16 @@ internal static class ItemEntityMapper
                         .Details.ExtraRecipeIds?.Select(r => new ConsumableExtraRecipe
                         {
                             ConsumableId = apiItem.Id,
-                            RecipeId = r
+                            RecipeId = r,
                         })
-                        .ToList() ?? [],
+                        .ToList()
+                    ?? [],
                 Skins =
                     apiItem
                         .Details.Skins?.Select(s => new ConsumableSkin { ConsumableId = apiItem.Id, SkinId = s })
-                        .ToList() ?? []
-            }
+                        .ToList()
+                    ?? [],
+            },
         };
     }
 
@@ -280,7 +282,7 @@ internal static class ItemEntityMapper
             Restrictions = apiItem
                 .Restrictions.Select(r => new ItemRestriction() { ItemId = apiItem.Id, Value = r.Value })
                 .ToList(),
-            Details = new ContainerDetails { ItemId = apiItem.Id, Type = apiItem.Details.Type.ToString() }
+            Details = new ContainerDetails { ItemId = apiItem.Id, Type = apiItem.Details.Type.ToString() },
         };
     }
 
@@ -304,7 +306,7 @@ internal static class ItemEntityMapper
             Restrictions = apiItem
                 .Restrictions.Select(r => new ItemRestriction() { ItemId = apiItem.Id, Value = r.Value })
                 .ToList(),
-            Details = new GatheringDetails { ItemId = apiItem.Id, Type = apiItem.Details.Type.ToString(), }
+            Details = new GatheringDetails { ItemId = apiItem.Id, Type = apiItem.Details.Type.ToString() },
         };
     }
 
@@ -353,7 +355,7 @@ internal static class ItemEntityMapper
             Restrictions = apiItem
                 .Restrictions.Select(r => new ItemRestriction() { ItemId = apiItem.Id, Value = r.Value })
                 .ToList(),
-            Details = new MiniPetDetails { ItemId = apiItem.Id, MinipetId = apiItem.Details.MinipetId, }
+            Details = new MiniPetDetails { ItemId = apiItem.Id, MinipetId = apiItem.Details.MinipetId },
         };
     }
 
@@ -381,8 +383,8 @@ internal static class ItemEntityMapper
             {
                 ItemId = apiItem.Id,
                 Type = apiItem.Details.Type,
-                Charges = apiItem.Details.Charges
-            }
+                Charges = apiItem.Details.Charges,
+            },
         };
     }
 
@@ -425,10 +427,10 @@ internal static class ItemEntityMapper
                     .Details.StatChoices.Select(s => new TrinketStatChoice
                     {
                         StatId = s,
-                        TrinketDetailsId = apiItem.Id
+                        TrinketDetailsId = apiItem.Id,
                     })
-                    .ToList()
-            }
+                    .ToList(),
+            },
         };
 
         // Map InfixUpgrade if exists
@@ -441,13 +443,13 @@ internal static class ItemEntityMapper
                     .Attributes.Select(a => new InfixUpgradeAttribute
                     {
                         Attribute = a.Attribute,
-                        Modifier = a.Modifier
+                        Modifier = a.Modifier,
                     })
                     .ToList(),
                 Buff =
                     infix.Buff == null
                         ? null
-                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description }
+                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description },
             };
         }
 
@@ -482,25 +484,28 @@ internal static class ItemEntityMapper
                 Flags = apiItem.Details.Flags.Select(f => f.Value).ToList(),
                 InfusionUpgradeFlags = apiItem.Details.InfusionUpgradeFlags.Select(f => f.Value).ToList(),
                 Bonuses = apiItem.Details.Bonuses?.ToList() ?? [],
-                InfixUpgrade = new UpgradeComponentInfixUpgrade
-                {
-                    Attributes = apiItem
-                        .Details.InfixUpgrade.Attributes.Select(a => new InfixUpgradeAttribute
+                InfixUpgrade =
+                    apiItem.Details.InfixUpgrade == null
+                        ? null
+                        : new UpgradeComponentInfixUpgrade
                         {
-                            Attribute = a.Attribute,
-                            Modifier = a.Modifier
-                        })
-                        .ToList(),
-                    Buff =
-                        apiItem.Details.InfixUpgrade.Buff == null
-                            ? null
-                            : new InfixUpgradeBuff
-                            {
-                                SkillId = apiItem.Details.InfixUpgrade.Buff.SkillId,
-                                Description = apiItem.Details.InfixUpgrade.Buff.Description
-                            }
-                }
-            }
+                            Attributes = apiItem
+                                .Details.InfixUpgrade.Attributes.Select(a => new InfixUpgradeAttribute
+                                {
+                                    Attribute = a.Attribute,
+                                    Modifier = a.Modifier,
+                                })
+                                .ToList(),
+                            Buff =
+                                apiItem.Details.InfixUpgrade.Buff == null
+                                    ? null
+                                    : new InfixUpgradeBuff
+                                    {
+                                        SkillId = apiItem.Details.InfixUpgrade.Buff.SkillId,
+                                        Description = apiItem.Details.InfixUpgrade.Buff.Description,
+                                    },
+                        },
+            },
         };
 
         return entity;
@@ -542,13 +547,13 @@ internal static class ItemEntityMapper
                     {
                         WeaponDetailsId = apiItem.Id,
                         Flags = s.Flags.Select(f => new ItemInfusionSlotFlag { Flag = f.Value }).ToList(),
-                        ItemId = s.ItemId
+                        ItemId = s.ItemId,
                     })
                     .ToList(),
                 StatChoices = apiItem
                     .Details.StatChoices.Select(s => new WeaponStatChoice { StatId = s, WeaponDetailsId = apiItem.Id })
-                    .ToList()
-            }
+                    .ToList(),
+            },
         };
 
         // Map InfixUpgrade if exists
@@ -561,17 +566,16 @@ internal static class ItemEntityMapper
                     .Attributes.Select(a => new InfixUpgradeAttribute
                     {
                         Attribute = a.Attribute,
-                        Modifier = a.Modifier
+                        Modifier = a.Modifier,
                     })
                     .ToList(),
                 Buff =
                     infix.Buff == null
                         ? null
-                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description }
+                        : new InfixUpgradeBuff { SkillId = infix.Buff.SkillId, Description = infix.Buff.Description },
             };
         }
 
         return entity;
     }
-
 }
