@@ -14,6 +14,7 @@
   <PropertyGroup>
     <Authors>gosferano</Authors>
     <Company>gosferano</Company>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/gosferano/gw2-gizmos</PackageProjectUrl>
     <RepositoryUrl>https://github.com/gosferano/gw2-gizmos.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
