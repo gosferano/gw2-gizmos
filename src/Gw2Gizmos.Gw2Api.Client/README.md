@@ -1,4 +1,46 @@
-### Supported endpoints
+# Gw2Gizmos.Gw2Api.Client
+
+A typed .NET client for the [Guild Wars 2 API v2](https://wiki.guildwars2.com/wiki/API:2): strongly-typed
+endpoints, bulk/pagination helpers, built-in resilience (retry + rate-limit/429 handling), and a managed
+`HttpClient` via `IHttpClientFactory`. The request/response types come from the
+`Gw2Gizmos.Gw2Api.Contract` package, pulled in automatically.
+
+## Install
+
+```
+dotnet add package Gw2Gizmos.Gw2Api.Client
+```
+
+## Quick start (no DI)
+
+```csharp
+using Gw2Gizmos.Gw2Api.Client;
+
+// apiKey is optional — omit it for public endpoints.
+var client = Gw2ApiClient.Create(apiKey);
+
+Account? account = await client.V2.Account.GetBlob();
+var characters = await client.V2.Characters.GetByIds(["My Character"]);
+```
+
+## With dependency injection
+
+```csharp
+services.AddGw2ApiClient(); // registers IGw2ApiClientFactory with retry/429 resilience
+// inject IGw2ApiClientFactory, then: clients.Create(apiKey)
+```
+
+## HttpClient & resilience
+
+Construction is routed through `IHttpClientFactory`, so handlers are pooled and rotated (no socket
+exhaustion, fresh DNS). Calls retry transient failures and HTTP 429 (honoring `Retry-After`) with a
+per-attempt timeout. For a custom handler/proxy: `AddGw2ApiClient(builder => /* configure */)`.
+
+- **`Gw2ApiClient.Create(apiKey)`** — simplest; reuses a process-wide default factory (build once). Ideal
+  for scripts/CLIs.
+- **`AddGw2ApiClient()` + `IGw2ApiClientFactory`** — for apps using dependency injection.
+
+## Supported endpoints
 
 - [x] /v2/account
 - [x] /v2/account/achievements

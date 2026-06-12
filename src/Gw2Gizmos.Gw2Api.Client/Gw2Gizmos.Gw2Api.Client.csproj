@@ -7,7 +7,12 @@
     <Version>0.0.0</Version>
     <Description>A typed HTTP client for the Guild Wars 2 API (v2). Depends on the contract package for its DTOs.</Description>
     <PackageTags>guildwars2;gw2;api;client</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
