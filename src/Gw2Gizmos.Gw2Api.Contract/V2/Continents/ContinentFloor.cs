@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 
-public class ContinentFloor
+public sealed class ContinentFloor
 {
     public int[] TextureDims { get; set; } = Array.Empty<int>();
     public int[][] ClampedView { get; set; } = Array.Empty<int[]>();

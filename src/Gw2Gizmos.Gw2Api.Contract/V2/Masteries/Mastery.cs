@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Masteries;
 
-public class Mastery
+public sealed class Mastery
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

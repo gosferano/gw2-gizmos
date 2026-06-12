@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Mounts;
 
-public class MountsClient : BaseBlobClient<string[]>, IMountsClient
+public sealed class MountsClient : BaseBlobClient<string[]>, IMountsClient
 {
     public MountsClient(HttpClient httpClient)
         : base(httpClient)
@@ -16,7 +16,7 @@ public class MountsClient : BaseBlobClient<string[]>, IMountsClient
     public IMountsTypesClient Types { get; }
 }
 
-public class MountsTypesClient : BaseBulkAllClient<MountType, string>, IMountsTypesClient
+public sealed class MountsTypesClient : BaseBulkAllClient<MountType, string>, IMountsTypesClient
 {
     internal MountsTypesClient(HttpClient httpClient)
         : base(httpClient) { }
@@ -24,7 +24,7 @@ public class MountsTypesClient : BaseBulkAllClient<MountType, string>, IMountsTy
     protected override string UriPath => "/v2/mounts/types";
 }
 
-public class MountsSkinsClient : BaseBulkAllClient<MountSkin, int>, IMountsSkinsClient
+public sealed class MountsSkinsClient : BaseBulkAllClient<MountSkin, int>, IMountsSkinsClient
 {
     internal MountsSkinsClient(HttpClient httpClient)
         : base(httpClient) { }

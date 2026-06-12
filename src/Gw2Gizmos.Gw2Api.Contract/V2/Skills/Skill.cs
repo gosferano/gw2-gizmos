@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Skills;
 
-public class Skill
+public sealed class Skill
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

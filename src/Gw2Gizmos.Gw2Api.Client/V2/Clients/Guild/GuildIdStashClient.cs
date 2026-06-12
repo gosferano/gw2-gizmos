@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildIdStashClient : BaseBlobClient<GuildStashSection[]>, IGuildIdStashClient
+public sealed class GuildIdStashClient : BaseBlobClient<GuildStashSection[]>, IGuildIdStashClient
 {
     private readonly string _guildId;
 

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.JadeBots;
 
-public class JadeBotsClient : BaseBulkAllClient<JadeBot, int>, IJadeBotsClient
+public sealed class JadeBotsClient : BaseBulkAllClient<JadeBot, int>, IJadeBotsClient
 {
     internal JadeBotsClient(HttpClient httpClient)
         : base(httpClient) { }

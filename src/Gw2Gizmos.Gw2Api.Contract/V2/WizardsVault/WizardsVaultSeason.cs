@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.WizardsVault;
 
-public class WizardsVaultSeason
+public sealed class WizardsVaultSeason
 {
     public string Title { get; set; } = null!;
     public DateTimeOffset Start { get; set; }

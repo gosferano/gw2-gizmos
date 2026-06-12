@@ -1,13 +1,13 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpStanding
+public sealed class PvpStanding
 {
     public string SeasonId { get; set; } = null!;
     public PvpStandingCurrent Current { get; set; } = null!;
     public PvpStandingBest Best { get; set; } = null!;
 }
 
-public class PvpStandingBest
+public sealed class PvpStandingBest
 {
     public int TotalPoints { get; set; }
     public int Division { get; set; }
@@ -16,7 +16,7 @@ public class PvpStandingBest
     public int Repeats { get; set; }
 }
 
-public class PvpStandingCurrent
+public sealed class PvpStandingCurrent
 {
     public int TotalPoints { get; set; }
     public int Division { get; set; }

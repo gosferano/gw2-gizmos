@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Professions;
 
-public class ProfessionTraining
+public sealed class ProfessionTraining
 {
     public int Id { get; set; }
     public ProfessionTrainingCategory Category { get; set; }

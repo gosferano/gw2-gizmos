@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
 
-public class CommercePrices
+public sealed class CommercePrices
 {
     public int Id { get; set; }
     public bool Whitelisted { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersBuildTabsActiveClient : BaseBlobClient<CharacterBuildTab>, ICharactersBuildTabsActiveClient
+public sealed class CharactersBuildTabsActiveClient : BaseBlobClient<CharacterBuildTab>, ICharactersBuildTabsActiveClient
 {
     private readonly string _characterId;
 

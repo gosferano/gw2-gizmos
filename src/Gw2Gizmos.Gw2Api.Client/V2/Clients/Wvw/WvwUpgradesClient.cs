@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwUpgradesClient : BaseBulkAllClient<WvwUpgrade, int>, IWvwUpgradesClient
+public sealed class WvwUpgradesClient : BaseBulkAllClient<WvwUpgrade, int>, IWvwUpgradesClient
 {
     internal WvwUpgradesClient(HttpClient httpClient)
         : base(httpClient) { }

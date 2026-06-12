@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.MapChests;
 
-public class MapChestsClient : BaseBulkAllClient<MapChest, string>, IMapChestsClient
+public sealed class MapChestsClient : BaseBulkAllClient<MapChest, string>, IMapChestsClient
 {
     internal MapChestsClient(HttpClient httpClient)
         : base(httpClient) { }

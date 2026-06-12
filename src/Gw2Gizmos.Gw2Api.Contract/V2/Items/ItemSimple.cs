@@ -1,3 +1,3 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class ItemSimple : Item { }
+public sealed class ItemSimple : Item { }

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Recipes;
 
-public class RecipesSearchClient : BaseClient, IRecipesSearchClient
+public sealed class RecipesSearchClient : BaseClient, IRecipesSearchClient
 {
     internal RecipesSearchClient(HttpClient httpClient)
         : base(httpClient) { }

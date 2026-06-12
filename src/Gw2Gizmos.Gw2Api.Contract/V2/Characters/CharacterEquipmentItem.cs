@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class CharacterEquipmentItem
+public sealed class CharacterEquipmentItem
 {
     public int Id { get; set; }
     public CharacterEquipmentItemSlot Slot { get; set; }

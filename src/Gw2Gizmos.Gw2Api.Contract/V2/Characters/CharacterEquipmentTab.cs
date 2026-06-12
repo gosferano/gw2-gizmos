@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class CharacterEquipmentTab
+public sealed class CharacterEquipmentTab
 {
     public int Tab { get; set; }
     public string Name { get; set; } = null!;

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.WizardsVault;
 
-public class WizardsVaultListing
+public sealed class WizardsVaultListing
 {
     public int Id { get; set; }
     public int ItemId { get; set; }

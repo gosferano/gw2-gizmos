@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildIdUpgradesClient : BaseBlobClient<int[]>, IGuildIdUpgradesClient
+public sealed class GuildIdUpgradesClient : BaseBlobClient<int[]>, IGuildIdUpgradesClient
 {
     private readonly string _guildId;
 

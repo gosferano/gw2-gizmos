@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpSeasonLeaderboardSettings
+public sealed class PvpSeasonLeaderboardSettings
 {
     public string Name { get; set; } = null!;
     public int? Duration { get; set; }

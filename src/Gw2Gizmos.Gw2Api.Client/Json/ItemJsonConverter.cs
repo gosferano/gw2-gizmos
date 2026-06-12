@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class ItemJsonConverter : PolymorphicJsonConverter<Item>
+public sealed class ItemJsonConverter : PolymorphicJsonConverter<Item>
 {
     protected override string TypePropertyName { get; } = "type";
 

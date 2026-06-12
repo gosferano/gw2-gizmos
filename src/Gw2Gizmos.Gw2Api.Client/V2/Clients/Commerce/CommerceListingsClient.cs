@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceListingsClient : BaseBulkClient<CommerceListings, int>, ICommerceListingsClient
+public sealed class CommerceListingsClient : BaseBulkClient<CommerceListings, int>, ICommerceListingsClient
 {
     internal CommerceListingsClient(HttpClient httpClient)
         : base(httpClient) { }

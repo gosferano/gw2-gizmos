@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwClient : BaseBlobClient<string[]>, IWvwClient
+public sealed class WvwClient : BaseBlobClient<string[]>, IWvwClient
 {
     internal WvwClient(HttpClient httpClient)
         : base(httpClient)

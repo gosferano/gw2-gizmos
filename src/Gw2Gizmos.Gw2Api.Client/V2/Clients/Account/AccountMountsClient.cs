@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountMountsClient : BaseBlobClient<string[]>, IAccountMountsClient
+public sealed class AccountMountsClient : BaseBlobClient<string[]>, IAccountMountsClient
 {
     internal AccountMountsClient(HttpClient httpClient)
         : base(httpClient)

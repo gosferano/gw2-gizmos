@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
 
-public class CommerceTransaction
+public sealed class CommerceTransaction
 {
     public long Id { get; set; }
     public int ItemId { get; set; }

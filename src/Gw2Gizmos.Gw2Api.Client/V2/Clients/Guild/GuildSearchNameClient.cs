@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildSearchNameClient : BaseClient, IGuildSearchNameClient
+public sealed class GuildSearchNameClient : BaseClient, IGuildSearchNameClient
 {
     private readonly string _guildName;
 

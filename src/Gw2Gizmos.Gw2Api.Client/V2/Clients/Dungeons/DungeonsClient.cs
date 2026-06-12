@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Dungeons;
 
-public class DungeonsClient : BaseBulkAllClient<Dungeon, string>, IDungeonsClient
+public sealed class DungeonsClient : BaseBulkAllClient<Dungeon, string>, IDungeonsClient
 {
     internal DungeonsClient(HttpClient httpClient)
         : base(httpClient) { }

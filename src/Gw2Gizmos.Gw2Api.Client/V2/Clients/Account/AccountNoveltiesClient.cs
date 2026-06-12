@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountNoveltiesClient : BaseBlobClient<int[]>, IAccountNoveltiesClient
+public sealed class AccountNoveltiesClient : BaseBlobClient<int[]>, IAccountNoveltiesClient
 {
     internal AccountNoveltiesClient(HttpClient httpClient)
         : base(httpClient) { }

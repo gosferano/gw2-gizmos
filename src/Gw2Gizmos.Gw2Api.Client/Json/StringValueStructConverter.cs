@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class StringValueStructConverter<T> : JsonConverter<T>
+public sealed class StringValueStructConverter<T> : JsonConverter<T>
     where T : struct
 {
     public override T Read(
@@ -34,7 +34,7 @@ public class StringValueStructConverter<T> : JsonConverter<T>
     }
 }
 
-public class StringValueStructConverterFactory : JsonConverterFactory
+public sealed class StringValueStructConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
     {

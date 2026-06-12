@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersBuildTabsClient : BaseBulkAllClient<CharacterBuildTab, int>, ICharactersBuildTabsClient
+public sealed class CharactersBuildTabsClient : BaseBulkAllClient<CharacterBuildTab, int>, ICharactersBuildTabsClient
 {
     private readonly string _characterId;
 

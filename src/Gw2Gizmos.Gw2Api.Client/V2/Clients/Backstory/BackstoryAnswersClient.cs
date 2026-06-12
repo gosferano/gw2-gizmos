@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Backstory;
 
-public class BackstoryAnswersClient : BaseBulkAllClient<BackstoryAnswer, string>, IBackstoryAnswersClient
+public sealed class BackstoryAnswersClient : BaseBulkAllClient<BackstoryAnswer, string>, IBackstoryAnswersClient
 {
     internal BackstoryAnswersClient(HttpClient httpClient)
         : base(httpClient) { }

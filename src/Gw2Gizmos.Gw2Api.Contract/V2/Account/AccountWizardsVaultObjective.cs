@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class AccountWizardsVaultObjective
+public sealed class AccountWizardsVaultObjective
 {
     public int Id { get; set; }
     public string Title { get; set; } = null!;

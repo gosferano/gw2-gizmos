@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildIdMembersClient : BaseBlobClient<GuildMember[]>, IGuildIdMembersClient
+public sealed class GuildIdMembersClient : BaseBlobClient<GuildMember[]>, IGuildIdMembersClient
 {
     private readonly string _guildId;
 

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountMinisClient : BaseBlobClient<int[]>, IAccountMinisClient
+public sealed class AccountMinisClient : BaseBlobClient<int[]>, IAccountMinisClient
 {
     internal AccountMinisClient(HttpClient httpClient)
         : base(httpClient) { }

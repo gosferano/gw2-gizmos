@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Outfits;
 
-public class OutfitsClient : BaseBulkAllClient<Outfit, int>, IOutfitsClient
+public sealed class OutfitsClient : BaseBulkAllClient<Outfit, int>, IOutfitsClient
 {
     internal OutfitsClient(HttpClient httpClient)
         : base(httpClient) { }

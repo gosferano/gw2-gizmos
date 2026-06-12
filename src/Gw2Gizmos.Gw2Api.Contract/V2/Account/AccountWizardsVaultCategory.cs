@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class AccountWizardsVaultCategory
+public sealed class AccountWizardsVaultCategory
 {
     public int MetaProgressCurrent { get; set; }
     public int MetaProgressComplete { get; set; }

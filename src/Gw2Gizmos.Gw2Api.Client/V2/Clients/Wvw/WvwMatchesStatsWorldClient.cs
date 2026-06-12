@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwMatchesStatsWorldClient : BaseClient, IWvwMatchesStatsWorldClient
+public sealed class WvwMatchesStatsWorldClient : BaseClient, IWvwMatchesStatsWorldClient
 {
     private readonly int _worldId;
 

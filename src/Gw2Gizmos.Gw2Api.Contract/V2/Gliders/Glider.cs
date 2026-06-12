@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Gliders;
 
-public class Glider
+public sealed class Glider
 {
     public int Id { get; set; }
     public int[] UnlockItems { get; set; } = Array.Empty<int>();

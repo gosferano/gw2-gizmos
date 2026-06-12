@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 
-public class ContinentFloorRegionMapMasteryPoint
+public sealed class ContinentFloorRegionMapMasteryPoint
 {
     public decimal[] Coord { get; set; } = Array.Empty<decimal>();
     public int Id { get; set; }

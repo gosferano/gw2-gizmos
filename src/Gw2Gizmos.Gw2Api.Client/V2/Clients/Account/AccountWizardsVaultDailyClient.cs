@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountWizardsVaultDailyClient
+public sealed class AccountWizardsVaultDailyClient
     : BaseBlobClient<AccountWizardsVaultCategory>,
         IAccountWizardsVaultDailyClient
 {

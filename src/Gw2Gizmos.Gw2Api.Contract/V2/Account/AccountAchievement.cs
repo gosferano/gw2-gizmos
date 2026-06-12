@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class AccountAchievement
+public sealed class AccountAchievement
 {
     public int Id { get; set; }
     public int[] Bits { get; set; } = Array.Empty<int>();

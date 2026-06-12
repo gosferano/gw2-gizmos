@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.DailyCrafting;
 
-public class DailyCraftingClient
+public sealed class DailyCraftingClient
     : BaseBulkAllClient<Contract.V2.DailyCrafting.DailyCrafting, string>,
         IDailyCraftingClient
 {

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class Account
+public sealed class Account
 {
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;

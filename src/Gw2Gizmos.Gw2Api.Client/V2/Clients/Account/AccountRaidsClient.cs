@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountRaidsClient : BaseBlobClient<string[]>, IAccountRaidsClient
+public sealed class AccountRaidsClient : BaseBlobClient<string[]>, IAccountRaidsClient
 {
     internal AccountRaidsClient(HttpClient httpClient)
         : base(httpClient) { }

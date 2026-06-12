@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountMasteriesClient : BaseBlobClient<AccountMastery[]>, IAccountMasteriesClient
+public sealed class AccountMasteriesClient : BaseBlobClient<AccountMastery[]>, IAccountMasteriesClient
 {
     internal AccountMasteriesClient(HttpClient httpClient)
         : base(httpClient) { }

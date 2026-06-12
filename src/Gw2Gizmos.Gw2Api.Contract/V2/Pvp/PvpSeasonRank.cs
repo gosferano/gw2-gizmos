@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpSeasonRank
+public sealed class PvpSeasonRank
 {
     public string Name { get; set; } = null!;
     public string Description { get; set; } = null!;

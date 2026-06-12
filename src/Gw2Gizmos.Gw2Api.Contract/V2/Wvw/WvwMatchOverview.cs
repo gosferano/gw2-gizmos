@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Wvw;
 
-public class WvwMatchOverview
+public sealed class WvwMatchOverview
 {
     public string Id { get; set; } = null!;
     public DateTimeOffset StartTime { get; set; }

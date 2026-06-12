@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Currencies;
 
-public class Currency
+public sealed class Currency
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

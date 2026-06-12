@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceTransactionsCurrentBuysClient
+public sealed class CommerceTransactionsCurrentBuysClient
     : BasePaginatedBlobClient<CommerceTransaction>,
         ICommerceTransactionsCurrentBuysClient
 {

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersIdClient : BaseClient, ICharactersIdClient
+public sealed class CharactersIdClient : BaseClient, ICharactersIdClient
 {
     private readonly string _characterId;
 

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Titles;
 
-public class TitlesClient : BaseBulkAllClient<Title, int>, ITitlesClient
+public sealed class TitlesClient : BaseBulkAllClient<Title, int>, ITitlesClient
 {
     internal TitlesClient(HttpClient httpClient)
         : base(httpClient) { }

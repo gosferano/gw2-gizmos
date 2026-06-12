@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpSeasonDivision
+public sealed class PvpSeasonDivision
 {
     public string Name { get; set; } = null!;
     public PvpSeasonFlag[] Flags { get; set; } = Array.Empty<PvpSeasonFlag>();

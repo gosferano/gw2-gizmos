@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.LegendaryArmory;
 
-public class LegendaryArmoryClient : BaseBulkAllClient<LegendaryArmoryItem, int>, ILegendaryArmoryClient
+public sealed class LegendaryArmoryClient : BaseBulkAllClient<LegendaryArmoryItem, int>, ILegendaryArmoryClient
 {
     internal LegendaryArmoryClient(HttpClient httpClient)
         : base(httpClient) { }

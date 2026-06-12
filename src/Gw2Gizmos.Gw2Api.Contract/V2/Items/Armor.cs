@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class Armor : Item
+public sealed class Armor : Item
 {
     public ArmorDetails Details { get; set; } = null!;
 }
 
-public class ArmorDetails
+public sealed class ArmorDetails
 {
     public ArmorSlotType Type { get; set; }
     public ArmorWeightClass WeightClass { get; set; }

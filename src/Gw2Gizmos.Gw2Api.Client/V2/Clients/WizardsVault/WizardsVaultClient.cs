@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.WizardsVault;
 
-public class WizardsVaultClient : BaseBlobClient<WizardsVaultSeason>, IWizardsVaultClient
+public sealed class WizardsVaultClient : BaseBlobClient<WizardsVaultSeason>, IWizardsVaultClient
 {
     internal WizardsVaultClient(HttpClient httpClient)
         : base(httpClient)

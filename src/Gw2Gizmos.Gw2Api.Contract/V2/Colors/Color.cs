@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Colors;
 
-public class Color
+public sealed class Color
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

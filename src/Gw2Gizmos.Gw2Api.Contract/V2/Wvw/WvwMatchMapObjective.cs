@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Wvw;
 
-public class WvwMatchMapObjective
+public sealed class WvwMatchMapObjective
 {
     public string Id { get; set; } = null!;
     public WvwObjectiveType Type { get; set; }

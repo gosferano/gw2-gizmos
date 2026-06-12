@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Achievements;
 
-public class AchievementReward
+public sealed class AchievementReward
 {
     public AchievementRewardType Type { get; set; }
     public int? Count { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Traits;
 
-public class TraitsClient : BaseBulkAllClient<Trait, int>, ITraitsClient
+public sealed class TraitsClient : BaseBulkAllClient<Trait, int>, ITraitsClient
 {
     internal TraitsClient(HttpClient httpClient)
         : base(httpClient) { }

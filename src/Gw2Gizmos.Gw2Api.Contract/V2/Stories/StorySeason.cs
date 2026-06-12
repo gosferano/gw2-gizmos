@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Stories;
 
-public class StorySeason
+public sealed class StorySeason
 {
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;

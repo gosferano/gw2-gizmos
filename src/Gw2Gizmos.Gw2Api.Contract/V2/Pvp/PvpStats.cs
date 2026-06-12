@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpStats
+public sealed class PvpStats
 {
     public int PvpRank { get; set; }
     public int PvpRankPoints { get; set; }

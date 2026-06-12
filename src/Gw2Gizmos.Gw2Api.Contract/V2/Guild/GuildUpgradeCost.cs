@@ -1,6 +1,6 @@
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 
-public class GuildUpgradeCost
+public sealed class GuildUpgradeCost
 {
     public GuildUpgradeCostType Type { get; set; }
     public string? Name { get; set; }

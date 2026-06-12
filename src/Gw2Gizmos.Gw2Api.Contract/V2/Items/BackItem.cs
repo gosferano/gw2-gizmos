@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class BackItem : Item
+public sealed class BackItem : Item
 {
     public BackItemDetails Details { get; set; } = null!;
 }
 
-public class BackItemDetails
+public sealed class BackItemDetails
 {
     public InfusionSlot[] InfusionSlots { get; set; } = Array.Empty<InfusionSlot>();
     public decimal AttributeAdjustment { get; set; }

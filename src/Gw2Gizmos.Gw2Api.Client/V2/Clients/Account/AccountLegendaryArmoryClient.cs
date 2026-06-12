@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountLegendaryArmoryClient : BaseBlobClient<AccountLegendaryArmoryItem[]>, IAccountLegendaryArmoryClient
+public sealed class AccountLegendaryArmoryClient : BaseBlobClient<AccountLegendaryArmoryItem[]>, IAccountLegendaryArmoryClient
 {
     internal AccountLegendaryArmoryClient(HttpClient httpClient)
         : base(httpClient) { }

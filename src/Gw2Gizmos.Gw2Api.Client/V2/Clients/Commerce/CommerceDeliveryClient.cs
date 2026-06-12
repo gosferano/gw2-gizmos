@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceDeliveryClient : BaseBlobClient<CommerceDelivery>, ICommerceDeliveryClient
+public sealed class CommerceDeliveryClient : BaseBlobClient<CommerceDelivery>, ICommerceDeliveryClient
 {
     internal CommerceDeliveryClient(HttpClient httpClient)
         : base(httpClient) { }

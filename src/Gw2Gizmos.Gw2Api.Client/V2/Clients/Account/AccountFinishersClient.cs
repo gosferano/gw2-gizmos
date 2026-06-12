@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountFinishersClient : BaseBlobClient<AccountFinisher[]>, IAccountFinishersClient
+public sealed class AccountFinishersClient : BaseBlobClient<AccountFinisher[]>, IAccountFinishersClient
 {
     internal AccountFinishersClient(HttpClient httpClient)
         : base(httpClient) { }

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountWalletClient : BaseBlobClient<AccountWalletCurrency[]>, IAccountWalletClient
+public sealed class AccountWalletClient : BaseBlobClient<AccountWalletCurrency[]>, IAccountWalletClient
 {
     internal AccountWalletClient(HttpClient httpClient)
         : base(httpClient) { }

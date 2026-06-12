@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Backstory;
 
-public class BackstoryAnswer
+public sealed class BackstoryAnswer
 {
     public string Id { get; set; } = null!;
     public string Title { get; set; } = null!;

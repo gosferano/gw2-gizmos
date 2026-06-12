@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Stories;
 
-public class StoriesSeasonsClient : BaseBulkAllClient<StorySeason, string>, IStoriesSeasonsClient
+public sealed class StoriesSeasonsClient : BaseBulkAllClient<StorySeason, string>, IStoriesSeasonsClient
 {
     internal StoriesSeasonsClient(HttpClient httpClient)
         : base(httpClient) { }

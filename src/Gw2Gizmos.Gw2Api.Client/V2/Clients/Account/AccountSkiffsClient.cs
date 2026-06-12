@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountSkiffsClient : BaseBlobClient<int[]>, IAccountSkiffsClient
+public sealed class AccountSkiffsClient : BaseBlobClient<int[]>, IAccountSkiffsClient
 {
     internal AccountSkiffsClient(HttpClient httpClient)
         : base(httpClient) { }

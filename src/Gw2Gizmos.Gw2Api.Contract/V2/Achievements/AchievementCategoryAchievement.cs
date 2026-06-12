@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Achievements;
 
-public class AchievementCategoryAchievement
+public sealed class AchievementCategoryAchievement
 {
     public int Id { get; set; }
     public AchievementCategoryAchievementFlag[] Flags { get; set; } = Array.Empty<AchievementCategoryAchievementFlag>();

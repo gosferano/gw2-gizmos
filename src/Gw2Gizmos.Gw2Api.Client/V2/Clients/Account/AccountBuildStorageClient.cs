@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountBuildStorageClient : BaseBulkAllClient<BuildStorageBuild, int>, IAccountBuildStorageClient
+public sealed class AccountBuildStorageClient : BaseBulkAllClient<BuildStorageBuild, int>, IAccountBuildStorageClient
 {
     internal AccountBuildStorageClient(HttpClient httpClient)
         : base(httpClient) { }

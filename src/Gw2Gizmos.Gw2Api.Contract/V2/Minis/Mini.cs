@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Minis;
 
-public class Mini
+public sealed class Mini
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

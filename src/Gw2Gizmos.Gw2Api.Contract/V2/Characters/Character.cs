@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class Character
+public sealed class Character
 {
     public string Name { get; set; } = null!;
     public RaceName Race { get; set; }

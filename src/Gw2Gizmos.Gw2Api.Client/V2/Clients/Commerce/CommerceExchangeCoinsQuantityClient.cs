@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceExchangeCoinsQuantityClient : BaseClient, ICommerceExchangeCoinsQuantityClient
+public sealed class CommerceExchangeCoinsQuantityClient : BaseClient, ICommerceExchangeCoinsQuantityClient
 {
     private readonly int _quantity;
 

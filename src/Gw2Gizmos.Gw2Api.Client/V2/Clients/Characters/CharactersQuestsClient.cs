@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersQuestsClient : BaseBlobClient<int[]>, ICharactersQuestsClient
+public sealed class CharactersQuestsClient : BaseBlobClient<int[]>, ICharactersQuestsClient
 {
     private readonly string _characterId;
 

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Backstory;
 
-public class BackstoryClient : BaseBlobClient<string[]>, IBackstoryClient
+public sealed class BackstoryClient : BaseBlobClient<string[]>, IBackstoryClient
 {
     internal BackstoryClient(HttpClient httpClient)
         : base(httpClient)

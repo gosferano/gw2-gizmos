@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Wvw;
 
-public class WvwMatchTeamValues<T>
+public sealed class WvwMatchTeamValues<T>
     where T : notnull
 {
     public T Red { get; set; } = default!;

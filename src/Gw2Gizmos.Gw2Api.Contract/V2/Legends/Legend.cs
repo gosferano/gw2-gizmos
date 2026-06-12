@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Legends;
 
-public class Legend
+public sealed class Legend
 {
     public string Id { get; set; } = null!;
     public int Swap { get; set; }

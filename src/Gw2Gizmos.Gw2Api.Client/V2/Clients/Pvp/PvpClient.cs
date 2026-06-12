@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Pvp;
 
-public class PvpClient : BaseBlobClient<string[]>, IPvpClient
+public sealed class PvpClient : BaseBlobClient<string[]>, IPvpClient
 {
     internal PvpClient(HttpClient httpClient)
         : base(httpClient)

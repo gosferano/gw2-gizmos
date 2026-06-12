@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Outfits;
 
-public class Outfit
+public sealed class Outfit
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

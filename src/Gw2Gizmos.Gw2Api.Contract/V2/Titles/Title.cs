@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Titles;
 
-public class Title
+public sealed class Title
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

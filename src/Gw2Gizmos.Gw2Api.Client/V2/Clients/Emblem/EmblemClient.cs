@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Emblem;
 
-public class EmblemClient : BaseBlobClient<string[]>, IEmblemClient
+public sealed class EmblemClient : BaseBlobClient<string[]>, IEmblemClient
 {
     internal EmblemClient(HttpClient httpClient)
         : base(httpClient)

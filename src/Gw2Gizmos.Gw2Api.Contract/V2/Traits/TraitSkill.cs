@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Traits;
 
-public class TraitSkill
+public sealed class TraitSkill
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

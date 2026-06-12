@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class CharacterInventoryBag
+public sealed class CharacterInventoryBag
 {
     public int Id { get; set; }
     public int Size { get; set; }

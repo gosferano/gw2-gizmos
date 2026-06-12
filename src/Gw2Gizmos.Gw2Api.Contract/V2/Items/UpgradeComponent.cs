@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class UpgradeComponent : Item
+public sealed class UpgradeComponent : Item
 {
     public UpgradeComponentDetails Details { get; set; } = null!;
 }
 
-public class UpgradeComponentDetails
+public sealed class UpgradeComponentDetails
 {
     public UpgradeComponentType Type { get; set; }
     public UpgradeComponentFlag[] Flags { get; set; } = Array.Empty<UpgradeComponentFlag>();

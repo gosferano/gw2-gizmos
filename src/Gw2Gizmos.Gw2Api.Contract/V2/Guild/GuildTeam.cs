@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 
-public class GuildTeam
+public sealed class GuildTeam
 {
     public int Id { get; set; }
     public GuildTeamMember[] Members { get; set; } = Array.Empty<GuildTeamMember>();

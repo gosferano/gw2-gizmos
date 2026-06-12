@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountHomeClient : BaseBlobClient<string[]>, IAccountHomeClient
+public sealed class AccountHomeClient : BaseBlobClient<string[]>, IAccountHomeClient
 {
     internal AccountHomeClient(HttpClient httpClient)
         : base(httpClient)

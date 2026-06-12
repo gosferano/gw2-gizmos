@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwRanksClient : BaseBulkAllClient<WvwRank, int>, IWvwRanksClient
+public sealed class WvwRanksClient : BaseBulkAllClient<WvwRank, int>, IWvwRanksClient
 {
     internal WvwRanksClient(HttpClient httpClient)
         : base(httpClient) { }

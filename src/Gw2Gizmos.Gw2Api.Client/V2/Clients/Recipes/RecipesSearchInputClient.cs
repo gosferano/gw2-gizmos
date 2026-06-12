@@ -1,6 +1,6 @@
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Recipes;
 
-public class RecipesSearchInputClient : BaseClient, IRecipesSearchInputClient
+public sealed class RecipesSearchInputClient : BaseClient, IRecipesSearchInputClient
 {
     private readonly int _inputItemId;
 

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountJadeBotsClient : BaseBlobClient<int[]>, IAccountJadeBotsClient
+public sealed class AccountJadeBotsClient : BaseBlobClient<int[]>, IAccountJadeBotsClient
 {
     internal AccountJadeBotsClient(HttpClient httpClient)
         : base(httpClient) { }

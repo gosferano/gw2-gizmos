@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Home;
 
-public class HomeCatsClient : BaseBulkAllClient<HomeCat, int>, IHomeCatsClient
+public sealed class HomeCatsClient : BaseBulkAllClient<HomeCat, int>, IHomeCatsClient
 {
     internal HomeCatsClient(HttpClient httpClient)
         : base(httpClient) { }

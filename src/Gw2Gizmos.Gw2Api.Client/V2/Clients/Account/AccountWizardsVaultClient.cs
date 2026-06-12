@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountWizardsVaultClient : BaseClient, IAccountWizardsVaultClient
+public sealed class AccountWizardsVaultClient : BaseClient, IAccountWizardsVaultClient
 {
     internal AccountWizardsVaultClient(HttpClient httpClient)
         : base(httpClient)

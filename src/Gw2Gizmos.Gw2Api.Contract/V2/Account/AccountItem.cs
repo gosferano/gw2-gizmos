@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class AccountItem
+public sealed class AccountItem
 {
     public int Id { get; set; }
     public int Count { get; set; }

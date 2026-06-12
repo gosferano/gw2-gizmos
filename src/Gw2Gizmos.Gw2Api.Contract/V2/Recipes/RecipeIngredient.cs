@@ -1,6 +1,6 @@
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Recipes;
 
-public class RecipeIngredient
+public sealed class RecipeIngredient
 {
     public int Id { get; set; }
     public int Count { get; set; }

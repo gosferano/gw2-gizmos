@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 
-public class ContinentFloorRegionMapSector
+public sealed class ContinentFloorRegionMapSector
 {
     public string Name { get; set; } = null!;
     public int Level { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Recipes;
 
-public class RecipesClient : BaseBulkClient<Recipe, int>, IRecipesClient
+public sealed class RecipesClient : BaseBulkClient<Recipe, int>, IRecipesClient
 {
     internal RecipesClient(HttpClient httpClient)
         : base(httpClient)

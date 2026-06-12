@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Finishers;
 
-public class FinishersClient : BaseBulkAllClient<Finisher, int>, IFinishersClient
+public sealed class FinishersClient : BaseBulkAllClient<Finisher, int>, IFinishersClient
 {
     internal FinishersClient(HttpClient httpClient)
         : base(httpClient) { }

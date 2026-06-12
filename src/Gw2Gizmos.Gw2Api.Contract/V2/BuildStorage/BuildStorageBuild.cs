@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.BuildStorage;
 
-public class BuildStorageBuild
+public sealed class BuildStorageBuild
 {
     public string Name { get; set; } = null!;
     public string Profession { get; set; } = null!;

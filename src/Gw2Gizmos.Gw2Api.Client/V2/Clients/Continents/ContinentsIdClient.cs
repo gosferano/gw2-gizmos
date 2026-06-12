@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Continents;
 
-public class ContinentsIdClient : BaseClient, IContinentsIdClient
+public sealed class ContinentsIdClient : BaseClient, IContinentsIdClient
 {
     private readonly int _continentId;
 

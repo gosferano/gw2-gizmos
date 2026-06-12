@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Pvp;
 
-public class PvpGamesClient : BaseBulkAllClient<PvpGame, string>, IPvpGamesClient
+public sealed class PvpGamesClient : BaseBulkAllClient<PvpGame, string>, IPvpGamesClient
 {
     internal PvpGamesClient(HttpClient httpClient)
         : base(httpClient) { }

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Pvp;
 
-public class PvpSeasonsIdClient : BaseClient, IPvpSeasonsIdClient
+public sealed class PvpSeasonsIdClient : BaseClient, IPvpSeasonsIdClient
 {
     private readonly string _seasonId;
 

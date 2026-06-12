@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Finishers;
 
-public class Finisher
+public sealed class Finisher
 {
     public int Id { get; set; }
     public string UnlockDetails { get; set; } = string.Empty;

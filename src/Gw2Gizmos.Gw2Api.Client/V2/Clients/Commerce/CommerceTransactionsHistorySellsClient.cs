@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceTransactionsHistorySellsClient
+public sealed class CommerceTransactionsHistorySellsClient
     : BasePaginatedBlobClient<CommerceTransaction>,
         ICommerceTransactionsHistorySellsClient
 {

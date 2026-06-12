@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceTransactionsCurrentClient : BaseBlobClient<string[]>, ICommerceTransactionsCurrentClient
+public sealed class CommerceTransactionsCurrentClient : BaseBlobClient<string[]>, ICommerceTransactionsCurrentClient
 {
     internal CommerceTransactionsCurrentClient(HttpClient httpClient)
         : base(httpClient)

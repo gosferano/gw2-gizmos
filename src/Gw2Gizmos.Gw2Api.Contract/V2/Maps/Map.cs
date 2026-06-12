@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Maps;
 
-public class Map
+public sealed class Map
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

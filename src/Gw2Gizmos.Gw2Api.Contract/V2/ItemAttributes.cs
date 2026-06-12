@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2;
 
-public class ItemAttributes
+public sealed class ItemAttributes
 {
     public decimal? AgonyResistance { get; set; }
     public decimal? BoonDuration { get; set; }

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Achievements;
 
-public class Achievement
+public sealed class Achievement
 {
     public int Id { get; set; }
     public string? Icon { get; set; }

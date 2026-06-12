@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Emblem;
 
-public class EmblemBackgroundsClient : BaseBulkAllClient<Contract.V2.Emblem.Emblem, int>, IEmblemBackgroundsClient
+public sealed class EmblemBackgroundsClient : BaseBulkAllClient<Contract.V2.Emblem.Emblem, int>, IEmblemBackgroundsClient
 {
     internal EmblemBackgroundsClient(HttpClient httpClient)
         : base(httpClient) { }

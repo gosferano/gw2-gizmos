@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Continents;
 
-public class ContinentsClient : BaseBulkAllClient<Continent, int>, IContinentsClient
+public sealed class ContinentsClient : BaseBulkAllClient<Continent, int>, IContinentsClient
 {
     internal ContinentsClient(HttpClient httpClient)
         : base(httpClient) { }

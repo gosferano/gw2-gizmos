@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpSeasonLeaderboardScoring
+public sealed class PvpSeasonLeaderboardScoring
 {
     public string Id { get; set; } = null!;
     public PvpSeasonLeaderboardScoringType Type { get; set; }

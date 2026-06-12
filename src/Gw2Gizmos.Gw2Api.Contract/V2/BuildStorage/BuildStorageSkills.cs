@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.BuildStorage;
 
-public class BuildStorageSkills
+public sealed class BuildStorageSkills
 {
     public int? Heal { get; set; }
     public int?[] Utilities { get; set; } = Array.Empty<int?>();

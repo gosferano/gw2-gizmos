@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pets;
 
-public class Pet
+public sealed class Pet
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

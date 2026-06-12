@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Wvw;
 
-public class WvwMatchStats
+public sealed class WvwMatchStats
 {
     public string Id { get; set; } = null!;
     public WvwMatchTeamValues<int> Kills { get; set; } = null!;

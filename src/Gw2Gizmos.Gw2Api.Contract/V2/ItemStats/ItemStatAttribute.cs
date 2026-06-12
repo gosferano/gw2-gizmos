@@ -1,6 +1,6 @@
 namespace Gw2Gizmos.Gw2Api.Contract.V2.ItemStats;
 
-public class ItemStatAttribute
+public sealed class ItemStatAttribute
 {
     public AttributeName Attribute { get; set; }
     public decimal Multiplier { get; set; }

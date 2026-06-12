@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountEmotesClient : BaseBlobClient<string[]>, IAccountEmotesClient
+public sealed class AccountEmotesClient : BaseBlobClient<string[]>, IAccountEmotesClient
 {
     internal AccountEmotesClient(HttpClient httpClient)
         : base(httpClient) { }

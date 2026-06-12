@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Pets;
 
-public class PetsClient : BaseBulkAllClient<Pet, int>, IPetsClient
+public sealed class PetsClient : BaseBulkAllClient<Pet, int>, IPetsClient
 {
     // ReSharper disable once ConvertToPrimaryConstructor
     public PetsClient(HttpClient httpClient)

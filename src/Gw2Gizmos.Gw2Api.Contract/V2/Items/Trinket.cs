@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class Trinket : Item
+public sealed class Trinket : Item
 {
     public TrinketDetails Details { get; set; } = null!;
 }
 
-public class TrinketDetails
+public sealed class TrinketDetails
 {
     public TrinketType Type { get; set; }
     public InfusionSlot[] InfusionSlots { get; set; } = Array.Empty<InfusionSlot>();

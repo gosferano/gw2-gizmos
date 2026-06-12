@@ -1,6 +1,6 @@
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpRankLevels
+public sealed class PvpRankLevels
 {
     public int MinRank { get; set; }
     public int MaxRank { get; set; }

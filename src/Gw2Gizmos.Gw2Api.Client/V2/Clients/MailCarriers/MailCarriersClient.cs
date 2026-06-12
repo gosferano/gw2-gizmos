@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.MailCarriers;
 
-public class MailCarriersClient : BaseBulkAllClient<MailCarrier, int>, IMailCarriersClient
+public sealed class MailCarriersClient : BaseBulkAllClient<MailCarrier, int>, IMailCarriersClient
 {
     internal MailCarriersClient(HttpClient httpClient)
         : base(httpClient) { }

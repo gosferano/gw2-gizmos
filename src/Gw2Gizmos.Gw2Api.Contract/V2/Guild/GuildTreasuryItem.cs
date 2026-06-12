@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 
-public class GuildTreasuryItem
+public sealed class GuildTreasuryItem
 {
     public int ItemId { get; set; }
     public int Count { get; set; }

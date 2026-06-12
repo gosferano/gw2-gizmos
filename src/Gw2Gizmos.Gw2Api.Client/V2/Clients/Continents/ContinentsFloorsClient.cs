@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Continents;
 
-public class ContinentsFloorsClient : BaseBulkAllClient<ContinentFloor, int>, IContinentsFloorsClient
+public sealed class ContinentsFloorsClient : BaseBulkAllClient<ContinentFloor, int>, IContinentsFloorsClient
 {
     private readonly int _continentId;
 

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwMatchesScoresClient : BaseBulkAllClient<WvwMatchScores, string>, IWvwMatchesScoresClient
+public sealed class WvwMatchesScoresClient : BaseBulkAllClient<WvwMatchScores, string>, IWvwMatchesScoresClient
 {
     internal WvwMatchesScoresClient(HttpClient httpClient)
         : base(httpClient) { }

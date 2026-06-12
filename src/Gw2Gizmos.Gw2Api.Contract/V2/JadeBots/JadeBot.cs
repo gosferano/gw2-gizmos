@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.JadeBots;
 
-public class JadeBot
+public sealed class JadeBot
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

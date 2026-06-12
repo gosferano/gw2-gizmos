@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class CharacterSab
+public sealed class CharacterSab
 {
     public CharacterSabZone[] Zones { get; set; } = Array.Empty<CharacterSabZone>();
     public CharacterSabSong[] Songs { get; set; } = Array.Empty<CharacterSabSong>();

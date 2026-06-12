@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Continents;
 
-public class ContinentsFloorsRegionsMapsPoisClient
+public sealed class ContinentsFloorsRegionsMapsPoisClient
     : BaseBulkAllClient<ContinentFloorRegionMapPoi, int>,
         IContinentsFloorsRegionsMapsPoisClient
 {

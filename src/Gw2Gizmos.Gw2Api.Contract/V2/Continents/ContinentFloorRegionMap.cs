@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 
-public class ContinentFloorRegionMap
+public sealed class ContinentFloorRegionMap
 {
     public string Name { get; set; } = null!;
     public int MinLevel { get; set; }

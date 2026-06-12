@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Masteries;
 
-public class MasteriesClient : BaseBulkAllClient<Mastery, int>, IMasteriesClient
+public sealed class MasteriesClient : BaseBulkAllClient<Mastery, int>, IMasteriesClient
 {
     internal MasteriesClient(HttpClient httpClient)
         : base(httpClient) { }

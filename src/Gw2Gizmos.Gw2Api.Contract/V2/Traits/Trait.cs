@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Traits;
 
-public class Trait
+public sealed class Trait
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

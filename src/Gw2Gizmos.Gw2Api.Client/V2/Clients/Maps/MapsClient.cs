@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Maps;
 
-public class MapsClient : BaseBulkAllClient<Map, int>, IMapsClient
+public sealed class MapsClient : BaseBulkAllClient<Map, int>, IMapsClient
 {
     internal MapsClient(HttpClient httpClient)
         : base(httpClient) { }

@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Achievements;
 
-public class AchievementsClient : BaseBulkClient<Achievement, int>, IAchievementsClient
+public sealed class AchievementsClient : BaseBulkClient<Achievement, int>, IAchievementsClient
 {
     internal AchievementsClient(HttpClient httpClient)
         : base(httpClient)

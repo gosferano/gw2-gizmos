@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Professions;
 
-public class Profession
+public sealed class Profession
 {
     public string Id { get; set; } = null!;
     public string Name { get; set; } = null!;

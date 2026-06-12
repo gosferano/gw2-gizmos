@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpRank
+public sealed class PvpRank
 {
     public int Id { get; set; }
     public int FinisherId { get; set; }

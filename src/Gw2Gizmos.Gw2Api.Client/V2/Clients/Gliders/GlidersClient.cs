@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Gliders;
 
-public class GlidersClient : BaseBulkAllClient<Glider, int>, IGlidersClient
+public sealed class GlidersClient : BaseBulkAllClient<Glider, int>, IGlidersClient
 {
     internal GlidersClient(HttpClient httpClient)
         : base(httpClient) { }

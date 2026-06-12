@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Specializations;
 
-public class Specialization
+public sealed class Specialization
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;

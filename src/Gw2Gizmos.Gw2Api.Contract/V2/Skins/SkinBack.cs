@@ -1,3 +1,3 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
-public class SkinBack : Skin { }
+public sealed class SkinBack : Skin { }

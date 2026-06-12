@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountLuckClient : BaseBlobClient<AccountLuck[]>, IAccountLuckClient
+public sealed class AccountLuckClient : BaseBlobClient<AccountLuck[]>, IAccountLuckClient
 {
     internal AccountLuckClient(HttpClient httpClient)
         : base(httpClient) { }

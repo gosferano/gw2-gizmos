@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class SkinJsonConverter : PolymorphicJsonConverter<Skin>
+public sealed class SkinJsonConverter : PolymorphicJsonConverter<Skin>
 {
     protected override string TypePropertyName => "type";
 

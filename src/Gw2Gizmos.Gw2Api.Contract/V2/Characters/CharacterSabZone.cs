@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 
-public class CharacterSabZone
+public sealed class CharacterSabZone
 {
     public int Id { get; set; }
     public string Mode { get; set; } = null!;

@@ -2,7 +2,7 @@ using Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 
-public class GuildTeamGame
+public sealed class GuildTeamGame
 {
     public string Id { get; set; } = null!;
     public int MapId { get; set; }

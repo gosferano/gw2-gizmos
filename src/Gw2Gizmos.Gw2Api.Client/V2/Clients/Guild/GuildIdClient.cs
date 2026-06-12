@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildIdClient : BaseBlobClient<Contract.V2.Guild.Guild>, IGuildIdClient
+public sealed class GuildIdClient : BaseBlobClient<Contract.V2.Guild.Guild>, IGuildIdClient
 {
     private readonly string _guildId;
 

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountDyesClient : BaseBlobClient<int[]>, IAccountDyesClient
+public sealed class AccountDyesClient : BaseBlobClient<int[]>, IAccountDyesClient
 {
     internal AccountDyesClient(HttpClient httpClient)
         : base(httpClient) { }

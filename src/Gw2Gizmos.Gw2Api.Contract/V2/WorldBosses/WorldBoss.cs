@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.WorldBosses;
 
-public class WorldBoss
+public sealed class WorldBoss
 {
     public string Id { get; set; } = null!;
 }

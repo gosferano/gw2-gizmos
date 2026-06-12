@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersRecipesClient : BaseBlobClient<CharacterRecipes>, ICharactersRecipesClient
+public sealed class CharactersRecipesClient : BaseBlobClient<CharacterRecipes>, ICharactersRecipesClient
 {
     private readonly string _characterId;
 

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 
-public class GuildStashSection
+public sealed class GuildStashSection
 {
     public int UpgradeId { get; set; }
     public int Size { get; set; }

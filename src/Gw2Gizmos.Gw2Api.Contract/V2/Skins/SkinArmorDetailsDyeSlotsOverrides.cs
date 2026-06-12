@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
-public class SkinArmorDetailsDyeSlotsOverrides
+public sealed class SkinArmorDetailsDyeSlotsOverrides
 {
     public SkinDyeSlot[] AsuraMale { get; set; } = Array.Empty<SkinDyeSlot>();
     public SkinDyeSlot[] AsuraFemale { get; set; } = Array.Empty<SkinDyeSlot>();

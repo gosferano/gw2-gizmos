@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Continents;
 
-public class ContinentsFloorsRegionsMapsIdClient : BaseClient, IContinentsFloorsRegionsMapsIdClient
+public sealed class ContinentsFloorsRegionsMapsIdClient : BaseClient, IContinentsFloorsRegionsMapsIdClient
 {
     private readonly int _continentId;
     private readonly int _floorId;

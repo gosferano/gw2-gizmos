@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Colors;
 
-public class ColorMaterial
+public sealed class ColorMaterial
 {
     public decimal Brightness { get; set; }
     public decimal Contrast { get; set; }

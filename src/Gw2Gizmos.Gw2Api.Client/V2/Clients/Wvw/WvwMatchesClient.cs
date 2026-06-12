@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwMatchesClient : BaseBulkAllClient<WvwMatch, string>, IWvwMatchesClient
+public sealed class WvwMatchesClient : BaseBulkAllClient<WvwMatch, string>, IWvwMatchesClient
 {
     internal WvwMatchesClient(HttpClient httpClient)
         : base(httpClient)

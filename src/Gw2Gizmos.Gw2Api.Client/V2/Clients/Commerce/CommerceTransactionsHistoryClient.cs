@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceTransactionsHistoryClient : BaseBlobClient<string[]>, ICommerceTransactionsHistoryClient
+public sealed class CommerceTransactionsHistoryClient : BaseBlobClient<string[]>, ICommerceTransactionsHistoryClient
 {
     internal CommerceTransactionsHistoryClient(HttpClient httpClient)
         : base(httpClient)

@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Pvp;
 
-public class PvpGame
+public sealed class PvpGame
 {
     public string Id { get; set; } = null!;
     public int MapId { get; set; }

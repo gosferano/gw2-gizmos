@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.WorldBosses;
 
-public class WorldBossesClient : BaseBulkAllClient<WorldBoss, string>, IWorldBossesClient
+public sealed class WorldBossesClient : BaseBulkAllClient<WorldBoss, string>, IWorldBossesClient
 {
     internal WorldBossesClient(HttpClient httpClient)
         : base(httpClient) { }

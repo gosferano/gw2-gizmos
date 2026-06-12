@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class GuildUpgradeJsonConverter : PolymorphicJsonConverter<GuildUpgrade>
+public sealed class GuildUpgradeJsonConverter : PolymorphicJsonConverter<GuildUpgrade>
 {
     protected override string TypePropertyName { get; } = "type";
 

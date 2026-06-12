@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Specializations;
 
-public class SpecializationsClient : BaseBulkAllClient<Specialization, int>, ISpecializationsClient
+public sealed class SpecializationsClient : BaseBulkAllClient<Specialization, int>, ISpecializationsClient
 {
     internal SpecializationsClient(HttpClient httpClient)
         : base(httpClient) { }

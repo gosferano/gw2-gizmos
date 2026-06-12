@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
-public class SkinArmorDetails
+public sealed class SkinArmorDetails
 {
     public ArmorSlotType Type { get; set; }
     public ArmorWeightClass WeightClass { get; set; }

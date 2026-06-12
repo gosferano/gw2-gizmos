@@ -1,11 +1,11 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Items;
 
-public class Consumable : Item
+public sealed class Consumable : Item
 {
     public ConsumableDetails Details { get; set; } = null!;
 }
 
-public class ConsumableDetails
+public sealed class ConsumableDetails
 {
     public ConsumableType Type { get; set; }
     public string? Description { get; set; }

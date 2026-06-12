@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Wvw;
 
-public class WvwObjectivesClient : BaseBulkAllClient<WvwObjective, string>, IWvwObjectivesClient
+public sealed class WvwObjectivesClient : BaseBulkAllClient<WvwObjective, string>, IWvwObjectivesClient
 {
     internal WvwObjectivesClient(HttpClient httpClient)
         : base(httpClient) { }

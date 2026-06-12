@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class ProfessionTrainingTrackStepJsonConverter : PolymorphicJsonConverter<ProfessionTrainingTrackStep>
+public sealed class ProfessionTrainingTrackStepJsonConverter : PolymorphicJsonConverter<ProfessionTrainingTrackStep>
 {
     protected override string TypePropertyName { get; } = "type";
     protected override Dictionary<string, Type> TypeMap { get; } =

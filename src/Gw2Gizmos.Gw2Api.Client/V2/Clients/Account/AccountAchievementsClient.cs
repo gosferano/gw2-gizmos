@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Account;
 
-public class AccountAchievementsClient : BaseBlobClient<AccountAchievement[]>, IAccountAchievementsClient
+public sealed class AccountAchievementsClient : BaseBlobClient<AccountAchievement[]>, IAccountAchievementsClient
 {
     internal AccountAchievementsClient(HttpClient httpClient)
         : base(httpClient) { }

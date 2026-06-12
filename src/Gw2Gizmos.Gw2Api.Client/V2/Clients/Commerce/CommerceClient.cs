@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceClient : ICommerceClient
+public sealed class CommerceClient : ICommerceClient
 {
     internal CommerceClient(HttpClient httpClient)
     {

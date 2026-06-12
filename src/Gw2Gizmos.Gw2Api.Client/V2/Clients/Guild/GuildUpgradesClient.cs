@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildUpgradesClient : BaseBulkAllClient<GuildUpgrade, int>, IGuildUpgradesClient
+public sealed class GuildUpgradesClient : BaseBulkAllClient<GuildUpgrade, int>, IGuildUpgradesClient
 {
     internal GuildUpgradesClient(HttpClient httpClient)
         : base(httpClient) { }

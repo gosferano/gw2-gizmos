@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 
-public class GuildSearchClient : BaseClient, IGuildSearchClient
+public sealed class GuildSearchClient : BaseClient, IGuildSearchClient
 {
     internal GuildSearchClient(HttpClient httpClient)
         : base(httpClient) { }

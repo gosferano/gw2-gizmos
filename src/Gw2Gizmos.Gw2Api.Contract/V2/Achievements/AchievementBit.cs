@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Achievements;
 
-public class AchievementBit
+public sealed class AchievementBit
 {
     public AchievementBitType Type { get; set; }
     public int Id { get; set; }

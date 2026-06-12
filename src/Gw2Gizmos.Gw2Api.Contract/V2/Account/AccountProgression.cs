@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Account;
 
-public class AccountProgression
+public sealed class AccountProgression
 {
     public string Id { get; set; } = null!;
     public long Value { get; set; }

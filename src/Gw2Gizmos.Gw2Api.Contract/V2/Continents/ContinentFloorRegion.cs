@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 
-public class ContinentFloorRegion
+public sealed class ContinentFloorRegion
 {
     public string Name { get; set; } = null!;
     public int[] LabelCoord { get; set; } = Array.Empty<int>();

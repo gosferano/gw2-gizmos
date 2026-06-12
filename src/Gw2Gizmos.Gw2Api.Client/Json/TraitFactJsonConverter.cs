@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.Json;
 
-public class TraitFactJsonConverter : PolymorphicJsonConverter<TraitFact>
+public sealed class TraitFactJsonConverter : PolymorphicJsonConverter<TraitFact>
 {
     protected override string TypePropertyName => "type";
 

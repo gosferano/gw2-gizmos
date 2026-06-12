@@ -2,7 +2,7 @@
 
 namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Characters;
 
-public class CharactersEquipmentTabsActiveClient
+public sealed class CharactersEquipmentTabsActiveClient
     : BaseBlobClient<CharacterEquipmentTab>,
         ICharactersEquipmentTabsActiveClient
 {

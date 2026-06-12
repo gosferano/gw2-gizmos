@@ -1,6 +1,6 @@
 ﻿namespace Gw2Gizmos.Gw2Api.Client.V2.Clients.Commerce;
 
-public class CommerceExchangeCoinsClient : BaseClient, ICommerceExchangeCoinsClient
+public sealed class CommerceExchangeCoinsClient : BaseClient, ICommerceExchangeCoinsClient
 {
     internal CommerceExchangeCoinsClient(HttpClient httpClient)
         : base(httpClient) { }
