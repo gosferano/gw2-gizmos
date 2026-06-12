@@ -7,6 +7,10 @@ public class Worker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<Worker> _logger;
 
+    // Serializes market-snapshot refreshes so the 15-minute timer and the after-commerce trigger can never
+    // run two wholesale table replaces at once (which would race on the MarketItems table).
+    private readonly SemaphoreSlim _marketRefreshLock = new(1, 1);
+
     public Worker(IServiceScopeFactory scopeFactory, ILogger<Worker> logger)
     {
         _scopeFactory = scopeFactory;
@@ -19,8 +23,8 @@ public class Worker : BackgroundService
         using var currenciesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        // Prices move with the trading post, so recompute the market snapshot on the commerce cadence.
-        using var marketTimer = new PeriodicTimer(TimeSpan.FromHours(1));
+        // Refresh the market grid every 15 minutes (it also refreshes right after each commerce sync).
+        using var marketTimer = new PeriodicTimer(TimeSpan.FromMinutes(15));
         // Poll prices frequently to capture trading volume at fine resolution.
         using var priceSnapshotTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
         // Coarsen the accumulating price history hourly so the 5-minute tier stays bounded.
@@ -50,6 +54,9 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
+
+            // Fresh listings just landed — refresh the grid now rather than waiting for the next tick.
+            await RefreshMarketSafely(stoppingToken);
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
@@ -102,6 +109,20 @@ public class Worker : BackgroundService
     {
         do
         {
+            await RefreshMarketSafely(stoppingToken);
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    /// <summary>
+    /// Rebuilds the market snapshot under a lock, so the periodic timer and the after-commerce trigger
+    /// never overlap. If a refresh is already running, this awaits it and then runs again — a harmless
+    /// back-to-back rebuild rather than a racing one.
+    /// </summary>
+    private async Task RefreshMarketSafely(CancellationToken stoppingToken)
+    {
+        await _marketRefreshLock.WaitAsync(stoppingToken);
+        try
+        {
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -110,7 +131,11 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        }
+        finally
+        {
+            _marketRefreshLock.Release();
+        }
     }
 
     private async Task RunPriceSnapshotUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
