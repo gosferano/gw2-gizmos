@@ -1,0 +1,14 @@
+<Project>
+
+  <!-- Repo-wide settings inherited by everything under the root: src/, tools/, and (later) tests/. -->
+  <PropertyGroup>
+    <!-- Default target for all projects; the Windows desktop app overrides this. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <WarningsAsErrors>$(WarningsAsErrors);Nullable</WarningsAsErrors>
+    <!-- Nothing is packed unless a project opts in (only the API libraries ship as NuGet today). -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

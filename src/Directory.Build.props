@@ -1,16 +1,10 @@
 <Project>
 
-  <PropertyGroup>
-    <!-- Default target for all projects; the Windows desktop app overrides this. -->
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <WarningsAsErrors>$(WarningsAsErrors);Nullable</WarningsAsErrors>
-    <!-- Nothing is packed unless a project opts in (only the API libraries ship as NuGet today). -->
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+  <!-- Inherit the repo-wide settings, then layer on packaging metadata + SourceLink that only the
+       shippable libraries under src/ need (so tools/ and tests/ don't pull packaging concerns). -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
-  <!-- Shared package metadata + SourceLink (used only when a project sets IsPackable=true). -->
+  <!-- Shared package metadata (used only when a project sets IsPackable=true). -->
   <PropertyGroup>
     <Authors>gosferano</Authors>
     <Company>gosferano</Company>

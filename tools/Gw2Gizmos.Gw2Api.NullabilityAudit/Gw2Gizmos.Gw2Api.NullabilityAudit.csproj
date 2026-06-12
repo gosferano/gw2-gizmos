@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Maintenance utility: empirically samples the live GW2 v2 API to find genuinely-optional DTO
+       fields and (in 'apply' mode) makes them nullable in the Contract. See Program.cs for usage.
+       Inherits the repo-wide Directory.Build.props (net10, nullable, IsPackable=false) but NOT the
+       packaging metadata under src/, so it never ships. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <!-- Reflect the DTOs to map report field-paths onto the exact properties to make nullable. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Gw2Api.Contract\Gw2Gizmos.Gw2Api.Contract.csproj" />
+  </ItemGroup>
+
+</Project>
