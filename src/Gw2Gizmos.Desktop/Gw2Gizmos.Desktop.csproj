@@ -29,6 +29,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- Hardcoded reference data (world-boss / meta / instance schedules) behind the Events timer screen. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Static\Gw2Gizmos.Data.Static.csproj" />
     <!-- The crafting engine: its tree serializer + RecipeNode model render the profitable-recipe detail. -->
     <ProjectReference Include="..\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj" />
     <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a

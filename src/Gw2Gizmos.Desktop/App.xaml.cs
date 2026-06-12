@@ -227,12 +227,16 @@ public partial class App : Application
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddSingleton<NotificationsViewModel>();
+        // Singleton so its one-second countdown clock keeps ticking and the event list is built once.
+        builder.Services.AddSingleton<EventsViewModel>();
         builder.Services.AddSingleton<LogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
         // Transient so the grid re-reads the worker's latest market snapshot on every navigation.
         builder.Services.AddTransient<MarketViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
+        // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
+        builder.Services.AddSingleton<EventsPage>();
         builder.Services.AddTransient<MarketPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();

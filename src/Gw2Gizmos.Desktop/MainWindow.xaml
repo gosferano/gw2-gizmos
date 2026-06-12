@@ -26,6 +26,11 @@
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="Events" TargetPageType="{x:Type local:EventsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Clock24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="Market" TargetPageType="{x:Type local:MarketPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Scales24" />

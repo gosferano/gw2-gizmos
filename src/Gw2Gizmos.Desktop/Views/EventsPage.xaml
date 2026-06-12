@@ -1,0 +1,78 @@
+<Page x:Class="Gw2Gizmos.Desktop.EventsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Events">
+    <c:PageShell Title="Events" Scrollable="False">
+        <c:PageShell.Resources>
+            <conv:BoolToVisibilityConverter x:Key="Bool" />
+        </c:PageShell.Resources>
+
+        <!-- One card per event. The cards leave a right-hand gutter so the overlay scrollbar sits beside
+             them rather than floating over the card edge. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Events}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:Card Margin="0,0,16,8" Padding="14,11" VerticalContentAlignment="Center">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Kind tag -->
+                                <Border Grid.Column="0" VerticalAlignment="Center" Margin="0,0,14,0"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        CornerRadius="4" Padding="8,3" MinWidth="68">
+                                    <TextBlock Text="{Binding KindLabel}" FontSize="11" TextAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </Border>
+
+                                <!-- Name + map -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding Map}" FontSize="12" Margin="0,1,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+
+                                <!-- Copyable chat link -->
+                                <Button Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0"
+                                        Content="{Binding ChatLink}" FontFamily="Consolas" FontSize="12"
+                                        Padding="8,3" MinWidth="0" ToolTip="Copy chat link"
+                                        Visibility="{Binding HasChatLink, Converter={StaticResource Bool}}"
+                                        Command="{Binding DataContext.CopyChatLinkCommand,
+                                                  RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding ChatLink}" />
+
+                                <!-- Countdown -->
+                                <TextBlock Grid.Column="3" Text="{Binding Countdown}" VerticalAlignment="Center"
+                                           HorizontalAlignment="Right" FontSize="14" FontWeight="Medium"
+                                           MinWidth="96" TextAlignment="Right">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </ui:Card>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </c:PageShell>
+</Page>
