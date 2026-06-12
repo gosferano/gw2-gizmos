@@ -35,6 +35,9 @@ public static class DataWorkerServiceCollectionExtensions
         services.AddScoped<CurrenciesUpdater>();
         services.AddScoped<RecipesUpdater>();
         services.AddScoped<MarketUpdater>();
+        services.AddScoped<PriceHistoryRetentionUpdater>();
+        // Singleton so it keeps the previous poll's totals in memory to compute per-interval volume.
+        services.AddSingleton<PriceSnapshotUpdater>();
 
         // Channel consumers + queues that connect the ingestion updaters.
         services.AddHostedService<ItemsAddedUpdater>();

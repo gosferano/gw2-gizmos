@@ -21,6 +21,10 @@ public class Worker : BackgroundService
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         // Prices move with the trading post, so recompute the market snapshot on the commerce cadence.
         using var marketTimer = new PeriodicTimer(TimeSpan.FromHours(1));
+        // Poll prices frequently to capture trading volume at fine resolution.
+        using var priceSnapshotTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
+        // Coarsen the accumulating price history hourly so the 5-minute tier stays bounded.
+        using var priceHistoryRetentionTimer = new PeriodicTimer(TimeSpan.FromHours(1));
 
         // Run all tasks concurrently
         await Task.WhenAll(
@@ -28,7 +32,9 @@ public class Worker : BackgroundService
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
-            RunMarketUpdater(marketTimer, stoppingToken)
+            RunMarketUpdater(marketTimer, stoppingToken),
+            RunPriceSnapshotUpdater(priceSnapshotTimer, stoppingToken),
+            RunPriceHistoryRetentionUpdater(priceHistoryRetentionTimer, stoppingToken)
         );
     }
 
@@ -101,6 +107,36 @@ public class Worker : BackgroundService
                 {
                     var marketUpdater = scope.ServiceProvider.GetRequiredService<MarketUpdater>();
                     await marketUpdater.UpdateMarket(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    private async Task RunPriceSnapshotUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        do
+        {
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var priceSnapshotUpdater = scope.ServiceProvider.GetRequiredService<PriceSnapshotUpdater>();
+                    await priceSnapshotUpdater.UpdatePrices(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    private async Task RunPriceHistoryRetentionUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        do
+        {
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var retentionUpdater = scope.ServiceProvider.GetRequiredService<PriceHistoryRetentionUpdater>();
+                    await retentionUpdater.DownsampleOldHistory(stoppingToken);
                 },
                 stoppingToken
             );

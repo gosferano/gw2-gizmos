@@ -49,6 +49,9 @@ public class Gw2GizmosDbContext : DbContext
     // Precomputed per-item market snapshot (best buy/sell + craft cost) for the desktop Market grid.
     public DbSet<MarketItem> MarketItems { get; set; }
 
+    // Append-only trading-post price history (one row per item per market refresh; downsampled over time).
+    public DbSet<PriceSnapshot> PriceSnapshots { get; set; }
+
     // Currencies
     public DbSet<Currency> Currencies { get; set; }
 

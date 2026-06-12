@@ -121,7 +121,8 @@ public class MarketUpdater
             });
         }
 
-        // Replace wholesale: the grid always reflects the latest run, nothing accumulates.
+        // Replace wholesale: the grid always reflects the latest run, nothing accumulates. (Price history
+        // is recorded separately by the higher-frequency PriceSnapshotUpdater, not from here.)
         await _dbContext.MarketItems.ExecuteDeleteAsync(stoppingToken);
         await _dbContext.MarketItems.AddRangeAsync(rows, stoppingToken);
         await _dbContext.SaveChangesAsync(stoppingToken);
