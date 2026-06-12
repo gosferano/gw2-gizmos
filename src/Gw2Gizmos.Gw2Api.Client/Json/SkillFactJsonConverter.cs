@@ -29,6 +29,4 @@ public sealed class SkillFactJsonConverter : PolymorphicJsonConverter<SkillFact>
             { SkillFactType.Time, typeof(SkillFactTime) },
             { SkillFactType.Unblockable, typeof(SkillFactUnblockable) },
         };
-
-    protected override Type FallbackType => typeof(SkillFactNoData);
 }

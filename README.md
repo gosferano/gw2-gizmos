@@ -90,7 +90,7 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 ```bash
 dotnet build Gw2Gizmos.sln                       # build everything
 dotnet run --project src/Gw2Gizmos.Desktop       # run the desktop app (Windows)
-dotnet test                                       # (tests planned under tests/)
+dotnet test                                       # run the test suite (tests/)
 ```
 
 The desktop app is Windows-only (WPF + DPAPI + Velopack); the API libraries are cross-platform.

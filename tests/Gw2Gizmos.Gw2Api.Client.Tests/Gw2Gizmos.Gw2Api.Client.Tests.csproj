@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test SDK + xunit packages and the Xunit using come from tests/Directory.Build.props. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Gw2Api.Client\Gw2Gizmos.Gw2Api.Client.csproj" />
+  </ItemGroup>
+
+</Project>

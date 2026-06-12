@@ -28,6 +28,9 @@ public abstract class BaseClient
         JsonSerializerOptions
     );
 
+    /// <summary>The exact serializer options used for all API (de)serialization. Internal for tests.</summary>
+    internal static JsonSerializerOptions SerializerOptions => JsonSerializerContext.Options;
+
     protected readonly HttpClient HttpClient;
     private readonly string _idsParameterName;
 
