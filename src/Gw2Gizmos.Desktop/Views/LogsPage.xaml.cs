@@ -1,16 +1,12 @@
-using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace Gw2Gizmos.Desktop;
 
 public partial class LogsPage : Page
 {
     private ScrollViewer? _scrollViewer;
-    private int _pendingShift;
-    private bool _shiftQueued;
 
     public LogsPage(LogsViewModel viewModel)
     {
@@ -22,50 +18,34 @@ public partial class LogsPage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         LogList.ApplyTemplate();
-        _scrollViewer ??= FindScrollViewer(LogList);
 
-        if (LogList.Items is INotifyCollectionChanged items)
+        if (_scrollViewer is not null)
         {
-            items.CollectionChanged -= OnItemsChanged;
-            items.CollectionChanged += OnItemsChanged;
+            return;
+        }
+
+        _scrollViewer = FindScrollViewer(LogList);
+        if (_scrollViewer is not null)
+        {
+            _scrollViewer.ScrollChanged += OnScrollChanged;
         }
     }
 
-    private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    // Newest entries are prepended at the top of the grid. When the user has scrolled down into the
+    // history, a row inserted above the viewport shifts every visible row down by one. Rather than let
+    // that shift render and correct the offset a frame later (which flickers), we compensate inside the
+    // same ScrollChanged pass that reports the extent growth: bumping the offset by exactly the amount
+    // the extent grew keeps the visible rows pinned in place, so nothing appears to move.
+    private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        if (_scrollViewer is null || e.Action != NotifyCollectionChangedAction.Add || e.NewStartingIndex != 0)
+        // Only react to content added above the viewport (extent grew). At the very top the user is
+        // following the newest entries, so let them flow in instead of holding the old position.
+        if (e.ExtentHeightChange <= 0 || e.VerticalOffset <= 0)
         {
             return;
         }
 
-        // At the top: let new (newest) items show. Scrolled down: keep the user's place by shifting
-        // the offset down by however many rows were inserted above (item-based scrolling).
-        if (_scrollViewer.VerticalOffset <= 0 && _pendingShift == 0)
-        {
-            return;
-        }
-
-        _pendingShift += e.NewItems?.Count ?? 0;
-
-        if (_shiftQueued)
-        {
-            return;
-        }
-
-        _shiftQueued = true;
-        Dispatcher.BeginInvoke(
-            () =>
-            {
-                if (_scrollViewer is not null && _pendingShift > 0)
-                {
-                    _scrollViewer.ScrollToVerticalOffset(_scrollViewer.VerticalOffset + _pendingShift);
-                }
-
-                _pendingShift = 0;
-                _shiftQueued = false;
-            },
-            DispatcherPriority.Background
-        );
+        _scrollViewer!.ScrollToVerticalOffset(e.VerticalOffset + e.ExtentHeightChange);
     }
 
     private static ScrollViewer? FindScrollViewer(DependencyObject root)

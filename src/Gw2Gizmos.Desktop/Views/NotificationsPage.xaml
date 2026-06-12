@@ -1,18 +1,12 @@
 <Page x:Class="Gw2Gizmos.Desktop.NotificationsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
       Title="Notifications">
-    <Grid Margin="24,16"
-          MaxHeight="{Binding (ScrollViewer.ViewportHeight), RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <TextBlock Grid.Row="0" Text="Notifications" FontSize="22" FontWeight="Medium" Margin="0,0,0,12" />
-
-        <ListView Grid.Row="1" ItemsSource="{Binding Items}" BorderThickness="0"
+    <c:PageShell Title="Notifications" Scrollable="False">
+        <ListView ItemsSource="{Binding Items}" Background="Transparent" BorderThickness="0"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
@@ -46,5 +40,5 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-    </Grid>
+    </c:PageShell>
 </Page>
