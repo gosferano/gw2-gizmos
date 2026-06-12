@@ -46,7 +46,17 @@
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item" Width="*" Binding="{Binding Name}" />
+                    <DataGridTemplateColumn Header="Item" Width="*" SortMemberPath="Name">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <c:ItemImage ItemId="{Binding ItemId}" Width="20" Height="20"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Buy" Width="100"
                                         Binding="{Binding Buy, Converter={StaticResource Coin}}" />
                     <DataGridTextColumn Header="Demand" Width="75"
@@ -110,6 +120,8 @@
                                 <HierarchicalDataTemplate DataType="{x:Type model:RecipeNode}"
                                                           ItemsSource="{Binding Ingredients}">
                                     <StackPanel Orientation="Horizontal">
+                                        <c:ItemImage ItemId="{Binding ItemId}" Width="18" Height="18"
+                                                     VerticalAlignment="Center" Margin="0,0,5,0" />
                                         <TextBlock Text="{Binding Count}" FontWeight="Medium" />
                                         <TextBlock Text="x " FontWeight="Medium" />
                                         <TextBlock Text="{Binding ItemName}" FontWeight="Medium" />

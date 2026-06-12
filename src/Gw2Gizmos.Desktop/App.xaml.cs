@@ -26,6 +26,9 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public partial class App : Application
 {
+    /// <summary>Item-icon cache, exposed statically so the lightweight <c>ItemImage</c> control can reach it.</summary>
+    public static IconProvider? Icons { get; private set; }
+
     private TaskbarIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
@@ -76,6 +79,8 @@ public partial class App : Application
         _host = BuildHost(dataDir, dbPath);
         _host.Services.MigrateGw2GizmosDb();
         await _host.StartAsync();
+
+        Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
 
         StartWorkerProcess(dataDir, dbPath);
 
