@@ -7,8 +7,9 @@ namespace Gw2Gizmos.Desktop;
 
 /// <summary>
 /// Shows Windows toast notifications using the built-in WinRT API (no third-party toolkit). Toasts are
-/// attributed via an AppUserModelID; the Velopack installer creates the Start-Menu shortcut carrying
-/// that same id, which Windows requires in order to display them.
+/// attributed via an AppUserModelID; Windows only displays them if a Start-Menu shortcut carries that same
+/// id. The Velopack installer stamps it on the shortcut via <c>vpk pack --aumid Gw2Gizmos</c> (see the
+/// release workflow), matching the id this process registers below.
 /// </summary>
 internal static class ToastService
 {
