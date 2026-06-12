@@ -13,6 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		.csharpierignore = .csharpierignore
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Sandbox", "src\Gw2Gizmos.Sandbox\Gw2Gizmos.Sandbox.csproj", "{6A6A43A4-6D59-4B96-82A4-FA80972CB990}"
