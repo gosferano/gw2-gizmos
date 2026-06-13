@@ -85,8 +85,6 @@
                     </DockPanel>
                 </StackPanel>
             </ui:Card>
-
-            <c:StatCard Margin="6" Title="Notifications" Value="{Binding NotificationCount}" />
         </UniformGrid>
     </c:PageShell>
 </Page>

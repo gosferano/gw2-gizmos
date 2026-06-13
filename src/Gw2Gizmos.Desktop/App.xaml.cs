@@ -242,15 +242,10 @@ public partial class App : Application
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         builder.Services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
 
-        // Notifications fan out through a composite: persist to a per-user file (+ in-app feed) and fire a
-        // Windows toast. All notifications now originate in this process, so there's no cross-process watcher.
-        builder.Services.AddSingleton<NotificationHub>();
-        builder.Services.AddSingleton<FileNotifier>();
-        builder.Services.AddSingleton<ToastNotifier>();
-        builder.Services.AddSingleton<INotifier>(sp => new CompositeNotifier(
-            sp.GetRequiredService<FileNotifier>(),
-            sp.GetRequiredService<ToastNotifier>()
-        ));
+        // Notifications surface only as Windows toasts (no in-app feed). A per-category global toggle on the
+        // Notifications page can silence a category; the dispatcher checks it before firing.
+        builder.Services.AddSingleton<NotificationSettingsStore>();
+        builder.Services.AddSingleton<INotifier, NotificationDispatcher>();
 
         // Event reminders + Events-screen state: the per-event opt-in store, the favorites (pin-to-top) store,
         // the configurable lead-time setting, and the scheduler that toasts a subscribed event before it begins.

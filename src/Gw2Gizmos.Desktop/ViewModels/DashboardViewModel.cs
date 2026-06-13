@@ -18,13 +18,11 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly FileGw2ApiKeyStore _apiKeyStore;
     private string _apiKeyStatus;
 
-    public DashboardViewModel(IServiceScopeFactory scopeFactory, FileGw2ApiKeyStore apiKeyStore, FileNotifier notifier)
+    public DashboardViewModel(IServiceScopeFactory scopeFactory, FileGw2ApiKeyStore apiKeyStore)
     {
         _apiKeyStore = apiKeyStore;
         ApiKeyConfigured = apiKeyStore.HasApiKey;
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
-
-        NotificationCount = notifier.History().Count;
 
         // The worker owns the database and opens it read-only here; on a fresh install it may not exist yet
         // (the worker creates it shortly after launch). Treat an absent/locked DB as "no data yet" rather
@@ -79,8 +77,6 @@ public sealed class DashboardViewModel : ViewModelBase
     public int CurrencyCount { get; }
 
     public int PriceSnapshotCount { get; }
-
-    public int NotificationCount { get; }
 
     private async Task LoadTokenInfoAsync()
     {
