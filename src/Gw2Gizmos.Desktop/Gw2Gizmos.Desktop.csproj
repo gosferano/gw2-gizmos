@@ -8,10 +8,14 @@
     <UseWPF>true</UseWPF>
     <!-- User-facing brand name; project stays Gw2Gizmos.Desktop. -->
     <AssemblyName>Gw2Gizmos</AssemblyName>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <!-- Use our explicit Program.Main (so VelopackApp.Run() runs before WPF) instead of the WPF SDK's
          auto-generated entry point. -->
     <StartupObject>Gw2Gizmos.Desktop.Program</StartupObject>
+    <!-- Embed the brand icon in the exe so the taskbar button uses it. Because the app sets an explicit
+         AppUserModelID (for toasts), Windows takes the taskbar icon from the exe/shortcut rather than
+         Window.Icon — so the .ico here is what makes the taskbar match the tray + title bar. -->
+    <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

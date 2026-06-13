@@ -4,6 +4,7 @@
                  xmlns:local="clr-namespace:Gw2Gizmos.Desktop"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Gw2Gizmos" Width="940" Height="620"
+                 Icon="pack://application:,,,/Assets/gw2gizmos.png"
                  WindowStartupLocation="CenterScreen" ExtendsContentIntoTitleBar="True">
     <Grid>
         <Grid.RowDefinitions>
@@ -11,7 +12,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="Gw2Gizmos" />
+        <ui:TitleBar Grid.Row="0" Title="Gw2Gizmos">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/gw2gizmos.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
         <ui:NavigationView x:Name="RootNavigation" Grid.Row="1" IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="False" PaneDisplayMode="Left" OpenPaneLength="190">

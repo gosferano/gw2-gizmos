@@ -99,7 +99,7 @@ jobs:
         shell: bash
         run: |
           dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ steps.detect.outputs.desktop_v }}" --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --outputDir Releases
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ steps.detect.outputs.desktop_v }}" --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
 
       # Scope the notes' baseline to the desktop tag series; otherwise GitHub's auto previous-tag
       # detection could pick a library tag (gw2-api-*). Empty on the first release -> action falls
