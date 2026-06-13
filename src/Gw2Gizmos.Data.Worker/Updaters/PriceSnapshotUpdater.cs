@@ -69,8 +69,10 @@ public class PriceSnapshotUpdater
 
             foreach (CommercePrices price in prices)
             {
-                int buy = price.Buys?.UnitPrice ?? 0;
-                int sell = price.Sells?.UnitPrice ?? 0;
+                // The API returns an empty book as unit_price 0 (not a missing object), so treat any
+                // non-positive price as "no orders" and store null rather than an ambiguous 0.
+                int? buy = price.Buys is { UnitPrice: > 0 } buys ? buys.UnitPrice : null;
+                int? sell = price.Sells is { UnitPrice: > 0 } sells ? sells.UnitPrice : null;
                 int demand = price.Buys?.Quantity ?? 0;
                 int supply = price.Sells?.Quantity ?? 0;
 

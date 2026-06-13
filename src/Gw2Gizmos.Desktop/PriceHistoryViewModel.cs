@@ -14,8 +14,9 @@ using System.Windows.Input;
 
 namespace Gw2Gizmos.Desktop;
 
-/// <summary>One recorded point of an item's trading-post history, flattened for charting.</summary>
-public readonly record struct HistoryPoint(DateTime Time, int Buy, int Sell, int Volume);
+/// <summary>One recorded point of an item's trading-post history, flattened for charting. Buy/Sell are null
+/// when that side of the book was empty at the time, which the line charts render as a gap.</summary>
+public readonly record struct HistoryPoint(DateTime Time, int? Buy, int? Sell, int Volume);
 
 /// <summary>
 /// Backs the price-history view for the selected market item: a detailed top chart (buy/sell lines plus a

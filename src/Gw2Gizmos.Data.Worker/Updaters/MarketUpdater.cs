@@ -101,7 +101,8 @@ public class MarketUpdater
             {
                 craftingCost = (double)node.CraftingCost;
                 // Profit from crafting then dumping into buy orders (the realizable-now sale), after fee.
-                profit = (buy.Price * TradingPostNetFactor) - craftingCost;
+                // No buy order (null price) means nothing to dump into, so treat the realizable price as 0.
+                profit = ((buy.Price ?? 0) * TradingPostNetFactor) - craftingCost;
                 marginPercent = craftingCost > 0 ? profit / craftingCost * 100d : 0d;
             }
 
@@ -130,6 +131,7 @@ public class MarketUpdater
         _logger.LogInformation("Market snapshot computation completed: {Count} tradeable items.", rows.Count);
     }
 
-    /// <summary>Best price and total quantity for one side of an item's order book; default is empty (0, 0).</summary>
-    private readonly record struct BookSide(int Price, int Quantity);
+    /// <summary>Best price and total quantity for one side of an item's order book; default is empty (null, 0),
+    /// i.e. that side has no orders.</summary>
+    private readonly record struct BookSide(int? Price, int Quantity);
 }

@@ -27,14 +27,14 @@ public class MarketItem
     [MaxLength(256)]
     public string Name { get; set; } = "";
 
-    /// <summary>Highest standing buy order (copper); 0 when nobody is buying.</summary>
-    public int Buy { get; set; }
+    /// <summary>Highest standing buy order (copper); null when nobody is buying.</summary>
+    public int? Buy { get; set; }
 
     /// <summary>Total units wanted across all buy orders (the in-game "Demand").</summary>
     public int Demand { get; set; }
 
-    /// <summary>Lowest standing sell listing (copper); 0 when nothing is listed.</summary>
-    public int Sell { get; set; }
+    /// <summary>Lowest standing sell listing (copper); null when nothing is listed.</summary>
+    public int? Sell { get; set; }
 
     /// <summary>Total units listed for sale across all sell orders (the in-game "Supply").</summary>
     public int Supply { get; set; }

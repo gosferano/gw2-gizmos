@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260613192347_AddMaterialCategories")]
-    partial class AddMaterialCategories
+    [Migration("20260613230611_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -195,7 +195,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Buy")
+                    b.Property<int?>("Buy")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("ComputedAtUtc")
@@ -221,7 +221,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<double?>("Profit")
                         .HasColumnType("REAL");
 
-                    b.Property<int>("Sell")
+                    b.Property<int?>("Sell")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Supply")
@@ -241,7 +241,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("Bought")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Buy")
+                    b.Property<int?>("Buy")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Demand")
@@ -250,7 +250,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("ItemId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Sell")
+                    b.Property<int?>("Sell")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Sold")

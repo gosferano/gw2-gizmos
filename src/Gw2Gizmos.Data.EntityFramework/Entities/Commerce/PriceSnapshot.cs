@@ -20,11 +20,11 @@ public class PriceSnapshot
 
     public DateTimeOffset TimestampUtc { get; set; }
 
-    /// <summary>Highest standing buy order (copper) at this time.</summary>
-    public int Buy { get; set; }
+    /// <summary>Highest standing buy order (copper) at this time; null when nobody was buying.</summary>
+    public int? Buy { get; set; }
 
-    /// <summary>Lowest standing sell listing (copper) at this time.</summary>
-    public int Sell { get; set; }
+    /// <summary>Lowest standing sell listing (copper) at this time; null when nothing was listed.</summary>
+    public int? Sell { get; set; }
 
     /// <summary>Total units wanted across all buy orders (demand) at this time.</summary>
     public int Demand { get; set; }

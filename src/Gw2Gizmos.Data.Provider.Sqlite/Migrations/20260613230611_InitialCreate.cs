@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,6 +11,86 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "AccountContainerSlots",
+                columns: table => new
+                {
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Store = table.Column<int>(type: "INTEGER", nullable: false),
+                    SlotIndex = table.Column<int>(type: "INTEGER", nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false),
+                    Charges = table.Column<int>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccountContainerSlots", x => new { x.AccountId, x.Store, x.SlotIndex });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AccountItemHoldingObservations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Store = table.Column<int>(type: "INTEGER", nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false),
+                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccountItemHoldingObservations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AccountMaterialObservations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Category = table.Column<int>(type: "INTEGER", nullable: false),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false),
+                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccountMaterialObservations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Accounts",
+                columns: table => new
+                {
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    World = table.Column<int>(type: "INTEGER", nullable: false),
+                    LastSyncedUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Accounts", x => x.AccountId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AccountWalletObservations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    CurrencyId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Value = table.Column<long>(type: "INTEGER", nullable: false),
+                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccountWalletObservations", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Currencies",
                 columns: table => new
@@ -70,6 +151,73 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Items", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MarketItems",
+                columns: table => new
+                {
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Buy = table.Column<int>(type: "INTEGER", nullable: true),
+                    Demand = table.Column<int>(type: "INTEGER", nullable: false),
+                    Sell = table.Column<int>(type: "INTEGER", nullable: true),
+                    Supply = table.Column<int>(type: "INTEGER", nullable: false),
+                    IsCraftable = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CraftingCost = table.Column<double>(type: "REAL", nullable: true),
+                    Profit = table.Column<double>(type: "REAL", nullable: true),
+                    MarginPercent = table.Column<double>(type: "REAL", nullable: true),
+                    ComputedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MarketItems", x => x.ItemId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MaterialCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    Order = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MaterialCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MaterialCategoryItems",
+                columns: table => new
+                {
+                    CategoryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Position = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MaterialCategoryItems", x => new { x.CategoryId, x.ItemId });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PriceSnapshots",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TimestampUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    Buy = table.Column<int>(type: "INTEGER", nullable: true),
+                    Sell = table.Column<int>(type: "INTEGER", nullable: true),
+                    Demand = table.Column<int>(type: "INTEGER", nullable: false),
+                    Supply = table.Column<int>(type: "INTEGER", nullable: false),
+                    Sold = table.Column<int>(type: "INTEGER", nullable: false),
+                    Bought = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PriceSnapshots", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1126,6 +1274,21 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AccountItemHoldingObservations_AccountId_Store_ItemId_Id",
+                table: "AccountItemHoldingObservations",
+                columns: new[] { "AccountId", "Store", "ItemId", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AccountMaterialObservations_AccountId_ItemId_Id",
+                table: "AccountMaterialObservations",
+                columns: new[] { "AccountId", "ItemId", "Id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AccountWalletObservations_AccountId_CurrencyId_Id",
+                table: "AccountWalletObservations",
+                columns: new[] { "AccountId", "CurrencyId", "Id" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ArmorInfixUpgrades_ArmorDetailsId",
                 table: "ArmorInfixUpgrades",
                 column: "ArmorDetailsId",
@@ -1204,6 +1367,11 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 column: "ItemId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PriceSnapshots_ItemId_TimestampUtc",
+                table: "PriceSnapshots",
+                columns: new[] { "ItemId", "TimestampUtc" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RecipeDisciplines_RecipeId",
                 table: "RecipeDisciplines",
                 column: "RecipeId");
@@ -1266,6 +1434,21 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AccountContainerSlots");
+
+            migrationBuilder.DropTable(
+                name: "AccountItemHoldingObservations");
+
+            migrationBuilder.DropTable(
+                name: "AccountMaterialObservations");
+
+            migrationBuilder.DropTable(
+                name: "Accounts");
+
+            migrationBuilder.DropTable(
+                name: "AccountWalletObservations");
+
+            migrationBuilder.DropTable(
                 name: "ArmorInfixUpgrades");
 
             migrationBuilder.DropTable(
@@ -1326,7 +1509,19 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "ItemRestrictions");
 
             migrationBuilder.DropTable(
+                name: "MarketItems");
+
+            migrationBuilder.DropTable(
+                name: "MaterialCategories");
+
+            migrationBuilder.DropTable(
+                name: "MaterialCategoryItems");
+
+            migrationBuilder.DropTable(
                 name: "MiniPetDetails");
+
+            migrationBuilder.DropTable(
+                name: "PriceSnapshots");
 
             migrationBuilder.DropTable(
                 name: "RecipeDisciplines");
