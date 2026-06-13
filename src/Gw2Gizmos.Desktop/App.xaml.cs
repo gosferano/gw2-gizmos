@@ -85,7 +85,13 @@ public partial class App : Application
 
         StartWorkerProcess(dataDir, dbPath);
 
+        // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
+        // it's distinguishable from the installed app when both are running at once.
+        UpdateManager updateManager = CreateUpdateManager();
+        string appTitle = TryIsInstalled(updateManager) ? "Gw2Gizmos" : "Gw2Gizmos (development)";
+
         _window = _host.Services.GetRequiredService<MainWindow>();
+        _window.Title = appTitle;
         _window.Closing += (_, args) =>
         {
             if (!_isExiting)
@@ -97,10 +103,10 @@ public partial class App : Application
         };
         _window.Show();
 
-        SetupTrayIcon();
+        SetupTrayIcon(appTitle);
 
         // Check for updates in the background; no-op when run from bin (not Velopack-installed).
-        _ = CheckForUpdatesAsync();
+        _ = CheckForUpdatesAsync(updateManager);
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -147,14 +153,26 @@ public partial class App : Application
         Shutdown(1);
     }
 
-    private static async Task CheckForUpdatesAsync()
+    private static UpdateManager CreateUpdateManager() =>
+        new(new GithubSource("https://github.com/gosferano/gw2-gizmos", null, prerelease: false));
+
+    /// <summary>True for a Velopack-installed build, false for a dev/bin run; never throws.</summary>
+    private static bool TryIsInstalled(UpdateManager updateManager)
     {
         try
         {
-            var updateManager = new UpdateManager(
-                new GithubSource("https://github.com/gosferano/gw2-gizmos", null, prerelease: false)
-            );
+            return updateManager.IsInstalled;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
+    private static async Task CheckForUpdatesAsync(UpdateManager updateManager)
+    {
+        try
+        {
             if (!updateManager.IsInstalled)
             {
                 return;
@@ -284,7 +302,7 @@ public partial class App : Application
         }
     }
 
-    private void SetupTrayIcon()
+    private void SetupTrayIcon(string tooltipText)
     {
         var showItem = new MenuItem { Header = "Show Gw2Gizmos" };
         showItem.Click += (_, _) => ShowWindow();
@@ -303,7 +321,7 @@ public partial class App : Application
 
         _trayIcon = new NotifyIcon
         {
-            TooltipText = "Gw2Gizmos",
+            TooltipText = tooltipText,
             Icon = new BitmapImage(new Uri("pack://application:,,,/Assets/gw2gizmos.png")),
             Menu = menu,
             FocusOnLeftClick = false,
