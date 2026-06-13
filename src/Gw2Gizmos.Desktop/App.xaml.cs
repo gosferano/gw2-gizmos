@@ -19,6 +19,7 @@ using Serilog.Events;
 using Velopack;
 using Velopack.Sources;
 using Wpf.Ui.Abstractions;
+using Wpf.Ui.Appearance;
 using Wpf.Ui.Tray.Controls;
 
 namespace Gw2Gizmos.Desktop;
@@ -120,6 +121,12 @@ public partial class App : Application
         };
         _window.Show();
 
+        // Follow the OS *app* theme. WPF-UI's own system-theme detection is unreliable here (it reports Light
+        // while the OS is Dark), so read AppsUseLightTheme directly and re-apply when the user switches themes.
+        // Done after Show so the window handle exists and the title bar + backdrop get themed too.
+        ApplyWindowsTheme();
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+
         SetupTrayIcon(appTitle);
 
         // Check for updates in the background; no-op when run from bin (not Velopack-installed).
@@ -168,6 +175,22 @@ public partial class App : Application
         }
 
         Shutdown(1);
+    }
+
+    /// <summary>Applies the current Windows app theme (light/dark) to the WPF-UI app + window.</summary>
+    private void ApplyWindowsTheme()
+    {
+        ApplicationThemeManager.ApplySystemTheme();
+        Log.Information("Applied {Theme} theme.", ApplicationThemeManager.GetAppTheme());
+    }
+
+    private void OnUserPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        // The General category fires when the light/dark theme is toggled.
+        if (e.Category == Microsoft.Win32.UserPreferenceCategory.General)
+        {
+            Dispatcher.Invoke(ApplyWindowsTheme);
+        }
     }
 
     private static UpdateManager CreateUpdateManager() =>

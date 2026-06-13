@@ -6,7 +6,9 @@
                  Title="Gw2Gizmos" Width="940" Height="620"
                  Icon="pack://application:,,,/Assets/gw2gizmos.png"
                  WindowStartupLocation="CenterScreen" ExtendsContentIntoTitleBar="True">
-    <Grid>
+    <!-- FluentWindow forces its own Background transparent; paint the client grid (covers the title bar +
+         nav region) with the themed brush so the chrome follows light/dark instead of compositing to black. -->
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
