@@ -38,6 +38,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A1B2C3D4-E5F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{C4A7E2B1-9D3F-4E58-B6A0-7F1C2D3E4B5A}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\add-migration.ps1 = scripts\add-migration.ps1
+		scripts\remove-migration.ps1 = scripts\remove-migration.ps1
+	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Gw2Api.Client.Tests", "tests\Gw2Gizmos.Gw2Api.Client.Tests\Gw2Gizmos.Gw2Api.Client.Tests.csproj", "{319C6D5D-AEC4-4EC9-8C62-26B3F4A693D5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.RecipeFinder", "src\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj", "{3E56373E-9D0A-4582-B222-6CAF5B4B0D11}"
