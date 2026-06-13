@@ -30,7 +30,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.7">
                     <Run Text="Every tradeable item, with craft cost and profit where craftable. Updated" />
-                    <Run Text="{Binding ComputedAtUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm} UTC', Mode=OneWay}" />
+                    <Run Text="{Binding ComputedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}', Mode=OneWay}" />
                 </TextBlock>
                 <ui:TextBox Grid.Column="1" Width="220" PlaceholderText="search items"
                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />

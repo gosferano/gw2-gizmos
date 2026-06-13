@@ -53,7 +53,7 @@ public sealed class MarketViewModel : ViewModelBase
         View = CollectionViewSource.GetDefaultView(Items);
         View.Filter = MatchesFilter;
 
-        ComputedAtUtc = Items.Count > 0 ? Items[0].ComputedAtUtc : null;
+        ComputedAt = Items.Count > 0 ? Items[0].ComputedAtUtc.LocalDateTime : null;
     }
 
     public ObservableCollection<MarketItem> Items { get; } = new();
@@ -62,7 +62,7 @@ public sealed class MarketViewModel : ViewModelBase
     public ICollectionView View { get; }
 
     /// <summary>When the worker last produced this snapshot; null when it has never run.</summary>
-    public DateTimeOffset? ComputedAtUtc { get; }
+    public DateTimeOffset? ComputedAt { get; }
 
     /// <summary>Free-text name filter applied to the grid.</summary>
     public string FilterText
