@@ -42,6 +42,7 @@ public static class WorldBosses
             Name = name,
             Map = map,
             Kind = EventKind.WorldBoss,
+            Expansion = Expansion.CoreTyria,
             ChatLink = chatLink,
             Duration = TimeSpan.FromMinutes(15),
             DailyTimesUtc = times

@@ -15,24 +15,34 @@ public static class PublicInstances
 
     public static readonly IReadOnlyList<ScheduledEvent> All = new[]
     {
-        Instance("twisted-marionette", "Twisted Marionette", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("00:00")), 20),
-        Instance("battle-for-lions-arch", "Battle For Lion's Arch", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("00:30")), 15),
-        Instance("dragonstorm", "Dragonstorm", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("01:00")), 20),
-        Instance("tower-of-nightmares", "Tower of Nightmares", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("01:30")), 15),
+        // The Eye of the North rotation shipped with the Icebrood Saga.
+        Instance("twisted-marionette", "Twisted Marionette", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("00:00")), 20, Expansion.IcebroodSaga),
+        Instance("battle-for-lions-arch", "Battle For Lion's Arch", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("00:30")), 15, Expansion.IcebroodSaga),
+        Instance("dragonstorm", "Dragonstorm", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("01:00")), 20, Expansion.IcebroodSaga),
+        Instance("tower-of-nightmares", "Tower of Nightmares", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("01:30")), 15, Expansion.IcebroodSaga),
 
-        Instance("convergence-mount-balrior", "Convergence: Mount Balrior", "Mount Balrior", "[&BK4OAAA=]", Schedule.Every(ThreeHours, T("00:00")), 15),
-        Instance("convergence-outer-nayos", "Convergence: Outer Nayos", "Outer Nayos", "[&BB8OAAA=]", Schedule.Every(ThreeHours, T("01:30")), 15),
+        Instance("convergence-mount-balrior", "Convergence: Mount Balrior", "Mount Balrior", "[&BK4OAAA=]", Schedule.Every(ThreeHours, T("00:00")), 15, Expansion.JanthirWilds),
+        Instance("convergence-outer-nayos", "Convergence: Outer Nayos", "Outer Nayos", "[&BB8OAAA=]", Schedule.Every(ThreeHours, T("01:30")), 15, Expansion.SecretsOfTheObscure),
     };
 
     private static TimeSpan T(string time) => TimeSpan.Parse(time);
 
-    private static ScheduledEvent Instance(string id, string name, string map, string chatLink, IReadOnlyList<TimeSpan> times, int durationMinutes) =>
+    private static ScheduledEvent Instance(
+        string id,
+        string name,
+        string map,
+        string chatLink,
+        IReadOnlyList<TimeSpan> times,
+        int durationMinutes,
+        Expansion expansion
+    ) =>
         new()
         {
             Id = id,
             Name = name,
             Map = map,
             Kind = EventKind.PublicInstance,
+            Expansion = expansion,
             ChatLink = chatLink,
             Duration = TimeSpan.FromMinutes(durationMinutes),
             DailyTimesUtc = times

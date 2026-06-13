@@ -9,6 +9,21 @@ public enum EventKind
     Invasion
 }
 
+/// <summary>The release an event belongs to (expansion or Living World season), for filtering the UI.</summary>
+public enum Expansion
+{
+    CoreTyria,
+    LivingWorldSeason2,
+    HeartOfThorns,
+    PathOfFire,
+    LivingWorldSeason4,
+    IcebroodSaga,
+    EndOfDragons,
+    SecretsOfTheObscure,
+    JanthirWilds,
+    VisionsOfEternity
+}
+
 /// <summary>
 /// A recurring Guild Wars 2 timed event (a world boss or a map meta) with a fixed daily UTC schedule. GW2's
 /// API has no spawn-timer endpoint, so the schedule is hardcoded here as times-of-day in UTC; the next
@@ -25,6 +40,9 @@ public sealed record ScheduledEvent
     public required string Map { get; init; }
 
     public required EventKind Kind { get; init; }
+
+    /// <summary>The release this event belongs to, for the expansion/Living-World filter.</summary>
+    public required Expansion Expansion { get; init; }
 
     /// <summary>GW2 chat link to the event's waypoint/POI (e.g. "[&amp;BNABAAA=]"), copyable in the UI.</summary>
     public string? ChatLink { get; init; }

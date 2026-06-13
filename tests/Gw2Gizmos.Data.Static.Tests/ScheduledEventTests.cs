@@ -11,6 +11,7 @@ public class ScheduledEventTests
             Name = "Test",
             Map = "Test Map",
             Kind = EventKind.WorldBoss,
+            Expansion = Expansion.CoreTyria,
             Duration = duration,
             DailyTimesUtc = times.Select(TimeSpan.Parse).ToList(),
         };

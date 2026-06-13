@@ -25,6 +25,7 @@ public static class Invasions
             Name = name,
             Map = map,
             Kind = EventKind.Invasion,
+            Expansion = Expansion.CoreTyria,
             ChatLink = chatLink,
             Duration = TimeSpan.FromMinutes(durationMinutes),
             DailyTimesUtc = times

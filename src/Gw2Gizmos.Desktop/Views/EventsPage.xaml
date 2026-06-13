@@ -12,75 +12,146 @@
             <conv:BoolToVisibilityConverter x:Key="Bool" />
         </c:PageShell.Resources>
 
-        <!-- One card per event. The cards leave a right-hand gutter so the overlay scrollbar sits beside
-             them rather than floating over the card edge. -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Events}">
-                <ItemsControl.ItemTemplate>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Toolbar: lead-time dropdown, expansion multi-select dropdown, and search. -->
+            <DockPanel Grid.Row="0" LastChildFill="True" Margin="0,0,16,10">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="Remind me" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ComboBox Margin="8,0" MinWidth="56" VerticalAlignment="Center"
+                              ItemsSource="{Binding LeadTimeOptions}"
+                              SelectedItem="{Binding SelectedLeadTimeMinutes, Mode=TwoWay}" />
+                    <TextBlock Text="min before" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- Expansion / Living-World multi-select dropdown (none checked = show all). -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <ToggleButton x:Name="ExpansionDropdown" Padding="10,0" MinWidth="140"
+                                  Height="{Binding ActualHeight, ElementName=SearchBox}"
+                                  HorizontalContentAlignment="Left" Content="{Binding ExpansionFilterLabel}" />
+                    <Popup IsOpen="{Binding IsChecked, ElementName=ExpansionDropdown, Mode=TwoWay}" StaysOpen="False"
+                           PlacementTarget="{Binding ElementName=ExpansionDropdown}" Placement="Bottom"
+                           AllowsTransparency="True" PopupAnimation="Fade">
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="10" Margin="0,4,0,0">
+                            <ItemsControl ItemsSource="{Binding ExpansionFilters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}" Margin="0,3"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+
+                <ui:TextBox x:Name="SearchBox" PlaceholderText="Search events…" VerticalAlignment="Center"
+                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            </DockPanel>
+
+            <!-- One card per event, in a virtualizing ListBox so re-filtering to the full ~55-row list
+                 doesn't re-realize every card (which froze the UI). The cards leave a right-hand gutter so
+                 the overlay scrollbar sits beside them; the container template is bare so there's no
+                 selection highlight while the in-card buttons stay interactive. -->
+            <ListBox Grid.Row="1" ItemsSource="{Binding Events}" Background="Transparent" BorderThickness="0"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter />
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <ui:Card Margin="0,0,16,8" Padding="14,11" VerticalContentAlignment="Center">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                            <ui:Card Margin="0,0,16,8" Padding="14,11" VerticalContentAlignment="Center">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                <!-- Kind tag -->
-                                <Border Grid.Column="0" VerticalAlignment="Center" Margin="0,0,14,0"
-                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                        CornerRadius="4" Padding="8,3" MinWidth="68">
-                                    <TextBlock Text="{Binding KindLabel}" FontSize="11" TextAlignment="Center"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                </Border>
+                                    <!-- Kind tag -->
+                                    <Border Grid.Column="0" VerticalAlignment="Center" Margin="0,0,14,0"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            CornerRadius="4" Padding="8,3" MinWidth="68">
+                                        <TextBlock Text="{Binding KindLabel}" FontSize="11" TextAlignment="Center"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </Border>
 
-                                <!-- Name + map -->
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="{Binding Map}" FontSize="12" Margin="0,1,0,0"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
+                                    <!-- Name + map -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="{Binding Map}" FontSize="12" Margin="0,1,0,0"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
 
-                                <!-- Copyable chat link -->
-                                <Button Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0"
-                                        Content="{Binding ChatLink}" FontFamily="Consolas" FontSize="12"
-                                        Padding="8,3" MinWidth="0" ToolTip="Copy chat link"
-                                        Visibility="{Binding HasChatLink, Converter={StaticResource Bool}}"
-                                        Command="{Binding DataContext.CopyChatLinkCommand,
-                                                  RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                        CommandParameter="{Binding ChatLink}" />
+                                    <!-- Copyable chat link -->
+                                    <Button Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0"
+                                            Content="{Binding ChatLink}" FontFamily="Consolas" FontSize="12"
+                                            Padding="8,3" MinWidth="0" ToolTip="Copy chat link"
+                                            Visibility="{Binding HasChatLink, Converter={StaticResource Bool}}"
+                                            Command="{Binding DataContext.CopyChatLinkCommand,
+                                                      RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                            CommandParameter="{Binding ChatLink}" />
 
-                                <!-- Countdown -->
-                                <TextBlock Grid.Column="3" Text="{Binding Countdown}" VerticalAlignment="Center"
-                                           HorizontalAlignment="Right" FontSize="14" FontWeight="Medium"
-                                           MinWidth="96" TextAlignment="Right">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                    <Setter Property="Foreground"
-                                                            Value="{DynamicResource SystemFillColorSuccessBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    <!-- Countdown -->
+                                    <TextBlock Grid.Column="3" Text="{Binding Countdown}" VerticalAlignment="Center"
+                                               HorizontalAlignment="Right" FontSize="14" FontWeight="Medium"
+                                               MinWidth="96" TextAlignment="Right">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Foreground"
+                                                                Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
 
-                                <!-- Reminder opt-in -->
-                                <ToggleButton Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center"
-                                              Padding="8" IsChecked="{Binding IsSubscribed, Mode=TwoWay}"
-                                              ToolTip="Remind me 5 minutes before this event">
-                                    <ui:SymbolIcon Symbol="Alert24" FontSize="18" />
-                                </ToggleButton>
-                            </Grid>
-                        </ui:Card>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                    <!-- Reminder opt-in -->
+                                    <ToggleButton Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center"
+                                                  Padding="8" IsChecked="{Binding IsSubscribed, Mode=TwoWay}"
+                                                  ToolTip="Remind me before this event">
+                                        <ui:SymbolIcon Symbol="Alert24" FontSize="18" />
+                                    </ToggleButton>
+
+                                    <!-- Favorite / pin to top -->
+                                    <ToggleButton Grid.Column="5" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                  Padding="8" IsChecked="{Binding IsFavorite, Mode=TwoWay}"
+                                                  ToolTip="Pin to top">
+                                        <ui:SymbolIcon Symbol="Star24" FontSize="18" />
+                                    </ToggleButton>
+                                </Grid>
+                            </ui:Card>
+                        </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
     </c:PageShell>
 </Page>

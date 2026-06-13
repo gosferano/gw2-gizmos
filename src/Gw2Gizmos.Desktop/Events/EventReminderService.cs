@@ -17,11 +17,10 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public sealed class EventReminderService : BackgroundService
 {
-    /// <summary>How long before an event starts the reminder fires.</summary>
-    private static readonly TimeSpan LeadTime = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(20);
 
     private readonly EventSubscriptionStore _subscriptions;
+    private readonly ReminderSettingsStore _settings;
     private readonly INotifier _notifier;
     private readonly ILogger<EventReminderService> _logger;
     private readonly IReadOnlyDictionary<string, ScheduledEvent> _events;
@@ -29,10 +28,12 @@ public sealed class EventReminderService : BackgroundService
 
     public EventReminderService(
         EventSubscriptionStore subscriptions,
+        ReminderSettingsStore settings,
         INotifier notifier,
         ILogger<EventReminderService> logger)
     {
         _subscriptions = subscriptions;
+        _settings = settings;
         _notifier = notifier;
         _logger = logger;
         _events = WorldBosses.All
@@ -47,7 +48,7 @@ public sealed class EventReminderService : BackgroundService
         _logger.LogInformation(
             "Event reminder service started ({Count} event(s) subscribed); lead time {LeadMinutes} min.",
             _subscriptions.SubscribedIds.Count,
-            LeadTime.TotalMinutes);
+            _settings.LeadTimeMinutes);
 
         using var timer = new PeriodicTimer(PollInterval);
         do
@@ -66,6 +67,9 @@ public sealed class EventReminderService : BackgroundService
 
     private void CheckOnce(DateTimeOffset now)
     {
+        // Read the lead time each pass so changes from the Events screen apply without a restart.
+        TimeSpan leadTime = TimeSpan.FromMinutes(_settings.LeadTimeMinutes);
+
         foreach (string id in _subscriptions.SubscribedIds)
         {
             if (!_events.TryGetValue(id, out ScheduledEvent? scheduledEvent))
@@ -75,7 +79,7 @@ public sealed class EventReminderService : BackgroundService
 
             DateTimeOffset next = scheduledEvent.NextStartUtc(now);
             TimeSpan untilStart = next - now;
-            if (untilStart > LeadTime || untilStart <= TimeSpan.Zero)
+            if (untilStart > leadTime || untilStart <= TimeSpan.Zero)
             {
                 continue;
             }

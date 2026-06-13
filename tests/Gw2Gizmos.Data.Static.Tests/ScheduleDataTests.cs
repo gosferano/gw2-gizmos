@@ -53,6 +53,7 @@ public class ScheduleDataTests
         Assert.False(string.IsNullOrWhiteSpace(scheduledEvent.Map));
         Assert.NotEmpty(scheduledEvent.DailyTimesUtc);
         Assert.True(scheduledEvent.Duration > TimeSpan.Zero);
+        Assert.True(Enum.IsDefined(scheduledEvent.Expansion));
 
         foreach (TimeSpan time in scheduledEvent.DailyTimesUtc)
         {
