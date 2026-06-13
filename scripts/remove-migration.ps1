@@ -22,7 +22,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$startupProject = Join-Path $repoRoot 'src/Gw2Gizmos.Data.Worker.Cli'
 $providerProjects = Get-ChildItem (Join-Path $repoRoot 'src') -Directory -Filter 'Gw2Gizmos.Data.Provider.*'
 
 if (-not $providerProjects) {
@@ -31,7 +30,8 @@ if (-not $providerProjects) {
 
 foreach ($project in $providerProjects) {
     Write-Host "==> $($project.Name): removing last migration" -ForegroundColor Cyan
-    $efArgs = @('ef', 'migrations', 'remove', '--project', $project.FullName, '--startup-project', $startupProject)
+    # Each provider project is its own startup (it carries EF Core Design + a design-time factory).
+    $efArgs = @('ef', 'migrations', 'remove', '--project', $project.FullName, '--startup-project', $project.FullName)
     if ($Force) { $efArgs += '--force' }
     dotnet @efArgs
     if ($LASTEXITCODE -ne 0) {

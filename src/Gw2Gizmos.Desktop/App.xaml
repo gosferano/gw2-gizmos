@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Gw2Gizmos.Desktop"
              xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+             xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
@@ -11,6 +12,40 @@
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Shared by the Account sub-pages (bank / shared inventory / material storage grids). -->
+            <conv:BoolToVisibilityConverter x:Key="Bool" />
+            <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
+
+            <!-- A bank/shared-inventory slot, or a placeholder when empty. The cell fills its 10-column
+                 UniformGrid column and is square (Height tracks width) → exactly 10 per row with equal
+                 spacing on both axes. The icon has a uniform margin so there's always an equal gap. -->
+            <DataTemplate x:Key="SlotTemplate">
+                <Grid Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}}" ToolTip="{Binding Name}">
+                    <Border Margin="5" CornerRadius="6" BorderThickness="1"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                            Visibility="{Binding IsEmpty, Converter={StaticResource Bool}}" />
+                    <c:ItemImage ItemId="{Binding ItemId}" CornerRadius="6" Stretch="Uniform" Margin="5"
+                                 Visibility="{Binding IsEmpty, Converter={StaticResource InverseBool}}" />
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"
+                            Background="#CC000000" CornerRadius="4" Padding="4,0"
+                            Visibility="{Binding HasCount, Converter={StaticResource Bool}}">
+                        <TextBlock Text="{Binding CountDisplay}" FontSize="11" Foreground="White" />
+                    </Border>
+                </Grid>
+            </DataTemplate>
+
+            <!-- A material-storage cell: like a slot, but the count is always shown (0 included). -->
+            <DataTemplate x:Key="MaterialCellTemplate">
+                <Grid Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}}" ToolTip="{Binding Name}">
+                    <c:ItemImage ItemId="{Binding ItemId}" CornerRadius="6" Stretch="Uniform" Margin="5" />
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"
+                            Background="#CC000000" CornerRadius="4" Padding="4,0">
+                        <TextBlock Text="{Binding CountDisplay}" FontSize="11" Foreground="White" />
+                    </Border>
+                </Grid>
+            </DataTemplate>
 
             <!-- Win11-Settings-style page chrome: a pinned title/breadcrumb over a width-capped, centered
                  body. Scrollable bodies scroll under the header; non-scrollable ones (grids) fill the
@@ -25,11 +60,18 @@
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
-                                <!-- Pinned breadcrumb / title -->
+                                <!-- Pinned breadcrumb header (every page; multi-level + clickable for sub-pages) -->
                                 <c:CenteredContent Grid.Row="0" MaxContentWidth="{TemplateBinding MaxContentWidth}"
                                                    Margin="36,18,36,8">
-                                    <TextBlock Text="{TemplateBinding Title}" FontSize="28" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <ui:BreadcrumbBar x:Name="PART_Breadcrumb"
+                                                      ItemsSource="{TemplateBinding ResolvedBreadcrumbs}">
+                                        <ui:BreadcrumbBar.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </DataTemplate>
+                                        </ui:BreadcrumbBar.ItemTemplate>
+                                    </ui:BreadcrumbBar>
                                 </c:CenteredContent>
 
                                 <!-- Body: scrolls (Auto) for content pages, fills (Disabled) for grids -->

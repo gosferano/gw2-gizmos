@@ -1,6 +1,8 @@
-﻿using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+﻿using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,7 +55,20 @@ public class Gw2GizmosDbContext : DbContext
     // Currencies
     public DbSet<Currency> Currencies { get; set; }
 
+    // Material-storage categories (master data) + their ordered item membership, for the Account screen grid.
+    public DbSet<MaterialCategory> MaterialCategories { get; set; }
+    public DbSet<MaterialCategoryItem> MaterialCategoryItems { get; set; }
+
     // Recipes
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
+
+    // Authenticated account data (keyed by account id). Wallet/materials and bank/inventory holdings are
+    // append-on-change event logs; AccountContainerSlots is the current slot-by-slot grid for bank + shared
+    // inventory, replaced each sync.
+    public DbSet<Account> Accounts { get; set; }
+    public DbSet<AccountWalletObservation> AccountWalletObservations { get; set; }
+    public DbSet<AccountMaterialObservation> AccountMaterialObservations { get; set; }
+    public DbSet<AccountItemHoldingObservation> AccountItemHoldingObservations { get; set; }
+    public DbSet<AccountContainerSlot> AccountContainerSlots { get; set; }
 }

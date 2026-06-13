@@ -32,9 +32,11 @@ public static class DataWorkerServiceCollectionExtensions
         services.AddScoped<ItemsUpdater>();
         services.AddScoped<CommerceUpdater>();
         services.AddScoped<CurrenciesUpdater>();
+        services.AddScoped<MaterialCategoriesUpdater>();
         services.AddScoped<RecipesUpdater>();
         services.AddScoped<MarketUpdater>();
         services.AddScoped<PriceHistoryRetentionUpdater>();
+        services.AddScoped<AccountSyncUpdater>();
         // Singleton so it keeps the previous poll's totals in memory to compute per-interval volume.
         services.AddSingleton<PriceSnapshotUpdater>();
 

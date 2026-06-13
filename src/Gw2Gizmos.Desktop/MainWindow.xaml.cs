@@ -14,6 +14,9 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
         RootNavigation.SetPageProviderService(pageProvider);
 
+        // Expose the nav view so Account cards + breadcrumbs can navigate to sub-pages.
+        App.MainNavigation = RootNavigation;
+
         // Navigate once the control's visual tree is ready (navigating in the ctor NREs).
         Loaded += (_, _) => RootNavigation.Navigate(typeof(NotificationsPage));
     }

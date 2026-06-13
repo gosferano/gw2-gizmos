@@ -1,0 +1,72 @@
+<Page x:Class="Gw2Gizmos.Desktop.AccountPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Account">
+    <c:PageShell Title="Account">
+        <StackPanel>
+            <!-- Account header -->
+            <TextBlock Text="{Binding AccountName}" FontSize="22" FontWeight="SemiBold"
+                       Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
+            <TextBlock Text="{Binding Summary}" Margin="0,2,0,18"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
+
+            <!-- Empty state -->
+            <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasData, Converter={StaticResource InverseBool}}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account data yet. Set an API key (with the account, wallet, and inventories scopes) in Settings — the worker will sync your wallet, materials, bank, and shared inventory shortly." />
+            </ui:Card>
+
+            <!-- Navigation cards to the per-section sub-pages (Win11-Settings style with a chevron). -->
+            <StackPanel Visibility="{Binding HasData, Converter={StaticResource Bool}}">
+                <ui:CardAction Click="OnOpenWallet" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Wallet24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Wallet" FontWeight="Medium" FontSize="14" />
+                            <TextBlock Text="Currencies and coin" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardAction>
+
+                <ui:CardAction Click="OnOpenMaterials" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="BoxMultiple24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Material storage" FontWeight="Medium" FontSize="14" />
+                            <TextBlock Text="Crafting materials by category" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardAction>
+
+                <ui:CardAction Click="OnOpenBank" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="BuildingBank24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Bank" FontWeight="Medium" FontSize="14" />
+                            <TextBlock Text="Account bank contents" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardAction>
+
+                <ui:CardAction Click="OnOpenSharedInventory" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Backpack24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Shared inventory" FontWeight="Medium" FontSize="14" />
+                            <TextBlock Text="Account-wide shared slots" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardAction>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</Page>

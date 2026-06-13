@@ -3,6 +3,7 @@ using System;
 using Gw2Gizmos.Data.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    partial class Gw2GizmosDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613185715_AddAccountSync")]
+    partial class AddAccountSync
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
@@ -881,40 +884,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasIndex("WeaponDetailsId");
 
                     b.ToTable("WeaponStatChoices");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Materials.MaterialCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("MaterialCategories");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Materials.MaterialCategoryItem", b =>
-                {
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("CategoryId", "ItemId");
-
-                    b.ToTable("MaterialCategoryItems");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.Recipe", b =>

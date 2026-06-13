@@ -21,13 +21,14 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public sealed class IconProvider
 {
-    /// <summary>Icons render small; decode at a modest width to keep memory down.</summary>
-    private const int DecodePixelWidth = 32;
+    /// <summary>Decode at the icons' native 64px so larger grid cells (10-per-row) stay crisp.</summary>
+    private const int DecodePixelWidth = 64;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly HttpClient _httpClient = new();
     private readonly string _cacheDirectory;
     private readonly ConcurrentDictionary<int, Task<ImageSource?>> _byItemId = new();
+    private readonly ConcurrentDictionary<string, Task<ImageSource?>> _byUrl = new();
 
     public IconProvider(IServiceScopeFactory scopeFactory, string dataDirectory)
     {
@@ -39,16 +40,20 @@ public sealed class IconProvider
     /// <summary>The item's icon, or null when it has none or can't be fetched. Memoized per item id.</summary>
     public Task<ImageSource?> GetIconAsync(int itemId) => _byItemId.GetOrAdd(itemId, LoadAsync);
 
+    /// <summary>An icon by its direct URL (e.g. a currency's icon, which isn't keyed by item id). Memoized.</summary>
+    public Task<ImageSource?> GetIconByUrlAsync(string url) =>
+        string.IsNullOrEmpty(url) ? Task.FromResult<ImageSource?>(null) : _byUrl.GetOrAdd(url, LoadFromUrlAsync);
+
     private async Task<ImageSource?> LoadAsync(int itemId)
+    {
+        string? url = await ResolveUrlAsync(itemId);
+        return string.IsNullOrEmpty(url) ? null : await GetIconByUrlAsync(url);
+    }
+
+    private async Task<ImageSource?> LoadFromUrlAsync(string url)
     {
         try
         {
-            string? url = await ResolveUrlAsync(itemId);
-            if (string.IsNullOrEmpty(url))
-            {
-                return null;
-            }
-
             string file = Path.Combine(_cacheDirectory, FileNameFor(url));
             byte[] bytes;
             if (File.Exists(file))
@@ -65,7 +70,7 @@ public sealed class IconProvider
         }
         catch
         {
-            // A missing or unreachable icon must never break the grid; just show nothing.
+            // A missing or unreachable icon must never break the UI; just show nothing.
             return null;
         }
     }

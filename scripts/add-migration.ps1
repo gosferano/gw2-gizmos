@@ -21,7 +21,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$startupProject = Join-Path $repoRoot 'src/Gw2Gizmos.Data.Worker.Cli'
 $providerProjects = Get-ChildItem (Join-Path $repoRoot 'src') -Directory -Filter 'Gw2Gizmos.Data.Provider.*'
 
 if (-not $providerProjects) {
@@ -30,7 +29,9 @@ if (-not $providerProjects) {
 
 foreach ($project in $providerProjects) {
     Write-Host "==> $($project.Name): adding migration '$Name'" -ForegroundColor Cyan
-    dotnet ef migrations add $Name --project $project.FullName --startup-project $startupProject
+    # Each provider project is its own startup: it carries Microsoft.EntityFrameworkCore.Design and an
+    # IDesignTimeDbContextFactory, so the tools need no separate runnable host.
+    dotnet ef migrations add $Name --project $project.FullName --startup-project $project.FullName
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet ef migrations add failed for $($project.Name)."
     }

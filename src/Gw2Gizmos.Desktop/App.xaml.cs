@@ -33,6 +33,12 @@ public partial class App : Application
     /// <summary>Item-icon cache, exposed statically so the lightweight <c>ItemImage</c> control can reach it.</summary>
     public static IconProvider? Icons { get; private set; }
 
+    /// <summary>The shell's navigation view, set by <c>MainWindow</c>; lets cards/breadcrumbs navigate.</summary>
+    internal static Wpf.Ui.Controls.NavigationView? MainNavigation { get; set; }
+
+    /// <summary>Navigates the shell to a page type (used by Account cards and breadcrumbs).</summary>
+    public static void NavigateTo(Type pageType) => MainNavigation?.Navigate(pageType);
+
     private NotifyIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
@@ -80,7 +86,11 @@ public partial class App : Application
         Directory.CreateDirectory(dataDir);
         string dbPath = Path.Combine(dataDir, "gw2gizmos.sqlite");
 
-        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args);
+        // Random, ephemeral name for the local pipe that serves the API key to the worker. Passed to the worker
+        // at spawn so it can fetch the key live without reading the desktop's secret file.
+        string keyServicePipeName = $"Gw2Gizmos.Keys.{Guid.NewGuid():N}";
+
+        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args, keyServicePipeName);
         _host = host;
         // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only, so it
         // does not migrate here. The worker (started just below) creates and brings the schema up to date.
@@ -88,8 +98,9 @@ public partial class App : Application
 
         Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
 
-        // The worker shares the same database, so it must use the same provider + connection string.
-        StartWorkerProcess(dataDir, connectionString, dbProvider);
+        // The worker shares the same database (same provider + connection string) and fetches the API key from
+        // the key service over the pipe whose name we pass here.
+        StartWorkerProcess(dataDir, connectionString, dbProvider, keyServicePipeName);
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
         // it's distinguishable from the installed app when both are running at once.
@@ -200,7 +211,8 @@ public partial class App : Application
     private static (IHost Host, string ConnectionString, string Provider) BuildHost(
         string dataDir,
         string dbPath,
-        string[] args
+        string[] args,
+        string keyServicePipeName
     )
     {
         // Pass args so --Database:Provider / --ConnectionStrings:Gw2GizmosDb (and matching env vars) flow
@@ -239,6 +251,12 @@ public partial class App : Application
         builder.Services.AddSingleton(new AppPaths(dataDir));
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
+        // Serve the API key to the cross-platform worker over a local pipe (it never reads our secret file).
+        builder.Services.AddHostedService(sp => new KeyServiceHost(
+            keyServicePipeName,
+            sp.GetRequiredService<FileGw2ApiKeyStore>(),
+            sp.GetRequiredService<ILogger<KeyServiceHost>>()
+        ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         builder.Services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
 
@@ -269,11 +287,23 @@ public partial class App : Application
         builder.Services.AddSingleton<SettingsViewModel>();
         // Transient so the grid re-reads the worker's latest market snapshot on every navigation.
         builder.Services.AddTransient<MarketViewModel>();
+        // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
+        builder.Services.AddSingleton<AccountReader>();
+        builder.Services.AddTransient<AccountViewModel>();
+        builder.Services.AddTransient<WalletViewModel>();
+        builder.Services.AddTransient<MaterialStorageViewModel>();
+        builder.Services.AddTransient<BankViewModel>();
+        builder.Services.AddTransient<SharedInventoryViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
         // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
         builder.Services.AddSingleton<EventsPage>();
         builder.Services.AddTransient<MarketPage>();
+        builder.Services.AddTransient<AccountPage>();
+        builder.Services.AddTransient<WalletPage>();
+        builder.Services.AddTransient<MaterialStoragePage>();
+        builder.Services.AddTransient<BankPage>();
+        builder.Services.AddTransient<SharedInventoryPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<SettingsPage>();
@@ -316,7 +346,7 @@ public partial class App : Application
         return (builder.Build(), connectionString, provider);
     }
 
-    private void StartWorkerProcess(string dataDir, string connectionString, string provider)
+    private void StartWorkerProcess(string dataDir, string connectionString, string provider, string keyServicePipeName)
     {
         // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
         // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
@@ -334,9 +364,11 @@ public partial class App : Application
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        // Forward the same provider + connection string so the worker opens the identical database.
+        // Forward the same provider + connection string so the worker opens the identical database, plus the
+        // key-service pipe name so it can fetch the API key live (the key itself never touches the command line).
         startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={connectionString}");
         startInfo.ArgumentList.Add($"--Database:Provider={provider}");
+        startInfo.ArgumentList.Add($"--KeyService:PipeName={keyServicePipeName}");
 
         _workerProcess = Process.Start(startInfo);
 

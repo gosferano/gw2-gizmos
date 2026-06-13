@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
+using Gw2Gizmos.Data.Worker.Configuration;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -37,9 +39,17 @@ if (string.IsNullOrEmpty(connectionString))
     );
 }
 
-// Ingestion uses public endpoints today, so no API key is required; the default configuration-backed key
-// provider (env/appsettings) suffices. When account-data sync (planned) needs a key, Gw2Gizmos will pass it
-// to this process at launch.
+// API key source: when Gw2Gizmos spawns this worker it passes --KeyService:PipeName, and we fetch the key
+// live from the desktop's key service over a local pipe (cross-platform, no secret at rest here). A standalone
+// worker omits the pipe and falls back to the default configuration/env provider (GW2_API_KEY / Gw2:ApiKey).
+string? keyServicePipeName = builder.Configuration["KeyService:PipeName"];
+if (!string.IsNullOrWhiteSpace(keyServicePipeName))
+{
+    builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => new IpcGw2ApiKeyProvider(
+        keyServicePipeName,
+        sp.GetRequiredService<ILogger<IpcGw2ApiKeyProvider>>()
+    ));
+}
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays
 // provider-agnostic. Swapping providers means registering a different one here.

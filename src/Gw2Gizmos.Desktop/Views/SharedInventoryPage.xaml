@@ -1,0 +1,30 @@
+<Page x:Class="Gw2Gizmos.Desktop.SharedInventoryPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="clr-namespace:Gw2Gizmos.Desktop"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Shared inventory">
+    <c:PageShell>
+        <c:PageShell.Breadcrumbs>
+            <x:Array Type="{x:Type c:BreadcrumbEntry}">
+                <c:BreadcrumbEntry Title="Account" Target="{x:Type local:AccountPage}" />
+                <c:BreadcrumbEntry Title="Shared inventory" />
+            </x:Array>
+        </c:PageShell.Breadcrumbs>
+
+        <!-- StackPanel so the grid sizes to its rows; otherwise the page-height-filling host stretches the
+             UniformGrid's cells vertically when there are few rows. -->
+        <StackPanel>
+            <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotTemplate}"
+                          MaxWidth="720" HorizontalAlignment="Stretch">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="10" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </c:PageShell>
+</Page>

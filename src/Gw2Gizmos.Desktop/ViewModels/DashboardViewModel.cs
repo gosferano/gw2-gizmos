@@ -13,7 +13,7 @@ namespace Gw2Gizmos.Desktop;
 public sealed class DashboardViewModel : ViewModelBase
 {
     /// <summary>Scopes this app needs; highlighted on the dashboard and flagged when missing.</summary>
-    private static readonly string[] RequiredScopes = { "account", "tradingpost" };
+    private static readonly string[] RequiredScopes = { "account", "tradingpost", "wallet", "inventories" };
 
     private readonly FileGw2ApiKeyStore _apiKeyStore;
     private string _apiKeyStatus;
