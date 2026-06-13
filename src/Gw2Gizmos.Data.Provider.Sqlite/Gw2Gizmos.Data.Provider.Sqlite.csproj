@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The SQLite implementation of IGw2GizmosDbProvider: owns the SQLite EF provider, the migrations
+       assembly, and SQLite-specific setup (WAL) + SQL dialect. Referenced only by composition roots. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gw2Gizmos.Data.EntityFramework\Gw2Gizmos.Data.EntityFramework.csproj" />
+  </ItemGroup>
+
+</Project>

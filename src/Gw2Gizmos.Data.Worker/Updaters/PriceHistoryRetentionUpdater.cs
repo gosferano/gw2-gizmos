@@ -19,11 +19,17 @@ public class PriceHistoryRetentionUpdater
     private static readonly TimeSpan HourlyResolutionWindow = TimeSpan.FromDays(14);
 
     private readonly Gw2GizmosDbContext _dbContext;
+    private readonly ActiveDbProvider _provider;
     private readonly ILogger<PriceHistoryRetentionUpdater> _logger;
 
-    public PriceHistoryRetentionUpdater(Gw2GizmosDbContext dbContext, ILogger<PriceHistoryRetentionUpdater> logger)
+    public PriceHistoryRetentionUpdater(
+        Gw2GizmosDbContext dbContext,
+        ActiveDbProvider provider,
+        ILogger<PriceHistoryRetentionUpdater> logger
+    )
     {
         _dbContext = dbContext;
+        _provider = provider;
         _logger = logger;
     }
 
@@ -34,8 +40,9 @@ public class PriceHistoryRetentionUpdater
         DateTimeOffset dayCutoff = now - HourlyResolutionWindow;
 
         // Collapse the 5-minute tier (older than an hour, within the last two weeks) to one point per hour.
+        // Time-bucket SQL is provider-specific, so it comes from the active provider's dialect.
         int collapsedToHourly = await CollapseBucketAsync(
-            qualifier => $"strftime('%Y-%m-%d %H', {qualifier}.TimestampUtc)",
+            _provider.Provider.Dialect.HourBucket,
             dayCutoff,
             hourCutoff,
             stoppingToken
@@ -43,7 +50,7 @@ public class PriceHistoryRetentionUpdater
 
         // Collapse everything older than two weeks to one point per day.
         int collapsedToDaily = await CollapseBucketAsync(
-            qualifier => $"date({qualifier}.TimestampUtc)",
+            _provider.Provider.Dialect.DayBucket,
             DateTimeOffset.MinValue,
             dayCutoff,
             stoppingToken

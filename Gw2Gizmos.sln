@@ -48,6 +48,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Data.Static.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.RecipeFinder.Tests", "tests\Gw2Gizmos.RecipeFinder.Tests\Gw2Gizmos.RecipeFinder.Tests.csproj", "{B086ED92-0A06-461C-B9B9-1ECA55F08FA4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Data.Provider.Sqlite", "src\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj", "{56E81157-477B-410D-98B3-5CDC7E2F7963}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -238,6 +240,18 @@ Global
 		{B086ED92-0A06-461C-B9B9-1ECA55F08FA4}.Release|x64.Build.0 = Release|Any CPU
 		{B086ED92-0A06-461C-B9B9-1ECA55F08FA4}.Release|x86.ActiveCfg = Release|Any CPU
 		{B086ED92-0A06-461C-B9B9-1ECA55F08FA4}.Release|x86.Build.0 = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|x64.Build.0 = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Debug|x86.Build.0 = Debug|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|x64.ActiveCfg = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|x64.Build.0 = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|x86.ActiveCfg = Release|Any CPU
+		{56E81157-477B-410D-98B3-5CDC7E2F7963}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -258,5 +272,6 @@ Global
 		{7B78CA65-74E1-4302-A6C9-EEFD6C0BA3BD} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
 		{3CD907B0-8955-420B-97F3-2C75C424895E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{B086ED92-0A06-461C-B9B9-1ECA55F08FA4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{56E81157-477B-410D-98B3-5CDC7E2F7963} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
 	EndGlobalSection
 EndGlobal

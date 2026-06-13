@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Gw2Gizmos.Data.EntityFramework.Migrations
+namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     /// <inheritdoc />
     public partial class AddPriceSnapshot : Migration

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Gw2Gizmos.Data.EntityFramework.Migrations
+namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
     [Migration("20260612123243_AddMarketSnapshot")]

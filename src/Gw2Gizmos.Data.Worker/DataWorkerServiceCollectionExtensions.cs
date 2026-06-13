@@ -4,7 +4,6 @@ using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Gw2Api.Client;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -72,25 +71,24 @@ public static class DataWorkerServiceCollectionExtensions
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();
 
-        // EF Core picks up the host's ILoggerFactory automatically.
+        // The concrete EF provider is chosen at launch (Database:Provider) from those registered at the
+        // composition root; this layer stays provider-agnostic. EF picks up the host's ILoggerFactory.
+        services.TryAddSingleton<ActiveDbProvider>();
         services.AddDbContext<Gw2GizmosDbContext>(
-            options =>
-                options.UseSqlite(connectionString),
+            (sp, options) => sp.GetRequiredService<ActiveDbProvider>().Provider.Configure(options, connectionString),
             contextLifetime: ServiceLifetime.Scoped,
             optionsLifetime: ServiceLifetime.Singleton
         );
     }
 
     /// <summary>
-    /// Applies pending EF Core migrations and switches the database to WAL journaling so the UI and
-    /// background processes can share it (concurrent readers alongside a writer). Call once after
-    /// building the host.
+    /// Brings the database up to the current schema and applies provider-specific setup, via the registered
+    /// <see cref="IGw2GizmosDbProvider"/>. Call once after building the host.
     /// </summary>
     public static void MigrateGw2GizmosDb(this IServiceProvider serviceProvider)
     {
         using IServiceScope scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        dbContext.Database.Migrate();
-        dbContext.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+        scope.ServiceProvider.GetRequiredService<ActiveDbProvider>().Provider.EnsureDatabase(dbContext);
     }
 }

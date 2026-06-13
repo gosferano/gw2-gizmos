@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,9 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddSingleton<AppStateApiKeyStore>();
 builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());
 
+// SQLite is the chosen database provider; register it before the data services so this layer stays
+// provider-agnostic. Swapping providers means registering a different one here.
+builder.Services.AddGw2GizmosSqlite();
 builder.Services.AddGw2GizmosIngestion(connectionString);
 
 IHost host = builder.Build();

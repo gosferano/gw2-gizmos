@@ -5,9 +5,11 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -58,7 +60,7 @@ public partial class App : Application
         // the class of failure a missing tray-icon resource once caused. Surface it instead.
         try
         {
-            await StartApplicationAsync();
+            await StartApplicationAsync(e.Args);
         }
         catch (Exception ex)
         {
@@ -66,7 +68,7 @@ public partial class App : Application
         }
     }
 
-    private async Task StartApplicationAsync()
+    private async Task StartApplicationAsync(string[] args)
     {
         ToastService.RegisterAppId();
 
@@ -77,13 +79,15 @@ public partial class App : Application
         Directory.CreateDirectory(dataDir);
         string dbPath = Path.Combine(dataDir, "gw2gizmos.sqlite");
 
-        _host = BuildHost(dataDir, dbPath);
+        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args);
+        _host = host;
         _host.Services.MigrateGw2GizmosDb();
         await _host.StartAsync();
 
         Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
 
-        StartWorkerProcess(dataDir, dbPath);
+        // The worker shares the same database, so it must use the same provider + connection string.
+        StartWorkerProcess(dataDir, connectionString, dbProvider);
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
         // it's distinguishable from the installed app when both are running at once.
@@ -191,9 +195,15 @@ public partial class App : Application
         }
     }
 
-    private static IHost BuildHost(string dataDir, string dbPath)
+    private static (IHost Host, string ConnectionString, string Provider) BuildHost(
+        string dataDir,
+        string dbPath,
+        string[] args
+    )
     {
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+        // Pass args so --Database:Provider / --ConnectionStrings:Gw2GizmosDb (and matching env vars) flow
+        // into configuration.
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
         string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
         const string logOutputTemplate =
@@ -266,13 +276,32 @@ public partial class App : Application
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<SettingsPage>();
 
-        // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
-        builder.Services.AddGw2GizmosDeliveryNotifications($"Data Source={dbPath}");
+        // Make the available DB providers selectable; the active one is chosen at launch via Database:Provider
+        // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
+        builder.Services.AddGw2GizmosSqlite();
 
-        return builder.Build();
+        // Provider + connection string come from launch config (--Database:Provider / env). SQLite needs no
+        // connection string — default to the per-user data file; any server provider must supply one.
+        string? configuredProvider = builder.Configuration["Database:Provider"];
+        string provider = string.IsNullOrWhiteSpace(configuredProvider)
+            ? ActiveDbProvider.DefaultProviderKey
+            : configuredProvider;
+
+        string? configuredConnectionString = builder.Configuration.GetConnectionString("Gw2GizmosDb");
+        string connectionString = !string.IsNullOrEmpty(configuredConnectionString)
+            ? configuredConnectionString
+            : string.Equals(provider, ActiveDbProvider.DefaultProviderKey, StringComparison.OrdinalIgnoreCase)
+                ? $"Data Source={dbPath}"
+                : throw new InvalidOperationException(
+                    $"Database:Provider='{provider}' requires a connection string (ConnectionStrings:Gw2GizmosDb=...).");
+
+        // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
+        builder.Services.AddGw2GizmosDeliveryNotifications(connectionString);
+
+        return (builder.Build(), connectionString, provider);
     }
 
-    private void StartWorkerProcess(string dataDir, string dbPath)
+    private void StartWorkerProcess(string dataDir, string connectionString, string provider)
     {
         // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
         // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
@@ -290,7 +319,9 @@ public partial class App : Application
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb=Data Source={dbPath}");
+        // Forward the same provider + connection string so the worker opens the identical database.
+        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={connectionString}");
+        startInfo.ArgumentList.Add($"--Database:Provider={provider}");
 
         _workerProcess = Process.Start(startInfo);
 

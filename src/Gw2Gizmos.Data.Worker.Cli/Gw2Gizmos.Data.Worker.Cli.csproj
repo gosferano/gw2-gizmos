@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- Composition root picks the concrete DB provider. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
   </ItemGroup>
 
 </Project>

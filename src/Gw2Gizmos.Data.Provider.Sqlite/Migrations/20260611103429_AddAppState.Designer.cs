@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Gw2Gizmos.Data.EntityFramework.Migrations
+namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260610201024_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260611103429_AddAppState")]
+    partial class AddAppState
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -765,6 +765,21 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.HasIndex("RecipeId");
 
                     b.ToTable("RecipeIngredients");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.State.AppState", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppState");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorInfixUpgrade", b =>

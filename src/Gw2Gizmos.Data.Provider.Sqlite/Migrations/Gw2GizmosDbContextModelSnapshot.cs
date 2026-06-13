@@ -3,19 +3,16 @@ using System;
 using Gw2Gizmos.Data.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Gw2Gizmos.Data.EntityFramework.Migrations
+namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260611184701_AddNotification")]
-    partial class AddNotification
+    partial class Gw2GizmosDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
@@ -53,6 +50,85 @@ namespace Gw2Gizmos.Data.EntityFramework.Migrations
                     b.HasKey("ItemId");
 
                     b.ToTable("CommerceItemListings");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.MarketItem", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Buy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("ComputedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("CraftingCost")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Demand")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCraftable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("MarginPercent")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Profit")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Sell")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Supply")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ItemId");
+
+                    b.ToTable("MarketItems");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Bought")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Buy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Demand")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Sell")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Sold")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Supply")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("TimestampUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId", "TimestampUtc");
+
+                    b.ToTable("PriceSnapshots");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.SellListing", b =>

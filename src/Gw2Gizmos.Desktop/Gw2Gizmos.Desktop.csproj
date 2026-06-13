@@ -35,6 +35,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- Composition root picks the concrete DB provider (the only place SQLite is referenced). -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
     <!-- Hardcoded reference data (world-boss / meta / instance schedules) behind the Events timer screen. -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Static\Gw2Gizmos.Data.Static.csproj" />
     <!-- The crafting engine: its tree serializer + RecipeNode model render the profitable-recipe detail. -->
@@ -60,14 +62,17 @@
     <ItemGroup>
       <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
       <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
-      <!-- The worker's loader metadata (deps.json / runtimeconfig.json) must always be refreshed, not
-           just copied when absent: when the worker gains a dependency (e.g. a new project reference) its
-           deps.json changes but the file already exists here, so !Exists would skip it — leaving the
-           spawned worker unable to bind the new assembly. -->
-      <_WorkerCliMeta Include="@(_WorkerCliFiles)" Condition="'%(Extension)' == '.json'" />
+      <!-- The worker's loader metadata (deps.json / runtimeconfig.json) AND its own Gw2Gizmos.* assemblies
+           must always be refreshed, not just copied when absent: when the worker changes (new code, or a new
+           dependency that alters its deps.json) the files already exist here, so !Exists would skip them —
+           leaving the spawned worker running stale code or unable to bind a new assembly. These are never
+           shared framework assemblies, so refreshing them can't clobber the app's runtime; SkipUnchangedFiles
+           avoids needless writes. -->
+      <_WorkerCliRefresh Include="@(_WorkerCliFiles)"
+                         Condition="'%(Extension)' == '.json' or $([System.String]::Copy('%(Filename)').StartsWith('Gw2Gizmos.'))" />
     </ItemGroup>
     <Copy SourceFiles="@(_WorkerCliNew)" DestinationFiles="@(_WorkerCliNew->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(_WorkerCliMeta)" DestinationFiles="@(_WorkerCliMeta->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WorkerCliRefresh)" DestinationFiles="@(_WorkerCliRefresh->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
   <!-- Publish: stage the worker CLI's publish (matching the app's self-contained / RID settings), then
