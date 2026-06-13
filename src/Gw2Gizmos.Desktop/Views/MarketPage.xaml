@@ -14,6 +14,66 @@
             <conv:CoinConverter x:Key="Coin" />
             <conv:BoolToVisibilityConverter x:Key="Bool" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
+
+            <!-- One tab header: a rounded-top "browser tab". Selected = brighter (blends into the card body),
+                 unselected = dimmer, with a hover step. -->
+            <Style x:Key="CardTabItem" TargetType="TabItem">
+                <Setter Property="Margin" Value="0,0,4,0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="ClipToBounds" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="Tab" CornerRadius="4,4,0,0" Padding="16,7"
+                                    SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                    Background="{DynamicResource ControlFillColorTertiaryBrush}">
+                                <ContentPresenter x:Name="Label" ContentSource="Header" VerticalAlignment="Center"
+                                                  TextElement.FontWeight="Medium"
+                                                  TextElement.Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Tab" Property="Background"
+                                            Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <!-- Same surface as the card body so the selected tab reads as one with it. -->
+                                    <Setter TargetName="Tab" Property="Background"
+                                            Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                                    <Setter TargetName="Label" Property="TextElement.Foreground"
+                                            Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Tab strip above; the selected tab's content fills a card directly below it. -->
+            <Style x:Key="CardTabControl" TargetType="TabControl">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabControl">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" IsItemsHost="True"
+                                            HorizontalAlignment="Left" Margin="6,0,0,0" Panel.ZIndex="1" />
+                                <!-- Card body; same fill as the selected tab so they read as one surface. No
+                                     top border, so the flush selected tab blends in seamlessly (the fill is
+                                     semi-transparent, so overlapping would double-darken into a visible line). -->
+                                <Border Grid.Row="1" CornerRadius="{DynamicResource ControlCornerRadius}" Padding="14"
+                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,1,1">
+                                    <ContentPresenter ContentSource="SelectedContent" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </c:PageShell.Resources>
         <Grid>
             <Grid.RowDefinitions>
@@ -78,8 +138,8 @@
             <GridSplitter Grid.Row="2" Height="8" HorizontalAlignment="Stretch"
                           VerticalAlignment="Center" Background="Transparent" />
 
-            <ui:Card Grid.Row="3" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
-                <TabControl Background="Transparent" BorderThickness="0">
+            <TabControl Grid.Row="3" VerticalAlignment="Stretch"
+                        Style="{StaticResource CardTabControl}" ItemContainerStyle="{StaticResource CardTabItem}">
                     <TabItem Header="History">
                         <Grid Margin="0,8,0,0">
                             <Grid.RowDefinitions>
@@ -134,8 +194,7 @@
                             </TreeView.Resources>
                         </TreeView>
                     </TabItem>
-                </TabControl>
-            </ui:Card>
+            </TabControl>
         </Grid>
     </c:PageShell>
 </Page>
