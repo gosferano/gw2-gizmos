@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
-using Gw2Gizmos.Data.Worker.Configuration;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -29,8 +27,8 @@ Log.Logger = new LoggerConfiguration()
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
 
-// Shares the database with Gw2Gizmos. Gw2Gizmos passes the connection string when it launches this
-// process: --ConnectionStrings:Gw2GizmosDb="Data Source=...".
+// The worker owns this database — it is the sole writer. Gw2Gizmos passes the connection string when it
+// launches this process: --ConnectionStrings:Gw2GizmosDb="Data Source=...".
 string? connectionString = builder.Configuration.GetConnectionString("Gw2GizmosDb");
 if (string.IsNullOrEmpty(connectionString))
 {
@@ -39,10 +37,9 @@ if (string.IsNullOrEmpty(connectionString))
     );
 }
 
-// The user enters the API key in Gw2Gizmos; it's shared via AppState. Ingestion uses public endpoints
-// today, but account-data sync (planned) will authenticate with this key.
-builder.Services.AddSingleton<AppStateApiKeyStore>();
-builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());
+// Ingestion uses public endpoints today, so no API key is required; the default configuration-backed key
+// provider (env/appsettings) suffices. When account-data sync (planned) needs a key, Gw2Gizmos will pass it
+// to this process at launch.
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays
 // provider-agnostic. Swapping providers means registering a different one here.

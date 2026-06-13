@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.EntityFramework.Entities.State;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Gw2Api.Client;
@@ -14,8 +12,8 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// when new coins or items arrive (a sell/buy order filled, or a cancelled order returned items).
 /// The box accumulates until the player collects it, so only <em>increases</em> are treated as a
 /// new delivery; the box emptying on collection is ignored. The baseline (last-seen box) is
-/// persisted in <see cref="AppState"/>, so a delivery that arrived while the worker was off is
-/// still detected on the next run.
+/// persisted via <see cref="IDeliveryBaselineStore"/>, so a delivery that arrived while the worker
+/// was off is still detected on the next run.
 /// </summary>
 public sealed class CommerceDeliveryUpdater : BackgroundService
 {
@@ -24,13 +22,11 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
     private const int MaxItemStacksShown = 5;
     private const int DefaultPollSeconds = 120;
     private const int MinPollSeconds = 15;
-    private const string BaselineKey = "commerce.delivery.baseline";
-
-    private sealed record DeliveryBaseline(int Coins, Dictionary<int, int> Items);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IGw2ApiClientFactory _apiClientFactory;
     private readonly IGw2ApiKeyProvider _apiKeyProvider;
+    private readonly IDeliveryBaselineStore _baselineStore;
     private readonly INotifier _notifier;
     private readonly ILogger<CommerceDeliveryUpdater> _logger;
     private readonly TimeSpan _pollInterval;
@@ -46,6 +42,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         IServiceScopeFactory scopeFactory,
         IGw2ApiClientFactory apiClientFactory,
         IGw2ApiKeyProvider apiKeyProvider,
+        IDeliveryBaselineStore baselineStore,
         IConfiguration configuration,
         INotifier notifier,
         ILogger<CommerceDeliveryUpdater> logger
@@ -54,6 +51,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         _scopeFactory = scopeFactory;
         _apiClientFactory = apiClientFactory;
         _apiKeyProvider = apiKeyProvider;
+        _baselineStore = baselineStore;
         _notifier = notifier;
         _logger = logger;
 
@@ -63,7 +61,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await LoadBaselineAsync(stoppingToken);
+        LoadBaseline();
 
         using var timer = new PeriodicTimer(_pollInterval);
         do
@@ -140,7 +138,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
             _lastCoins = delivery.Coins;
             _lastItemCounts = currentItems;
             _baselineEstablished = true;
-            await SaveBaselineAsync(delivery.Coins, currentItems, stoppingToken);
+            _baselineStore.Save(new DeliveryBaseline(delivery.Coins, currentItems));
             _logger.LogInformation(
                 "Trading-post delivery baseline established: {Coins} coins, {StackCount} stack(s).",
                 delivery.Coins,
@@ -169,7 +167,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         // Persist on any change (a collection empties the box too) so the baseline survives restart.
         if (boxChanged)
         {
-            await SaveBaselineAsync(delivery.Coins, currentItems, stoppingToken);
+            _baselineStore.Save(new DeliveryBaseline(delivery.Coins, currentItems));
         }
 
         if (coinsDelta <= 0 && addedItems.Count == 0)
@@ -181,18 +179,9 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         _notifier.Notify("Trading post delivery", message, "Delivery");
     }
 
-    private async Task LoadBaselineAsync(CancellationToken stoppingToken)
+    private void LoadBaseline()
     {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-
-        AppState? row = await dbContext.AppState.FirstOrDefaultAsync(s => s.Key == BaselineKey, stoppingToken);
-        if (row is null)
-        {
-            return;
-        }
-
-        DeliveryBaseline? baseline = JsonSerializer.Deserialize<DeliveryBaseline>(row.Value);
+        DeliveryBaseline? baseline = _baselineStore.Load();
         if (baseline is null)
         {
             return;
@@ -206,25 +195,6 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
             _lastCoins,
             _lastItemCounts.Count
         );
-    }
-
-    private async Task SaveBaselineAsync(int coins, Dictionary<int, int> items, CancellationToken stoppingToken)
-    {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-
-        string json = JsonSerializer.Serialize(new DeliveryBaseline(coins, items));
-        AppState? row = await dbContext.AppState.FirstOrDefaultAsync(s => s.Key == BaselineKey, stoppingToken);
-        if (row is null)
-        {
-            dbContext.AppState.Add(new AppState { Key = BaselineKey, Value = json });
-        }
-        else
-        {
-            row.Value = json;
-        }
-
-        await dbContext.SaveChangesAsync(stoppingToken);
     }
 
     private static bool ItemsEqual(Dictionary<int, int> a, Dictionary<int, int> b)

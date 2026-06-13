@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,30 +15,41 @@ public sealed class DashboardViewModel : ViewModelBase
     /// <summary>Scopes this app needs; highlighted on the dashboard and flagged when missing.</summary>
     private static readonly string[] RequiredScopes = { "account", "tradingpost" };
 
-    private readonly AppStateApiKeyStore _apiKeyStore;
+    private readonly FileGw2ApiKeyStore _apiKeyStore;
     private string _apiKeyStatus;
 
-    public DashboardViewModel(IServiceScopeFactory scopeFactory, AppStateApiKeyStore apiKeyStore)
+    public DashboardViewModel(IServiceScopeFactory scopeFactory, FileGw2ApiKeyStore apiKeyStore, FileNotifier notifier)
     {
         _apiKeyStore = apiKeyStore;
         ApiKeyConfigured = apiKeyStore.HasApiKey;
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
 
-        using IServiceScope scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        ItemCount = dbContext.Items.Count();
-        RecipeCount = dbContext.Recipes.Count();
-        TradeableItemCount = dbContext.CommerceItemListings.Count();
-        CurrencyCount = dbContext.Currencies.Count();
-        PriceSnapshotCount = dbContext.PriceSnapshots.Count();
-        NotificationCount = dbContext.Notifications.Count();
+        NotificationCount = notifier.History().Count;
 
-        // The price poller runs every 5 min, so a recent snapshot means the worker is alive and updating.
-        DateTimeOffset? lastPoll = dbContext
-            .PriceSnapshots.OrderByDescending(p => p.Id)
-            .Select(p => (DateTimeOffset?)p.TimestampUtc)
-            .FirstOrDefault();
-        WorkerOperational = lastPoll is { } poll && DateTimeOffset.UtcNow - poll < TimeSpan.FromMinutes(15);
+        // The worker owns the database and opens it read-only here; on a fresh install it may not exist yet
+        // (the worker creates it shortly after launch). Treat an absent/locked DB as "no data yet" rather
+        // than crashing — the dashboard then shows zeros until the first sync lands.
+        try
+        {
+            using IServiceScope scope = scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            ItemCount = dbContext.Items.Count();
+            RecipeCount = dbContext.Recipes.Count();
+            TradeableItemCount = dbContext.CommerceItemListings.Count();
+            CurrencyCount = dbContext.Currencies.Count();
+            PriceSnapshotCount = dbContext.PriceSnapshots.Count();
+
+            // The price poller runs every 5 min, so a recent snapshot means the worker is alive and updating.
+            DateTimeOffset? lastPoll = dbContext
+                .PriceSnapshots.OrderByDescending(p => p.Id)
+                .Select(p => (DateTimeOffset?)p.TimestampUtc)
+                .FirstOrDefault();
+            WorkerOperational = lastPoll is { } poll && DateTimeOffset.UtcNow - poll < TimeSpan.FromMinutes(15);
+        }
+        catch (Exception)
+        {
+            // Database not ready yet (fresh install) — counts stay zero, worker shows not-operational.
+        }
 
         _ = LoadTokenInfoAsync();
     }

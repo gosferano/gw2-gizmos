@@ -34,11 +34,20 @@ public sealed class MarketViewModel : ViewModelBase
     {
         _scopeFactory = scopeFactory;
 
-        using IServiceScope scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        foreach (MarketItem item in dbContext.MarketItems.AsNoTracking().OrderBy(item => item.Name))
+        // The worker owns the database (opened read-only here); on a fresh install it may not exist yet.
+        // Treat an absent/locked DB as an empty snapshot rather than crashing the page.
+        try
         {
-            Items.Add(item);
+            using IServiceScope scope = scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            foreach (MarketItem item in dbContext.MarketItems.AsNoTracking().OrderBy(item => item.Name))
+            {
+                Items.Add(item);
+            }
+        }
+        catch (Exception)
+        {
+            // No snapshot yet — the grid renders empty until the worker produces one.
         }
 
         View = CollectionViewSource.GetDefaultView(Items);

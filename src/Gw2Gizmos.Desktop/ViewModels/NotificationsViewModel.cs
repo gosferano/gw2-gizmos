@@ -1,39 +1,25 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows;
-using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.EntityFramework.Entities.Notifications;
 using Gw2Gizmos.Desktop.Mvvm;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Gw2Gizmos.Desktop;
 
 public sealed class NotificationsViewModel : ViewModelBase
 {
-    private const int HistoryLimit = 200;
-
-    private readonly IServiceScopeFactory _scopeFactory;
-
-    public NotificationsViewModel(IServiceScopeFactory scopeFactory, NotificationHub hub)
+    public NotificationsViewModel(FileNotifier notifier, NotificationHub hub)
     {
-        _scopeFactory = scopeFactory;
-        LoadHistory();
+        // History is stored newest-first, so it loads straight into the list.
+        foreach (Notification notification in notifier.History())
+        {
+            Items.Add(notification);
+        }
+
         hub.Added += OnAdded;
     }
 
     /// <summary>Newest first.</summary>
     public ObservableCollection<Notification> Items { get; } = new();
-
-    private void LoadHistory()
-    {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        foreach (Notification notification in dbContext.Notifications.OrderByDescending(n => n.Id).Take(HistoryLimit))
-        {
-            Items.Add(notification);
-        }
-    }
 
     private void OnAdded(Notification notification)
     {

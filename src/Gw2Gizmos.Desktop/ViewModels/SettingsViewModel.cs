@@ -1,16 +1,15 @@
 using System.Windows.Input;
-using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
 
 public sealed class SettingsViewModel : ViewModelBase
 {
-    private readonly AppStateApiKeyStore _apiKeyStore;
+    private readonly FileGw2ApiKeyStore _apiKeyStore;
     private string _apiKeyInput = "";
     private string _status = "";
 
-    public SettingsViewModel(AppStateApiKeyStore apiKeyStore)
+    public SettingsViewModel(FileGw2ApiKeyStore apiKeyStore)
     {
         _apiKeyStore = apiKeyStore;
         SaveCommand = new RelayCommand(Save);

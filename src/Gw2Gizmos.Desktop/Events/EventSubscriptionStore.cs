@@ -1,28 +1,25 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.EntityFramework.Entities.State;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Tracks which scheduled events the user has opted into reminders for. Persisted as a JSON id list in the
-/// shared <see cref="AppState"/> table (so it survives restarts), cached in memory and written through on
-/// each change. Read by the Events screen's per-row bell toggle and by <see cref="EventReminderService"/>.
+/// Tracks which scheduled events the user has opted into reminders for. Persisted as a JSON id list in a
+/// per-user file (so it survives restarts), cached in memory and written through on each change. Read by the
+/// Events screen's per-row bell toggle and by <see cref="EventReminderService"/>.
 /// </summary>
 public sealed class EventSubscriptionStore
 {
-    private const string StateKey = "gw2gizmos.eventreminders";
-
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly string _path;
     private readonly HashSet<string> _ids;
     private readonly object _gate = new();
 
-    public EventSubscriptionStore(IServiceScopeFactory scopeFactory)
+    public EventSubscriptionStore(AppPaths paths)
     {
-        _scopeFactory = scopeFactory;
+        _path = paths.File("event-subscriptions.json");
         _ids = Load();
     }
 
@@ -62,36 +59,21 @@ public sealed class EventSubscriptionStore
 
     private HashSet<string> Load()
     {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        AppState? row = dbContext.AppState.FirstOrDefault(s => s.Key == StateKey);
+        try
+        {
+            if (!File.Exists(_path))
+            {
+                return new HashSet<string>();
+            }
 
-        if (row is null || string.IsNullOrWhiteSpace(row.Value))
+            string[]? ids = JsonSerializer.Deserialize<string[]>(File.ReadAllText(_path));
+            return ids is null ? new HashSet<string>() : new HashSet<string>(ids);
+        }
+        catch (Exception)
         {
             return new HashSet<string>();
         }
-
-        string[]? ids = JsonSerializer.Deserialize<string[]>(row.Value);
-        return ids is null ? new HashSet<string>() : new HashSet<string>(ids);
     }
 
-    private void Save()
-    {
-        string json = JsonSerializer.Serialize(_ids.ToArray());
-
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-        AppState? row = dbContext.AppState.FirstOrDefault(s => s.Key == StateKey);
-
-        if (row is null)
-        {
-            dbContext.AppState.Add(new AppState { Key = StateKey, Value = json });
-        }
-        else
-        {
-            row.Value = json;
-        }
-
-        dbContext.SaveChanges();
-    }
+    private void Save() => File.WriteAllText(_path, JsonSerializer.Serialize(_ids.ToArray()));
 }

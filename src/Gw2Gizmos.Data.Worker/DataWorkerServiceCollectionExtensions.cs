@@ -57,6 +57,8 @@ public static class DataWorkerServiceCollectionExtensions
 
         // LogNotifier is the default; a consumer (e.g. Gw2Gizmos) registers its own INotifier first.
         services.TryAddSingleton<INotifier, LogNotifier>();
+        // Baseline persistence is host-supplied; default to in-memory if the host registers nothing.
+        services.TryAddSingleton<IDeliveryBaselineStore, InMemoryDeliveryBaselineStore>();
         services.AddHostedService<CommerceDeliveryUpdater>();
 
         return services;

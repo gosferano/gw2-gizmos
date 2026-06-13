@@ -9,6 +9,7 @@ using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
+using Gw2Gizmos.Data.Worker.Updaters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -81,7 +82,8 @@ public partial class App : Application
 
         (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args);
         _host = host;
-        _host.Services.MigrateGw2GizmosDb();
+        // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only, so it
+        // does not migrate here. The worker (started just below) creates and brings the schema up to date.
         await _host.StartAsync();
 
         Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
@@ -232,20 +234,23 @@ public partial class App : Application
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog();
 
-        // The desktop app's implementations, registered before the engine so its TryAdd defaults are skipped.
-        builder.Services.AddSingleton<AppStateApiKeyStore>();
-        builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<AppStateApiKeyStore>());
+        // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
+        // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
+        builder.Services.AddSingleton(new AppPaths(dataDir));
+        builder.Services.AddSingleton<FileGw2ApiKeyStore>();
+        builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
+        // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
+        builder.Services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
 
-        // Notifications fan out through a composite: persist to the shared table (+ in-app feed) and
-        // fire a Windows toast. NotificationWatcher surfaces the worker's cross-process notifications.
+        // Notifications fan out through a composite: persist to a per-user file (+ in-app feed) and fire a
+        // Windows toast. All notifications now originate in this process, so there's no cross-process watcher.
         builder.Services.AddSingleton<NotificationHub>();
-        builder.Services.AddSingleton<DbNotifier>();
+        builder.Services.AddSingleton<FileNotifier>();
         builder.Services.AddSingleton<ToastNotifier>();
         builder.Services.AddSingleton<INotifier>(sp => new CompositeNotifier(
-            sp.GetRequiredService<DbNotifier>(),
+            sp.GetRequiredService<FileNotifier>(),
             sp.GetRequiredService<ToastNotifier>()
         ));
-        builder.Services.AddHostedService<NotificationWatcher>();
 
         // Event reminders + Events-screen state: the per-event opt-in store, the favorites (pin-to-top) store,
         // the configurable lead-time setting, and the scheduler that toasts a subscribed event before it begins.
@@ -289,16 +294,29 @@ public partial class App : Application
             ? ActiveDbProvider.DefaultProviderKey
             : configuredProvider;
 
+        bool isDefaultSqlite =
+            string.Equals(provider, ActiveDbProvider.DefaultProviderKey, StringComparison.OrdinalIgnoreCase);
+
         string? configuredConnectionString = builder.Configuration.GetConnectionString("Gw2GizmosDb");
+
+        // The worker is the sole writer, so it gets a read-write connection string (the one we also forward
+        // to the worker process).
         string connectionString = !string.IsNullOrEmpty(configuredConnectionString)
             ? configuredConnectionString
-            : string.Equals(provider, ActiveDbProvider.DefaultProviderKey, StringComparison.OrdinalIgnoreCase)
+            : isDefaultSqlite
                 ? $"Data Source={dbPath}"
                 : throw new InvalidOperationException(
                     $"Database:Provider='{provider}' requires a connection string (ConnectionStrings:Gw2GizmosDb=...).");
 
+        // The desktop never writes the database — it opens it read-only. For the default per-user SQLite file
+        // we append Mode=ReadOnly (we construct that string ourselves, so no flag collision); a custom or
+        // server connection string is used as supplied (read-only is enforced by its own credentials).
+        string desktopConnectionString = isDefaultSqlite && string.IsNullOrEmpty(configuredConnectionString)
+            ? $"{connectionString};Mode=ReadOnly"
+            : connectionString;
+
         // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
-        builder.Services.AddGw2GizmosDeliveryNotifications(connectionString);
+        builder.Services.AddGw2GizmosDeliveryNotifications(desktopConnectionString);
 
         return (builder.Build(), connectionString, provider);
     }

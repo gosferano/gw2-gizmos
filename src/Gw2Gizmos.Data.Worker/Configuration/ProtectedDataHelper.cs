@@ -8,7 +8,7 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 /// back by the same Windows user on the same machine; copying it elsewhere makes it useless.
 /// Windows-only at runtime.
 /// </summary>
-internal static class ProtectedDataHelper
+public static class ProtectedDataHelper
 {
     // Extra entropy tied to this app; not a secret, just domain separation from other DPAPI blobs.
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("Gw2Gizmos");
