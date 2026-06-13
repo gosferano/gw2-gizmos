@@ -79,6 +79,9 @@ public class PriceHistoryRetentionUpdater
             + $"GROUP BY ItemId, {outer}";
 
         // Fold each (item, bucket) group's total volume into its latest row before deleting the rest.
+        // EF1002 is safe to suppress here: the only interpolated values (inner/outer/survivors) are
+        // code-built SQL fragments — never user input — and the {0}/{1} time bounds are bound as parameters.
+#pragma warning disable EF1002
         await _dbContext.Database.ExecuteSqlRawAsync(
             $@"UPDATE PriceSnapshots
                SET Sold = (SELECT SUM(p.Sold) FROM PriceSnapshots p
@@ -100,5 +103,6 @@ public class PriceHistoryRetentionUpdater
             new object[] { lower, upper },
             stoppingToken
         );
+#pragma warning restore EF1002
     }
 }

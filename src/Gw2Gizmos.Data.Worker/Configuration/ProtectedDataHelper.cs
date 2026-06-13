@@ -15,6 +15,11 @@ internal static class ProtectedDataHelper
 
     public static string Protect(string plaintext)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("DPAPI (ProtectedData) is only available on Windows.");
+        }
+
         byte[] cipher = ProtectedData.Protect(
             Encoding.UTF8.GetBytes(plaintext),
             Entropy,
@@ -25,6 +30,11 @@ internal static class ProtectedDataHelper
 
     public static string? Unprotect(string base64Cipher)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("DPAPI (ProtectedData) is only available on Windows.");
+        }
+
         try
         {
             byte[] plain = ProtectedData.Unprotect(

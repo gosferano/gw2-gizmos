@@ -12,6 +12,9 @@
     <!-- Use our explicit Program.Main (so VelopackApp.Run() runs before WPF) instead of the WPF SDK's
          auto-generated entry point. -->
     <StartupObject>Gw2Gizmos.Desktop.Program</StartupObject>
+    <!-- LiveCharts pulls in OpenTK / SkiaSharp.Views.WPF, which ship only .NETFramework assets; NuGet's
+         fallback to them is harmless here (the chart works), so silence the cross-framework restore noise. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
     <!-- Embed the brand icon in the exe so the taskbar button uses it. Because the app sets an explicit
          AppUserModelID (for toasts), Windows takes the taskbar icon from the exe/shortcut rather than
          Window.Icon — so the .ico here is what makes the taskbar match the tray + title bar. -->
@@ -20,7 +23,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Sinks.Console" />
