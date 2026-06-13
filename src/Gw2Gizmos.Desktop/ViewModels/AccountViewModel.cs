@@ -48,6 +48,9 @@ public sealed record SlotRow(int ItemId, string Name, int Count)
     /// <summary>Show the corner count badge for bank/inventory stacks of more than one.</summary>
     public bool HasCount => Count > 1;
 
+    /// <summary>A material the account doesn't currently hold (count 0); its cell renders greyscale.</summary>
+    public bool IsZero => Count <= 0;
+
     /// <summary>Count text (always rendered for material cells).</summary>
     public string CountDisplay => Count.ToString("N0");
 

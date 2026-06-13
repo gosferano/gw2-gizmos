@@ -22,10 +22,12 @@
                  spacing on both axes. The icon has a uniform margin so there's always an equal gap. -->
             <DataTemplate x:Key="SlotTemplate">
                 <Grid Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}}" ToolTip="{Binding Name}">
+                    <!-- Placeholder tile, always drawn: an empty slot shows it alone, and a filled slot whose
+                         item hasn't synced yet (icon not downloaded) still reads as occupied — with its known
+                         count — instead of a blank gap. The icon paints over the tile once it's available. -->
                     <Border Margin="5" CornerRadius="6" BorderThickness="1"
                             Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                            Visibility="{Binding IsEmpty, Converter={StaticResource Bool}}" />
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" />
                     <c:ItemImage ItemId="{Binding ItemId}" CornerRadius="6" Stretch="Uniform" Margin="5"
                                  Visibility="{Binding IsEmpty, Converter={StaticResource InverseBool}}" />
                     <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"
@@ -39,7 +41,13 @@
             <!-- A material-storage cell: like a slot, but the count is always shown (0 included). -->
             <DataTemplate x:Key="MaterialCellTemplate">
                 <Grid Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}}" ToolTip="{Binding Name}">
-                    <c:ItemImage ItemId="{Binding ItemId}" CornerRadius="6" Stretch="Uniform" Margin="5" />
+                    <!-- Always-drawn placeholder tile, so an un-synced material still shows its known count
+                         over a slot instead of a blank cell; the icon paints over it once downloaded. -->
+                    <Border Margin="5" CornerRadius="6" BorderThickness="1"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlElevationBorderBrush}" />
+                    <c:ItemImage ItemId="{Binding ItemId}" CornerRadius="6" Stretch="Uniform" Margin="5"
+                                 Desaturate="{Binding IsZero}" />
                     <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,6"
                             Background="#CC000000" CornerRadius="4" Padding="4,0">
                         <TextBlock Text="{Binding CountDisplay}" FontSize="11" Foreground="White" />
