@@ -475,7 +475,13 @@ public partial class App : Application
         }
 
         _window.Show();
-        _window.WindowState = WindowState.Normal;
+        // Restore a minimized window, but don't touch a maximized (or normally-resized) one — forcing Normal
+        // unconditionally would shrink a maximized window back to its initial size on every reopen.
+        if (_window.WindowState == WindowState.Minimized)
+        {
+            _window.WindowState = WindowState.Normal;
+        }
+
         _window.Activate();
     }
 
