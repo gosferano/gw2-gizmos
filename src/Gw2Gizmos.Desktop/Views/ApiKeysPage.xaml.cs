@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace Gw2Gizmos.Desktop;
 
-public partial class SettingsPage : Page
+public partial class ApiKeysPage : Page
 {
-    public SettingsPage(SettingsViewModel viewModel)
+    public ApiKeysPage(ApiKeysViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;

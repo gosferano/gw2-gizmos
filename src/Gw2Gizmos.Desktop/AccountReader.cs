@@ -45,6 +45,25 @@ public sealed class AccountReader
         }
     }
 
+    /// <summary>All synced accounts (one per API key), most-recently-synced first, for the Account list.</summary>
+    public List<AccountInfo> GetAccounts()
+    {
+        try
+        {
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+            return db.Accounts.AsNoTracking().AsEnumerable()
+                .OrderByDescending(a => a.LastSyncedUtc)
+                .Select(a => new AccountInfo(a.AccountId, a.Name, a.World, a.LastSyncedUtc))
+                .ToList();
+        }
+        catch (Exception)
+        {
+            return new List<AccountInfo>();
+        }
+    }
+
     public List<WalletRow> GetWallet(string accountId)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
@@ -165,4 +184,8 @@ public sealed class AccountReader
 }
 
 /// <summary>The current account's identity for the Account landing header.</summary>
-public sealed record AccountInfo(string Id, string Name, int World, DateTimeOffset LastSyncedUtc);
+public sealed record AccountInfo(string Id, string Name, int World, DateTimeOffset LastSyncedUtc)
+{
+    /// <summary>Card subtitle, e.g. "World 1001 · synced 14/06/2026 04:12".</summary>
+    public string Subtitle => $"World {World} · synced {LastSyncedUtc.LocalDateTime:g}";
+}

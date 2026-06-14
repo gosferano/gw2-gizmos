@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.IO.Pipes;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,10 +65,9 @@ public sealed class KeyServiceHost : BackgroundService
 
     private async Task WriteKeysAsync(NamedPipeServerStream server, CancellationToken stoppingToken)
     {
-        string? key = _keyStore.GetApiKey();
         var response = new KeyServiceResponse
         {
-            Keys = string.IsNullOrWhiteSpace(key) ? Array.Empty<string>() : new[] { key },
+            Keys = _keyStore.GetApiKeys().ToArray(),
         };
 
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(response);

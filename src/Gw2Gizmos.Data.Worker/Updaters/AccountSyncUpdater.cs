@@ -36,8 +36,8 @@ public class AccountSyncUpdater
 
     public async Task SyncAccount(CancellationToken stoppingToken)
     {
-        string? apiKey = _apiKeyProvider.GetApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey))
+        IReadOnlyList<string> apiKeys = _apiKeyProvider.GetApiKeys();
+        if (apiKeys.Count == 0)
         {
             if (!_warnedNoKey)
             {
@@ -49,13 +49,60 @@ public class AccountSyncUpdater
         }
 
         _warnedNoKey = false;
+
+        // Sync every configured key, but each account only once: two keys for the same account would
+        // otherwise double-sync it (the desktop blocks that on entry, but the worker is the safety net).
+        var seenAccounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var syncedNames = new List<string>();
+        foreach (string apiKey in apiKeys)
+        {
+            if (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            try
+            {
+                string? name = await SyncOneAccountAsync(apiKey, seenAccounts, stoppingToken);
+                if (name is not null)
+                {
+                    syncedNames.Add(name);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Account sync failed for one API key; continuing with the others.");
+            }
+        }
+
+        _logger.LogInformation(
+            "Account sync completed for {Count} account(s): {Accounts}.",
+            syncedNames.Count,
+            syncedNames.Count == 0 ? "(none)" : string.Join(", ", syncedNames)
+        );
+    }
+
+    /// <summary>Syncs the account for one key; returns its name, or null when skipped (no data, or a duplicate
+    /// account already synced this run).</summary>
+    private async Task<string?> SyncOneAccountAsync(
+        string apiKey,
+        HashSet<string> seenAccounts,
+        CancellationToken stoppingToken
+    )
+    {
         Gw2ApiClient client = _apiClientFactory.Create(apiKey, Locale.English);
 
         Api.Account? account = await client.V2.Account.GetBlob(stoppingToken);
         if (account is null || string.IsNullOrEmpty(account.Id))
         {
-            _logger.LogWarning("Account endpoint returned no data; the API key may lack the 'account' scope.");
-            return;
+            _logger.LogWarning("Account endpoint returned no data; an API key may lack the 'account' scope.");
+            return null;
+        }
+
+        if (!seenAccounts.Add(account.Id))
+        {
+            // Another key already synced this account this run — dedupe.
+            return null;
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -67,7 +114,7 @@ public class AccountSyncUpdater
         await RunSection("bank", () => SyncBankAsync(client, account.Id, now, stoppingToken));
         await RunSection("shared inventory", () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
 
-        _logger.LogInformation("Account sync completed for {Account}.", account.Name);
+        return account.Name;
     }
 
     private async Task RunSection(string name, Func<Task> action)

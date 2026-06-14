@@ -6,13 +6,7 @@
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
       Title="Material storage">
-    <c:PageShell>
-        <c:PageShell.Breadcrumbs>
-            <x:Array Type="{x:Type c:BreadcrumbEntry}">
-                <c:BreadcrumbEntry Title="Account" Target="{x:Type local:AccountPage}" />
-                <c:BreadcrumbEntry Title="Material storage" />
-            </x:Array>
-        </c:PageShell.Breadcrumbs>
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
 
         <!-- In-game categories; expand one to see its slot grid. -->
         <ItemsControl ItemsSource="{Binding Categories}">

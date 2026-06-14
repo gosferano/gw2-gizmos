@@ -14,4 +14,10 @@ public sealed class ConfigurationGw2ApiKeyProvider : IGw2ApiKeyProvider
     }
 
     public string? GetApiKey() => _configuration["Gw2:ApiKey"] ?? _configuration["GW2_API_KEY"];
+
+    public IReadOnlyList<string> GetApiKeys()
+    {
+        string? key = GetApiKey();
+        return string.IsNullOrWhiteSpace(key) ? System.Array.Empty<string>() : new[] { key };
+    }
 }

@@ -6,13 +6,7 @@
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
       Title="Wallet">
-    <c:PageShell>
-        <c:PageShell.Breadcrumbs>
-            <x:Array Type="{x:Type c:BreadcrumbEntry}">
-                <c:BreadcrumbEntry Title="Account" Target="{x:Type local:AccountPage}" />
-                <c:BreadcrumbEntry Title="Wallet" />
-            </x:Array>
-        </c:PageShell.Breadcrumbs>
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
 
         <ItemsControl ItemsSource="{Binding Wallet}">
             <ItemsControl.ItemTemplate>

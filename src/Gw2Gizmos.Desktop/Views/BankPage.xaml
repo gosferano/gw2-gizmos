@@ -6,13 +6,7 @@
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
       Title="Bank">
-    <c:PageShell>
-        <c:PageShell.Breadcrumbs>
-            <x:Array Type="{x:Type c:BreadcrumbEntry}">
-                <c:BreadcrumbEntry Title="Account" Target="{x:Type local:AccountPage}" />
-                <c:BreadcrumbEntry Title="Bank" />
-            </x:Array>
-        </c:PageShell.Breadcrumbs>
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
 
         <!-- StackPanel so the grid sizes to its rows; otherwise the page-height-filling host stretches the
              UniformGrid's cells vertically when there are few rows. -->

@@ -8,21 +8,19 @@
       Title="Account">
     <c:PageShell Title="Account">
         <StackPanel>
-            <!-- Account header -->
-            <TextBlock Text="{Binding AccountName}" FontSize="22" FontWeight="SemiBold"
-                       Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
-            <TextBlock Text="{Binding Summary}" Margin="0,2,0,18"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
-
-            <!-- Empty state -->
-            <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasData, Converter={StaticResource InverseBool}}">
+            <!-- No account picked yet -->
+            <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasAccount, Converter={StaticResource InverseBool}}">
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="No account data yet. Set an API key (with the account, wallet, and inventories scopes) in Settings — the worker will sync your wallet, materials, bank, and shared inventory shortly." />
+                           Text="No account selected. Add an API key (with the account, wallet, inventories and tradingpost scopes) on the API keys page, then pick which account to view." />
             </ui:Card>
 
-            <!-- Navigation cards to the per-section sub-pages (Win11-Settings style with a chevron). -->
-            <StackPanel Visibility="{Binding HasData, Converter={StaticResource Bool}}">
+            <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource Bool}}">
+                <!-- Current account (the global selection), shown here instead of as a breadcrumb crumb. -->
+                <TextBlock Text="{Binding AccountName}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Summary}" Margin="0,2,0,14"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <!-- Per-section sub-pages for the selected account. -->
                 <ui:CardAction Click="OnOpenWallet" Margin="0,0,0,8">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Wallet24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />

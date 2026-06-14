@@ -3,31 +3,37 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Desktop.Controls;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Per-section Account view-models. Each is transient, so navigating to a sub-page reloads that section's
-/// current data off the UI thread. They share the read-only <see cref="AccountReader"/>. The whole read —
-/// resolving the current account and querying its data — runs in <see cref="Task.Run"/> so navigation never
-/// blocks the UI thread (the first DB touch also pays EF's cold-start cost); the populated collection is then
-/// filled on the resumed UI thread.
+/// Per-section Account view-models. Each is transient, so navigating to a sub-page reloads that section for
+/// the selected account (<see cref="SelectedAccountService"/>, falling back to the most-recently-synced one).
+/// The whole read runs in <see cref="Task.Run"/> so navigation never blocks the UI thread; the populated
+/// collection is then filled on the resumed UI thread. <see cref="Breadcrumbs"/> carries the account name.
 /// </summary>
 public sealed class WalletViewModel : ViewModelBase
 {
-    public WalletViewModel(AccountReader reader) => _ = LoadAsync(reader);
+    public WalletViewModel(AccountReader reader, SelectedAccountService selected)
+    {
+        Breadcrumbs = AccountBreadcrumbs.Section("Wallet");
+        _ = LoadAsync(reader, selected.AccountId);
+    }
 
     public ObservableCollection<WalletRow> Wallet { get; } = new();
 
-    private async Task LoadAsync(AccountReader reader)
+    public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    private async Task LoadAsync(AccountReader reader, string? accountId)
     {
         try
         {
             List<WalletRow> rows = await Task.Run(() =>
             {
-                AccountInfo? account = reader.GetCurrentAccount();
-                return account is null ? new List<WalletRow>() : reader.GetWallet(account.Id);
+                string? id = accountId ?? reader.GetCurrentAccount()?.Id;
+                return id is null ? new List<WalletRow>() : reader.GetWallet(id);
             });
 
             foreach (WalletRow row in rows)
@@ -44,18 +50,24 @@ public sealed class WalletViewModel : ViewModelBase
 
 public sealed class MaterialStorageViewModel : ViewModelBase
 {
-    public MaterialStorageViewModel(AccountReader reader) => _ = LoadAsync(reader);
+    public MaterialStorageViewModel(AccountReader reader, SelectedAccountService selected)
+    {
+        Breadcrumbs = AccountBreadcrumbs.Section("Material storage");
+        _ = LoadAsync(reader, selected.AccountId);
+    }
 
     public ObservableCollection<MaterialCategoryView> Categories { get; } = new();
 
-    private async Task LoadAsync(AccountReader reader)
+    public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    private async Task LoadAsync(AccountReader reader, string? accountId)
     {
         try
         {
             List<MaterialCategoryView> categories = await Task.Run(() =>
             {
-                AccountInfo? account = reader.GetCurrentAccount();
-                return account is null ? new List<MaterialCategoryView>() : reader.GetMaterials(account.Id);
+                string? id = accountId ?? reader.GetCurrentAccount()?.Id;
+                return id is null ? new List<MaterialCategoryView>() : reader.GetMaterials(id);
             });
 
             foreach (MaterialCategoryView category in categories)
@@ -72,18 +84,24 @@ public sealed class MaterialStorageViewModel : ViewModelBase
 
 public sealed class BankViewModel : ViewModelBase
 {
-    public BankViewModel(AccountReader reader) => _ = LoadAsync(reader);
+    public BankViewModel(AccountReader reader, SelectedAccountService selected)
+    {
+        Breadcrumbs = AccountBreadcrumbs.Section("Bank");
+        _ = LoadAsync(reader, selected.AccountId);
+    }
 
     public ObservableCollection<SlotRow> Slots { get; } = new();
 
-    private async Task LoadAsync(AccountReader reader)
+    public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    private async Task LoadAsync(AccountReader reader, string? accountId)
     {
         try
         {
             List<SlotRow> slots = await Task.Run(() =>
             {
-                AccountInfo? account = reader.GetCurrentAccount();
-                return account is null ? new List<SlotRow>() : reader.GetSlots(account.Id, AccountContainer.Bank);
+                string? id = accountId ?? reader.GetCurrentAccount()?.Id;
+                return id is null ? new List<SlotRow>() : reader.GetSlots(id, AccountContainer.Bank);
             });
 
             foreach (SlotRow slot in slots)
@@ -100,20 +118,24 @@ public sealed class BankViewModel : ViewModelBase
 
 public sealed class SharedInventoryViewModel : ViewModelBase
 {
-    public SharedInventoryViewModel(AccountReader reader) => _ = LoadAsync(reader);
+    public SharedInventoryViewModel(AccountReader reader, SelectedAccountService selected)
+    {
+        Breadcrumbs = AccountBreadcrumbs.Section("Shared inventory");
+        _ = LoadAsync(reader, selected.AccountId);
+    }
 
     public ObservableCollection<SlotRow> Slots { get; } = new();
 
-    private async Task LoadAsync(AccountReader reader)
+    public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    private async Task LoadAsync(AccountReader reader, string? accountId)
     {
         try
         {
             List<SlotRow> slots = await Task.Run(() =>
             {
-                AccountInfo? account = reader.GetCurrentAccount();
-                return account is null
-                    ? new List<SlotRow>()
-                    : reader.GetSlots(account.Id, AccountContainer.SharedInventory);
+                string? id = accountId ?? reader.GetCurrentAccount()?.Id;
+                return id is null ? new List<SlotRow>() : reader.GetSlots(id, AccountContainer.SharedInventory);
             });
 
             foreach (SlotRow slot in slots)

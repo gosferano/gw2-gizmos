@@ -56,9 +56,9 @@
                         <ui:SymbolIcon Symbol="DocumentBulletList24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Settings" TargetPageType="{x:Type local:SettingsPage}">
+                <ui:NavigationViewItem Content="API keys" TargetPageType="{x:Type local:ApiKeysPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Settings24" />
+                        <ui:SymbolIcon Symbol="Key24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>

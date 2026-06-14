@@ -19,7 +19,7 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
     private readonly string _pipeName;
     private readonly ILogger<IpcGw2ApiKeyProvider> _logger;
     private readonly object _gate = new();
-    private string? _cachedKey;
+    private IReadOnlyList<string> _cachedKeys = Array.Empty<string>();
     private DateTime _fetchedAtUtc = DateTime.MinValue;
 
     public IpcGw2ApiKeyProvider(string pipeName, ILogger<IpcGw2ApiKeyProvider> logger)
@@ -30,29 +30,35 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
 
     public string? GetApiKey()
     {
+        IReadOnlyList<string> keys = GetApiKeys();
+        return keys.Count > 0 ? keys[0] : null;
+    }
+
+    public IReadOnlyList<string> GetApiKeys()
+    {
         lock (_gate)
         {
             if (DateTime.UtcNow - _fetchedAtUtc < CacheTtl)
             {
-                return _cachedKey;
+                return _cachedKeys;
             }
         }
 
-        string? key = TryFetch();
+        IReadOnlyList<string>? keys = TryFetch();
 
         lock (_gate)
         {
-            // On a fetch failure keep serving the last known key rather than dropping it mid-run.
-            if (key is not null)
+            // On a fetch failure keep serving the last known keys rather than dropping them mid-run.
+            if (keys is not null)
             {
-                _cachedKey = key;
+                _cachedKeys = keys;
             }
             _fetchedAtUtc = DateTime.UtcNow;
-            return _cachedKey;
+            return _cachedKeys;
         }
     }
 
-    private string? TryFetch()
+    private IReadOnlyList<string>? TryFetch()
     {
         try
         {
@@ -71,19 +77,13 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
             client.ReadExactly(payload);
 
             KeyServiceResponse? response = JsonSerializer.Deserialize<KeyServiceResponse>(payload);
-            foreach (string candidate in response?.Keys ?? [])
-            {
-                if (!string.IsNullOrWhiteSpace(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            return null;
+            return (response?.Keys ?? [])
+                .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+                .ToArray();
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not fetch the API key from the desktop key service.");
+            _logger.LogDebug(ex, "Could not fetch the API keys from the desktop key service.");
             return null;
         }
     }

@@ -1,52 +1,48 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Backs the Account landing page: the current account header (name/world/last sync) and — via the page's
-/// cards — links to the per-section sub-pages. Cheap: just one identity query, resolved synchronously so the
-/// empty-state decision doesn't flicker. Each sub-page loads its own section fresh on navigation.
+/// Backs the Account page — the per-account sections hub: the current account's name + last-synced time in the
+/// header, over the Wallet / Material storage / Bank / Shared inventory cards. The account is the global
+/// selection (<see cref="SelectedAccountService"/>), picked on the API Keys page; this page just reflects it.
 /// </summary>
 public sealed class AccountViewModel : ViewModelBase
 {
-    private bool _hasData;
-    private string _accountName = "";
     private string _summary = "";
 
-    public AccountViewModel(AccountReader reader) => _ = LoadAsync(reader);
-
-    /// <summary>True once an account has been synced; the page shows a "waiting for sync" note otherwise.</summary>
-    public bool HasData
+    public AccountViewModel(SelectedAccountService selected, AccountReader reader)
     {
-        get => _hasData;
-        private set => SetProperty(ref _hasData, value);
+        AccountName = selected.AccountName ?? "";
+        HasAccount = !string.IsNullOrEmpty(selected.AccountId);
+
+        if (selected.AccountId is { } accountId)
+        {
+            _ = LoadSyncTimeAsync(reader, accountId);
+        }
     }
 
-    public string AccountName
-    {
-        get => _accountName;
-        private set => SetProperty(ref _accountName, value);
-    }
+    public string AccountName { get; }
 
+    /// <summary>False when no account is selected/added yet; the page shows a "pick an account" note.</summary>
+    public bool HasAccount { get; }
+
+    /// <summary>When this account last synced (no world id — it was noise).</summary>
     public string Summary
     {
         get => _summary;
         private set => SetProperty(ref _summary, value);
     }
 
-    private async Task LoadAsync(AccountReader reader)
+    private async Task LoadSyncTimeAsync(AccountReader reader, string accountId)
     {
-        // Off the UI thread so navigation doesn't block (the first DB touch pays EF's cold-start cost too).
-        AccountInfo? account = await Task.Run(reader.GetCurrentAccount);
-        if (account is null)
-        {
-            return;
-        }
-
-        AccountName = account.Name;
-        Summary = $"World {account.World} · synced {account.LastSyncedUtc.LocalDateTime:g}";
-        HasData = true; // set last so the page flips to the loaded view in a single step
+        // Off the UI thread; the synced Account row may not exist yet on a freshly-added key.
+        AccountInfo? account = await Task.Run(() => reader.GetAccounts().FirstOrDefault(a => a.Id == accountId));
+        Summary = account is null
+            ? "Waiting for first sync…"
+            : $"Synced {account.LastSyncedUtc.LocalDateTime:g}";
     }
 }
 

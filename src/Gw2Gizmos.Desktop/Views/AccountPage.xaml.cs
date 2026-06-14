@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 
 namespace Gw2Gizmos.Desktop;
@@ -10,13 +11,11 @@ public partial class AccountPage : Page
         DataContext = viewModel;
     }
 
-    private void OnOpenWallet(object sender, System.Windows.RoutedEventArgs e) => App.NavigateTo(typeof(WalletPage));
+    private void OnOpenWallet(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(WalletPage));
 
-    private void OnOpenMaterials(object sender, System.Windows.RoutedEventArgs e) =>
-        App.NavigateTo(typeof(MaterialStoragePage));
+    private void OnOpenMaterials(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(MaterialStoragePage));
 
-    private void OnOpenBank(object sender, System.Windows.RoutedEventArgs e) => App.NavigateTo(typeof(BankPage));
+    private void OnOpenBank(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(BankPage));
 
-    private void OnOpenSharedInventory(object sender, System.Windows.RoutedEventArgs e) =>
-        App.NavigateTo(typeof(SharedInventoryPage));
+    private void OnOpenSharedInventory(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(SharedInventoryPage));
 }

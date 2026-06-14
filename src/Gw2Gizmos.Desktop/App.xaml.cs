@@ -307,11 +307,14 @@ public partial class App : Application
         // Singleton so its one-second countdown clock keeps ticking and the event list is built once.
         builder.Services.AddSingleton<EventsViewModel>();
         builder.Services.AddSingleton<LogsViewModel>();
-        builder.Services.AddSingleton<SettingsViewModel>();
+        // Transient so the page re-reads the stored keys on every navigation.
+        builder.Services.AddTransient<ApiKeysViewModel>();
         // Transient so the grid re-reads the worker's latest item/market data on every navigation.
         builder.Services.AddTransient<ItemsViewModel>();
         // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
         builder.Services.AddSingleton<AccountReader>();
+        // Carries the drilled-into account across the parameterless WPF-UI navigation.
+        builder.Services.AddSingleton<SelectedAccountService>();
         builder.Services.AddTransient<AccountViewModel>();
         builder.Services.AddTransient<WalletViewModel>();
         builder.Services.AddTransient<MaterialStorageViewModel>();
@@ -329,7 +332,7 @@ public partial class App : Application
         builder.Services.AddTransient<SharedInventoryPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
-        builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<ApiKeysPage>();
 
         // Make the available DB providers selectable; the active one is chosen at launch via Database:Provider
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
