@@ -30,7 +30,6 @@ public static class DataWorkerServiceCollectionExtensions
 
         services.AddHostedService<Worker>();
         services.AddScoped<ItemsUpdater>();
-        services.AddScoped<CommerceUpdater>();
         services.AddScoped<CurrenciesUpdater>();
         services.AddScoped<MaterialCategoriesUpdater>();
         services.AddScoped<RecipesUpdater>();
@@ -40,10 +39,9 @@ public static class DataWorkerServiceCollectionExtensions
         // Singleton so it keeps the previous poll's totals in memory to compute per-interval volume.
         services.AddSingleton<PriceSnapshotUpdater>();
 
-        // Channel consumers + queues that connect the ingestion updaters.
-        services.AddHostedService<ItemsAddedUpdater>();
+        // Channel consumer + queue that connects the ingestion updaters: ItemsUpdater discovers item ids the
+        // catalog is missing and queues them; ItemsMissingUpdater is the single consumer that fetches + upserts.
         services.AddHostedService<ItemsMissingUpdater>();
-        services.AddSingleton(Channel.CreateUnbounded<ItemAddedDto>());
         services.AddSingleton(Channel.CreateUnbounded<ItemMissingDto>());
 
         return services;

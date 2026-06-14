@@ -23,13 +23,12 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var commerceTimer = new PeriodicTimer(TimeSpan.FromHours(1));
         using var currenciesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var materialCategoriesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        // Recompute craft costs every 15 minutes (also refreshed right after each commerce sync, since they
-        // depend on ingredient listing prices).
+        // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
+        // depend on ingredient prices).
         using var craftCostTimer = new PeriodicTimer(TimeSpan.FromMinutes(15));
         // Poll prices frequently to capture trading volume at fine resolution.
         using var priceSnapshotTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
@@ -41,7 +40,6 @@ public class Worker : BackgroundService
         // Run all tasks concurrently
         var tasks = new List<Task>
         {
-            RunCommerceUpdater(commerceTimer, stoppingToken),
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
@@ -55,24 +53,6 @@ public class Worker : BackgroundService
         };
 
         await Task.WhenAll(tasks);
-    }
-
-    private async Task RunCommerceUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
-    {
-        do
-        {
-            await RunUpdateSafely(
-                async scope =>
-                {
-                    var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
-                    await commerceUpdater.UpdateCommerceListings(stoppingToken);
-                },
-                stoppingToken
-            );
-
-            // Fresh listings just landed — recompute craft costs now rather than waiting for the next tick.
-            await RefreshCraftCostsSafely(stoppingToken);
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
     private async Task RunCurrenciesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
@@ -205,6 +185,10 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
+
+            // Fresh prices just landed — recompute craft costs now (they're priced from these snapshots) rather
+            // than waiting for the craft-cost timer. RefreshCraftCostsSafely is itself gated on PricesSync.
+            await RefreshCraftCostsSafely(stoppingToken);
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 

@@ -152,41 +152,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountWalletObservations");
                 });
 
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.BuyListing", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CommerceItemListingId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Listings")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UnitPrice")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommerceItemListingId");
-
-                    b.ToTable("BuyListings");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceItemListing", b =>
-                {
-                    b.Property<int>("ItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ItemId");
-
-                    b.ToTable("CommerceItemListings");
-                });
-
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>
                 {
                     b.Property<long>("Id")
@@ -222,31 +187,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasIndex("ItemId", "TimestampUtc");
 
                     b.ToTable("PriceSnapshots");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.SellListing", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CommerceItemListingId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Listings")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UnitPrice")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommerceItemListingId");
-
-                    b.ToTable("SellListings");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Currencies.Currency", b =>
@@ -1184,39 +1124,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("WeaponInfusionSlots");
                 });
 
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.BuyListing", b =>
-                {
-                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceItemListing", "CommerceItemListing")
-                        .WithMany("Buys")
-                        .HasForeignKey("CommerceItemListingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CommerceItemListing");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceItemListing", b =>
-                {
-                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.Item", "Item")
-                        .WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Item");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.SellListing", b =>
-                {
-                    b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceItemListing", "CommerceItemListing")
-                        .WithMany("Sells")
-                        .HasForeignKey("CommerceItemListingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CommerceItemListing");
-                });
-
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorDetails", b =>
                 {
                     b.HasOne("Gw2Gizmos.Data.EntityFramework.Entities.Items.Armor", "Armor")
@@ -1762,13 +1669,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("WeaponDetails");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.CommerceItemListing", b =>
-                {
-                    b.Navigation("Buys");
-
-                    b.Navigation("Sells");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorDetails", b =>

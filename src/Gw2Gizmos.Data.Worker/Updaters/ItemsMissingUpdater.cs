@@ -10,14 +10,13 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// Single background consumer of the <see cref="ItemMissingDto"/> channel — the only path that
 /// upserts items. Batches queued ids, fetches them from the API, maps them with
 /// <see cref="ItemEntityMapper"/>, and upserts them. Ids come from the scheduled refresh
-/// (<see cref="ItemsUpdater.UpdateItems"/>) and from the commerce updater when it finds market ids
-/// absent from the items table. As the sole writer, these producers never collide on the Items key.
+/// (<see cref="ItemsUpdater.UpdateItems"/>) when it finds catalogue ids absent from the items table.
+/// As the sole writer, it never collides on the Items key.
 /// </summary>
 public class ItemsMissingUpdater : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly Channel<ItemMissingDto> _itemsMissingChannel;
-    private readonly ChannelWriter<ItemAddedDto> _itemsAddedWriter;
     private readonly Gw2ApiClient _apiClient;
     private readonly ILogger<ItemsMissingUpdater> _logger;
 
@@ -26,14 +25,12 @@ public class ItemsMissingUpdater : BackgroundService
     public ItemsMissingUpdater(
         IServiceProvider serviceProvider,
         Channel<ItemMissingDto> itemsMissingChannel,
-        Channel<ItemAddedDto> itemsAdded,
         IGw2ApiClientFactory apiClientFactory,
         ILogger<ItemsMissingUpdater> logger
     )
     {
         _serviceProvider = serviceProvider;
         _itemsMissingChannel = itemsMissingChannel;
-        _itemsAddedWriter = itemsAdded.Writer;
         _apiClient = apiClientFactory.Create(Locale.English);
         _logger = logger;
     }
@@ -343,11 +340,9 @@ public class ItemsMissingUpdater : BackgroundService
 
         await dbContext.SaveChangesAsync(stoppingToken);
 
-        // Signal newly-added items only after the page has been persisted, so a failed save
-        // never emits a phantom "added" event.
-        foreach (int id in newlyAddedIds)
+        if (newlyAddedIds.Count > 0)
         {
-            await _itemsAddedWriter.WriteAsync(new ItemAddedDto { ItemId = id }, stoppingToken);
+            _logger.LogInformation("Upserted {Count} newly-discovered item(s).", newlyAddedIds.Count);
         }
     }
 
