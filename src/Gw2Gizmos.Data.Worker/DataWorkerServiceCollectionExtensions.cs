@@ -71,6 +71,9 @@ public static class DataWorkerServiceCollectionExtensions
     {
         // Configuration-backed key provider is the default; consumers can register their own first.
         services.TryAddSingleton<IGw2ApiKeyProvider, ConfigurationGw2ApiKeyProvider>();
+        // Likewise the feature gate: the standalone worker reads Worker:Features:* from config, while a
+        // desktop-launched worker registers an IPC-backed gate (and the desktop a settings-backed one) first.
+        services.TryAddSingleton<IFeatureGate, ConfigurationFeatureGate>();
 
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();

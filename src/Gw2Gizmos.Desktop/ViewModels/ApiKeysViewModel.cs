@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.Gw2Api.Client;
 using ApiAccount = Gw2Gizmos.Gw2Api.Contract.V2.Account.Account;
@@ -14,23 +15,31 @@ namespace Gw2Gizmos.Desktop;
 
 /// <summary>
 /// Backs the API Keys page: add a GW2 API key (validated against <c>/v2/account</c> + <c>/v2/tokeninfo</c>,
-/// one key per account), see each stored key as a card (account name, key name, scopes), and remove it. The
-/// worker picks up adds/removes on its next key-service fetch and syncs every account.
+/// one key per account), see each stored key as a card (account name, key name, and every GW2 permission with
+/// the ones an enabled feature needs but the key lacks shown in red), and remove it. The worker picks up
+/// adds/removes on its next key-service fetch and syncs every account.
 /// </summary>
 public sealed class ApiKeysViewModel : ViewModelBase
 {
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly IGw2ApiClientFactory _clientFactory;
     private readonly SelectedAccountService _selected;
+    private readonly FeatureSettingsStore _features;
     private string _apiKeyInput = "";
     private string _status = "";
     private bool _busy;
 
-    public ApiKeysViewModel(FileGw2ApiKeyStore keyStore, IGw2ApiClientFactory clientFactory, SelectedAccountService selected)
+    public ApiKeysViewModel(
+        FileGw2ApiKeyStore keyStore,
+        IGw2ApiClientFactory clientFactory,
+        SelectedAccountService selected,
+        FeatureSettingsStore features
+    )
     {
         _keyStore = keyStore;
         _clientFactory = clientFactory;
         _selected = selected;
+        _features = features;
         AddCommand = new RelayCommand(() => _ = AddAsync(), () => !_busy);
         DeleteCommand = new RelayCommand<string>(Delete);
         SelectAccountCommand = new RelayCommand<ApiKeyCard>(SelectAccount);
@@ -61,13 +70,35 @@ public sealed class ApiKeysViewModel : ViewModelBase
     private void LoadKeys()
     {
         Keys.Clear();
+
+        // Permissions an enabled feature needs but the key lacks are painted red; computed against the
+        // currently-enabled features (re-read each navigation, so toggling on the Settings page is reflected).
+        List<string> enabledFeatures = WorkerFeatures.All
+            .Where(feature => _features.IsEnabled(feature.Key))
+            .Select(feature => feature.Key)
+            .ToList();
+
         foreach (StoredApiKey key in _keyStore.GetStoredKeys())
         {
+            var have = new HashSet<string>(key.Permissions, StringComparer.OrdinalIgnoreCase);
+            var requiredMissing = new HashSet<string>(
+                WorkerFeatures.MissingPermissions(key.Permissions, enabledFeatures),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            List<PermissionChip> chips = WorkerFeatures.AllPermissions
+                .Select(permission => new PermissionChip(
+                    permission,
+                    have.Contains(permission),
+                    requiredMissing.Contains(permission)
+                ))
+                .ToList();
+
             Keys.Add(new ApiKeyCard(
                 key.AccountId,
                 key.AccountName,
                 string.IsNullOrWhiteSpace(key.KeyName) ? "(unnamed key)" : key.KeyName,
-                key.Permissions.Count == 0 ? "no scopes" : string.Join(", ", key.Permissions)
+                chips
             ));
         }
 
@@ -177,13 +208,14 @@ public sealed class ApiKeysViewModel : ViewModelBase
     }
 }
 
-/// <summary>A stored API key as shown on a card: account name, the key's name, its scopes, and whether it's
-/// the currently-selected account (the active radio choice).</summary>
+/// <summary>A stored API key as shown on a card: account name, the key's name, the full permission set (with
+/// required-but-missing ones flagged), and whether it's the currently-selected account (the active radio
+/// choice).</summary>
 public sealed class ApiKeyCard : ViewModelBase
 {
     private bool _isSelected;
 
-    public ApiKeyCard(string accountId, string accountName, string keyName, string permissions)
+    public ApiKeyCard(string accountId, string accountName, string keyName, IReadOnlyList<PermissionChip> permissions)
     {
         AccountId = accountId;
         AccountName = accountName;
@@ -197,7 +229,8 @@ public sealed class ApiKeyCard : ViewModelBase
 
     public string KeyName { get; }
 
-    public string Permissions { get; }
+    /// <summary>Every GW2 permission, each marked present on the key and/or required-but-missing.</summary>
+    public IReadOnlyList<PermissionChip> Permissions { get; }
 
     public bool IsSelected
     {
@@ -205,3 +238,7 @@ public sealed class ApiKeyCard : ViewModelBase
         set => SetProperty(ref _isSelected, value);
     }
 }
+
+/// <summary>One permission tile on a key card. <paramref name="Present"/>: the key holds it.
+/// <paramref name="RequiredMissing"/>: an enabled feature needs it but the key lacks it (painted red).</summary>
+public sealed record PermissionChip(string Name, bool Present, bool RequiredMissing);

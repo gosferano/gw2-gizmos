@@ -21,12 +21,19 @@ public sealed class KeyServiceHost : BackgroundService
 {
     private readonly string _pipeName;
     private readonly FileGw2ApiKeyStore _keyStore;
+    private readonly FeatureSettingsStore _featureSettings;
     private readonly ILogger<KeyServiceHost> _logger;
 
-    public KeyServiceHost(string pipeName, FileGw2ApiKeyStore keyStore, ILogger<KeyServiceHost> logger)
+    public KeyServiceHost(
+        string pipeName,
+        FileGw2ApiKeyStore keyStore,
+        FeatureSettingsStore featureSettings,
+        ILogger<KeyServiceHost> logger
+    )
     {
         _pipeName = pipeName;
         _keyStore = keyStore;
+        _featureSettings = featureSettings;
         _logger = logger;
     }
 
@@ -68,6 +75,7 @@ public sealed class KeyServiceHost : BackgroundService
         var response = new KeyServiceResponse
         {
             Keys = _keyStore.GetApiKeys().ToArray(),
+            EnabledFeatures = _featureSettings.EnabledKeys().ToArray(),
         };
 
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(response);

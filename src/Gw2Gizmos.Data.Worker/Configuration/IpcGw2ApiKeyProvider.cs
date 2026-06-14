@@ -11,7 +11,7 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 /// is picked up on the next refresh. Used only when the desktop spawned the worker (pipe name passed in);
 /// standalone runs use the configuration/env provider instead.
 /// </summary>
-public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
+public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider, IFeatureGate
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
     private const int ConnectTimeoutMs = 2000;
@@ -20,6 +20,7 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
     private readonly ILogger<IpcGw2ApiKeyProvider> _logger;
     private readonly object _gate = new();
     private IReadOnlyList<string> _cachedKeys = Array.Empty<string>();
+    private IReadOnlyList<string> _cachedEnabledFeatures = Array.Empty<string>();
     private DateTime _fetchedAtUtc = DateTime.MinValue;
 
     public IpcGw2ApiKeyProvider(string pipeName, ILogger<IpcGw2ApiKeyProvider> logger)
@@ -36,29 +37,50 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
 
     public IReadOnlyList<string> GetApiKeys()
     {
+        Refresh();
         lock (_gate)
         {
-            if (DateTime.UtcNow - _fetchedAtUtc < CacheTtl)
-            {
-                return _cachedKeys;
-            }
-        }
-
-        IReadOnlyList<string>? keys = TryFetch();
-
-        lock (_gate)
-        {
-            // On a fetch failure keep serving the last known keys rather than dropping them mid-run.
-            if (keys is not null)
-            {
-                _cachedKeys = keys;
-            }
-            _fetchedAtUtc = DateTime.UtcNow;
             return _cachedKeys;
         }
     }
 
-    private IReadOnlyList<string>? TryFetch()
+    public bool IsEnabled(string featureKey)
+    {
+        Refresh();
+        lock (_gate)
+        {
+            return _cachedEnabledFeatures.Contains(featureKey, StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>Refreshes the cached keys + enabled features from the desktop, no more often than the TTL.</summary>
+    private void Refresh()
+    {
+        lock (_gate)
+        {
+            if (DateTime.UtcNow - _fetchedAtUtc < CacheTtl)
+            {
+                return;
+            }
+        }
+
+        KeyServiceResponse? response = TryFetch();
+
+        lock (_gate)
+        {
+            // On a fetch failure keep serving the last known values rather than dropping them mid-run.
+            if (response is not null)
+            {
+                _cachedKeys = (response.Keys ?? [])
+                    .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+                    .ToArray();
+                _cachedEnabledFeatures = response.EnabledFeatures ?? Array.Empty<string>();
+            }
+            _fetchedAtUtc = DateTime.UtcNow;
+        }
+    }
+
+    private KeyServiceResponse? TryFetch()
     {
         try
         {
@@ -76,10 +98,7 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider
             byte[] payload = new byte[length];
             client.ReadExactly(payload);
 
-            KeyServiceResponse? response = JsonSerializer.Deserialize<KeyServiceResponse>(payload);
-            return (response?.Keys ?? [])
-                .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
-                .ToArray();
+            return JsonSerializer.Deserialize<KeyServiceResponse>(payload);
         }
         catch (Exception ex)
         {

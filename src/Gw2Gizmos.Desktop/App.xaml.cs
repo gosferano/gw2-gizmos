@@ -274,10 +274,15 @@ public partial class App : Application
         builder.Services.AddSingleton(new AppPaths(dataDir));
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
-        // Serve the API key to the cross-platform worker over a local pipe (it never reads our secret file).
+        // Worker-feature toggles: the desktop is the source of truth (persisted here); the key service pushes
+        // the enabled set to the worker, which gates its sync work on it.
+        builder.Services.AddSingleton<FeatureSettingsStore>();
+        // Serve the API key + feature toggles to the cross-platform worker over a local pipe (it never reads
+        // our secret file).
         builder.Services.AddHostedService(sp => new KeyServiceHost(
             keyServicePipeName,
             sp.GetRequiredService<FileGw2ApiKeyStore>(),
+            sp.GetRequiredService<FeatureSettingsStore>(),
             sp.GetRequiredService<ILogger<KeyServiceHost>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
@@ -307,8 +312,10 @@ public partial class App : Application
         // Singleton so its one-second countdown clock keeps ticking and the event list is built once.
         builder.Services.AddSingleton<EventsViewModel>();
         builder.Services.AddSingleton<LogsViewModel>();
-        // Transient so the page re-reads the stored keys on every navigation.
+        // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         builder.Services.AddTransient<ApiKeysViewModel>();
+        // Transient so the page reflects the current toggle/permission state on every navigation.
+        builder.Services.AddTransient<SettingsViewModel>();
         // Transient so the grid re-reads the worker's latest item/market data on every navigation.
         builder.Services.AddTransient<ItemsViewModel>();
         // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
@@ -333,6 +340,7 @@ public partial class App : Application
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();
+        builder.Services.AddTransient<SettingsPage>();
 
         // Make the available DB providers selectable; the active one is chosen at launch via Database:Provider
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.

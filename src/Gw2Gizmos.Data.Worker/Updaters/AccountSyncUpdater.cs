@@ -1,9 +1,11 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.Worker.Configuration;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
 using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
+using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
@@ -18,6 +20,7 @@ public class AccountSyncUpdater
     private readonly Gw2GizmosDbContext _dbContext;
     private readonly IGw2ApiClientFactory _apiClientFactory;
     private readonly IGw2ApiKeyProvider _apiKeyProvider;
+    private readonly IFeatureGate _featureGate;
     private readonly ILogger<AccountSyncUpdater> _logger;
     private bool _warnedNoKey;
 
@@ -25,12 +28,14 @@ public class AccountSyncUpdater
         Gw2GizmosDbContext dbContext,
         IGw2ApiClientFactory apiClientFactory,
         IGw2ApiKeyProvider apiKeyProvider,
+        IFeatureGate featureGate,
         ILogger<AccountSyncUpdater> logger
     )
     {
         _dbContext = dbContext;
         _apiClientFactory = apiClientFactory;
         _apiKeyProvider = apiKeyProvider;
+        _featureGate = featureGate;
         _logger = logger;
     }
 
@@ -108,24 +113,53 @@ public class AccountSyncUpdater
         DateTimeOffset now = DateTimeOffset.UtcNow;
         await UpsertAccountAsync(account, now, stoppingToken);
 
-        // Each store is independent: a missing scope on one endpoint shouldn't abort the others.
-        await RunSection("wallet", () => SyncWalletAsync(client, account.Id, now, stoppingToken));
-        await RunSection("materials", () => SyncMaterialsAsync(client, account.Id, now, stoppingToken));
-        await RunSection("bank", () => SyncBankAsync(client, account.Id, now, stoppingToken));
-        await RunSection("shared inventory", () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
+        // The key's live permissions, so an enabled feature whose key lacks a permission can be warned about
+        // up front rather than silently failing the request.
+        ApiTokenInfo? token = await client.V2.TokenInfo.GetBlob(stoppingToken);
+        IReadOnlyList<string> permissions = token?.Permissions
+            .Select(permission => permission.ToString().ToLowerInvariant())
+            .ToArray() ?? Array.Empty<string>();
+
+        // Each section is gated by its own feature and is independent: a disabled feature or a missing
+        // permission on one endpoint shouldn't affect the others.
+        await RunSection(WorkerFeatures.Wallet, account, permissions, () => SyncWalletAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.MaterialStorage, account, permissions, () => SyncMaterialsAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.Bank, account, permissions, () => SyncBankAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.SharedInventory, account, permissions, () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
 
         return account.Name;
     }
 
-    private async Task RunSection(string name, Func<Task> action)
+    /// <summary>
+    /// Runs one account section if its feature is enabled and the key holds the required permissions; otherwise
+    /// skips it (warning when an enabled feature is missing a permission, so the misconfiguration is visible).
+    /// </summary>
+    private async Task RunSection(WorkerFeature feature, Api.Account account, IReadOnlyList<string> permissions, Func<Task> action)
     {
+        if (!_featureGate.IsEnabled(feature.Key))
+        {
+            return;
+        }
+
+        IReadOnlyList<string> missing = WorkerFeatures.MissingPermissions(permissions, new[] { feature.Key });
+        if (missing.Count > 0)
+        {
+            _logger.LogWarning(
+                "{Feature} sync is enabled for {Account} but the key is missing permission(s): {Missing}.",
+                feature.Display,
+                account.Name,
+                string.Join(", ", missing)
+            );
+            return;
+        }
+
         try
         {
             await action();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Account {Section} sync failed (missing scope or API error); continuing.", name);
+            _logger.LogWarning(ex, "{Feature} sync failed for {Account} (API error); continuing.", feature.Display, account.Name);
         }
     }
 

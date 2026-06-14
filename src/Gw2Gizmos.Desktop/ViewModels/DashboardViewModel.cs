@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,15 +14,18 @@ namespace Gw2Gizmos.Desktop;
 
 public sealed class DashboardViewModel : ViewModelBase
 {
-    /// <summary>Scopes this app needs; highlighted on the dashboard and flagged when missing.</summary>
-    private static readonly string[] RequiredScopes = { "account", "tradingpost", "wallet", "inventories" };
-
     private readonly FileGw2ApiKeyStore _apiKeyStore;
+    private readonly FeatureSettingsStore _features;
     private string _apiKeyStatus;
 
-    public DashboardViewModel(IServiceScopeFactory scopeFactory, FileGw2ApiKeyStore apiKeyStore)
+    public DashboardViewModel(
+        IServiceScopeFactory scopeFactory,
+        FileGw2ApiKeyStore apiKeyStore,
+        FeatureSettingsStore features
+    )
     {
         _apiKeyStore = apiKeyStore;
+        _features = features;
         ApiKeyConfigured = apiKeyStore.HasApiKey;
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
 
@@ -105,16 +110,27 @@ public sealed class DashboardViewModel : ViewModelBase
 
         ApiKeyStatus = string.IsNullOrWhiteSpace(info.Name) ? "Configured" : info.Name;
 
+        // "Required" is whatever the currently-enabled features need — so a permission like tradingpost is only
+        // flagged as required (or missing) while its feature (TP delivery alerts) is on.
+        List<string> enabledFeatures = WorkerFeatures.All
+            .Where(feature => _features.IsEnabled(feature.Key))
+            .Select(feature => feature.Key)
+            .ToList();
+        var required = new HashSet<string>(
+            WorkerFeatures.RequiredPermissions(enabledFeatures),
+            StringComparer.OrdinalIgnoreCase
+        );
+
         var granted = info.Permissions.Select(p => p.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
         Scopes.Clear();
         foreach (string scope in granted.OrderBy(s => s, StringComparer.OrdinalIgnoreCase))
         {
-            Scopes.Add(new ScopeBadge(scope, RequiredScopes.Contains(scope, StringComparer.OrdinalIgnoreCase), true));
+            Scopes.Add(new ScopeBadge(scope, required.Contains(scope), true));
         }
 
-        foreach (string required in RequiredScopes.Where(r => !granted.Contains(r)))
+        foreach (string missing in required.Where(r => !granted.Contains(r)).OrderBy(s => s, StringComparer.OrdinalIgnoreCase))
         {
-            Scopes.Add(new ScopeBadge(required, true, false));
+            Scopes.Add(new ScopeBadge(missing, true, false));
         }
     }
 }

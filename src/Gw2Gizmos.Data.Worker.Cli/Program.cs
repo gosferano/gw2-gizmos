@@ -9,7 +9,13 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+// Anchor the content root to the exe directory so appsettings.json (the standalone feature defaults) is found
+// no matter the working directory — the desktop launches this worker with a different cwd.
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory,
+});
 
 string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
 const string logOutputTemplate =
@@ -45,10 +51,13 @@ if (string.IsNullOrEmpty(connectionString))
 string? keyServicePipeName = builder.Configuration["KeyService:PipeName"];
 if (!string.IsNullOrWhiteSpace(keyServicePipeName))
 {
-    builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => new IpcGw2ApiKeyProvider(
+    // One IPC provider instance serves both the keys and the feature toggles (both ride the same pipe payload).
+    builder.Services.AddSingleton(sp => new IpcGw2ApiKeyProvider(
         keyServicePipeName,
         sp.GetRequiredService<ILogger<IpcGw2ApiKeyProvider>>()
     ));
+    builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<IpcGw2ApiKeyProvider>());
+    builder.Services.AddSingleton<IFeatureGate>(sp => sp.GetRequiredService<IpcGw2ApiKeyProvider>());
 }
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays

@@ -9,7 +9,7 @@
     <c:PageShell Title="API keys" MaxContentWidth="640">
         <StackPanel>
             <TextBlock Text="GW2 API keys" FontWeight="Medium" />
-            <TextBlock Text="Add one key per account — needs the account, wallet, inventories and tradingpost scopes. Create one at account.arena.net."
+            <TextBlock Text="Add one key per account. Create one at account.arena.net."
                        Opacity="0.7" Margin="0,2,0,8" TextWrapping="Wrap" />
 
             <Grid>
@@ -37,8 +37,40 @@
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding AccountName}" FontWeight="Medium" FontSize="15" />
                                     <TextBlock Text="{Binding KeyName}" Opacity="0.7" Margin="0,1,0,0" />
-                                    <TextBlock Text="{Binding Permissions}" Opacity="0.55" FontSize="12"
-                                               TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    <!-- Every GW2 permission; granted ones read normally, an enabled feature's
+                                         missing permission is red, the rest are dimmed. -->
+                                    <ItemsControl ItemsSource="{Binding Permissions}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,6,5" Padding="7,2" CornerRadius="9"
+                                                        Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                                    <TextBlock Text="{Binding Name}" FontSize="11">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Opacity" Value="0.4" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Present}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.9" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding RequiredMissing}" Value="True">
+                                                                        <Setter Property="Opacity" Value="1" />
+                                                                        <Setter Property="FontWeight" Value="Medium" />
+                                                                        <Setter Property="Foreground"
+                                                                                Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
                                 <!-- Select: makes this the active account (radio-style); accent check when active. -->
                                 <Button Grid.Column="1" VerticalAlignment="Center" Padding="8" Margin="10,0,0,0"

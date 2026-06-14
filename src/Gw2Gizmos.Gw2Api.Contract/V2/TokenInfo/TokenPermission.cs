@@ -1,4 +1,6 @@
-﻿namespace Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo;
+﻿using System.Collections.Generic;
+
+namespace Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo;
 
 public struct TokenPermission : IEquatable<TokenPermission>
 {
@@ -12,6 +14,13 @@ public struct TokenPermission : IEquatable<TokenPermission>
     public static readonly TokenPermission TradingPost = new("tradingpost");
     public static readonly TokenPermission Unlocks = new("unlocks");
     public static readonly TokenPermission Wallet = new("wallet");
+
+    /// <summary>Every GW2 API permission, in canonical order — the single source of the permission names.</summary>
+    public static readonly IReadOnlyList<TokenPermission> All = new[]
+    {
+        Account, Builds, Characters, Guilds, Inventories,
+        Progression, Pvp, TradingPost, Unlocks, Wallet,
+    };
 
     public string Value { get; }
 

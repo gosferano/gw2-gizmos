@@ -1,24 +1,24 @@
+using Gw2Gizmos.Data.Worker.Configuration;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Data.Worker.Updaters;
-using Microsoft.Extensions.Configuration;
 
 namespace Gw2Gizmos.Data.Worker;
 
 public class Worker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IFeatureGate _featureGate;
     private readonly ILogger<Worker> _logger;
-    private readonly bool _accountSyncEnabled;
 
     // Serializes craft-cost refreshes so the 15-minute timer and the after-commerce trigger can never run
     // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
     private readonly SemaphoreSlim _craftCostRefreshLock = new(1, 1);
 
-    public Worker(IServiceScopeFactory scopeFactory, IConfiguration configuration, ILogger<Worker> logger)
+    public Worker(IServiceScopeFactory scopeFactory, IFeatureGate featureGate, ILogger<Worker> logger)
     {
         _scopeFactory = scopeFactory;
+        _featureGate = featureGate;
         _logger = logger;
-        // Worker features are individually toggle-able via Worker:Features:* (default on).
-        _accountSyncEnabled = configuration.GetValue("Worker:Features:AccountSync", true);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -49,16 +49,10 @@ public class Worker : BackgroundService
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
             RunPriceSnapshotUpdater(priceSnapshotTimer, stoppingToken),
             RunPriceHistoryRetentionUpdater(priceHistoryRetentionTimer, stoppingToken),
+            // The account loop always runs; each section (wallet/materials/bank/shared) is gated per-feature
+            // inside the updater, so toggles take effect live without restarting the worker.
+            RunAccountSyncUpdater(accountSyncTimer, stoppingToken),
         };
-
-        if (_accountSyncEnabled)
-        {
-            tasks.Add(RunAccountSyncUpdater(accountSyncTimer, stoppingToken));
-        }
-        else
-        {
-            _logger.LogInformation("Account sync feature disabled (Worker:Features:AccountSync=false).");
-        }
 
         await Task.WhenAll(tasks);
     }
@@ -115,6 +109,12 @@ public class Worker : BackgroundService
     {
         do
         {
+            // Gated by the Item-data feature (on by default); skipping a tick leaves the existing catalog intact.
+            if (!_featureGate.IsEnabled(WorkerFeatures.ItemsSync.Key))
+            {
+                continue;
+            }
+
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -130,6 +130,12 @@ public class Worker : BackgroundService
     {
         do
         {
+            // Gated by the Recipes feature (on by default); skipping a tick leaves the existing recipes intact.
+            if (!_featureGate.IsEnabled(WorkerFeatures.RecipesSync.Key))
+            {
+                continue;
+            }
+
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -178,6 +184,12 @@ public class Worker : BackgroundService
     {
         do
         {
+            // Gated by the Price-history feature (off by default on the desktop, since the snapshots grow the DB).
+            if (!_featureGate.IsEnabled(WorkerFeatures.PricesSync.Key))
+            {
+                continue;
+            }
+
             await RunUpdateSafely(
                 async scope =>
                 {
