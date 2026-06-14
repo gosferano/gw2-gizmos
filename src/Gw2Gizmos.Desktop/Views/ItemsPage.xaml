@@ -14,6 +14,7 @@
             <conv:CoinConverter x:Key="Coin" />
             <conv:BoolToVisibilityConverter x:Key="Bool" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
+            <conv:BoolToFontWeightConverter x:Key="Bold" />
 
             <!-- One tab header: a rounded-top "browser tab". Selected = brighter (blends into the card body),
                  unselected = dimmer, with a hover step. -->
@@ -192,10 +193,28 @@
                                         <TextBlock Text="{Binding Count}" FontWeight="Medium" />
                                         <TextBlock Text="x " FontWeight="Medium" />
                                         <TextBlock Text="{Binding ItemName}" FontWeight="Medium" />
-                                        <TextBlock Text="  ·  craft " Opacity="0.6" />
-                                        <TextBlock Text="{Binding CraftingCost, Converter={StaticResource Coin}}" Opacity="0.6" />
-                                        <TextBlock Text="  buy " Opacity="0.6" />
-                                        <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6" />
+                                        <TextBlock Text="  ·  " Opacity="0.6" />
+                                        <TextBlock Text="craft " Opacity="0.6"
+                                                   FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
+                                        <TextBlock Opacity="0.6"
+                                                   FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <!-- Craft cost, or an em-dash when the item has no recipe (a 0 here would read as "free"). -->
+                                                    <Setter Property="Text" Value="{Binding CraftingCost, Converter={StaticResource Coin}}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCraftable}" Value="False">
+                                                            <Setter Property="Text" Value="—" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="  ·  " Opacity="0.6" />
+                                        <TextBlock Text="buy " Opacity="0.6"
+                                                   FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
+                                        <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6"
+                                                   FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
                                     </StackPanel>
                                 </HierarchicalDataTemplate>
                             </TreeView.Resources>

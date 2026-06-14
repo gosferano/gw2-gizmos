@@ -13,11 +13,22 @@ public class RecipeNode
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
 
-    public int SellPrice => SellPricePerUnit * Count;
-    public int BuyPrice => BuyPricePerUnit * Count;
+    // long: deep trees (e.g. the Agony Infusion doubling chain) push Count into the millions, so a copper
+    // total of pricePerUnit * Count easily exceeds int.MaxValue (~214,748g) and would wrap negative.
+    public long SellPrice => (long)SellPricePerUnit * Count;
+    public long BuyPrice => (long)BuyPricePerUnit * Count;
     public decimal CraftingCost => CraftingCostPerUnit * Count;
     public bool IsProfitable =>
         CraftingCostPerUnit > 0 && (CraftingCostPerUnit < BuyPricePerUnit || SellPricePerUnit == 0);
+
+    /// <summary>Crafting is strictly cheaper (or the only available way) to obtain this node — bolded in the
+    /// recipe tree. When craft and buy are equal, neither is bolded; a 0 on either side means that option
+    /// isn't available rather than "free".</summary>
+    public bool CraftIsCheaper => CraftingCost > 0 && (BuyPrice <= 0 || CraftingCost < BuyPrice);
+
+    /// <summary>Buying is strictly cheaper (or the only available way) to obtain this node — bolded in the
+    /// recipe tree. Equal craft/buy bolds neither.</summary>
+    public bool BuyIsCheaper => BuyPrice > 0 && (CraftingCost <= 0 || BuyPrice < CraftingCost);
 
     /// <summary>
     /// The cheapest known cost to obtain this node as an ingredient of its parent — the lesser of buying
