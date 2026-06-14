@@ -13,13 +13,19 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// retention pass downsamples older points later.
 /// <para>
 /// Registered as a singleton so it can hold the previous poll's totals in memory and compute the deltas
-/// without a database read. The map is empty on the first poll and after a restart, so that poll records
-/// zero volume rather than a spurious spike.
+/// without a database read. On the first poll after a (re)start the baseline is reseeded from the most recent
+/// snapshot when it's recent (≤ <see cref="BaselineMaxAge"/>), so a quick relaunch doesn't drop the interval's
+/// volume; otherwise (no history, or a long gap) that poll records zero volume rather than a spurious spike.
 /// </para>
 /// </summary>
 public class PriceSnapshotUpdater
 {
     private const int PageSize = 200;
+
+    // How recent the last stored snapshot must be to reuse it as the volume baseline after a restart. Beyond
+    // this (the app was closed a while) the supply/demand delta would span too long to be a meaningful
+    // per-interval volume, so we drop it instead.
+    private static readonly TimeSpan BaselineMaxAge = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly Gw2ApiClient _apiClient;
@@ -41,6 +47,13 @@ public class PriceSnapshotUpdater
     public async Task UpdatePrices(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Starting price snapshot poll...");
+
+        // First poll after a (re)start: reseed the volume baseline from the latest snapshot if it's recent, so a
+        // quick relaunch keeps computing volume rather than dropping the interval that spans the restart.
+        if (_previous.Count == 0)
+        {
+            _previous = LoadRecentBaseline();
+        }
 
         int[]? itemIds = await _apiClient.V2.Commerce.Prices.GetIds(stoppingToken);
         if (itemIds is null || itemIds.Length == 0)
@@ -111,5 +124,57 @@ public class PriceSnapshotUpdater
         // Only adopt this poll as the baseline once it's safely persisted.
         _previous = current;
         _logger.LogInformation("Price snapshot poll completed: {Count} items recorded.", rows.Count);
+    }
+
+    /// <summary>
+    /// Loads the per-item supply/demand from each item's most recent snapshot, keeping only those newer than
+    /// <see cref="BaselineMaxAge"/> — the volume baseline for the first poll after a restart. Empty on a fresh
+    /// database or after a long downtime (so that poll records zero volume). Best-effort: a read failure just
+    /// yields an empty baseline.
+    /// </summary>
+    private Dictionary<int, (int Supply, int Demand)> LoadRecentBaseline()
+    {
+        var baseline = new Dictionary<int, (int Supply, int Demand)>();
+        try
+        {
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+            IQueryable<long> latestIds = dbContext.PriceSnapshots
+                .AsNoTracking()
+                .GroupBy(snapshot => snapshot.ItemId)
+                .Select(group => group.Max(snapshot => snapshot.Id));
+
+            // Materialize first, then filter by age in memory: SQLite can't compare DateTimeOffset in SQL.
+            var latest = dbContext.PriceSnapshots
+                .AsNoTracking()
+                .Where(snapshot => latestIds.Contains(snapshot.Id))
+                .Select(snapshot => new { snapshot.ItemId, snapshot.Supply, snapshot.Demand, snapshot.TimestampUtc })
+                .ToList();
+
+            DateTimeOffset cutoff = DateTimeOffset.UtcNow - BaselineMaxAge;
+            foreach (var snapshot in latest)
+            {
+                if (snapshot.TimestampUtc >= cutoff)
+                {
+                    baseline[snapshot.ItemId] = (snapshot.Supply, snapshot.Demand);
+                }
+            }
+
+            if (baseline.Count > 0)
+            {
+                _logger.LogInformation(
+                    "Reusing volume baseline from {Count} recent snapshot(s) (≤ {Minutes} min old).",
+                    baseline.Count,
+                    BaselineMaxAge.TotalMinutes
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not reseed the volume baseline; the first poll will record zero volume.");
+        }
+
+        return baseline;
     }
 }
