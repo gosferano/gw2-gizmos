@@ -120,6 +120,19 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ItemCraftCosts",
+                columns: table => new
+                {
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CraftingCost = table.Column<double>(type: "REAL", nullable: false),
+                    ComputedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ItemCraftCosts", x => x.ItemId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ItemInfusionSlot",
                 columns: table => new
                 {
@@ -151,27 +164,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Items", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "MarketItems",
-                columns: table => new
-                {
-                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Buy = table.Column<int>(type: "INTEGER", nullable: true),
-                    Demand = table.Column<int>(type: "INTEGER", nullable: false),
-                    Sell = table.Column<int>(type: "INTEGER", nullable: true),
-                    Supply = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsCraftable = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CraftingCost = table.Column<double>(type: "REAL", nullable: true),
-                    Profit = table.Column<double>(type: "REAL", nullable: true),
-                    MarginPercent = table.Column<double>(type: "REAL", nullable: true),
-                    ComputedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MarketItems", x => x.ItemId);
                 });
 
             migrationBuilder.CreateTable(
@@ -1497,6 +1489,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "InfixUpgradeBuffs");
 
             migrationBuilder.DropTable(
+                name: "ItemCraftCosts");
+
+            migrationBuilder.DropTable(
                 name: "ItemFlags");
 
             migrationBuilder.DropTable(
@@ -1507,9 +1502,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "ItemRestrictions");
-
-            migrationBuilder.DropTable(
-                name: "MarketItems");
 
             migrationBuilder.DropTable(
                 name: "MaterialCategories");

@@ -9,9 +9,9 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly bool _accountSyncEnabled;
 
-    // Serializes market-snapshot refreshes so the 15-minute timer and the after-commerce trigger can never
-    // run two wholesale table replaces at once (which would race on the MarketItems table).
-    private readonly SemaphoreSlim _marketRefreshLock = new(1, 1);
+    // Serializes craft-cost refreshes so the 15-minute timer and the after-commerce trigger can never run
+    // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
+    private readonly SemaphoreSlim _craftCostRefreshLock = new(1, 1);
 
     public Worker(IServiceScopeFactory scopeFactory, IConfiguration configuration, ILogger<Worker> logger)
     {
@@ -28,8 +28,9 @@ public class Worker : BackgroundService
         using var materialCategoriesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
         using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        // Refresh the market grid every 15 minutes (it also refreshes right after each commerce sync).
-        using var marketTimer = new PeriodicTimer(TimeSpan.FromMinutes(15));
+        // Recompute craft costs every 15 minutes (also refreshed right after each commerce sync, since they
+        // depend on ingredient listing prices).
+        using var craftCostTimer = new PeriodicTimer(TimeSpan.FromMinutes(15));
         // Poll prices frequently to capture trading volume at fine resolution.
         using var priceSnapshotTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
         // Coarsen the accumulating price history hourly so the 5-minute tier stays bounded.
@@ -45,7 +46,7 @@ public class Worker : BackgroundService
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
-            RunMarketUpdater(marketTimer, stoppingToken),
+            RunCraftCostUpdater(craftCostTimer, stoppingToken),
             RunPriceSnapshotUpdater(priceSnapshotTimer, stoppingToken),
             RunPriceHistoryRetentionUpdater(priceHistoryRetentionTimer, stoppingToken),
         };
@@ -75,8 +76,8 @@ public class Worker : BackgroundService
                 stoppingToken
             );
 
-            // Fresh listings just landed — refresh the grid now rather than waiting for the next tick.
-            await RefreshMarketSafely(stoppingToken);
+            // Fresh listings just landed — recompute craft costs now rather than waiting for the next tick.
+            await RefreshCraftCostsSafely(stoppingToken);
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
@@ -140,36 +141,36 @@ public class Worker : BackgroundService
         } while (await recipesTimer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task RunMarketUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    private async Task RunCraftCostUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
         do
         {
-            await RefreshMarketSafely(stoppingToken);
+            await RefreshCraftCostsSafely(stoppingToken);
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
     /// <summary>
-    /// Rebuilds the market snapshot under a lock, so the periodic timer and the after-commerce trigger
+    /// Recomputes the craft-cost cache under a lock, so the periodic timer and the after-commerce trigger
     /// never overlap. If a refresh is already running, this awaits it and then runs again — a harmless
     /// back-to-back rebuild rather than a racing one.
     /// </summary>
-    private async Task RefreshMarketSafely(CancellationToken stoppingToken)
+    private async Task RefreshCraftCostsSafely(CancellationToken stoppingToken)
     {
-        await _marketRefreshLock.WaitAsync(stoppingToken);
+        await _craftCostRefreshLock.WaitAsync(stoppingToken);
         try
         {
             await RunUpdateSafely(
                 async scope =>
                 {
-                    var marketUpdater = scope.ServiceProvider.GetRequiredService<MarketUpdater>();
-                    await marketUpdater.UpdateMarket(stoppingToken);
+                    var craftCostUpdater = scope.ServiceProvider.GetRequiredService<ItemCraftCostUpdater>();
+                    await craftCostUpdater.UpdateCraftCosts(stoppingToken);
                 },
                 stoppingToken
             );
         }
         finally
         {
-            _marketRefreshLock.Release();
+            _craftCostRefreshLock.Release();
         }
     }
 

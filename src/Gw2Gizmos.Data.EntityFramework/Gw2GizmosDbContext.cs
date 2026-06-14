@@ -46,8 +46,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<BuyListing> BuyListings { get; set; }
     public DbSet<SellListing> SellListings { get; set; }
 
-    // Precomputed per-item market snapshot (best buy/sell + craft cost) for the desktop Market grid.
-    public DbSet<MarketItem> MarketItems { get; set; }
+    // Precomputed craft-cost cache (cheapest fully-priced craft cost per craftable item) for the Items grid;
+    // live prices/profit/margin are derived from PriceSnapshots at read time, not stored here.
+    public DbSet<ItemCraftCost> ItemCraftCosts { get; set; }
 
     // Append-only trading-post price history (one row per item per market refresh; downsampled over time).
     public DbSet<PriceSnapshot> PriceSnapshots { get; set; }

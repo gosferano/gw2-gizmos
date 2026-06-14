@@ -89,8 +89,8 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.7">
-                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable. Market updated" />
-                    <Run Text="{Binding ComputedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}', Mode=OneWay}" />
+                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable. Prices as of" />
+                    <Run Text="{Binding PricesUpdatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}', Mode=OneWay}" />
                 </TextBlock>
                 <ui:TextBox Grid.Column="1" Width="220" PlaceholderText="search items"
                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />

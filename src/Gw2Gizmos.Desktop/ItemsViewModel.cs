@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using Gw2Gizmos.Data.EntityFramework;
-using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
@@ -17,17 +16,21 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Backs the Items grid: lists every tradeable or craftable item, overlaying the worker's precomputed
-/// <see cref="MarketItem"/> snapshot (best buy/sell prices, demand/supply, and craft cost/profit) on the
-/// tradeable ones. A craftable-but-non-tradeable item still appears — with blank market columns — and its
-/// craft tree is rebuilt on demand like any other. Items that are neither are omitted (nothing to show).
-/// Exposes a name-filterable view; sort by the Profit or Margin column for the "what's profitable to craft" view.
-/// The tree is never stored — it's recomputed for the one row in focus, which is cheap because the engine memoizes.
+/// Backs the Items grid: lists every tradeable or craftable item. Buy/sell/demand/supply come live from the
+/// most recent price poll (<c>PriceSnapshots</c>) — the same source the history chart uses, so the grid and
+/// the chart can never disagree. Craft cost comes from the worker's <c>ItemCraftCosts</c> cache (the one
+/// expensive precompute), and profit/margin are derived here from the live buy price. A craftable-but-non-
+/// tradeable item still appears (blank price columns); items that are neither are omitted (nothing to show).
+/// Exposes a name-filterable view; sort by Profit or Margin for the "what's profitable to craft" view. The
+/// craft tree is rebuilt on demand for the row in focus — cheap because the engine memoizes — never stored.
 /// </summary>
 public sealed class ItemsViewModel : ViewModelBase
 {
+    /// <summary>Trading-post sales are charged a 15% fee (listing + exchange), so you net 85%.</summary>
+    private const double TradingPostNetFactor = 0.85;
+
     private readonly IServiceScopeFactory _scopeFactory;
-    private MarketItem? _selectedItem;
+    private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
 
@@ -40,39 +43,76 @@ public sealed class ItemsViewModel : ViewModelBase
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-            // The market snapshot covers only tradeable items: best buy/sell plus computed craft cost/profit.
-            Dictionary<int, MarketItem> market = dbContext.MarketItems.AsNoTracking().ToDictionary(m => m.ItemId);
+            // Live market figures: the most recent price poll per item (best buy/sell + demand/supply).
+            IQueryable<long> latestIds = db.PriceSnapshots
+                .GroupBy(snapshot => snapshot.ItemId)
+                .Select(group => group.Max(snapshot => snapshot.Id));
+            var latest = db.PriceSnapshots.AsNoTracking()
+                .Where(snapshot => latestIds.Contains(snapshot.Id))
+                .Select(snapshot => new
+                {
+                    snapshot.ItemId,
+                    snapshot.Buy,
+                    snapshot.Sell,
+                    snapshot.Demand,
+                    snapshot.Supply,
+                    snapshot.TimestampUtc
+                })
+                .ToList();
+            Dictionary<int, PricePoint> prices = latest.ToDictionary(
+                row => row.ItemId,
+                row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
+            );
+
+            // Cached craft cost per craftable item (the one expensive precompute).
+            Dictionary<int, double> craftCosts = db.ItemCraftCosts.AsNoTracking()
+                .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
 
             // Every item any recipe outputs — craftable even if it never reaches the trading post.
-            HashSet<int> craftableIds = dbContext.Recipes.AsNoTracking()
-                .Select(r => r.OutputItemId).Distinct().ToHashSet();
+            HashSet<int> craftableIds = db.Recipes.AsNoTracking()
+                .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
 
-            // List every item that's tradeable or craftable (or both). A tradeable item carries its market
-            // snapshot; a craftable-but-non-tradeable item still gets a row so its craft tree is reachable.
-            // Items that are neither are skipped — both detail panes would be empty, so they'd only be noise.
-            foreach (var item in dbContext.Items.AsNoTracking()
+            // List every item that's tradeable (has a price) or craftable (or both). Items that are neither
+            // are skipped — both detail panes would be empty, so they'd only be noise.
+            foreach (var item in db.Items.AsNoTracking()
                          .Select(i => new { i.Id, i.Name })
                          .OrderBy(i => i.Name))
             {
-                if (market.TryGetValue(item.Id, out MarketItem? snapshot))
+                bool hasPrice = prices.TryGetValue(item.Id, out PricePoint price);
+                bool craftable = craftableIds.Contains(item.Id);
+                if (!hasPrice && !craftable)
                 {
-                    Items.Add(snapshot);
+                    continue;
                 }
-                else if (craftableIds.Contains(item.Id))
-                {
-                    Items.Add(new MarketItem
-                    {
-                        ItemId = item.Id,
-                        Name = item.Name,
-                        IsCraftable = true,
-                    });
-                }
+
+                double? craftCost = craftCosts.TryGetValue(item.Id, out double cost) ? cost : null;
+                // Profit = dumping into buy orders (after the 15% fee) minus craft cost; only meaningful when
+                // the item is craftable and someone is buying, otherwise blank.
+                double? profit = craftCost is double knownCost && price.Buy is int buy
+                    ? (buy * TradingPostNetFactor) - knownCost
+                    : null;
+                double? margin = profit is double knownProfit && craftCost is double c and > 0
+                    ? knownProfit / c * 100d
+                    : null;
+
+                Items.Add(new ItemRow(
+                    item.Id,
+                    item.Name,
+                    hasPrice ? price.Buy : null,
+                    hasPrice ? price.Demand : null,
+                    hasPrice ? price.Sell : null,
+                    hasPrice ? price.Supply : null,
+                    craftCost,
+                    profit,
+                    margin,
+                    craftable
+                ));
             }
 
-            // All snapshot rows share one batch timestamp, so any of them dates the market data.
-            ComputedAt = market.Count > 0 ? market.Values.First().ComputedAtUtc.LocalDateTime : null;
+            // Show the latest poll's time so users can see how fresh the grid's prices are.
+            PricesUpdatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
         }
         catch (Exception)
         {
@@ -83,13 +123,13 @@ public sealed class ItemsViewModel : ViewModelBase
         View.Filter = MatchesFilter;
     }
 
-    public ObservableCollection<MarketItem> Items { get; } = new();
+    public ObservableCollection<ItemRow> Items { get; } = new();
 
     /// <summary>The grid binds here so sorting and the text filter apply without disturbing <see cref="Items"/>.</summary>
     public ICollectionView View { get; }
 
-    /// <summary>When the worker last produced this snapshot; null when it has never run.</summary>
-    public DateTimeOffset? ComputedAt { get; }
+    /// <summary>When the latest price poll ran; null when no prices have been recorded yet.</summary>
+    public DateTimeOffset? PricesUpdatedAt { get; }
 
     /// <summary>Free-text name filter applied to the grid.</summary>
     public string FilterText
@@ -104,7 +144,7 @@ public sealed class ItemsViewModel : ViewModelBase
         }
     }
 
-    public MarketItem? SelectedItem
+    public ItemRow? SelectedItem
     {
         get => _selectedItem;
         set
@@ -128,14 +168,14 @@ public sealed class ItemsViewModel : ViewModelBase
 
     private bool MatchesFilter(object obj) =>
         string.IsNullOrWhiteSpace(_filterText)
-        || (obj is MarketItem item && item.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+        || (obj is ItemRow item && item.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Loads the selected row's detail panes (craft tree + price history) as fire-and-forget work, but
     /// observes any failure here so a detail-load error degrades the pane gracefully instead of surfacing
     /// as an unobserved task exception.
     /// </summary>
-    private async Task LoadDetailsAsync(MarketItem? item)
+    private async Task LoadDetailsAsync(ItemRow? item)
     {
         try
         {
@@ -162,7 +202,7 @@ public sealed class ItemsViewModel : ViewModelBase
         }
     }
 
-    private async Task UpdateTreeAsync(MarketItem? item)
+    private async Task UpdateTreeAsync(ItemRow? item)
     {
         if (item is null || !item.IsCraftable)
         {
@@ -186,7 +226,7 @@ public sealed class ItemsViewModel : ViewModelBase
         }
     }
 
-    private async Task UpdateHistoryAsync(MarketItem? item)
+    private async Task UpdateHistoryAsync(ItemRow? item)
     {
         if (item is null)
         {
@@ -220,3 +260,21 @@ public sealed class ItemsViewModel : ViewModelBase
         }
     }
 }
+
+/// <summary>One row of the Items grid: identity plus live market figures and craft economics. Price columns
+/// are null when the item has never been polled; craft columns are null when it isn't craftable.</summary>
+public sealed record ItemRow(
+    int ItemId,
+    string Name,
+    int? Buy,
+    int? Demand,
+    int? Sell,
+    int? Supply,
+    double? CraftingCost,
+    double? Profit,
+    double? MarginPercent,
+    bool IsCraftable
+);
+
+/// <summary>The latest poll's market figures for one item; Buy/Sell are null when that side has no orders.</summary>
+internal readonly record struct PricePoint(int? Buy, int? Sell, int Demand, int Supply);
