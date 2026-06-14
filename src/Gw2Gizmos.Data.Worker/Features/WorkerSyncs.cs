@@ -33,4 +33,12 @@ public static class WorkerSyncs
     /// <summary>The shipped default cadence for a sync, or an hour for an unknown key.</summary>
     public static TimeSpan DefaultInterval(string key) =>
         All.FirstOrDefault(sync => sync.Key == key)?.Default ?? TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// The sync that enabling a feature should run immediately: the sync sharing the feature's key
+    /// (Items / Recipes / Prices), or the shared <see cref="Account"/> sync for the per-section account features
+    /// (wallet / materials / bank / shared inventory), which all ride one account pass.
+    /// </summary>
+    public static string TriggeredByFeature(string featureKey) =>
+        All.FirstOrDefault(sync => sync.Key == featureKey)?.Key ?? Account.Key;
 }

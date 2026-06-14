@@ -60,6 +60,7 @@ if (!string.IsNullOrWhiteSpace(workerConfigPipeName))
     builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
     builder.Services.AddSingleton<IFeatureGate>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
     builder.Services.AddSingleton<IIntervalGate>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
+    builder.Services.AddSingleton<ISyncTriggerSource>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
 }
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays

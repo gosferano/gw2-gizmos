@@ -23,6 +23,7 @@ public sealed class WorkerConfigHost : BackgroundService
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly FeatureSettingsStore _featureSettings;
     private readonly IntervalSettingsStore _intervalSettings;
+    private readonly SyncTriggerStore _triggers;
     private readonly ILogger<WorkerConfigHost> _logger;
 
     public WorkerConfigHost(
@@ -30,6 +31,7 @@ public sealed class WorkerConfigHost : BackgroundService
         FileGw2ApiKeyStore keyStore,
         FeatureSettingsStore featureSettings,
         IntervalSettingsStore intervalSettings,
+        SyncTriggerStore triggers,
         ILogger<WorkerConfigHost> logger
     )
     {
@@ -37,6 +39,7 @@ public sealed class WorkerConfigHost : BackgroundService
         _keyStore = keyStore;
         _featureSettings = featureSettings;
         _intervalSettings = intervalSettings;
+        _triggers = triggers;
         _logger = logger;
     }
 
@@ -80,6 +83,7 @@ public sealed class WorkerConfigHost : BackgroundService
             Keys = _keyStore.GetApiKeys().ToArray(),
             EnabledFeatures = _featureSettings.EnabledKeys().ToArray(),
             Intervals = _intervalSettings.AllIntervals().ToDictionary(entry => entry.Key, entry => entry.Value),
+            SyncGenerations = _triggers.Snapshot(),
         };
 
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(payload);

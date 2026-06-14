@@ -273,10 +273,13 @@ public partial class App : Application
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton(new AppPaths(dataDir));
+        // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
+        // that data immediately. Registered first — the key/feature stores bump it.
+        builder.Services.AddSingleton<SyncTriggerStore>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
         // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
-        // config pipe: feature on/off toggles and per-sync intervals.
+        // config pipe: feature on/off toggles, per-sync intervals, and the trigger generations.
         builder.Services.AddSingleton<FeatureSettingsStore>();
         builder.Services.AddSingleton<IntervalSettingsStore>();
         // Serve keys + features + intervals to the cross-platform worker over a local pipe (it never reads our
@@ -286,6 +289,7 @@ public partial class App : Application
             sp.GetRequiredService<FileGw2ApiKeyStore>(),
             sp.GetRequiredService<FeatureSettingsStore>(),
             sp.GetRequiredService<IntervalSettingsStore>(),
+            sp.GetRequiredService<SyncTriggerStore>(),
             sp.GetRequiredService<ILogger<WorkerConfigHost>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.

@@ -19,4 +19,10 @@ public sealed class WorkerConfigPayload
     /// <summary>Per-sync cadence, keyed by <see cref="Features.WorkerSyncs"/> key (see
     /// <see cref="IIntervalGate"/>). An absent key falls back to the catalog default.</summary>
     public Dictionary<string, TimeSpan> Intervals { get; set; } = new();
+
+    /// <summary>Per-sync trigger generation, keyed by <see cref="Features.WorkerSyncs"/> key (see
+    /// <see cref="ISyncTriggerSource"/>). The desktop bumps a sync's value when the user enables its feature or
+    /// adds a key; the worker runs that sync immediately when it sees the value increase. Monotonic; an absent
+    /// key means zero.</summary>
+    public Dictionary<string, long> SyncGenerations { get; set; } = new();
 }

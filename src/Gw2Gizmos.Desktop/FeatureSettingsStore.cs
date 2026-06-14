@@ -27,10 +27,12 @@ public sealed class FeatureSettingsStore
     private readonly string _path;
     private readonly object _gate = new();
     private readonly Dictionary<string, bool> _states;
+    private readonly SyncTriggerStore _triggers;
 
-    public FeatureSettingsStore(AppPaths paths)
+    public FeatureSettingsStore(AppPaths paths, SyncTriggerStore triggers)
     {
         _path = paths.File("feature-settings.json");
+        _triggers = triggers;
         _states = Load();
     }
 
@@ -62,6 +64,13 @@ public sealed class FeatureSettingsStore
 
             _states[featureKey] = enabled;
             Save(_states);
+        }
+
+        // Enabling a feature should sync its data now, not at the next tick — bump the matching sync's generation
+        // so the worker runs it within a few seconds. (Disabling needs no trigger.)
+        if (enabled)
+        {
+            _triggers.Bump(WorkerSyncs.TriggeredByFeature(featureKey));
         }
 
         Changed?.Invoke();

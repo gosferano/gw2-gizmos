@@ -9,17 +9,24 @@ public class Worker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFeatureGate _featureGate;
     private readonly IIntervalGate _intervalGate;
+    private readonly SyncTriggers _triggers;
     private readonly ILogger<Worker> _logger;
 
     // Serializes craft-cost refreshes so the 15-minute timer and the after-price trigger can never run
     // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
     private readonly SemaphoreSlim _craftCostRefreshLock = new(1, 1);
 
-    public Worker(IServiceScopeFactory scopeFactory, IFeatureGate featureGate, IIntervalGate intervalGate, ILogger<Worker> logger)
+    public Worker(
+        IServiceScopeFactory scopeFactory,
+        IFeatureGate featureGate,
+        IIntervalGate intervalGate,
+        SyncTriggers triggers,
+        ILogger<Worker> logger)
     {
         _scopeFactory = scopeFactory;
         _featureGate = featureGate;
         _intervalGate = intervalGate;
+        _triggers = triggers;
         _logger = logger;
     }
 
@@ -60,6 +67,7 @@ public class Worker : BackgroundService
 
     private async Task RunCurrenciesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Currencies.Key);
         do
         {
             timer.Period = _intervalGate.GetInterval(WorkerSyncs.Currencies.Key);
@@ -71,11 +79,12 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunMaterialCategoriesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.MaterialCategories.Key);
         do
         {
             timer.Period = _intervalGate.GetInterval(WorkerSyncs.MaterialCategories.Key);
@@ -87,11 +96,12 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunItemsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Items.Key);
         do
         {
             timer.Period = _intervalGate.GetInterval(WorkerSyncs.Items.Key);
@@ -109,11 +119,12 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunRecipesUpdater(PeriodicTimer recipesTimer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Recipes.Key);
         do
         {
             recipesTimer.Period = _intervalGate.GetInterval(WorkerSyncs.Recipes.Key);
@@ -131,7 +142,7 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await recipesTimer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(recipesTimer, stoppingToken));
     }
 
     private async Task RunCraftCostUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
@@ -176,6 +187,7 @@ public class Worker : BackgroundService
 
     private async Task RunPriceSnapshotUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Prices.Key);
         do
         {
             timer.Period = _intervalGate.GetInterval(WorkerSyncs.Prices.Key);
@@ -197,7 +209,7 @@ public class Worker : BackgroundService
             // Fresh prices just landed — recompute craft costs now (they're priced from these snapshots) rather
             // than waiting for the craft-cost timer. RefreshCraftCostsSafely is itself gated on PricesSync.
             await RefreshCraftCostsSafely(stoppingToken);
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunPriceHistoryRetentionUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
@@ -217,6 +229,7 @@ public class Worker : BackgroundService
 
     private async Task RunAccountSyncUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Account.Key);
         do
         {
             timer.Period = _intervalGate.GetInterval(WorkerSyncs.Account.Key);
@@ -228,7 +241,7 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunUpdateSafely(Func<IServiceScope, Task> updateAction, CancellationToken stoppingToken)

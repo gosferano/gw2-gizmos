@@ -11,9 +11,12 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 /// it isn't a connection per call; changes in the desktop are picked up on the next refresh. Used only when the
 /// desktop spawned the worker (pipe name passed in); standalone runs use the configuration/env providers.
 /// </summary>
-public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, IIntervalGate
+public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, IIntervalGate, ISyncTriggerSource
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
+    // Short so a feature the user just enabled is seen — and its sync triggered — within a few seconds. The
+    // generation map and the feature/key/interval values ride the same payload, so this also keeps the gate
+    // consistent with the trigger (an enabled feature is visible by the time its sync is signalled).
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(3);
     private const int ConnectTimeoutMs = 2000;
 
     private readonly string _pipeName;
@@ -22,6 +25,7 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
     private IReadOnlyList<string> _cachedKeys = Array.Empty<string>();
     private IReadOnlyList<string> _cachedEnabledFeatures = Array.Empty<string>();
     private IReadOnlyDictionary<string, TimeSpan> _cachedIntervals = new Dictionary<string, TimeSpan>();
+    private IReadOnlyDictionary<string, long> _cachedGenerations = new Dictionary<string, long>();
     private DateTime _fetchedAtUtc = DateTime.MinValue;
 
     public IpcWorkerConfigProvider(string pipeName, ILogger<IpcWorkerConfigProvider> logger)
@@ -68,7 +72,16 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
         return WorkerSyncs.DefaultInterval(syncKey);
     }
 
-    /// <summary>Refreshes the cached keys + features + intervals from the desktop, no more often than the TTL.</summary>
+    public long GetGeneration(string syncKey)
+    {
+        Refresh();
+        lock (_gate)
+        {
+            return _cachedGenerations.TryGetValue(syncKey, out long generation) ? generation : 0;
+        }
+    }
+
+    /// <summary>Refreshes the cached keys + features + intervals + generations from the desktop, no more often than the TTL.</summary>
     private void Refresh()
     {
         lock (_gate)
@@ -91,6 +104,7 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
                     .ToArray();
                 _cachedEnabledFeatures = payload.EnabledFeatures ?? Array.Empty<string>();
                 _cachedIntervals = payload.Intervals ?? new Dictionary<string, TimeSpan>();
+                _cachedGenerations = payload.SyncGenerations ?? new Dictionary<string, long>();
             }
             _fetchedAtUtc = DateTime.UtcNow;
         }
