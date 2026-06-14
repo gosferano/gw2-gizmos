@@ -158,10 +158,17 @@ public class Worker : BackgroundService
     /// <summary>
     /// Recomputes the craft-cost cache under a lock, so the periodic timer and the after-commerce trigger
     /// never overlap. If a refresh is already running, this awaits it and then runs again — a harmless
-    /// back-to-back rebuild rather than a racing one.
+    /// back-to-back rebuild rather than a racing one. Gated on <see cref="WorkerFeatures.PricesSync"/>: craft
+    /// cost is derived from ingredient prices, so without price history every cost computes to 0 and the run is
+    /// wasted — this single gate covers both the timer loop and the after-commerce trigger.
     /// </summary>
     private async Task RefreshCraftCostsSafely(CancellationToken stoppingToken)
     {
+        if (!_featureGate.IsEnabled(WorkerFeatures.PricesSync.Key))
+        {
+            return;
+        }
+
         await _craftCostRefreshLock.WaitAsync(stoppingToken);
         try
         {
