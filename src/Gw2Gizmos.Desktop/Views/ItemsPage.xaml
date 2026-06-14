@@ -104,10 +104,10 @@
                       EnableRowVirtualization="True" EnableColumnVirtualization="True"
                       GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent"
                       FontSize="13"
-                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                       ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Header="Item" Width="*" SortMemberPath="Name">
+                    <DataGridTemplateColumn Header="Item" Width="210" SortMemberPath="Name">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -118,20 +118,26 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Buy" Width="100"
+                    <DataGridTextColumn Header="Buy" Width="95"
                                         Binding="{Binding Buy, Converter={StaticResource Coin}}" />
-                    <DataGridTextColumn Header="Demand" Width="75"
+                    <DataGridTextColumn Header="Demand" Width="70"
                                         Binding="{Binding Demand, StringFormat='{}{0:N0}'}" />
-                    <DataGridTextColumn Header="Sell" Width="100"
+                    <DataGridTextColumn Header="Sell" Width="95"
                                         Binding="{Binding Sell, Converter={StaticResource Coin}}" />
-                    <DataGridTextColumn Header="Supply" Width="75"
+                    <DataGridTextColumn Header="Supply" Width="70"
                                         Binding="{Binding Supply, StringFormat='{}{0:N0}'}" />
-                    <DataGridTextColumn Header="Craft cost" Width="100"
+                    <DataGridTextColumn Header="Craft cost" Width="120"
                                         Binding="{Binding CraftingCost, Converter={StaticResource Coin}}" />
-                    <DataGridTextColumn Header="Profit" Width="100"
-                                        Binding="{Binding Profit, Converter={StaticResource Coin}}" />
-                    <DataGridTextColumn Header="Margin" Width="70"
-                                        Binding="{Binding MarginPercent, StringFormat='{}{0:F0}%'}" />
+                    <!-- Profit/margin selling instantly into buy orders, and listing at the sell price; both
+                         net the 15% trading-post fee. -->
+                    <DataGridTextColumn Header="Buy profit" Width="120"
+                                        Binding="{Binding BuyProfit, Converter={StaticResource Coin}}" />
+                    <DataGridTextColumn Header="Buy margin" Width="80"
+                                        Binding="{Binding BuyMargin, StringFormat='{}{0:F0}%'}" />
+                    <DataGridTextColumn Header="Sell profit" Width="120"
+                                        Binding="{Binding SellProfit, Converter={StaticResource Coin}}" />
+                    <DataGridTextColumn Header="Sell margin" Width="80"
+                                        Binding="{Binding SellMargin, StringFormat='{}{0:F0}%'}" />
                 </DataGrid.Columns>
             </DataGrid>
             </ui:Card>

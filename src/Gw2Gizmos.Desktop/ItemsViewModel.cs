@@ -125,14 +125,17 @@ public sealed class ItemsViewModel : ViewModelBase
             }
 
             double? craftCost = craftCosts.TryGetValue(item.Id, out double cost) ? cost : null;
-            // Profit = dumping into buy orders (after the 15% fee) minus craft cost; only meaningful when the
-            // item is craftable and someone is buying, otherwise blank.
-            double? profit = craftCost is double knownCost && price.Buy is int buy
-                ? (buy * TradingPostNetFactor) - knownCost
+            // Profit (and margin) two ways: dumping into the buy orders for an instant sale, and listing at
+            // the sell price — each nets the 15% trading-post fee, minus craft cost. Only meaningful when the
+            // item is craftable and that side is priced, otherwise blank.
+            double? buyProfit = craftCost is double buyCost && price.Buy is int buy
+                ? (buy * TradingPostNetFactor) - buyCost
                 : null;
-            double? margin = profit is double knownProfit && craftCost is double c and > 0
-                ? knownProfit / c * 100d
+            double? sellProfit = craftCost is double sellCost && price.Sell is int sell
+                ? (sell * TradingPostNetFactor) - sellCost
                 : null;
+            double? buyMargin = buyProfit is double bp && craftCost is double bc and > 0 ? bp / bc * 100d : null;
+            double? sellMargin = sellProfit is double sp && craftCost is double sc and > 0 ? sp / sc * 100d : null;
 
             rows.Add(new ItemRow(
                 item.Id,
@@ -142,8 +145,10 @@ public sealed class ItemsViewModel : ViewModelBase
                 hasPrice ? price.Sell : null,
                 hasPrice ? price.Supply : null,
                 craftCost,
-                profit,
-                margin,
+                buyProfit,
+                buyMargin,
+                sellProfit,
+                sellMargin,
                 craftable
             ));
         }
@@ -311,7 +316,8 @@ public sealed class ItemsViewModel : ViewModelBase
 }
 
 /// <summary>One row of the Items grid: identity plus live market figures and craft economics. Price columns
-/// are null when the item has never been polled; craft columns are null when it isn't craftable.</summary>
+/// are null when the item has never been polled; craft columns are null when it isn't craftable. Profit/margin
+/// come two ways — selling into buy orders, and listing at the sell price.</summary>
 public sealed record ItemRow(
     int ItemId,
     string Name,
@@ -320,8 +326,10 @@ public sealed record ItemRow(
     int? Sell,
     int? Supply,
     double? CraftingCost,
-    double? Profit,
-    double? MarginPercent,
+    double? BuyProfit,
+    double? BuyMargin,
+    double? SellProfit,
+    double? SellMargin,
     bool IsCraftable
 );
 
