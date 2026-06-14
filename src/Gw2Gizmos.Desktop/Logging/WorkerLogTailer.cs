@@ -31,14 +31,12 @@ public sealed class WorkerLogTailer : BackgroundService
     private DateTimeOffset _lastTimestamp = DateTimeOffset.Now;
     private string _lastLevel = "INF";
 
-    public WorkerLogTailer(LogStore store)
+    public WorkerLogTailer(LogStore store, AppPaths paths)
     {
         _store = store;
-        _logsDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Gw2Gizmos",
-            "Logs"
-        );
+        // Derive from the shared per-user data dir (so a dev build's tailer reads the dev worker's logs, not the
+        // release folder); the worker is spawned with this as its working directory and writes Logs/ under it.
+        _logsDir = Path.Combine(paths.DataDirectory, "Logs");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
