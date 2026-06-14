@@ -237,19 +237,19 @@ public class RecipeTreeBuilder
     /// <summary>The best trading-post buy/sell unit prices for an item, or 0 when it isn't listed.</summary>
     private async Task<TradingPostPrices> GetPricesAsync(int itemId, CancellationToken ct)
     {
-        int sellPrice = await _dbContext
-            .SellListings.Where(sl => sl.CommerceItemListingId == itemId)
-            .OrderBy(sl => sl.UnitPrice)
-            .Select(sl => sl.UnitPrice)
+        // Price from the latest price-poll snapshot, not the raw listing tables. One poll captures every
+        // tradeable item at once, so a cold-start tree is fully priced after the first poll (~minutes)
+        // instead of dribbling in as the far larger listings sync completes — and it's the same source the
+        // Items grid and history chart use, so they all agree. An item with no snapshot (not on the trading
+        // post) reads as 0; Buy/Sell can each be null when that side of the book is empty.
+        var latest = await _dbContext
+            .PriceSnapshots.Where(snapshot => snapshot.ItemId == itemId)
+            .OrderByDescending(snapshot => snapshot.Id)
+            .Select(snapshot => new { snapshot.Buy, snapshot.Sell })
             .FirstOrDefaultAsync(ct);
 
-        int buyPrice = await _dbContext
-            .BuyListings.Where(bl => bl.CommerceItemListingId == itemId)
-            .OrderByDescending(bl => bl.UnitPrice)
-            .Select(bl => bl.UnitPrice)
-            .FirstOrDefaultAsync(ct);
-
-        return new TradingPostPrices(sellPrice > 0 ? sellPrice : 0, buyPrice > 0 ? buyPrice : 0);
+        // SellOrderPrice = lowest sell listing (what you pay to buy); BuyOrderPrice = highest buy order.
+        return new TradingPostPrices(latest?.Sell ?? 0, latest?.Buy ?? 0);
     }
 
     private async Task<string> GetItemNameAsync(int itemId, CancellationToken ct)

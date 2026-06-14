@@ -89,8 +89,8 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.7">
-                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable. Prices as of" />
-                    <Run Text="{Binding PricesUpdatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}', Mode=OneWay}" />
+                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable." />
+                    <Run Text="{Binding PricesStatus, Mode=OneWay}" />
                 </TextBlock>
                 <ui:TextBox Grid.Column="1" Width="220" PlaceholderText="search items"
                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
@@ -147,7 +147,7 @@
                                 <RowDefinition Height="70" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Select an item to see its price history."
+                            <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="{Binding HistoryPlaceholder}"
                                        Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="{Binding History.HasData, Converter={StaticResource InverseBool}}" />
 
@@ -169,8 +169,15 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="Craft tree">
-                        <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
-                                  Margin="0,8,0,0">
+                        <Grid>
+                            <!-- Before the first price poll every cost reads 0, so show a note instead of a
+                                 misleading tree of zeros until prices have synced. -->
+                            <TextBlock Text="Prices are still syncing — craft costs will appear shortly."
+                                       Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding PricesSyncing, Converter={StaticResource Bool}}" />
+                            <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
+                                  Margin="0,8,0,0"
+                                  Visibility="{Binding PricesSyncing, Converter={StaticResource InverseBool}}">
                             <TreeView.ItemContainerStyle>
                                 <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                                     <Setter Property="IsExpanded" Value="True" />
@@ -192,7 +199,8 @@
                                     </StackPanel>
                                 </HierarchicalDataTemplate>
                             </TreeView.Resources>
-                        </TreeView>
+                            </TreeView>
+                        </Grid>
                     </TabItem>
             </TabControl>
         </Grid>

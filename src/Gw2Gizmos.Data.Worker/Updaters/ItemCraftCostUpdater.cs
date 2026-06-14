@@ -37,11 +37,14 @@ public class ItemCraftCostUpdater
             return;
         }
 
-        // Keep the cheapest fully-priced tree per output item; an item with no priceable tree is skipped.
+        // Keep the cheapest tree per output item. Untradeable ingredients price to 0 (treated as free), so a
+        // recipe is included as long as its total cost is positive; we don't require every ingredient to be
+        // priced. Before the first price poll all prices are 0, so every cost is 0 and the run is skipped by
+        // the empty-result guard below — meaning a cached cost is only ever built against a populated price set.
         var cheapestByItem = new Dictionary<int, RecipeNode>();
         foreach (RecipeNode tree in trees)
         {
-            if (!tree.CraftCostKnown || tree.CraftingCost <= 0)
+            if (tree.CraftingCost <= 0)
             {
                 continue;
             }

@@ -131,6 +131,17 @@ public sealed class ItemsViewModel : ViewModelBase
     /// <summary>When the latest price poll ran; null when no prices have been recorded yet.</summary>
     public DateTimeOffset? PricesUpdatedAt { get; }
 
+    /// <summary>
+    /// True before the first price poll completes (no <c>PriceSnapshot</c> exists). Until then we can't tell
+    /// an untradeable item from one whose price simply hasn't synced — every item reads as 0 — so the grid's
+    /// price/craft columns and the craft tree are blanked behind a "syncing" note rather than shown as 0.
+    /// </summary>
+    public bool PricesSyncing => PricesUpdatedAt is null;
+
+    /// <summary>Header status: when prices last polled, or a syncing note before the first poll.</summary>
+    public string PricesStatus =>
+        PricesUpdatedAt is { } updated ? $"Prices as of {updated:yyyy-MM-dd HH:mm}." : "Prices syncing…";
+
     /// <summary>Free-text name filter applied to the grid.</summary>
     public string FilterText
     {
@@ -151,10 +162,16 @@ public sealed class ItemsViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedItem, value))
             {
+                OnPropertyChanged(nameof(HistoryPlaceholder));
                 _ = LoadDetailsAsync(value);
             }
         }
     }
+
+    /// <summary>Text for the empty history pane: a prompt when nothing is selected, otherwise a note that the
+    /// selected item has no recorded price history (e.g. an untradeable item never reaches the price poll).</summary>
+    public string HistoryPlaceholder =>
+        _selectedItem is null ? "Select an item to see its price history." : "No price history for this item.";
 
     /// <summary>The selected item's craft tree as a single-root list for the detail <c>TreeView</c>.</summary>
     public IReadOnlyList<RecipeNode> SelectedTree
