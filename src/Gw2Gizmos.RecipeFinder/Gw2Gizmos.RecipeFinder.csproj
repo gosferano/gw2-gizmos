@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.Data.EntityFramework\Gw2Gizmos.Data.EntityFramework.csproj" />
+    <!-- Static fallbacks for data the API lacks: custom recipes (Mystic Forge / daily crafts) and vendor prices. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Static\Gw2Gizmos.Data.Static.csproj" />
   </ItemGroup>
 
   <ItemGroup>

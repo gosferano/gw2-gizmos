@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.Static.Crafting;
 using Gw2Gizmos.RecipeFinder.Model;
 using Microsoft.EntityFrameworkCore;
 
@@ -147,6 +148,16 @@ public class RecipeTreeBuilder
                     _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                 }
             }
+            else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out StaticRecipe? staticRecipe))
+            {
+                // No API recipe, but a hardcoded one (Mystic Forge / daily craft) — price it from its inputs
+                // so an otherwise account-bound intermediate isn't a 0-cost leaf.
+                RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct);
+                currentNode.OutputItemCount = recipeTree.OutputItemCount;
+                currentNode.CraftingCostPerUnit = recipeTree.CraftingCostPerUnit;
+                currentNode.Ingredients = recipeTree.Ingredients;
+                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+            }
             else
             {
                 // Leaf node - no recipe, mark as processed
@@ -234,6 +245,39 @@ public class RecipeTreeBuilder
         return recipeNode;
     }
 
+    /// <summary>
+    /// Builds a subtree for a hardcoded <see cref="StaticRecipe"/> (one the API doesn't expose). Mirrors
+    /// <see cref="BuildRecipeTreeForComparison"/>, but every ingredient is a real item (no currency inputs),
+    /// so each recurses through <see cref="BuildTreeAsync"/> and is priced from the trading post / vendors.
+    /// </summary>
+    private async Task<RecipeNode> BuildStaticRecipeTree(StaticRecipe recipe, int targetCount, CancellationToken ct)
+    {
+        var recipeNode = new RecipeNode
+        {
+            ItemId = recipe.OutputItemId,
+            Count = targetCount,
+            OutputItemCount = recipe.OutputItemCount
+        };
+
+        int craftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+
+        foreach (StaticIngredient ingredient in recipe.Ingredients)
+        {
+            int requiredCount = ingredient.Count * craftsNeeded;
+            if (requiredCount == 0)
+            {
+                requiredCount = 1;
+            }
+
+            recipeNode.Ingredients.Add(await BuildTreeAsync(ingredient.ItemId, ct, requiredCount));
+        }
+
+        recipeNode.CraftingCostPerUnit =
+            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / targetCount;
+
+        return recipeNode;
+    }
+
     /// <summary>The best trading-post buy/sell unit prices for an item, or 0 when it isn't listed.</summary>
     private async Task<TradingPostPrices> GetPricesAsync(int itemId, CancellationToken ct)
     {
@@ -248,8 +292,19 @@ public class RecipeTreeBuilder
             .Select(snapshot => new { snapshot.Buy, snapshot.Sell })
             .FirstOrDefaultAsync(ct);
 
-        // SellOrderPrice = lowest sell listing (what you pay to buy); BuyOrderPrice = highest buy order.
-        return new TradingPostPrices(latest?.Sell ?? 0, latest?.Buy ?? 0);
+        // Acquisition price (SellOrderPrice = lowest sell listing = what you pay): take the cheaper of the
+        // trading post and a coin vendor that sells it. The vendor price both fills in untradeable items the
+        // TP doesn't list and undercuts the TP where a vendor is cheaper. BuyOrderPrice stays TP-only.
+        int tradingPostSell = latest?.Sell ?? 0;
+        int? vendor = VendorItems.CopperPriceFor(itemId);
+        int sellOrderPrice = (tradingPostSell, vendor) switch
+        {
+            ( > 0, int v) => Math.Min(tradingPostSell, v),
+            (0, int v) => v,
+            _ => tradingPostSell
+        };
+
+        return new TradingPostPrices(sellOrderPrice, latest?.Buy ?? 0);
     }
 
     private async Task<string> GetItemNameAsync(int itemId, CancellationToken ct)
