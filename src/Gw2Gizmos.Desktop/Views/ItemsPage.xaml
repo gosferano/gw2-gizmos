@@ -192,6 +192,10 @@
                             <TextBlock Text="Prices are still syncing — craft costs will appear shortly."
                                        Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="{Binding PricesSyncing, Converter={StaticResource Bool}}" />
+                            <!-- Empty state: nothing selected, or the selected item has no recipe. -->
+                            <TextBlock Text="{Binding CraftTreePlaceholder}"
+                                       Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding ShowCraftTreePlaceholder, Converter={StaticResource Bool}}" />
                             <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
                                   Margin="0,8,0,0"
                                   Visibility="{Binding PricesSyncing, Converter={StaticResource InverseBool}}">

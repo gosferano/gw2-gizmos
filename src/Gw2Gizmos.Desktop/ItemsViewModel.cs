@@ -89,6 +89,7 @@ public sealed class ItemsViewModel : ViewModelBase
             OnPropertyChanged(nameof(PricesUpdatedAt));
             OnPropertyChanged(nameof(PricesSyncing));
             OnPropertyChanged(nameof(PricesStatus));
+            OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
         }
         catch (Exception)
         {
@@ -269,6 +270,8 @@ public sealed class ItemsViewModel : ViewModelBase
             if (SetProperty(ref _selectedItem, value))
             {
                 OnPropertyChanged(nameof(HistoryPlaceholder));
+                OnPropertyChanged(nameof(CraftTreePlaceholder));
+                OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
                 _ = LoadDetailsAsync(value);
             }
         }
@@ -279,11 +282,25 @@ public sealed class ItemsViewModel : ViewModelBase
     public string HistoryPlaceholder =>
         _selectedItem is null ? "Select an item to see its price history." : "No price history for this item.";
 
+    /// <summary>Empty-state text for the craft-tree pane: a prompt when nothing is selected, otherwise a note
+    /// that the selected item has no recipe.</summary>
+    public string CraftTreePlaceholder =>
+        _selectedItem is null ? "Select an item to see its craft tree." : "This item has no recipe.";
+
+    /// <summary>Show the craft-tree empty state when there's no tree to draw and we're not mid first-sync.</summary>
+    public bool ShowCraftTreePlaceholder => !PricesSyncing && _selectedTree.Count == 0;
+
     /// <summary>The selected item's craft tree as a single-root list for the detail <c>TreeView</c>.</summary>
     public IReadOnlyList<RecipeNode> SelectedTree
     {
         get => _selectedTree;
-        private set => SetProperty(ref _selectedTree, value);
+        private set
+        {
+            if (SetProperty(ref _selectedTree, value))
+            {
+                OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
+            }
+        }
     }
 
     /// <summary>The selected item's trading-post price/volume history charts.</summary>
