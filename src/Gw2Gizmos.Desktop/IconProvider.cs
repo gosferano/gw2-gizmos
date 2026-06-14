@@ -38,16 +38,50 @@ public sealed class IconProvider
     }
 
     /// <summary>The item's icon, or null when it has none or can't be fetched. Memoized per item id.</summary>
-    public Task<ImageSource?> GetIconAsync(int itemId) => _byItemId.GetOrAdd(itemId, LoadAsync);
+    public Task<ImageSource?> GetIconAsync(int itemId) =>
+        _byItemId.GetOrAdd(itemId, id => LoadCachingAsync(_byItemId, id, LoadAsync));
 
     /// <summary>An icon by its direct URL (e.g. a currency's icon, which isn't keyed by item id). Memoized.</summary>
     public Task<ImageSource?> GetIconByUrlAsync(string url) =>
-        string.IsNullOrEmpty(url) ? Task.FromResult<ImageSource?>(null) : _byUrl.GetOrAdd(url, LoadFromUrlAsync);
+        string.IsNullOrEmpty(url)
+            ? Task.FromResult<ImageSource?>(null)
+            : _byUrl.GetOrAdd(url, key => LoadCachingAsync(_byUrl, key, LoadFromUrlAsync));
+
+    /// <summary>
+    /// Runs a load and keeps its task in <paramref name="cache"/> so concurrent callers share one in-flight
+    /// fetch per key (the same icon is downloaded and written once). A load that yields no image drops its entry,
+    /// so a transient miss — offline, or an icon URL the worker hadn't synced yet — is retried the next time the
+    /// icon is bound rather than cached as "no icon" for the session.
+    /// </summary>
+    private static async Task<ImageSource?> LoadCachingAsync<TKey>(
+        ConcurrentDictionary<TKey, Task<ImageSource?>> cache,
+        TKey key,
+        Func<TKey, Task<ImageSource?>> load
+    )
+        where TKey : notnull
+    {
+        ImageSource? image = await load(key).ConfigureAwait(false);
+        if (image is null)
+        {
+            cache.TryRemove(key, out _);
+        }
+
+        return image;
+    }
 
     private async Task<ImageSource?> LoadAsync(int itemId)
     {
-        string? url = await ResolveUrlAsync(itemId);
-        return string.IsNullOrEmpty(url) ? null : await GetIconByUrlAsync(url);
+        // Never throw: a failed DB read (e.g. the worker mid-write) would fault the caller's async-void handler.
+        // Returning null instead drops the cache entry above, so it retries.
+        try
+        {
+            string? url = await ResolveUrlAsync(itemId);
+            return string.IsNullOrEmpty(url) ? null : await GetIconByUrlAsync(url);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async Task<ImageSource?> LoadFromUrlAsync(string url)
