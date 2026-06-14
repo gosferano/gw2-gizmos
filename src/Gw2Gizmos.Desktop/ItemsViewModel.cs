@@ -33,103 +33,135 @@ public sealed class ItemsViewModel : ViewModelBase
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
+    private ObservableCollection<ItemRow> _items = new();
+    private ICollectionView _view;
 
     public ItemsViewModel(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
+        _view = CollectionViewSource.GetDefaultView(_items);
+        _view.Filter = MatchesFilter;
+        // Load off the UI thread (the first DB touch also pays EF's cold-start cost). The await resumes on
+        // the UI thread, where swapping in the bound collection/properties is safe.
+        _ = LoadAsync();
+    }
 
-        // The worker owns the database (opened read-only here); on a fresh install it may not exist yet.
-        // Treat an absent/locked DB as an empty list rather than crashing the page.
+    /// <summary>Loads the grid asynchronously so navigating to the page never blocks the UI thread.</summary>
+    private async Task LoadAsync()
+    {
         try
         {
-            using IServiceScope scope = scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            (List<ItemRow> rows, DateTimeOffset? updatedAt) = await Task.Run(LoadRows);
 
-            // Live market figures: the most recent price poll per item (best buy/sell + demand/supply).
-            IQueryable<long> latestIds = db.PriceSnapshots
-                .GroupBy(snapshot => snapshot.ItemId)
-                .Select(group => group.Max(snapshot => snapshot.Id));
-            var latest = db.PriceSnapshots.AsNoTracking()
-                .Where(snapshot => latestIds.Contains(snapshot.Id))
-                .Select(snapshot => new
-                {
-                    snapshot.ItemId,
-                    snapshot.Buy,
-                    snapshot.Sell,
-                    snapshot.Demand,
-                    snapshot.Supply,
-                    snapshot.TimestampUtc
-                })
-                .ToList();
-            Dictionary<int, PricePoint> prices = latest.ToDictionary(
-                row => row.ItemId,
-                row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
-            );
+            // Build the collection in one shot (the ObservableCollection constructor copies without per-item
+            // events) and swap in a fresh view, rather than raising thousands of CollectionChanged events.
+            _items = new ObservableCollection<ItemRow>(rows);
+            ICollectionView view = CollectionViewSource.GetDefaultView(_items);
+            view.Filter = MatchesFilter;
+            View = view;
 
-            // Cached craft cost per craftable item (the one expensive precompute).
-            Dictionary<int, double> craftCosts = db.ItemCraftCosts.AsNoTracking()
-                .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
-
-            // Every item any recipe outputs — craftable even if it never reaches the trading post.
-            HashSet<int> craftableIds = db.Recipes.AsNoTracking()
-                .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
-
-            // List every item that's tradeable (has a price) or craftable (or both). Items that are neither
-            // are skipped — both detail panes would be empty, so they'd only be noise.
-            foreach (var item in db.Items.AsNoTracking()
-                         .Select(i => new { i.Id, i.Name })
-                         .OrderBy(i => i.Name))
-            {
-                bool hasPrice = prices.TryGetValue(item.Id, out PricePoint price);
-                bool craftable = craftableIds.Contains(item.Id);
-                if (!hasPrice && !craftable)
-                {
-                    continue;
-                }
-
-                double? craftCost = craftCosts.TryGetValue(item.Id, out double cost) ? cost : null;
-                // Profit = dumping into buy orders (after the 15% fee) minus craft cost; only meaningful when
-                // the item is craftable and someone is buying, otherwise blank.
-                double? profit = craftCost is double knownCost && price.Buy is int buy
-                    ? (buy * TradingPostNetFactor) - knownCost
-                    : null;
-                double? margin = profit is double knownProfit && craftCost is double c and > 0
-                    ? knownProfit / c * 100d
-                    : null;
-
-                Items.Add(new ItemRow(
-                    item.Id,
-                    item.Name,
-                    hasPrice ? price.Buy : null,
-                    hasPrice ? price.Demand : null,
-                    hasPrice ? price.Sell : null,
-                    hasPrice ? price.Supply : null,
-                    craftCost,
-                    profit,
-                    margin,
-                    craftable
-                ));
-            }
-
-            // Show the latest poll's time so users can see how fresh the grid's prices are.
-            PricesUpdatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
+            PricesUpdatedAt = updatedAt;
+            OnPropertyChanged(nameof(PricesUpdatedAt));
+            OnPropertyChanged(nameof(PricesSyncing));
+            OnPropertyChanged(nameof(PricesStatus));
         }
         catch (Exception)
         {
-            // Nothing synced yet — the grid renders empty until the worker produces items.
+            // Nothing synced yet / read failed — the grid stays empty.
         }
-
-        View = CollectionViewSource.GetDefaultView(Items);
-        View.Filter = MatchesFilter;
     }
 
-    public ObservableCollection<ItemRow> Items { get; } = new();
+    /// <summary>
+    /// The heavy read, run on a background thread. The worker owns the database (opened read-only here); on a
+    /// fresh install it may not exist yet, in which case the query throws and <see cref="LoadAsync"/> leaves
+    /// the grid empty.
+    /// </summary>
+    private (List<ItemRow> Rows, DateTimeOffset? UpdatedAt) LoadRows()
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-    /// <summary>The grid binds here so sorting and the text filter apply without disturbing <see cref="Items"/>.</summary>
-    public ICollectionView View { get; }
+        // Live market figures: the most recent price poll per item (best buy/sell + demand/supply).
+        IQueryable<long> latestIds = db.PriceSnapshots
+            .GroupBy(snapshot => snapshot.ItemId)
+            .Select(group => group.Max(snapshot => snapshot.Id));
+        var latest = db.PriceSnapshots.AsNoTracking()
+            .Where(snapshot => latestIds.Contains(snapshot.Id))
+            .Select(snapshot => new
+            {
+                snapshot.ItemId,
+                snapshot.Buy,
+                snapshot.Sell,
+                snapshot.Demand,
+                snapshot.Supply,
+                snapshot.TimestampUtc
+            })
+            .ToList();
+        Dictionary<int, PricePoint> prices = latest.ToDictionary(
+            row => row.ItemId,
+            row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
+        );
+
+        // Cached craft cost per craftable item (the one expensive precompute).
+        Dictionary<int, double> craftCosts = db.ItemCraftCosts.AsNoTracking()
+            .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
+
+        // Every item any recipe outputs — craftable even if it never reaches the trading post.
+        HashSet<int> craftableIds = db.Recipes.AsNoTracking()
+            .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
+
+        // List every item that's tradeable (has a price) or craftable (or both). Items that are neither are
+        // skipped — both detail panes would be empty, so they'd only be noise.
+        var rows = new List<ItemRow>();
+        foreach (var item in db.Items.AsNoTracking()
+                     .Select(i => new { i.Id, i.Name })
+                     .OrderBy(i => i.Name))
+        {
+            bool hasPrice = prices.TryGetValue(item.Id, out PricePoint price);
+            bool craftable = craftableIds.Contains(item.Id);
+            if (!hasPrice && !craftable)
+            {
+                continue;
+            }
+
+            double? craftCost = craftCosts.TryGetValue(item.Id, out double cost) ? cost : null;
+            // Profit = dumping into buy orders (after the 15% fee) minus craft cost; only meaningful when the
+            // item is craftable and someone is buying, otherwise blank.
+            double? profit = craftCost is double knownCost && price.Buy is int buy
+                ? (buy * TradingPostNetFactor) - knownCost
+                : null;
+            double? margin = profit is double knownProfit && craftCost is double c and > 0
+                ? knownProfit / c * 100d
+                : null;
+
+            rows.Add(new ItemRow(
+                item.Id,
+                item.Name,
+                hasPrice ? price.Buy : null,
+                hasPrice ? price.Demand : null,
+                hasPrice ? price.Sell : null,
+                hasPrice ? price.Supply : null,
+                craftCost,
+                profit,
+                margin,
+                craftable
+            ));
+        }
+
+        // Show the latest poll's time so users can see how fresh the grid's prices are.
+        DateTimeOffset? updatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
+        return (rows, updatedAt);
+    }
+
+    /// <summary>The grid binds here so sorting and the text filter apply over the latest loaded rows.</summary>
+    public ICollectionView View
+    {
+        get => _view;
+        private set => SetProperty(ref _view, value);
+    }
 
     /// <summary>When the latest price poll ran; null when no prices have been recorded yet.</summary>
-    public DateTimeOffset? PricesUpdatedAt { get; }
+    public DateTimeOffset? PricesUpdatedAt { get; private set; }
 
     /// <summary>
     /// True before the first price poll completes (no <c>PriceSnapshot</c> exists). Until then we can't tell

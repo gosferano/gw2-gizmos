@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -9,25 +10,44 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public sealed class AccountViewModel : ViewModelBase
 {
-    public AccountViewModel(AccountReader reader)
+    private bool _hasData;
+    private string _accountName = "";
+    private string _summary = "";
+
+    public AccountViewModel(AccountReader reader) => _ = LoadAsync(reader);
+
+    /// <summary>True once an account has been synced; the page shows a "waiting for sync" note otherwise.</summary>
+    public bool HasData
     {
-        AccountInfo? account = reader.GetCurrentAccount();
+        get => _hasData;
+        private set => SetProperty(ref _hasData, value);
+    }
+
+    public string AccountName
+    {
+        get => _accountName;
+        private set => SetProperty(ref _accountName, value);
+    }
+
+    public string Summary
+    {
+        get => _summary;
+        private set => SetProperty(ref _summary, value);
+    }
+
+    private async Task LoadAsync(AccountReader reader)
+    {
+        // Off the UI thread so navigation doesn't block (the first DB touch pays EF's cold-start cost too).
+        AccountInfo? account = await Task.Run(reader.GetCurrentAccount);
         if (account is null)
         {
             return;
         }
 
-        HasData = true;
         AccountName = account.Name;
         Summary = $"World {account.World} · synced {account.LastSyncedUtc.LocalDateTime:g}";
+        HasData = true; // set last so the page flips to the loaded view in a single step
     }
-
-    /// <summary>True once an account has been synced; the page shows a "waiting for sync" note otherwise.</summary>
-    public bool HasData { get; }
-
-    public string AccountName { get; } = "";
-
-    public string Summary { get; } = "";
 }
 
 /// <summary>A wallet currency and its current amount, with its icon URL for display.</summary>
