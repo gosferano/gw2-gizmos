@@ -48,6 +48,17 @@ public partial class App : Application
     private Mutex? _singleInstanceMutex;
     private bool _isExiting;
 
+    // A development build (Debug) keeps its own per-user data folder and single-instance guard so it can run
+    // side by side with the installed release — without sharing its database or tripping its single-instance
+    // mutex. Release builds use the shared names so the installer and auto-update see one app.
+#if DEBUG
+    private const string AppDataFolderName = "Gw2Gizmos.Dev";
+    private const string SingleInstanceMutexName = @"Local\Gw2Gizmos.Dev.SingleInstance";
+#else
+    private const string AppDataFolderName = "Gw2Gizmos";
+    private const string SingleInstanceMutexName = @"Local\Gw2Gizmos.SingleInstance";
+#endif
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         // Velopack's hooks run in Program.Main (before WPF starts); here we just begin a normal launch.
@@ -55,7 +66,7 @@ public partial class App : Application
 
         // One instance per user: a second launch (Start-menu + tray, or a Velopack post-update relaunch
         // racing the old process) would spawn a duplicate worker and double every toast. Bail if held.
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, @"Local\Gw2Gizmos.SingleInstance", out bool isPrimary);
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out bool isPrimary);
         if (!isPrimary)
         {
             Shutdown(0);
@@ -82,7 +93,7 @@ public partial class App : Application
 
         string dataDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Gw2Gizmos"
+            AppDataFolderName
         );
         Directory.CreateDirectory(dataDir);
         string dbPath = Path.Combine(dataDir, "gw2gizmos.sqlite");
