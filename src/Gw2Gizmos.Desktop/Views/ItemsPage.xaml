@@ -20,12 +20,11 @@
                  unselected = dimmer, with a hover step. -->
             <Style x:Key="CardTabItem" TargetType="TabItem">
                 <Setter Property="Margin" Value="0,0,4,0" />
-                <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="ClipToBounds" Value="False" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="TabItem">
-                            <Border x:Name="Tab" CornerRadius="4,4,0,0" Padding="16,7"
+                            <Border x:Name="Tab" CornerRadius="4,4,0,0" Padding="16,7" Cursor="Hand"
                                     SnapsToDevicePixels="True" UseLayoutRounding="True"
                                     Background="{DynamicResource ControlFillColorTertiaryBrush}">
                                 <ContentPresenter x:Name="Label" ContentSource="Header" VerticalAlignment="Center"
@@ -193,6 +192,10 @@
                             <TextBlock Text="Prices are still syncing — craft costs will appear shortly."
                                        Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="{Binding PricesSyncing, Converter={StaticResource Bool}}" />
+                            <!-- Empty state: nothing selected, or the selected item has no recipe. -->
+                            <TextBlock Text="{Binding CraftTreePlaceholder}"
+                                       Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding ShowCraftTreePlaceholder, Converter={StaticResource Bool}}" />
                             <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
                                   Margin="0,8,0,0"
                                   Visibility="{Binding PricesSyncing, Converter={StaticResource InverseBool}}">
