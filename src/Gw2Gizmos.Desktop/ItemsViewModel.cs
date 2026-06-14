@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Threading;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
@@ -34,8 +36,10 @@ public sealed class ItemsViewModel : ViewModelBase
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
+    private bool _isRefreshing;
     private ObservableCollection<ItemRow> _items = new();
     private ICollectionView _view;
+    private readonly DispatcherTimer _filterDebounce;
 
     public ItemsViewModel(IServiceScopeFactory scopeFactory, FeatureSettingsStore features)
     {
@@ -44,14 +48,32 @@ public sealed class ItemsViewModel : ViewModelBase
         PricesEnabled = features.IsEnabled(WorkerFeatures.PricesSync.Key);
         _view = CollectionViewSource.GetDefaultView(_items);
         _view.Filter = MatchesFilter;
+        // Re-filtering the (large) grid on every keystroke blocks the UI thread, so each typed character lags.
+        // Debounce instead: keystrokes restart the timer and the filter applies once typing pauses.
+        _filterDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _filterDebounce.Tick += (_, _) =>
+        {
+            _filterDebounce.Stop();
+            View.Refresh();
+        };
+        // Re-reads the grid from the worker-owned DB (picking up newer prices). The text filter is a view filter
+        // keyed off _filterText, untouched by a reload, so the current search stays applied to the fresh rows.
+        RefreshCommand = new RelayCommand(() => _ = LoadAsync(), () => !IsRefreshing);
         // Load off the UI thread (the first DB touch also pays EF's cold-start cost). The await resumes on
         // the UI thread, where swapping in the bound collection/properties is safe.
         _ = LoadAsync();
     }
 
-    /// <summary>Loads the grid asynchronously so navigating to the page never blocks the UI thread.</summary>
+    /// <summary>Loads the grid asynchronously so navigating to the page never blocks the UI thread. Also the
+    /// Refresh handler — guarded so an in-flight load isn't stacked by an impatient second click.</summary>
     private async Task LoadAsync()
     {
+        if (IsRefreshing)
+        {
+            return;
+        }
+
+        IsRefreshing = true;
         try
         {
             (List<ItemRow> rows, DateTimeOffset? updatedAt) = await Task.Run(LoadRows);
@@ -71,6 +93,10 @@ public sealed class ItemsViewModel : ViewModelBase
         catch (Exception)
         {
             // Nothing synced yet / read failed — the grid stays empty.
+        }
+        finally
+        {
+            IsRefreshing = false;
         }
     }
 
@@ -182,6 +208,23 @@ public sealed class ItemsViewModel : ViewModelBase
         private set => SetProperty(ref _view, value);
     }
 
+    /// <summary>Reloads the grid from the database, keeping the current search filter applied.</summary>
+    public RelayCommand RefreshCommand { get; }
+
+    /// <summary>True while a (re)load is in flight; disables the Refresh button so loads can't stack.</summary>
+    public bool IsRefreshing
+    {
+        get => _isRefreshing;
+        private set
+        {
+            if (SetProperty(ref _isRefreshing, value))
+            {
+                // Re-evaluate RefreshCommand.CanExecute now that the in-flight state changed.
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
     /// <summary>When the latest price poll ran; null when no prices have been recorded yet.</summary>
     public DateTimeOffset? PricesUpdatedAt { get; private set; }
 
@@ -211,7 +254,9 @@ public sealed class ItemsViewModel : ViewModelBase
         {
             if (SetProperty(ref _filterText, value))
             {
-                View.Refresh();
+                // Restart the debounce; the filter runs on the next pause, not on this keystroke.
+                _filterDebounce.Stop();
+                _filterDebounce.Start();
             }
         }
     }
