@@ -60,7 +60,13 @@
        the net10.0\**\* glob recurse into the worker's RID-nested output and re-nest it under win-x64\. -->
   <Target Name="CopyWorkerCli" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
     <ItemGroup>
-      <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*" />
+      <!-- Exclude the worker's appsettings*.json: it configures STANDALONE runs only (feature defaults +
+           an optional connection string). Bundling it into the app's output is harmful: both the spawned
+           worker AND the desktop's own host read appsettings from here, so its relative connection string
+           ("Data Source=Data/...") hijacks the absolute DB path they should get from args — sending the
+           worker's writes and the desktop's reads to different files. -->
+      <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*"
+                       Exclude="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\appsettings*.json" />
       <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
       <!-- The worker's loader metadata (deps.json / runtimeconfig.json) AND its own Gw2Gizmos.* assemblies
            must always be refreshed, not just copied when absent: when the worker changes (new code, or a new
@@ -70,7 +76,10 @@
            avoids needless writes. -->
       <_WorkerCliRefresh Include="@(_WorkerCliFiles)"
                          Condition="'%(Extension)' == '.json' or $([System.String]::Copy('%(Filename)').StartsWith('Gw2Gizmos.'))" />
+      <!-- Drop any appsettings.json a prior build copied into the app output, so it can't pollute config. -->
+      <_StaleWorkerAppsettings Include="$(OutDir)appsettings*.json" />
     </ItemGroup>
+    <Delete Files="@(_StaleWorkerAppsettings)" />
     <Copy SourceFiles="@(_WorkerCliNew)" DestinationFiles="@(_WorkerCliNew->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_WorkerCliRefresh)" DestinationFiles="@(_WorkerCliRefresh->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
@@ -89,7 +98,8 @@
              Targets="Publish"
              Properties="Configuration=$(Configuration);PublishDir=$(_WorkerStage);SelfContained=$(SelfContained);RuntimeIdentifier=$(RuntimeIdentifier)" />
     <ItemGroup>
-      <_WorkerPublished Include="$(_WorkerStage)**\*" />
+      <!-- Same exclusion as CopyWorkerCli: the worker's appsettings*.json is standalone-only, never in the app. -->
+      <_WorkerPublished Include="$(_WorkerStage)**\*" Exclude="$(_WorkerStage)appsettings*.json" />
       <_WorkerPublishedNew Include="@(_WorkerPublished)" Condition="!Exists('$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Copy SourceFiles="@(_WorkerPublishedNew)" DestinationFiles="@(_WorkerPublishedNew->'$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
