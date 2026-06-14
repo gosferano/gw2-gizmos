@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace Gw2Gizmos.Desktop;
 
-public partial class MarketPage : Page
+public partial class ItemsPage : Page
 {
-    public MarketPage(MarketViewModel viewModel)
+    public ItemsPage(ItemsViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;

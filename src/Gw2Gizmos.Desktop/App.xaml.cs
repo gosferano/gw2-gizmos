@@ -308,8 +308,8 @@ public partial class App : Application
         builder.Services.AddSingleton<EventsViewModel>();
         builder.Services.AddSingleton<LogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
-        // Transient so the grid re-reads the worker's latest market snapshot on every navigation.
-        builder.Services.AddTransient<MarketViewModel>();
+        // Transient so the grid re-reads the worker's latest item/market data on every navigation.
+        builder.Services.AddTransient<ItemsViewModel>();
         // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
         builder.Services.AddSingleton<AccountReader>();
         builder.Services.AddTransient<AccountViewModel>();
@@ -321,7 +321,7 @@ public partial class App : Application
         builder.Services.AddTransient<NotificationsPage>();
         // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
         builder.Services.AddSingleton<EventsPage>();
-        builder.Services.AddTransient<MarketPage>();
+        builder.Services.AddTransient<ItemsPage>();
         builder.Services.AddTransient<AccountPage>();
         builder.Services.AddTransient<WalletPage>();
         builder.Services.AddTransient<MaterialStoragePage>();

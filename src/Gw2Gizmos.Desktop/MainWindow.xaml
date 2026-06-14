@@ -39,9 +39,9 @@
                         <ui:SymbolIcon Symbol="Clock24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Market" TargetPageType="{x:Type local:MarketPage}">
+                <ui:NavigationViewItem Content="Items" TargetPageType="{x:Type local:ItemsPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Scales24" />
+                        <ui:SymbolIcon Symbol="BoxMultiple24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="Account" TargetPageType="{x:Type local:AccountPage}">

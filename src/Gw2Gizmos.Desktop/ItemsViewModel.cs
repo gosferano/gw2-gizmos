@@ -17,43 +17,70 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Backs the Market grid: loads the worker's precomputed <see cref="MarketItem"/> snapshot (every
-/// tradeable item with its best buy/sell prices, demand/supply, and craft cost/profit where craftable),
-/// exposes a name-filterable view, and rebuilds the selected item's craft tree on demand. The tree is
-/// never stored — it's recomputed for the one row in focus, which is cheap because the engine memoizes.
-/// Sort by the Profit or Margin column to get the "what's profitable to craft" view.
+/// Backs the Items grid: lists every tradeable or craftable item, overlaying the worker's precomputed
+/// <see cref="MarketItem"/> snapshot (best buy/sell prices, demand/supply, and craft cost/profit) on the
+/// tradeable ones. A craftable-but-non-tradeable item still appears — with blank market columns — and its
+/// craft tree is rebuilt on demand like any other. Items that are neither are omitted (nothing to show).
+/// Exposes a name-filterable view; sort by the Profit or Margin column for the "what's profitable to craft" view.
+/// The tree is never stored — it's recomputed for the one row in focus, which is cheap because the engine memoizes.
 /// </summary>
-public sealed class MarketViewModel : ViewModelBase
+public sealed class ItemsViewModel : ViewModelBase
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private MarketItem? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
 
-    public MarketViewModel(IServiceScopeFactory scopeFactory)
+    public ItemsViewModel(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
 
         // The worker owns the database (opened read-only here); on a fresh install it may not exist yet.
-        // Treat an absent/locked DB as an empty snapshot rather than crashing the page.
+        // Treat an absent/locked DB as an empty list rather than crashing the page.
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-            foreach (MarketItem item in dbContext.MarketItems.AsNoTracking().OrderBy(item => item.Name))
+
+            // The market snapshot covers only tradeable items: best buy/sell plus computed craft cost/profit.
+            Dictionary<int, MarketItem> market = dbContext.MarketItems.AsNoTracking().ToDictionary(m => m.ItemId);
+
+            // Every item any recipe outputs — craftable even if it never reaches the trading post.
+            HashSet<int> craftableIds = dbContext.Recipes.AsNoTracking()
+                .Select(r => r.OutputItemId).Distinct().ToHashSet();
+
+            // List every item that's tradeable or craftable (or both). A tradeable item carries its market
+            // snapshot; a craftable-but-non-tradeable item still gets a row so its craft tree is reachable.
+            // Items that are neither are skipped — both detail panes would be empty, so they'd only be noise.
+            foreach (var item in dbContext.Items.AsNoTracking()
+                         .Select(i => new { i.Id, i.Name })
+                         .OrderBy(i => i.Name))
             {
-                Items.Add(item);
+                if (market.TryGetValue(item.Id, out MarketItem? snapshot))
+                {
+                    Items.Add(snapshot);
+                }
+                else if (craftableIds.Contains(item.Id))
+                {
+                    Items.Add(new MarketItem
+                    {
+                        ItemId = item.Id,
+                        Name = item.Name,
+                        IsCraftable = true,
+                    });
+                }
             }
+
+            // All snapshot rows share one batch timestamp, so any of them dates the market data.
+            ComputedAt = market.Count > 0 ? market.Values.First().ComputedAtUtc.LocalDateTime : null;
         }
         catch (Exception)
         {
-            // No snapshot yet — the grid renders empty until the worker produces one.
+            // Nothing synced yet — the grid renders empty until the worker produces items.
         }
 
         View = CollectionViewSource.GetDefaultView(Items);
         View.Filter = MatchesFilter;
-
-        ComputedAt = Items.Count > 0 ? Items[0].ComputedAtUtc.LocalDateTime : null;
     }
 
     public ObservableCollection<MarketItem> Items { get; } = new();

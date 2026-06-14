@@ -1,4 +1,4 @@
-<Page x:Class="Gw2Gizmos.Desktop.MarketPage"
+<Page x:Class="Gw2Gizmos.Desktop.ItemsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -8,8 +8,8 @@
       xmlns:model="clr-namespace:Gw2Gizmos.RecipeFinder.Model;assembly=Gw2Gizmos.RecipeFinder"
       TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       ScrollViewer.CanContentScroll="False"
-      Title="Market">
-    <c:PageShell Title="Market" Scrollable="False">
+      Title="Items">
+    <c:PageShell Title="Items" Scrollable="False">
         <c:PageShell.Resources>
             <conv:CoinConverter x:Key="Coin" />
             <conv:BoolToVisibilityConverter x:Key="Bool" />
@@ -89,7 +89,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.7">
-                    <Run Text="Every tradeable item, with craft cost and profit where craftable. Updated" />
+                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable. Market updated" />
                     <Run Text="{Binding ComputedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}', Mode=OneWay}" />
                 </TextBlock>
                 <ui:TextBox Grid.Column="1" Width="220" PlaceholderText="search items"
