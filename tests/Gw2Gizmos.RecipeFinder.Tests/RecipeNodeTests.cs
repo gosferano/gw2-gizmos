@@ -106,6 +106,17 @@ public class RecipeNodeTests
     }
 
     [Fact]
+    public void EffectiveCost_KeepsThePricedParts_WhenAnUntradeableIngredientHasNoCost()
+    {
+        // An untradeable craftable (no buy order) with one priced ingredient and one untradeable leaf: the
+        // roll-up counts the untradeable part as 0 and keeps the priced part, instead of collapsing to 0.
+        RecipeNode root = Craftable(buy: 0, count: 1, Leaf(buy: 10), Leaf(buy: 0));
+
+        Assert.Equal(10m, root.EffectiveCost); // 10 (priced) + 0 (untradeable)
+        Assert.Null(root.EffectiveCostOrNull); // still "not fully known" — that signal is unchanged
+    }
+
+    [Fact]
     public void EffectiveCost_RollsUpThroughNestedCraftables()
     {
         // sub = craft(leaf 5 + leaf 5) = 10, no buy → effective 10

@@ -67,8 +67,50 @@ public class RecipeNode
         }
     }
 
-    /// <summary>Cheapest known acquisition cost, or 0 when unknown — used for cost roll-up in the builder.</summary>
-    public decimal EffectiveCost => EffectiveCostOrNull ?? 0m;
+    /// <summary>
+    /// The cost used to roll a node up into its parent. Unlike <see cref="EffectiveCostOrNull"/> (which is
+    /// all-or-nothing — a single unpriced ingredient makes the whole craft unknown), this treats untradeable
+    /// or unpriced parts as 0 and <em>sums the rest</em>, so a recipe with one account-bound input still
+    /// contributes its tradeable parts instead of collapsing to 0. A fully-priced node still takes the cheaper
+    /// of crafting vs. buying; a partially-priced node prefers a real buy order (a true upper bound) and falls
+    /// back to the partial craft only when the item can't be bought at all (untradeable).
+    /// </summary>
+    public decimal EffectiveCost
+    {
+        get
+        {
+            decimal? buy = BuyPricePerUnit > 0 ? BuyPrice : null;
+            if (!IsCraftable)
+            {
+                return buy ?? 0m;
+            }
+
+            decimal craftSum = 0m;
+            var craftFullyKnown = true;
+            foreach (RecipeNode child in Ingredients)
+            {
+                if (child.IsCurrency)
+                {
+                    continue;
+                }
+
+                craftSum += child.EffectiveCost; // untradeable/unpriced children contribute 0
+                if (child.EffectiveCostOrNull is null)
+                {
+                    craftFullyKnown = false;
+                }
+            }
+
+            if (craftFullyKnown)
+            {
+                return buy is { } known ? Math.Min(known, craftSum) : craftSum;
+            }
+
+            // Partially priced: the craft sum is only a lower bound, so prefer a known buy order; fall back to
+            // the partial craft only when the item is untradeable (no buy order to defer to).
+            return buy ?? craftSum;
+        }
+    }
 
     /// <summary>
     /// True when this node can be crafted and every ingredient on its cheapest path has a known cost. The
