@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
@@ -38,6 +39,7 @@ public sealed class ItemsViewModel : ViewModelBase
     private bool _isRefreshing;
     private ObservableCollection<ItemRow> _items = new();
     private ICollectionView _view;
+    private readonly DispatcherTimer _filterDebounce;
 
     public ItemsViewModel(IServiceScopeFactory scopeFactory, FeatureSettingsStore features)
     {
@@ -46,6 +48,14 @@ public sealed class ItemsViewModel : ViewModelBase
         PricesEnabled = features.IsEnabled(WorkerFeatures.PricesSync.Key);
         _view = CollectionViewSource.GetDefaultView(_items);
         _view.Filter = MatchesFilter;
+        // Re-filtering the (large) grid on every keystroke blocks the UI thread, so each typed character lags.
+        // Debounce instead: keystrokes restart the timer and the filter applies once typing pauses.
+        _filterDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _filterDebounce.Tick += (_, _) =>
+        {
+            _filterDebounce.Stop();
+            View.Refresh();
+        };
         // Re-reads the grid from the worker-owned DB (picking up newer prices). The text filter is a view filter
         // keyed off _filterText, untouched by a reload, so the current search stays applied to the fresh rows.
         RefreshCommand = new RelayCommand(() => _ = LoadAsync(), () => !IsRefreshing);
@@ -244,7 +254,9 @@ public sealed class ItemsViewModel : ViewModelBase
         {
             if (SetProperty(ref _filterText, value))
             {
-                View.Refresh();
+                // Restart the debounce; the filter runs on the next pause, not on this keystroke.
+                _filterDebounce.Stop();
+                _filterDebounce.Start();
             }
         }
     }
