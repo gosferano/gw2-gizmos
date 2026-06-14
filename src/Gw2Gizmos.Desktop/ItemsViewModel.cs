@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
@@ -36,9 +37,11 @@ public sealed class ItemsViewModel : ViewModelBase
     private ObservableCollection<ItemRow> _items = new();
     private ICollectionView _view;
 
-    public ItemsViewModel(IServiceScopeFactory scopeFactory)
+    public ItemsViewModel(IServiceScopeFactory scopeFactory, FeatureSettingsStore features)
     {
         _scopeFactory = scopeFactory;
+        // Read once — the VM is transient, so this reflects the toggle's state at navigation time.
+        PricesEnabled = features.IsEnabled(WorkerFeatures.PricesSync.Key);
         _view = CollectionViewSource.GetDefaultView(_items);
         _view.Filter = MatchesFilter;
         // Load off the UI thread (the first DB touch also pays EF's cold-start cost). The await resumes on
@@ -81,49 +84,65 @@ public sealed class ItemsViewModel : ViewModelBase
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-        // Live market figures: the most recent price poll per item (best buy/sell + demand/supply).
-        IQueryable<long> latestIds = db.PriceSnapshots
-            .GroupBy(snapshot => snapshot.ItemId)
-            .Select(group => group.Max(snapshot => snapshot.Id));
-        var latest = db.PriceSnapshots.AsNoTracking()
-            .Where(snapshot => latestIds.Contains(snapshot.Id))
-            .Select(snapshot => new
-            {
-                snapshot.ItemId,
-                snapshot.Buy,
-                snapshot.Sell,
-                snapshot.Demand,
-                snapshot.Supply,
-                snapshot.TimestampUtc
-            })
-            .ToList();
-        Dictionary<int, PricePoint> prices = latest.ToDictionary(
-            row => row.ItemId,
-            row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
-        );
+        // Live market figures: the most recent price poll per item (best buy/sell + demand/supply). Skipped
+        // entirely when price history is off, so stale snapshots from an earlier run don't read as current.
+        Dictionary<int, PricePoint> prices = new();
+        DateTimeOffset? updatedAt = null;
+        if (PricesEnabled)
+        {
+            IQueryable<long> latestIds = db.PriceSnapshots
+                .GroupBy(snapshot => snapshot.ItemId)
+                .Select(group => group.Max(snapshot => snapshot.Id));
+            var latest = db.PriceSnapshots.AsNoTracking()
+                .Where(snapshot => latestIds.Contains(snapshot.Id))
+                .Select(snapshot => new
+                {
+                    snapshot.ItemId,
+                    snapshot.Buy,
+                    snapshot.Sell,
+                    snapshot.Demand,
+                    snapshot.Supply,
+                    snapshot.TimestampUtc
+                })
+                .ToList();
+            prices = latest.ToDictionary(
+                row => row.ItemId,
+                row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
+            );
+            // Show the latest poll's time so users can see how fresh the grid's prices are.
+            updatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
+        }
 
-        // Cached craft cost per craftable item (the one expensive precompute).
-        Dictionary<int, double> craftCosts = db.ItemCraftCosts.AsNoTracking()
-            .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
+        // Cached craft cost per craftable item (the one expensive precompute). Ignored when price history is off
+        // — without ingredient prices the cache fills with zeros, which would read as a misleading "0c".
+        Dictionary<int, double> craftCosts = PricesEnabled
+            ? db.ItemCraftCosts.AsNoTracking().ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost)
+            : new Dictionary<int, double>();
 
         // Every item any recipe outputs — craftable even if it never reaches the trading post.
         HashSet<int> craftableIds = db.Recipes.AsNoTracking()
             .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
 
-        // List every item that's tradeable (has a price) or craftable (or both). Items that are neither are
-        // skipped — both detail panes would be empty, so they'd only be noise.
+        // Every item with a trading-post listing — "tradeable" independent of whether prices are being recorded,
+        // so tradeable items still appear (with blank price columns) when price history is off.
+        HashSet<int> tradeableIds = db.CommerceItemListings.AsNoTracking()
+            .Select(listing => listing.ItemId).ToHashSet();
+
+        // List every item that's tradeable or craftable (or both). Items that are neither are skipped — both
+        // detail panes would be empty, so they'd only be noise.
         var rows = new List<ItemRow>();
         foreach (var item in db.Items.AsNoTracking()
                      .Select(i => new { i.Id, i.Name })
                      .OrderBy(i => i.Name))
         {
-            bool hasPrice = prices.TryGetValue(item.Id, out PricePoint price);
+            bool tradeable = tradeableIds.Contains(item.Id);
             bool craftable = craftableIds.Contains(item.Id);
-            if (!hasPrice && !craftable)
+            if (!tradeable && !craftable)
             {
                 continue;
             }
 
+            bool hasPrice = prices.TryGetValue(item.Id, out PricePoint price);
             double? craftCost = craftCosts.TryGetValue(item.Id, out double cost) ? cost : null;
             // Profit (and margin) two ways: dumping into the buy orders for an instant sale, and listing at
             // the sell price — each nets the 15% trading-post fee, minus craft cost. Only meaningful when the
@@ -153,8 +172,6 @@ public sealed class ItemsViewModel : ViewModelBase
             ));
         }
 
-        // Show the latest poll's time so users can see how fresh the grid's prices are.
-        DateTimeOffset? updatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
         return (rows, updatedAt);
     }
 
@@ -168,16 +185,23 @@ public sealed class ItemsViewModel : ViewModelBase
     /// <summary>When the latest price poll ran; null when no prices have been recorded yet.</summary>
     public DateTimeOffset? PricesUpdatedAt { get; private set; }
 
-    /// <summary>
-    /// True before the first price poll completes (no <c>PriceSnapshot</c> exists). Until then we can't tell
-    /// an untradeable item from one whose price simply hasn't synced — every item reads as 0 — so the grid's
-    /// price/craft columns and the craft tree are blanked behind a "syncing" note rather than shown as 0.
-    /// </summary>
-    public bool PricesSyncing => PricesUpdatedAt is null;
+    /// <summary>Whether the Price history feature is on. When off, the price/craft columns and the craft tree's
+    /// craft-vs-buy economics are simply absent (not "syncing"), and the header says so.</summary>
+    public bool PricesEnabled { get; }
 
-    /// <summary>Header status: when prices last polled, or a syncing note before the first poll.</summary>
+    /// <summary>
+    /// True only during a genuine cold start: price history is enabled but the first <c>PriceSnapshot</c> hasn't
+    /// landed yet, so every item still reads as 0 — the craft tree is blanked behind a "syncing" note until then.
+    /// When price history is <em>off</em> this is false: the page shows its structure with prices absent rather
+    /// than a perpetual syncing note.
+    /// </summary>
+    public bool PricesSyncing => PricesEnabled && PricesUpdatedAt is null;
+
+    /// <summary>Header status: price history off, the first-poll syncing note, or when prices last polled.</summary>
     public string PricesStatus =>
-        PricesUpdatedAt is { } updated ? $"Prices as of {updated:yyyy-MM-dd HH:mm}." : "Prices syncing…";
+        !PricesEnabled ? "Price history is off — enable it in Settings to see prices and craft costs."
+        : PricesUpdatedAt is { } updated ? $"Prices as of {updated:yyyy-MM-dd HH:mm}."
+        : "Prices syncing…";
 
     /// <summary>Free-text name filter applied to the grid.</summary>
     public string FilterText
