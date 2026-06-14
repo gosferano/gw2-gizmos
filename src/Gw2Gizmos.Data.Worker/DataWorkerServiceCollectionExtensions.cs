@@ -72,6 +72,9 @@ public static class DataWorkerServiceCollectionExtensions
         // Likewise the feature gate: the standalone worker reads Worker:Features:* from config, while a
         // desktop-launched worker registers an IPC-backed gate (and the desktop a settings-backed one) first.
         services.TryAddSingleton<IFeatureGate, ConfigurationFeatureGate>();
+        // And the interval gate: standalone reads Worker:Intervals:* from config; the desktop pushes intervals
+        // over the pipe (the IPC provider, registered first, satisfies all three gates).
+        services.TryAddSingleton<IIntervalGate, ConfigurationIntervalGate>();
 
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();

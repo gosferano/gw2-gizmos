@@ -35,6 +35,18 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- Advanced: per-sync intervals, behind a chevron card (with a "not recommended" warning inside). -->
+            <ui:CardAction Click="OnOpenAdvanced" Margin="0,14,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Options24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Advanced" FontWeight="Medium" FontSize="14" />
+                        <TextBlock Text="Sync intervals" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:CardAction>
         </StackPanel>
     </c:PageShell>
 </Page>

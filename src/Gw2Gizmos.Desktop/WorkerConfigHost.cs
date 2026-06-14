@@ -12,28 +12,31 @@ using Microsoft.Extensions.Logging;
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// Serves the current GW2 API key(s) to the worker over a same-machine named pipe, so the cross-platform
-/// worker never reads the desktop's secret file or any OS crypto. The pipe name is random per app run and
-/// passed to the worker at spawn; each client connection receives a length-prefixed JSON
-/// <see cref="KeyServiceResponse"/>. The payload is a list so multiple accounts can be served later.
+/// Serves the desktop's live worker config — API keys + enabled features + per-sync intervals — to the worker
+/// over a same-machine named pipe, so the cross-platform worker never reads the desktop's secret file or any OS
+/// crypto. The pipe name is random per app run and passed to the worker at spawn; each client connection
+/// receives a length-prefixed JSON <see cref="WorkerConfigPayload"/>.
 /// </summary>
-public sealed class KeyServiceHost : BackgroundService
+public sealed class WorkerConfigHost : BackgroundService
 {
     private readonly string _pipeName;
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly FeatureSettingsStore _featureSettings;
-    private readonly ILogger<KeyServiceHost> _logger;
+    private readonly IntervalSettingsStore _intervalSettings;
+    private readonly ILogger<WorkerConfigHost> _logger;
 
-    public KeyServiceHost(
+    public WorkerConfigHost(
         string pipeName,
         FileGw2ApiKeyStore keyStore,
         FeatureSettingsStore featureSettings,
-        ILogger<KeyServiceHost> logger
+        IntervalSettingsStore intervalSettings,
+        ILogger<WorkerConfigHost> logger
     )
     {
         _pipeName = pipeName;
         _keyStore = keyStore;
         _featureSettings = featureSettings;
+        _intervalSettings = intervalSettings;
         _logger = logger;
     }
 
@@ -52,7 +55,7 @@ public sealed class KeyServiceHost : BackgroundService
                 );
 
                 await server.WaitForConnectionAsync(stoppingToken);
-                await WriteKeysAsync(server, stoppingToken);
+                await WriteConfigAsync(server, stoppingToken);
 
                 if (server.IsConnected)
                 {
@@ -65,25 +68,26 @@ public sealed class KeyServiceHost : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Key service connection failed; awaiting the next client.");
+                _logger.LogWarning(ex, "Worker-config connection failed; awaiting the next client.");
             }
         }
     }
 
-    private async Task WriteKeysAsync(NamedPipeServerStream server, CancellationToken stoppingToken)
+    private async Task WriteConfigAsync(NamedPipeServerStream server, CancellationToken stoppingToken)
     {
-        var response = new KeyServiceResponse
+        var payload = new WorkerConfigPayload
         {
             Keys = _keyStore.GetApiKeys().ToArray(),
             EnabledFeatures = _featureSettings.EnabledKeys().ToArray(),
+            Intervals = _intervalSettings.AllIntervals().ToDictionary(entry => entry.Key, entry => entry.Value),
         };
 
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(response);
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
         byte[] length = new byte[4];
-        BinaryPrimitives.WriteInt32LittleEndian(length, payload.Length);
+        BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
 
         await server.WriteAsync(length, stoppingToken);
-        await server.WriteAsync(payload, stoppingToken);
+        await server.WriteAsync(bytes, stoppingToken);
         await server.FlushAsync(stoppingToken);
     }
 }

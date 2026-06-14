@@ -9,7 +9,7 @@ namespace Gw2Gizmos.Desktop;
 
 /// <summary>
 /// Persists which worker features the user has enabled (a per-user JSON file). The desktop's Settings page binds
-/// to it, and the <see cref="KeyServiceHost"/> pushes the enabled set to the worker, which gates its sync work
+/// to it, and the <see cref="WorkerConfigHost"/> pushes the enabled set to the worker, which gates its sync work
 /// on it. Unset features fall back to the desktop default (on, except <see cref="OffByDefault"/>). Cached in
 /// memory and written through on change; raises <see cref="Changed"/> so the API Keys page recomputes its
 /// permission highlighting.

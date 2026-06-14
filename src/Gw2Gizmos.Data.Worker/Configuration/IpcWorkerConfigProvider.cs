@@ -1,29 +1,30 @@
 using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Text.Json;
+using Gw2Gizmos.Data.Worker.Features;
 
 namespace Gw2Gizmos.Data.Worker.Configuration;
 
 /// <summary>
-/// Cross-platform <see cref="IGw2ApiKeyProvider"/> that fetches the key from the desktop's key service over a
-/// local named pipe (works on Windows/Linux/macOS via .NET pipes). The worker holds no secret at rest and uses
-/// no OS crypto. The result is cached briefly so it isn't a connection per call; a key changed in the desktop
-/// is picked up on the next refresh. Used only when the desktop spawned the worker (pipe name passed in);
-/// standalone runs use the configuration/env provider instead.
+/// Fetches the desktop's live worker config — API keys, enabled features, and per-sync intervals — over a
+/// same-machine named pipe (cross-platform via .NET pipes; no secret at rest, no OS crypto). Cached briefly so
+/// it isn't a connection per call; changes in the desktop are picked up on the next refresh. Used only when the
+/// desktop spawned the worker (pipe name passed in); standalone runs use the configuration/env providers.
 /// </summary>
-public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider, IFeatureGate
+public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, IIntervalGate
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
     private const int ConnectTimeoutMs = 2000;
 
     private readonly string _pipeName;
-    private readonly ILogger<IpcGw2ApiKeyProvider> _logger;
+    private readonly ILogger<IpcWorkerConfigProvider> _logger;
     private readonly object _gate = new();
     private IReadOnlyList<string> _cachedKeys = Array.Empty<string>();
     private IReadOnlyList<string> _cachedEnabledFeatures = Array.Empty<string>();
+    private IReadOnlyDictionary<string, TimeSpan> _cachedIntervals = new Dictionary<string, TimeSpan>();
     private DateTime _fetchedAtUtc = DateTime.MinValue;
 
-    public IpcGw2ApiKeyProvider(string pipeName, ILogger<IpcGw2ApiKeyProvider> logger)
+    public IpcWorkerConfigProvider(string pipeName, ILogger<IpcWorkerConfigProvider> logger)
     {
         _pipeName = pipeName;
         _logger = logger;
@@ -53,7 +54,21 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider, IFeatureGate
         }
     }
 
-    /// <summary>Refreshes the cached keys + enabled features from the desktop, no more often than the TTL.</summary>
+    public TimeSpan GetInterval(string syncKey)
+    {
+        Refresh();
+        lock (_gate)
+        {
+            if (_cachedIntervals.TryGetValue(syncKey, out TimeSpan interval) && interval > TimeSpan.Zero)
+            {
+                return interval;
+            }
+        }
+
+        return WorkerSyncs.DefaultInterval(syncKey);
+    }
+
+    /// <summary>Refreshes the cached keys + features + intervals from the desktop, no more often than the TTL.</summary>
     private void Refresh()
     {
         lock (_gate)
@@ -64,23 +79,24 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider, IFeatureGate
             }
         }
 
-        KeyServiceResponse? response = TryFetch();
+        WorkerConfigPayload? payload = TryFetch();
 
         lock (_gate)
         {
             // On a fetch failure keep serving the last known values rather than dropping them mid-run.
-            if (response is not null)
+            if (payload is not null)
             {
-                _cachedKeys = (response.Keys ?? [])
+                _cachedKeys = (payload.Keys ?? [])
                     .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
                     .ToArray();
-                _cachedEnabledFeatures = response.EnabledFeatures ?? Array.Empty<string>();
+                _cachedEnabledFeatures = payload.EnabledFeatures ?? Array.Empty<string>();
+                _cachedIntervals = payload.Intervals ?? new Dictionary<string, TimeSpan>();
             }
             _fetchedAtUtc = DateTime.UtcNow;
         }
     }
 
-    private KeyServiceResponse? TryFetch()
+    private WorkerConfigPayload? TryFetch()
     {
         try
         {
@@ -95,14 +111,14 @@ public sealed class IpcGw2ApiKeyProvider : IGw2ApiKeyProvider, IFeatureGate
                 return null;
             }
 
-            byte[] payload = new byte[length];
-            client.ReadExactly(payload);
+            byte[] bytes = new byte[length];
+            client.ReadExactly(bytes);
 
-            return JsonSerializer.Deserialize<KeyServiceResponse>(payload);
+            return JsonSerializer.Deserialize<WorkerConfigPayload>(bytes);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not fetch the API keys from the desktop key service.");
+            _logger.LogDebug(ex, "Could not fetch the worker config from the desktop.");
             return null;
         }
     }
