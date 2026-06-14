@@ -147,6 +147,14 @@ public sealed class PriceHistoryViewModel : ViewModelBase
         {
             new LineSeries<DateTimePoint>
             {
+                Values = buy,
+                Stroke = new SolidColorPaint(AxisColor, 1),
+                Fill = null,
+                GeometrySize = 0,
+                LineSmoothness = 0
+            },
+            new LineSeries<DateTimePoint>
+            {
                 Values = sell,
                 Stroke = new SolidColorPaint(AxisColor, 1),
                 Fill = null,
