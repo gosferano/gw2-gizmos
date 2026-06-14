@@ -41,11 +41,6 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<UpgradeComponentDetails> UpgradeComponentDetails { get; set; }
     public DbSet<WeaponDetails> WeaponDetails { get; set; }
 
-    // Commerce
-    public DbSet<CommerceItemListing> CommerceItemListings { get; set; }
-    public DbSet<BuyListing> BuyListings { get; set; }
-    public DbSet<SellListing> SellListings { get; set; }
-
     // Precomputed craft-cost cache (cheapest fully-priced craft cost per craftable item) for the Items grid;
     // live prices/profit/margin are derived from PriceSnapshots at read time, not stored here.
     public DbSet<ItemCraftCost> ItemCraftCosts { get; set; }

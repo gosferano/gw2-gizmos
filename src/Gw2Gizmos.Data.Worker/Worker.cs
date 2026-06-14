@@ -8,40 +8,48 @@ public class Worker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFeatureGate _featureGate;
+    private readonly IIntervalGate _intervalGate;
+    private readonly SyncTriggers _triggers;
     private readonly ILogger<Worker> _logger;
 
-    // Serializes craft-cost refreshes so the 15-minute timer and the after-commerce trigger can never run
+    // Serializes craft-cost refreshes so the 15-minute timer and the after-price trigger can never run
     // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
     private readonly SemaphoreSlim _craftCostRefreshLock = new(1, 1);
 
-    public Worker(IServiceScopeFactory scopeFactory, IFeatureGate featureGate, ILogger<Worker> logger)
+    public Worker(
+        IServiceScopeFactory scopeFactory,
+        IFeatureGate featureGate,
+        IIntervalGate intervalGate,
+        SyncTriggers triggers,
+        ILogger<Worker> logger)
     {
         _scopeFactory = scopeFactory;
         _featureGate = featureGate;
+        _intervalGate = intervalGate;
+        _triggers = triggers;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var commerceTimer = new PeriodicTimer(TimeSpan.FromHours(1));
-        using var currenciesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        using var materialCategoriesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        using var itemsTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        using var recipesTimer = new PeriodicTimer(TimeSpan.FromDays(1));
-        // Recompute craft costs every 15 minutes (also refreshed right after each commerce sync, since they
-        // depend on ingredient listing prices).
+        // The user-tunable syncs start at their catalog default and are retimed each iteration from the interval
+        // gate (so a change on Settings → Advanced applies on the next wait). craft-cost + price-history
+        // retention are fixed internal cadences.
+        using var currenciesTimer = new PeriodicTimer(WorkerSyncs.Currencies.Default);
+        using var materialCategoriesTimer = new PeriodicTimer(WorkerSyncs.MaterialCategories.Default);
+        using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
+        using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
+        // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
+        // depend on ingredient prices).
         using var craftCostTimer = new PeriodicTimer(TimeSpan.FromMinutes(15));
-        // Poll prices frequently to capture trading volume at fine resolution.
-        using var priceSnapshotTimer = new PeriodicTimer(TimeSpan.FromMinutes(5));
-        // Coarsen the accumulating price history hourly so the 5-minute tier stays bounded.
+        using var priceSnapshotTimer = new PeriodicTimer(WorkerSyncs.Prices.Default);
+        // Coarsen the accumulating price history hourly so the fine-grained tier stays bounded.
         using var priceHistoryRetentionTimer = new PeriodicTimer(TimeSpan.FromHours(1));
-        // Authenticated account data (wallet/materials/bank/inventory) refreshes a few times an hour.
-        using var accountSyncTimer = new PeriodicTimer(TimeSpan.FromMinutes(10));
+        using var accountSyncTimer = new PeriodicTimer(WorkerSyncs.Account.Default);
 
         // Run all tasks concurrently
         var tasks = new List<Task>
         {
-            RunCommerceUpdater(commerceTimer, stoppingToken),
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
@@ -57,28 +65,12 @@ public class Worker : BackgroundService
         await Task.WhenAll(tasks);
     }
 
-    private async Task RunCommerceUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
-    {
-        do
-        {
-            await RunUpdateSafely(
-                async scope =>
-                {
-                    var commerceUpdater = scope.ServiceProvider.GetRequiredService<CommerceUpdater>();
-                    await commerceUpdater.UpdateCommerceListings(stoppingToken);
-                },
-                stoppingToken
-            );
-
-            // Fresh listings just landed — recompute craft costs now rather than waiting for the next tick.
-            await RefreshCraftCostsSafely(stoppingToken);
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
-    }
-
     private async Task RunCurrenciesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Currencies.Key);
         do
         {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Currencies.Key);
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -87,13 +79,15 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunMaterialCategoriesUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.MaterialCategories.Key);
         do
         {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.MaterialCategories.Key);
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -102,13 +96,15 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunItemsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Items.Key);
         do
         {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Items.Key);
             // Gated by the Item-data feature (on by default); skipping a tick leaves the existing catalog intact.
             if (!_featureGate.IsEnabled(WorkerFeatures.ItemsSync.Key))
             {
@@ -123,13 +119,15 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunRecipesUpdater(PeriodicTimer recipesTimer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Recipes.Key);
         do
         {
+            recipesTimer.Period = _intervalGate.GetInterval(WorkerSyncs.Recipes.Key);
             // Gated by the Recipes feature (on by default); skipping a tick leaves the existing recipes intact.
             if (!_featureGate.IsEnabled(WorkerFeatures.RecipesSync.Key))
             {
@@ -144,7 +142,7 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await recipesTimer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(recipesTimer, stoppingToken));
     }
 
     private async Task RunCraftCostUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
@@ -189,8 +187,10 @@ public class Worker : BackgroundService
 
     private async Task RunPriceSnapshotUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Prices.Key);
         do
         {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Prices.Key);
             // Gated by the Price-history feature (off by default on the desktop, since the snapshots grow the DB).
             if (!_featureGate.IsEnabled(WorkerFeatures.PricesSync.Key))
             {
@@ -205,7 +205,11 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+
+            // Fresh prices just landed — recompute craft costs now (they're priced from these snapshots) rather
+            // than waiting for the craft-cost timer. RefreshCraftCostsSafely is itself gated on PricesSync.
+            await RefreshCraftCostsSafely(stoppingToken);
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunPriceHistoryRetentionUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
@@ -225,8 +229,10 @@ public class Worker : BackgroundService
 
     private async Task RunAccountSyncUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
     {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Account.Key);
         do
         {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Account.Key);
             await RunUpdateSafely(
                 async scope =>
                 {
@@ -235,7 +241,7 @@ public class Worker : BackgroundService
                 },
                 stoppingToken
             );
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
     }
 
     private async Task RunUpdateSafely(Func<IServiceScope, Task> updateAction, CancellationToken stoppingToken)

@@ -29,8 +29,12 @@ public static class DataWorkerServiceCollectionExtensions
         AddCore(services, connectionString);
 
         services.AddHostedService<Worker>();
+        // Per-sync wake signals + the watcher that fires them when the desktop bumps a generation, so an enabled
+        // feature or added key syncs within a few seconds rather than at the next tick. Standalone runs get the
+        // no-op trigger source (registered in AddCore), so the watcher simply idles.
+        services.AddSingleton<SyncTriggers>();
+        services.AddHostedService<SyncTriggerWatcher>();
         services.AddScoped<ItemsUpdater>();
-        services.AddScoped<CommerceUpdater>();
         services.AddScoped<CurrenciesUpdater>();
         services.AddScoped<MaterialCategoriesUpdater>();
         services.AddScoped<RecipesUpdater>();
@@ -40,10 +44,9 @@ public static class DataWorkerServiceCollectionExtensions
         // Singleton so it keeps the previous poll's totals in memory to compute per-interval volume.
         services.AddSingleton<PriceSnapshotUpdater>();
 
-        // Channel consumers + queues that connect the ingestion updaters.
-        services.AddHostedService<ItemsAddedUpdater>();
+        // Channel consumer + queue that connects the ingestion updaters: ItemsUpdater discovers item ids the
+        // catalog is missing and queues them; ItemsMissingUpdater is the single consumer that fetches + upserts.
         services.AddHostedService<ItemsMissingUpdater>();
-        services.AddSingleton(Channel.CreateUnbounded<ItemAddedDto>());
         services.AddSingleton(Channel.CreateUnbounded<ItemMissingDto>());
 
         return services;
@@ -74,6 +77,12 @@ public static class DataWorkerServiceCollectionExtensions
         // Likewise the feature gate: the standalone worker reads Worker:Features:* from config, while a
         // desktop-launched worker registers an IPC-backed gate (and the desktop a settings-backed one) first.
         services.TryAddSingleton<IFeatureGate, ConfigurationFeatureGate>();
+        // And the interval gate: standalone reads Worker:Intervals:* from config; the desktop pushes intervals
+        // over the pipe (the IPC provider, registered first, satisfies all four gates/sources).
+        services.TryAddSingleton<IIntervalGate, ConfigurationIntervalGate>();
+        // The sync-trigger source: standalone has no desktop to signal it, so it's a no-op; a desktop-launched
+        // worker registers the IPC provider (which carries generations) first.
+        services.TryAddSingleton<ISyncTriggerSource, NullSyncTriggerSource>();
 
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();

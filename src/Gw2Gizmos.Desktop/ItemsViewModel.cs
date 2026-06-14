@@ -125,8 +125,8 @@ public sealed class ItemsViewModel : ViewModelBase
 
         // Every item with a trading-post listing — "tradeable" independent of whether prices are being recorded,
         // so tradeable items still appear (with blank price columns) when price history is off.
-        HashSet<int> tradeableIds = db.CommerceItemListings.AsNoTracking()
-            .Select(listing => listing.ItemId).ToHashSet();
+        HashSet<int> tradeableIds = db.PriceSnapshots.AsNoTracking()
+            .Select(snapshot => snapshot.ItemId).ToHashSet();
 
         // List every item that's tradeable or craftable (or both). Items that are neither are skipped — both
         // detail panes would be empty, so they'd only be noise.

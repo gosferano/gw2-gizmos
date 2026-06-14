@@ -45,19 +45,22 @@ if (string.IsNullOrEmpty(connectionString))
     );
 }
 
-// API key source: when Gw2Gizmos spawns this worker it passes --KeyService:PipeName, and we fetch the key
-// live from the desktop's key service over a local pipe (cross-platform, no secret at rest here). A standalone
-// worker omits the pipe and falls back to the default configuration/env provider (GW2_API_KEY / Gw2:ApiKey).
-string? keyServicePipeName = builder.Configuration["KeyService:PipeName"];
-if (!string.IsNullOrWhiteSpace(keyServicePipeName))
+// Config source: when Gw2Gizmos spawns this worker it passes --WorkerConfig:PipeName, and we fetch the live
+// config (keys + enabled features + intervals) from the desktop over a local pipe (cross-platform, no secret at
+// rest here). A standalone worker omits the pipe and falls back to the configuration/env providers
+// (GW2_API_KEY / Gw2:ApiKey, Worker:Features:*, Worker:Intervals:*).
+string? workerConfigPipeName = builder.Configuration["WorkerConfig:PipeName"];
+if (!string.IsNullOrWhiteSpace(workerConfigPipeName))
 {
-    // One IPC provider instance serves both the keys and the feature toggles (both ride the same pipe payload).
-    builder.Services.AddSingleton(sp => new IpcGw2ApiKeyProvider(
-        keyServicePipeName,
-        sp.GetRequiredService<ILogger<IpcGw2ApiKeyProvider>>()
+    // One pipe-backed provider serves keys + feature toggles + intervals (all ride the same payload).
+    builder.Services.AddSingleton(sp => new IpcWorkerConfigProvider(
+        workerConfigPipeName,
+        sp.GetRequiredService<ILogger<IpcWorkerConfigProvider>>()
     ));
-    builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<IpcGw2ApiKeyProvider>());
-    builder.Services.AddSingleton<IFeatureGate>(sp => sp.GetRequiredService<IpcGw2ApiKeyProvider>());
+    builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
+    builder.Services.AddSingleton<IFeatureGate>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
+    builder.Services.AddSingleton<IIntervalGate>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
+    builder.Services.AddSingleton<ISyncTriggerSource>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
 }
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays

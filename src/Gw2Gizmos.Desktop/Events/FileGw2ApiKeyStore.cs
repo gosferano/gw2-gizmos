@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Gw2Gizmos.Data.Worker.Configuration;
+using Gw2Gizmos.Data.Worker.Features;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -17,11 +18,13 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
 {
     private readonly string _path;
     private readonly object _gate = new();
+    private readonly SyncTriggerStore _triggers;
     private List<StoredApiKey>? _cached;
 
-    public FileGw2ApiKeyStore(AppPaths paths)
+    public FileGw2ApiKeyStore(AppPaths paths, SyncTriggerStore triggers)
     {
         _path = paths.File("api-keys.dat");
+        _triggers = triggers;
     }
 
     public bool HasApiKey => Snapshot().Count > 0;
@@ -54,8 +57,11 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
             all.Add(key);
             Save(all);
             _cached = all;
-            return true;
         }
+
+        // A new key just landed — sync this account's data now rather than at the next account tick.
+        _triggers.Bump(WorkerSyncs.Account.Key);
+        return true;
     }
 
     /// <summary>Removes the key for the given account id (no-op if absent).</summary>

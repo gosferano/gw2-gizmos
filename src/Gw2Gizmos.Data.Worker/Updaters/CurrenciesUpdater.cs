@@ -12,12 +12,12 @@ public class CurrenciesUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;
     private readonly Gw2ApiClient _apiClient;
-    private readonly ILogger<CommerceUpdater> _logger;
+    private readonly ILogger<CurrenciesUpdater> _logger;
 
     public CurrenciesUpdater(
         Gw2GizmosDbContext dbContext,
         IGw2ApiClientFactory apiClientFactory,
-        ILogger<CommerceUpdater> logger
+        ILogger<CurrenciesUpdater> logger
     )
     {
         _dbContext = dbContext;

@@ -7,6 +7,7 @@ using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.Gw2Api.Client;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
@@ -38,7 +39,9 @@ public sealed class DashboardViewModel : ViewModelBase
             var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
             ItemCount = dbContext.Items.Count();
             RecipeCount = dbContext.Recipes.Count();
-            TradeableItemCount = dbContext.CommerceItemListings.Count();
+            // Distinct items that have ever been price-polled (on the trading post); derived from snapshots
+            // since the order-book table is gone.
+            TradeableItemCount = dbContext.PriceSnapshots.AsNoTracking().Select(s => s.ItemId).Distinct().Count();
             CurrencyCount = dbContext.Currencies.Count();
             PriceSnapshotCount = dbContext.PriceSnapshots.Count();
 

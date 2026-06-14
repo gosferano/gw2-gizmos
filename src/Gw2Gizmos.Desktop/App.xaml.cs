@@ -87,11 +87,12 @@ public partial class App : Application
         Directory.CreateDirectory(dataDir);
         string dbPath = Path.Combine(dataDir, "gw2gizmos.sqlite");
 
-        // Random, ephemeral name for the local pipe that serves the API key to the worker. Passed to the worker
-        // at spawn so it can fetch the key live without reading the desktop's secret file.
-        string keyServicePipeName = $"Gw2Gizmos.Keys.{Guid.NewGuid():N}";
+        // Random, ephemeral name for the local pipe that serves the live worker config (keys + features +
+        // intervals) to the worker. Passed to the worker at spawn so it can fetch config without reading the
+        // desktop's secret file.
+        string workerConfigPipeName = $"Gw2Gizmos.Config.{Guid.NewGuid():N}";
 
-        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args, keyServicePipeName);
+        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args, workerConfigPipeName);
         _host = host;
         // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only, so it
         // does not migrate here. The worker (started just below) creates and brings the schema up to date.
@@ -99,9 +100,9 @@ public partial class App : Application
 
         Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
 
-        // The worker shares the same database (same provider + connection string) and fetches the API key from
-        // the key service over the pipe whose name we pass here.
-        StartWorkerProcess(dataDir, connectionString, dbProvider, keyServicePipeName);
+        // The worker shares the same database (same provider + connection string) and fetches its config from
+        // the config service over the pipe whose name we pass here.
+        StartWorkerProcess(dataDir, connectionString, dbProvider, workerConfigPipeName);
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
         // it's distinguishable from the installed app when both are running at once.
@@ -235,7 +236,7 @@ public partial class App : Application
         string dataDir,
         string dbPath,
         string[] args,
-        string keyServicePipeName
+        string workerConfigPipeName
     )
     {
         // Pass args so --Database:Provider / --ConnectionStrings:Gw2GizmosDb (and matching env vars) flow
@@ -272,18 +273,24 @@ public partial class App : Application
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton(new AppPaths(dataDir));
+        // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
+        // that data immediately. Registered first — the key/feature stores bump it.
+        builder.Services.AddSingleton<SyncTriggerStore>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
-        // Worker-feature toggles: the desktop is the source of truth (persisted here); the key service pushes
-        // the enabled set to the worker, which gates its sync work on it.
+        // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
+        // config pipe: feature on/off toggles, per-sync intervals, and the trigger generations.
         builder.Services.AddSingleton<FeatureSettingsStore>();
-        // Serve the API key + feature toggles to the cross-platform worker over a local pipe (it never reads
-        // our secret file).
-        builder.Services.AddHostedService(sp => new KeyServiceHost(
-            keyServicePipeName,
+        builder.Services.AddSingleton<IntervalSettingsStore>();
+        // Serve keys + features + intervals to the cross-platform worker over a local pipe (it never reads our
+        // secret file).
+        builder.Services.AddHostedService(sp => new WorkerConfigHost(
+            workerConfigPipeName,
             sp.GetRequiredService<FileGw2ApiKeyStore>(),
             sp.GetRequiredService<FeatureSettingsStore>(),
-            sp.GetRequiredService<ILogger<KeyServiceHost>>()
+            sp.GetRequiredService<IntervalSettingsStore>(),
+            sp.GetRequiredService<SyncTriggerStore>(),
+            sp.GetRequiredService<ILogger<WorkerConfigHost>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         builder.Services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
@@ -316,6 +323,7 @@ public partial class App : Application
         builder.Services.AddTransient<ApiKeysViewModel>();
         // Transient so the page reflects the current toggle/permission state on every navigation.
         builder.Services.AddTransient<SettingsViewModel>();
+        builder.Services.AddTransient<AdvancedSettingsViewModel>();
         // Transient so the grid re-reads the worker's latest item/market data on every navigation.
         builder.Services.AddTransient<ItemsViewModel>();
         // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
@@ -341,6 +349,7 @@ public partial class App : Application
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<AdvancedSettingsPage>();
 
         // Make the available DB providers selectable; the active one is chosen at launch via Database:Provider
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
@@ -380,7 +389,7 @@ public partial class App : Application
         return (builder.Build(), connectionString, provider);
     }
 
-    private void StartWorkerProcess(string dataDir, string connectionString, string provider, string keyServicePipeName)
+    private void StartWorkerProcess(string dataDir, string connectionString, string provider, string workerConfigPipeName)
     {
         // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
         // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
@@ -399,10 +408,10 @@ public partial class App : Application
             CreateNoWindow = true,
         };
         // Forward the same provider + connection string so the worker opens the identical database, plus the
-        // key-service pipe name so it can fetch the API key live (the key itself never touches the command line).
+        // config pipe name so it can fetch keys/features/intervals live (no secret ever touches the command line).
         startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={connectionString}");
         startInfo.ArgumentList.Add($"--Database:Provider={provider}");
-        startInfo.ArgumentList.Add($"--KeyService:PipeName={keyServicePipeName}");
+        startInfo.ArgumentList.Add($"--WorkerConfig:PipeName={workerConfigPipeName}");
 
         _workerProcess = Process.Start(startInfo);
 
