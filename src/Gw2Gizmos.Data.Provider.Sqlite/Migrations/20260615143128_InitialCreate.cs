@@ -28,37 +28,20 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AccountItemHoldingObservations",
+                name: "AccountItemObservations",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Store = table.Column<int>(type: "INTEGER", nullable: false),
+                    Container = table.Column<int>(type: "INTEGER", nullable: false),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: false),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
                     ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AccountItemHoldingObservations", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AccountMaterialObservations",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Category = table.Column<int>(type: "INTEGER", nullable: false),
-                    Count = table.Column<int>(type: "INTEGER", nullable: false),
-                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AccountMaterialObservations", x => x.Id);
+                    table.PrimaryKey("PK_AccountItemObservations", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -89,6 +72,22 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AccountWalletObservations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CharacterItemSlots",
+                columns: table => new
+                {
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    CharacterName = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    SlotIndex = table.Column<int>(type: "INTEGER", nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Count = table.Column<int>(type: "INTEGER", nullable: false),
+                    Charges = table.Column<int>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CharacterItemSlots", x => new { x.AccountId, x.CharacterName, x.SlotIndex });
                 });
 
             migrationBuilder.CreateTable(
@@ -1205,14 +1204,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AccountItemHoldingObservations_AccountId_Store_ItemId_Id",
-                table: "AccountItemHoldingObservations",
-                columns: new[] { "AccountId", "Store", "ItemId", "Id" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AccountMaterialObservations_AccountId_ItemId_Id",
-                table: "AccountMaterialObservations",
-                columns: new[] { "AccountId", "ItemId", "Id" });
+                name: "IX_AccountItemObservations_AccountId_Container_ItemId_Id",
+                table: "AccountItemObservations",
+                columns: new[] { "AccountId", "Container", "ItemId", "Id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AccountWalletObservations_AccountId_CurrencyId_Id",
@@ -1358,10 +1352,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "AccountContainerSlots");
 
             migrationBuilder.DropTable(
-                name: "AccountItemHoldingObservations");
-
-            migrationBuilder.DropTable(
-                name: "AccountMaterialObservations");
+                name: "AccountItemObservations");
 
             migrationBuilder.DropTable(
                 name: "Accounts");
@@ -1389,6 +1380,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "BagDetails");
+
+            migrationBuilder.DropTable(
+                name: "CharacterItemSlots");
 
             migrationBuilder.DropTable(
                 name: "ConsumableExtraRecipes");

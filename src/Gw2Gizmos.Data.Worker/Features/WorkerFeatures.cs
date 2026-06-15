@@ -56,9 +56,13 @@ public static class WorkerFeatures
         "SharedInventory", "Shared inventory", "Account-wide shared slots.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Inventories) });
 
+    public static readonly WorkerFeature CharacterInventory = new(
+        "CharacterInventory", "Character inventories", "Items in characters' bags (one request per character).",
+        new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Characters), Perm(TokenPermission.Inventories) });
+
     /// <summary>All worker features, in display order (public data first, then account-bound).</summary>
     public static IReadOnlyList<WorkerFeature> All { get; } =
-        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory };
+        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory };
 
     /// <summary>
     /// Every GW2 permission that can appear on a key — shown in full on the API Keys page. Sourced from

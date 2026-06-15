@@ -3,6 +3,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
+using Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 using Microsoft.EntityFrameworkCore;
 using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
@@ -10,10 +11,12 @@ using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
 /// <summary>
-/// Syncs the authenticated GW2 account for the current API key. Upserts the <see cref="Account"/> identity,
-/// then records wallet and material-storage balances and bank/shared-inventory holdings as append-on-change
-/// observation logs (latest row per resource = current value), and replaces the bank/shared-inventory slot
-/// grids for an exact current layout. Every row is keyed by account id so multiple accounts coexist.
+/// Syncs the authenticated GW2 account for the current API key. Upserts the <see cref="Account"/> identity, then
+/// records item holdings — material storage, bank, shared inventory, and (summed across characters) character bags
+/// — as one append-on-change <see cref="AccountItemObservation"/> log discriminated by location, with the wallet
+/// in its own log. Slot-based stores also get a replaced current grid: <see cref="AccountContainerSlot"/> for
+/// bank/shared and <see cref="CharacterItemSlot"/> per character. Every row is keyed by account id so multiple
+/// accounts coexist.
 /// </summary>
 public class AccountSyncUpdater
 {
@@ -126,6 +129,7 @@ public class AccountSyncUpdater
         await RunSection(WorkerFeatures.MaterialStorage, account, permissions, () => SyncMaterialsAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.Bank, account, permissions, () => SyncBankAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.SharedInventory, account, permissions, () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharacterInventoriesAsync(client, account.Id, now, stoppingToken));
 
         return account.Name;
     }
@@ -134,7 +138,7 @@ public class AccountSyncUpdater
     /// Runs one account section if its feature is enabled and the key holds the required permissions; otherwise
     /// skips it (warning when an enabled feature is missing a permission, so the misconfiguration is visible).
     /// </summary>
-    private async Task RunSection(WorkerFeature feature, Api.Account account, IReadOnlyList<string> permissions, Func<Task> action)
+    private async Task RunSection(WorkerFeature feature, Api.Account account, IReadOnlyList<string> permissions, Func<Task<int>> action)
     {
         if (!_featureGate.IsEnabled(feature.Key))
         {
@@ -155,7 +159,11 @@ public class AccountSyncUpdater
 
         try
         {
-            await action();
+            // Start + completion logged per section (like the price poll) so the log shows each sync running; the
+            // count is that section's natural unit (currencies, material/item types, characters).
+            _logger.LogInformation("Syncing {Feature} for {Account}...", feature.Display, account.Name);
+            int count = await action();
+            _logger.LogInformation("{Feature} sync completed for {Account} ({Count}).", feature.Display, account.Name, count);
         }
         catch (Exception ex)
         {
@@ -188,12 +196,12 @@ public class AccountSyncUpdater
         await _dbContext.SaveChangesAsync(stoppingToken);
     }
 
-    private async Task SyncWalletAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    private async Task<int> SyncWalletAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
     {
         Api.AccountWalletCurrency[]? wallet = await client.V2.Account.Wallet.GetBlob(stoppingToken);
         if (wallet is null)
         {
-            return;
+            return 0;
         }
 
         IQueryable<long> maxIds = _dbContext
@@ -238,63 +246,120 @@ public class AccountSyncUpdater
         }
 
         await _dbContext.SaveChangesAsync(stoppingToken);
+        return wallet.Length;
     }
 
-    private async Task SyncMaterialsAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    private async Task<int> SyncMaterialsAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
     {
         Api.AccountMaterial[]? materials = await client.V2.Account.Materials.GetBlob(stoppingToken);
         if (materials is null)
         {
-            return;
+            return 0;
         }
 
-        IQueryable<long> maxIds = _dbContext
-            .AccountMaterialObservations.Where(o => o.AccountId == accountId)
-            .GroupBy(o => o.ItemId)
-            .Select(g => g.Max(x => x.Id));
-        Dictionary<int, int> latest = await _dbContext
-            .AccountMaterialObservations.Where(o => maxIds.Contains(o.Id))
-            .ToDictionaryAsync(o => o.ItemId, o => o.Count, stoppingToken);
+        // Material storage is just items in a location: feed the shared item-observation log. Only currently-held
+        // materials (count > 0) are totals; a material dropping to 0 is recorded by the helper's zero-out pass.
+        // The same item id can be listed under more than one material-storage category, but each row reports the
+        // *same* single storage count — so take it once (Max), not summed (which would double-count), and group
+        // so the duplicate id doesn't throw.
+        Dictionary<int, int> totals = materials
+            .Where(material => material.Count > 0)
+            .GroupBy(material => material.Id)
+            .ToDictionary(group => group.Key, group => group.Max(material => material.Count));
+        await SyncItemObservationsAsync(accountId, AccountContainer.MaterialStorage, totals, now, stoppingToken);
+        return totals.Count;
+    }
 
-        foreach (Api.AccountMaterial material in materials)
+    private async Task<int> SyncBankAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        Api.AccountItem?[]? bank = await client.V2.Account.Bank.GetBlob(stoppingToken);
+        return bank is null ? 0 : await SyncContainerAsync(accountId, AccountContainer.Bank, bank, now, stoppingToken);
+    }
+
+    private async Task<int> SyncSharedInventoryAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        Api.AccountItem[]? inventory = await client.V2.Account.Inventory.GetBlob(stoppingToken);
+        return inventory is null ? 0 : await SyncContainerAsync(accountId, AccountContainer.SharedInventory, inventory, now, stoppingToken);
+    }
+
+    private async Task<int> SyncCharacterInventoriesAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        // The only section that costs one request per character (1 + N); it rides the shared account-sync pass.
+        string[]? characterNames = await client.V2.Characters.GetIds(stoppingToken);
+        if (characterNames is null || characterNames.Length == 0)
         {
-            if (!latest.TryGetValue(material.Id, out int previous) || previous != material.Count)
+            return 0;
+        }
+
+        // Account-wide per-item totals, summed across every character's bags, so moving an item between characters
+        // isn't a gain or loss in the observation log.
+        var totals = new Dictionary<int, int>();
+        foreach (string characterName in characterNames)
+        {
+            if (stoppingToken.IsCancellationRequested)
             {
-                _dbContext.AccountMaterialObservations.Add(
-                    new AccountMaterialObservation
+                break;
+            }
+
+            CharacterInventory? inventory;
+            try
+            {
+                inventory = await client.V2.Characters[characterName].Inventory.GetBlob(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Character inventory sync failed for {Character} on {Account}; skipping it.", characterName, accountId);
+                continue;
+            }
+
+            if (inventory is null)
+            {
+                continue;
+            }
+
+            // (a) Replace this character's slot grid (per-character, so one character's failure leaves the others'
+            // snapshots intact). ExecuteDelete runs now; the re-inserts commit with the observation save below.
+            await _dbContext
+                .CharacterItemSlots.Where(s => s.AccountId == accountId && s.CharacterName == characterName)
+                .ExecuteDeleteAsync(stoppingToken);
+
+            var slotIndex = 0;
+            foreach (CharacterInventoryBag? bag in inventory.Bags)
+            {
+                if (bag is null)
+                {
+                    continue;
+                }
+
+                foreach (Api.AccountItem? item in bag.Inventory)
+                {
+                    _dbContext.CharacterItemSlots.Add(
+                        new CharacterItemSlot
+                        {
+                            AccountId = accountId,
+                            CharacterName = characterName,
+                            SlotIndex = slotIndex,
+                            ItemId = item?.Id,
+                            Count = item?.Count ?? 0,
+                            Charges = item?.Charges,
+                        }
+                    );
+                    slotIndex++;
+
+                    // (b) Accumulate the account-wide per-item total.
+                    if (item is not null)
                     {
-                        AccountId = accountId,
-                        ItemId = material.Id,
-                        Category = material.Category,
-                        Count = material.Count,
-                        ObservedAtUtc = now,
+                        totals[item.Id] = totals.GetValueOrDefault(item.Id) + item.Count;
                     }
-                );
+                }
             }
         }
 
-        await _dbContext.SaveChangesAsync(stoppingToken);
+        await SyncItemObservationsAsync(accountId, AccountContainer.CharacterInventory, totals, now, stoppingToken);
+        return characterNames.Length;
     }
 
-    private async Task SyncBankAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
-    {
-        Api.AccountItem?[]? bank = await client.V2.Account.Bank.GetBlob(stoppingToken);
-        if (bank is not null)
-        {
-            await SyncContainerAsync(accountId, AccountContainer.Bank, bank, now, stoppingToken);
-        }
-    }
-
-    private async Task SyncSharedInventoryAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
-    {
-        Api.AccountItem[]? inventory = await client.V2.Account.Inventory.GetBlob(stoppingToken);
-        if (inventory is not null)
-        {
-            await SyncContainerAsync(accountId, AccountContainer.SharedInventory, inventory, now, stoppingToken);
-        }
-    }
-
-    private async Task SyncContainerAsync(
+    private async Task<int> SyncContainerAsync(
         string accountId,
         AccountContainer store,
         IReadOnlyList<Api.AccountItem?> slots,
@@ -330,23 +395,40 @@ public class AccountSyncUpdater
             .GroupBy(s => s!.Id)
             .ToDictionary(g => g.Key, g => g.Sum(s => s!.Count));
 
+        await SyncItemObservationsAsync(accountId, store, totals, now, stoppingToken);
+        return totals.Count;
+    }
+
+    /// <summary>
+    /// Appends an <see cref="AccountItemObservation"/> for each item whose per-item total changed since this
+    /// container's last observation, plus a zero row for any previously-held item that's now gone. Shared by every
+    /// item section — material storage, bank, shared inventory, and character bags — and persists pending changes.
+    /// </summary>
+    private async Task SyncItemObservationsAsync(
+        string accountId,
+        AccountContainer container,
+        IReadOnlyDictionary<int, int> totals,
+        DateTimeOffset now,
+        CancellationToken stoppingToken
+    )
+    {
         IQueryable<long> maxIds = _dbContext
-            .AccountItemHoldingObservations.Where(o => o.AccountId == accountId && o.Store == store)
+            .AccountItemObservations.Where(o => o.AccountId == accountId && o.Container == container)
             .GroupBy(o => o.ItemId)
             .Select(g => g.Max(x => x.Id));
         Dictionary<int, int> latest = await _dbContext
-            .AccountItemHoldingObservations.Where(o => maxIds.Contains(o.Id))
+            .AccountItemObservations.Where(o => maxIds.Contains(o.Id))
             .ToDictionaryAsync(o => o.ItemId, o => o.Count, stoppingToken);
 
         foreach ((int itemId, int count) in totals)
         {
             if (!latest.TryGetValue(itemId, out int previous) || previous != count)
             {
-                _dbContext.AccountItemHoldingObservations.Add(
-                    new AccountItemHoldingObservation
+                _dbContext.AccountItemObservations.Add(
+                    new AccountItemObservation
                     {
                         AccountId = accountId,
-                        Store = store,
+                        Container = container,
                         ItemId = itemId,
                         Count = count,
                         ObservedAtUtc = now,
@@ -359,11 +441,11 @@ public class AccountSyncUpdater
         {
             if (count != 0 && !totals.ContainsKey(itemId))
             {
-                _dbContext.AccountItemHoldingObservations.Add(
-                    new AccountItemHoldingObservation
+                _dbContext.AccountItemObservations.Add(
+                    new AccountItemObservation
                     {
                         AccountId = accountId,
-                        Store = store,
+                        Container = container,
                         ItemId = itemId,
                         Count = 0,
                         ObservedAtUtc = now,

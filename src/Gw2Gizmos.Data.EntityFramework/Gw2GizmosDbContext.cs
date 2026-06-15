@@ -59,12 +59,13 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<Recipe> Recipes { get; set; }
     public DbSet<RecipeIngredient> RecipeIngredients { get; set; }
 
-    // Authenticated account data (keyed by account id). Wallet/materials and bank/inventory holdings are
-    // append-on-change event logs; AccountContainerSlots is the current slot-by-slot grid for bank + shared
-    // inventory, replaced each sync.
+    // Authenticated account data (keyed by account id). Item holdings (material storage, bank, shared inventory,
+    // character bags) are one append-on-change log discriminated by location; the wallet is its own log
+    // (currencies aren't items). AccountContainerSlots / CharacterItemSlots are the current slot-by-slot grids
+    // (bank + shared inventory, and per-character bags), replaced each sync.
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountWalletObservation> AccountWalletObservations { get; set; }
-    public DbSet<AccountMaterialObservation> AccountMaterialObservations { get; set; }
-    public DbSet<AccountItemHoldingObservation> AccountItemHoldingObservations { get; set; }
+    public DbSet<AccountItemObservation> AccountItemObservations { get; set; }
     public DbSet<AccountContainerSlot> AccountContainerSlots { get; set; }
+    public DbSet<CharacterItemSlot> CharacterItemSlots { get; set; }
 }

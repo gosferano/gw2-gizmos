@@ -105,11 +105,11 @@ public sealed class AccountReader
             .GroupBy(ci => ci.CategoryId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        IQueryable<long> maxIds = db.AccountMaterialObservations
-            .Where(o => o.AccountId == accountId)
+        IQueryable<long> maxIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.Container == AccountContainer.MaterialStorage)
             .GroupBy(o => o.ItemId)
             .Select(g => g.Max(x => x.Id));
-        Dictionary<int, int> counts = db.AccountMaterialObservations.AsNoTracking()
+        Dictionary<int, int> counts = db.AccountItemObservations.AsNoTracking()
             .Where(o => maxIds.Contains(o.Id))
             .ToDictionary(o => o.ItemId, o => o.Count);
 
@@ -152,6 +152,33 @@ public sealed class AccountReader
                 ? new SlotRow(itemId, names.GetValueOrDefault(itemId) ?? $"Item {itemId}", s.Count)
                 : SlotRow.Empty)
             .ToList();
+    }
+
+    /// <summary>
+    /// The account's total count of each item across every location (material storage, bank, shared inventory,
+    /// character bags) from the latest observation per (location, item). Backs the unified-inventory / play-session
+    /// "hoarded" views.
+    /// </summary>
+    public Dictionary<int, int> GetUnifiedItemTotals(string accountId)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        // Latest row per (container, item); sum the current counts across containers into a per-item total.
+        IQueryable<long> maxIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId)
+            .GroupBy(o => new { o.Container, o.ItemId })
+            .Select(g => g.Max(x => x.Id));
+
+        var totals = new Dictionary<int, int>();
+        foreach (var row in db.AccountItemObservations.AsNoTracking()
+                     .Where(o => maxIds.Contains(o.Id) && o.Count > 0)
+                     .Select(o => new { o.ItemId, o.Count }))
+        {
+            totals[row.ItemId] = totals.GetValueOrDefault(row.ItemId) + row.Count;
+        }
+
+        return totals;
     }
 
     // Resolves id→name in batches of 500 to stay under SQLite's ~999 bound-parameter limit.

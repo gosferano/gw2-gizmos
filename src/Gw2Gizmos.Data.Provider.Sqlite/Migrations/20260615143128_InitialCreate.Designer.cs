@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260614093154_InitialCreate")]
+    [Migration("20260615143128_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -68,7 +68,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountContainerSlots");
                 });
 
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountItemHoldingObservation", b =>
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountItemObservation", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -79,37 +79,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Count")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("ObservedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Store")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId", "Store", "ItemId", "Id");
-
-                    b.ToTable("AccountItemHoldingObservations");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountMaterialObservation", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccountId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Category")
+                    b.Property<int>("Container")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Count")
@@ -123,9 +93,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId", "ItemId", "Id");
+                    b.HasIndex("AccountId", "Container", "ItemId", "Id");
 
-                    b.ToTable("AccountMaterialObservations");
+                    b.ToTable("AccountItemObservations");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountWalletObservation", b =>
@@ -153,6 +123,33 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasIndex("AccountId", "CurrencyId", "Id");
 
                     b.ToTable("AccountWalletObservations");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterItemSlot", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CharacterName")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Charges")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "CharacterName", "SlotIndex");
+
+                    b.ToTable("CharacterItemSlots");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>
