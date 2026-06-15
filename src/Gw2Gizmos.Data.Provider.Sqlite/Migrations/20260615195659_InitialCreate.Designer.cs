@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 {
     [DbContext(typeof(Gw2GizmosDbContext))]
-    [Migration("20260615193838_AddCharacterDetails")]
-    partial class AddCharacterDetails
+    [Migration("20260615195659_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,8 +48,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Store")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Store")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
@@ -79,8 +80,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Container")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Container")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Count")
                         .HasColumnType("INTEGER");

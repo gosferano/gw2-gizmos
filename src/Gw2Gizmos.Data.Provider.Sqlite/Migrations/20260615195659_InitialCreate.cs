@@ -16,7 +16,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 columns: table => new
                 {
                     AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Store = table.Column<int>(type: "INTEGER", nullable: false),
+                    Store = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
                     SlotIndex = table.Column<int>(type: "INTEGER", nullable: false),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: true),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
@@ -34,7 +34,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Container = table.Column<int>(type: "INTEGER", nullable: false),
+                    Container = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: false),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
                     ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
@@ -88,6 +88,32 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CharacterItemSlots", x => new { x.AccountId, x.CharacterName, x.SlotIndex });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Characters",
+                columns: table => new
+                {
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    Race = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
+                    Gender = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
+                    Profession = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
+                    Level = table.Column<int>(type: "INTEGER", nullable: false),
+                    Guild = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    Age = table.Column<int>(type: "INTEGER", nullable: false),
+                    Created = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    LastModified = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    Deaths = table.Column<int>(type: "INTEGER", nullable: false),
+                    Title = table.Column<int>(type: "INTEGER", nullable: true),
+                    BuildTabsUnlocked = table.Column<int>(type: "INTEGER", nullable: false),
+                    ActiveBuildTab = table.Column<int>(type: "INTEGER", nullable: false),
+                    EquipmentTabsUnlocked = table.Column<int>(type: "INTEGER", nullable: false),
+                    ActiveEquipmentTab = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Characters", x => new { x.AccountId, x.Name });
                 });
 
             migrationBuilder.CreateTable(
@@ -1383,6 +1409,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "CharacterItemSlots");
+
+            migrationBuilder.DropTable(
+                name: "Characters");
 
             migrationBuilder.DropTable(
                 name: "ConsumableExtraRecipes");

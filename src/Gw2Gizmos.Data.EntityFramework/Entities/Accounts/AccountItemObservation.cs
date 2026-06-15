@@ -24,7 +24,8 @@ public class AccountItemObservation
     [MaxLength(64)]
     public string AccountId { get; set; } = "";
 
-    public AccountContainer Container { get; set; }
+    [MaxLength(32)]
+    public string Container { get; set; } = "";
 
     public int ItemId { get; set; }
 

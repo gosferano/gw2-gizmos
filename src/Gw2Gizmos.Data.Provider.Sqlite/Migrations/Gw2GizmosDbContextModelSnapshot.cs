@@ -45,8 +45,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Store")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Store")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
@@ -76,8 +77,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Container")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Container")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Count")
                         .HasColumnType("INTEGER");

@@ -134,7 +134,7 @@ public sealed class AccountReader
         return views;
     }
 
-    public List<SlotRow> GetSlots(string accountId, AccountContainer store)
+    public List<SlotRow> GetSlots(string accountId, string store)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();

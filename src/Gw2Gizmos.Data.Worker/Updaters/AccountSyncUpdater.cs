@@ -395,7 +395,7 @@ public class AccountSyncUpdater
 
     private async Task<int> SyncContainerAsync(
         string accountId,
-        AccountContainer store,
+        string store,
         IReadOnlyList<Api.AccountItem?> slots,
         DateTimeOffset now,
         CancellationToken stoppingToken
@@ -440,7 +440,7 @@ public class AccountSyncUpdater
     /// </summary>
     private async Task SyncItemObservationsAsync(
         string accountId,
-        AccountContainer container,
+        string container,
         IReadOnlyDictionary<int, int> totals,
         DateTimeOffset now,
         CancellationToken stoppingToken
