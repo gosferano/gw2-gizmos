@@ -59,7 +59,7 @@ public sealed class CharactersViewModel : ViewModelBase
 
             OnPropertyChanged(nameof(HasCharacters));
             Status = names.Count == 0
-                ? "No character inventories synced yet. Enable “Character inventories” in Settings (the API key needs the characters and inventories scopes)."
+                ? "No characters synced yet. Enable “Characters” in Settings (the API key needs the characters and inventories permissions)."
                 : "";
         }
         catch (Exception)

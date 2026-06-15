@@ -142,7 +142,7 @@ public sealed class ApiKeysViewModel : ViewModelBase
             ApiAccount? account = await client.V2.Account.GetBlob(CancellationToken.None);
             if (account is null || string.IsNullOrEmpty(account.Id))
             {
-                Status = "Key is invalid or missing the 'account' scope.";
+                Status = "Key is invalid or missing the 'account' permission.";
                 return;
             }
 

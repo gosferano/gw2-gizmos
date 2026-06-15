@@ -73,7 +73,7 @@ public sealed class DashboardViewModel : ViewModelBase
     /// <summary>True when the worker has produced data recently — drives the Worker card's status dot.</summary>
     public bool WorkerOperational { get; }
 
-    /// <summary>The token's granted scopes (plus any required-but-missing), shown as badges.</summary>
+    /// <summary>The token's granted permissions (plus any required-but-missing), shown as badges.</summary>
     public ObservableCollection<ScopeBadge> Scopes { get; } = new();
 
     public int ItemCount { get; }

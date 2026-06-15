@@ -11,7 +11,7 @@
             <!-- No account picked yet -->
             <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasAccount, Converter={StaticResource InverseBool}}">
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="No account selected. Add an API key (with the account, wallet, inventories and tradingpost scopes) on the API keys page, then pick which account to view." />
+                           Text="No account selected. Add an API key (with the account, wallet, inventories and tradingpost permissions) on the API keys page, then pick which account to view." />
             </ui:Card>
 
             <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource Bool}}">

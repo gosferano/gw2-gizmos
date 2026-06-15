@@ -154,16 +154,15 @@ public sealed class AccountReader
             .ToList();
     }
 
-    /// <summary>The names of the account's characters that have a synced bag snapshot, alphabetical.</summary>
+    /// <summary>The account's character names from the synced character details, alphabetical.</summary>
     public List<string> GetCharacterNames(string accountId)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-        return db.CharacterItemSlots.AsNoTracking()
-            .Where(s => s.AccountId == accountId)
-            .Select(s => s.CharacterName)
-            .Distinct()
+        return db.Characters.AsNoTracking()
+            .Where(c => c.AccountId == accountId)
+            .Select(c => c.Name)
             .OrderBy(name => name)
             .ToList();
     }

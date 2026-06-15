@@ -64,6 +64,7 @@ public class Gw2GizmosDbContext : DbContext
     // (currencies aren't items). AccountContainerSlots / CharacterItemSlots are the current slot-by-slot grids
     // (bank + shared inventory, and per-character bags), replaced each sync.
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<Character> Characters { get; set; }
     public DbSet<AccountWalletObservation> AccountWalletObservations { get; set; }
     public DbSet<AccountItemObservation> AccountItemObservations { get; set; }
     public DbSet<AccountContainerSlot> AccountContainerSlots { get; set; }

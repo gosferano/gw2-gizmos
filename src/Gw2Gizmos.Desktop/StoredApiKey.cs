@@ -23,6 +23,6 @@ public sealed record StoredApiKey
     /// <summary>The key's own name, as set on the GW2 account page (from <c>/v2/tokeninfo</c>).</summary>
     public required string KeyName { get; init; }
 
-    /// <summary>The scopes/permissions granted to the key (from <c>/v2/tokeninfo</c>).</summary>
+    /// <summary>The permissions granted to the key (from <c>/v2/tokeninfo</c>).</summary>
     public IReadOnlyList<string> Permissions { get; init; } = Array.Empty<string>();
 }

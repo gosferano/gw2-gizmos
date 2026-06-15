@@ -3,9 +3,10 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
-using Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 using Microsoft.EntityFrameworkCore;
 using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
+// Aliased so the contract's Character doesn't collide with the Character entity (Entities.Accounts).
+using ApiChar = Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
@@ -15,7 +16,8 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// records item holdings — material storage, bank, shared inventory, and (summed across characters) character bags
 /// — as one append-on-change <see cref="AccountItemObservation"/> log discriminated by location, with the wallet
 /// in its own log. Slot-based stores also get a replaced current grid: <see cref="AccountContainerSlot"/> for
-/// bank/shared and <see cref="CharacterItemSlot"/> per character. Every row is keyed by account id so multiple
+/// bank/shared and <see cref="CharacterItemSlot"/> per character. Character core details are upserted to the
+/// <see cref="Character"/> table from the same full-character fetch. Every row is keyed by account id so multiple
 /// accounts coexist.
 /// </summary>
 public class AccountSyncUpdater
@@ -103,7 +105,7 @@ public class AccountSyncUpdater
         Api.Account? account = await client.V2.Account.GetBlob(stoppingToken);
         if (account is null || string.IsNullOrEmpty(account.Id))
         {
-            _logger.LogWarning("Account endpoint returned no data; an API key may lack the 'account' scope.");
+            _logger.LogWarning("Account endpoint returned no data; an API key may lack the 'account' permission.");
             return null;
         }
 
@@ -129,7 +131,7 @@ public class AccountSyncUpdater
         await RunSection(WorkerFeatures.MaterialStorage, account, permissions, () => SyncMaterialsAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.Bank, account, permissions, () => SyncBankAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.SharedInventory, account, permissions, () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
-        await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharacterInventoriesAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharactersAsync(client, account.Id, now, stoppingToken));
 
         return account.Name;
     }
@@ -282,9 +284,10 @@ public class AccountSyncUpdater
         return inventory is null ? 0 : await SyncContainerAsync(accountId, AccountContainer.SharedInventory, inventory, now, stoppingToken);
     }
 
-    private async Task<int> SyncCharacterInventoriesAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    private async Task<int> SyncCharactersAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
     {
-        // The only section that costs one request per character (1 + N); it rides the shared account-sync pass.
+        // One full-character request per character (1 + N) — the heavy object carries details AND bags, so no
+        // separate inventory call is needed. Rides the shared account-sync pass.
         string[]? characterNames = await client.V2.Characters.GetIds(stoppingToken);
         if (characterNames is null || characterNames.Length == 0)
         {
@@ -301,30 +304,33 @@ public class AccountSyncUpdater
                 break;
             }
 
-            CharacterInventory? inventory;
+            ApiChar.Character? character;
             try
             {
-                inventory = await client.V2.Characters[characterName].Inventory.GetBlob(stoppingToken);
+                character = await client.V2.Characters.GetById(characterName, stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Character inventory sync failed for {Character} on {Account}; skipping it.", characterName, accountId);
+                _logger.LogWarning(ex, "Character sync failed for {Character} on {Account}; skipping it.", characterName, accountId);
                 continue;
             }
 
-            if (inventory is null)
+            if (character is null)
             {
                 continue;
             }
 
-            // (a) Replace this character's slot grid (per-character, so one character's failure leaves the others'
-            // snapshots intact). ExecuteDelete runs now; the re-inserts commit with the observation save below.
+            // (a) Upsert the character's details — the source of the character list.
+            await UpsertCharacterAsync(accountId, character, stoppingToken);
+
+            // (b) Replace this character's bag slot grid (per-character, so one character's failure leaves the
+            // others' snapshots intact). ExecuteDelete runs now; the re-inserts commit with the observation save.
             await _dbContext
                 .CharacterItemSlots.Where(s => s.AccountId == accountId && s.CharacterName == characterName)
                 .ExecuteDeleteAsync(stoppingToken);
 
             var slotIndex = 0;
-            foreach (CharacterInventoryBag? bag in inventory.Bags)
+            foreach (ApiChar.CharacterInventoryBag? bag in character.Bags)
             {
                 if (bag is null)
                 {
@@ -346,7 +352,7 @@ public class AccountSyncUpdater
                     );
                     slotIndex++;
 
-                    // (b) Accumulate the account-wide per-item total.
+                    // (c) Accumulate the account-wide per-item total.
                     if (item is not null)
                     {
                         totals[item.Id] = totals.GetValueOrDefault(item.Id) + item.Count;
@@ -357,6 +363,34 @@ public class AccountSyncUpdater
 
         await SyncItemObservationsAsync(accountId, AccountContainer.CharacterInventory, totals, now, stoppingToken);
         return characterNames.Length;
+    }
+
+    private async Task UpsertCharacterAsync(string accountId, ApiChar.Character character, CancellationToken stoppingToken)
+    {
+        Character? existing = await _dbContext.Characters
+            .FirstOrDefaultAsync(c => c.AccountId == accountId && c.Name == character.Name, stoppingToken);
+        if (existing is null)
+        {
+            existing = new Character { AccountId = accountId, Name = character.Name };
+            _dbContext.Characters.Add(existing);
+        }
+
+        existing.Race = character.Race.ToString();
+        existing.Gender = character.Gender.ToString();
+        existing.Profession = character.Profession.ToString();
+        existing.Level = character.Level;
+        existing.Guild = character.Guild;
+        existing.Age = character.Age;
+        existing.Created = character.Created;
+        existing.LastModified = character.LastModified;
+        existing.Deaths = character.Deaths;
+        existing.Title = character.Title;
+        existing.BuildTabsUnlocked = character.BuildTabsUnlocked;
+        existing.ActiveBuildTab = character.ActiveBuildTab;
+        existing.EquipmentTabsUnlocked = character.EquipmentTabsUnlocked;
+        existing.ActiveEquipmentTab = character.ActiveEquipmentTab;
+        // SaveChanges is deferred to the section's SyncItemObservationsAsync call, committing these upserts with
+        // the pending slot inserts and observation rows together.
     }
 
     private async Task<int> SyncContainerAsync(
