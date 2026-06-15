@@ -1,0 +1,22 @@
+<Page x:Class="Gw2Gizmos.Desktop.CharacterInventoryPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Inventory">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+
+        <!-- StackPanel so the grid sizes to its rows, matching the bank/shared-inventory layout. -->
+        <StackPanel>
+            <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotTemplate}"
+                          MaxWidth="720" HorizontalAlignment="Stretch">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="10" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </c:PageShell>
+</Page>

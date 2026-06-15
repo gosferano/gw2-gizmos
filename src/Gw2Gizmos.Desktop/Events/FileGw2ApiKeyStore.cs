@@ -29,7 +29,7 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
 
     public bool HasApiKey => Snapshot().Count > 0;
 
-    /// <summary>All stored keys with their account/scope metadata, for the API Keys cards.</summary>
+    /// <summary>All stored keys with their account/permission metadata, for the API Keys cards.</summary>
     public IReadOnlyList<StoredApiKey> GetStoredKeys() => Snapshot();
 
     public IReadOnlyList<string> GetApiKeys() => Snapshot().Select(k => k.Key).ToArray();

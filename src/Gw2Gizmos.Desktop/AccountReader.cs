@@ -105,11 +105,11 @@ public sealed class AccountReader
             .GroupBy(ci => ci.CategoryId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        IQueryable<long> maxIds = db.AccountMaterialObservations
-            .Where(o => o.AccountId == accountId)
+        IQueryable<long> maxIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.Container == AccountContainer.MaterialStorage)
             .GroupBy(o => o.ItemId)
             .Select(g => g.Max(x => x.Id));
-        Dictionary<int, int> counts = db.AccountMaterialObservations.AsNoTracking()
+        Dictionary<int, int> counts = db.AccountItemObservations.AsNoTracking()
             .Where(o => maxIds.Contains(o.Id))
             .ToDictionary(o => o.ItemId, o => o.Count);
 
@@ -134,7 +134,7 @@ public sealed class AccountReader
         return views;
     }
 
-    public List<SlotRow> GetSlots(string accountId, AccountContainer store)
+    public List<SlotRow> GetSlots(string accountId, string store)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -152,6 +152,67 @@ public sealed class AccountReader
                 ? new SlotRow(itemId, names.GetValueOrDefault(itemId) ?? $"Item {itemId}", s.Count)
                 : SlotRow.Empty)
             .ToList();
+    }
+
+    /// <summary>The account's character names from the synced character details, alphabetical.</summary>
+    public List<string> GetCharacterNames(string accountId)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        return db.Characters.AsNoTracking()
+            .Where(c => c.AccountId == accountId)
+            .Select(c => c.Name)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
+    /// <summary>One character's current bag layout (slot order, empties included) for the inventory grid.</summary>
+    public List<SlotRow> GetCharacterInventory(string accountId, string characterName)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        List<CharacterItemSlot> slots = db.CharacterItemSlots.AsNoTracking()
+            .Where(s => s.AccountId == accountId && s.CharacterName == characterName)
+            .OrderBy(s => s.SlotIndex)
+            .ToList();
+
+        Dictionary<int, string> names = LoadNames(slots.Where(s => s.ItemId.HasValue).Select(s => s.ItemId!.Value), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+
+        return slots
+            .Select(s => s.ItemId is int itemId
+                ? new SlotRow(itemId, names.GetValueOrDefault(itemId) ?? $"Item {itemId}", s.Count)
+                : SlotRow.Empty)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The account's total count of each item across every location (material storage, bank, shared inventory,
+    /// character bags) from the latest observation per (location, item). Backs the unified-inventory / play-session
+    /// "hoarded" views.
+    /// </summary>
+    public Dictionary<int, int> GetUnifiedItemTotals(string accountId)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        // Latest row per (container, item); sum the current counts across containers into a per-item total.
+        IQueryable<long> maxIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId)
+            .GroupBy(o => new { o.Container, o.ItemId })
+            .Select(g => g.Max(x => x.Id));
+
+        var totals = new Dictionary<int, int>();
+        foreach (var row in db.AccountItemObservations.AsNoTracking()
+                     .Where(o => maxIds.Contains(o.Id) && o.Count > 0)
+                     .Select(o => new { o.ItemId, o.Count }))
+        {
+            totals[row.ItemId] = totals.GetValueOrDefault(row.ItemId) + row.Count;
+        }
+
+        return totals;
     }
 
     // Resolves id→name in batches of 500 to stay under SQLite's ~999 bound-parameter limit.

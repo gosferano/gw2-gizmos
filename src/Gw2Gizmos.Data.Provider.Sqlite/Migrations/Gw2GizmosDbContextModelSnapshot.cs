@@ -45,8 +45,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Store")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Store")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
@@ -65,7 +66,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountContainerSlots");
                 });
 
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountItemHoldingObservation", b =>
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountItemObservation", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -76,38 +77,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Count")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("ObservedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Store")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId", "Store", "ItemId", "Id");
-
-                    b.ToTable("AccountItemHoldingObservations");
-                });
-
-            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountMaterialObservation", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccountId")
+                    b.Property<string>("Container")
                         .IsRequired()
-                        .HasMaxLength(64)
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("Category")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Count")
                         .HasColumnType("INTEGER");
@@ -120,9 +93,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId", "ItemId", "Id");
+                    b.HasIndex("AccountId", "Container", "ItemId", "Id");
 
-                    b.ToTable("AccountMaterialObservations");
+                    b.ToTable("AccountItemObservations");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountWalletObservation", b =>
@@ -150,6 +123,99 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasIndex("AccountId", "CurrencyId", "Id");
 
                     b.ToTable("AccountWalletObservations");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.Character", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ActiveBuildTab")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ActiveEquipmentTab")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Age")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BuildTabsUnlocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Deaths")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EquipmentTabsUnlocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Guild")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Profession")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Race")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Title")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("Characters");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterItemSlot", b =>
+                {
+                    b.Property<string>("CharacterName")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Charges")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("CharacterName", "SlotIndex");
+
+                    b.ToTable("CharacterItemSlots");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>

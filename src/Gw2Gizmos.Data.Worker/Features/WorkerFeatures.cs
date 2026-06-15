@@ -56,9 +56,13 @@ public static class WorkerFeatures
         "SharedInventory", "Shared inventory", "Account-wide shared slots.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Inventories) });
 
+    public static readonly WorkerFeature CharacterInventory = new(
+        "CharacterInventory", "Characters", "Character details and bag contents (one request per character).",
+        new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Characters), Perm(TokenPermission.Inventories) });
+
     /// <summary>All worker features, in display order (public data first, then account-bound).</summary>
     public static IReadOnlyList<WorkerFeature> All { get; } =
-        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory };
+        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory };
 
     /// <summary>
     /// Every GW2 permission that can appear on a key — shown in full on the API Keys page. Sourced from
@@ -77,7 +81,7 @@ public static class WorkerFeatures
 
     /// <summary>
     /// The required permissions (across the enabled features) that <paramref name="keyPermissions"/> doesn't
-    /// hold. Drives the worker warning, the API Keys red highlighting, and the dashboard's missing-scope badges.
+    /// hold. Drives the worker warning, the API Keys red highlighting, and the dashboard's missing-permission badges.
     /// </summary>
     public static IReadOnlyList<string> MissingPermissions(
         IEnumerable<string> keyPermissions,

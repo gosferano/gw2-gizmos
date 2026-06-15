@@ -104,7 +104,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
 
         if (!string.Equals(apiKey, _currentApiKey, StringComparison.Ordinal))
         {
-            // Key needs the 'account' + 'tradingpost' scopes.
+            // Key needs the 'account' + 'tradingpost' permissions.
             _apiClient = _apiClientFactory.Create(apiKey, Locale.English);
             _currentApiKey = apiKey;
             _warnedNoKey = false;
@@ -126,7 +126,7 @@ public sealed class CommerceDeliveryUpdater : BackgroundService
         if (delivery is null)
         {
             _logger.LogWarning(
-                "Trading-post delivery request returned no data; check the API key has the 'tradingpost' scope."
+                "Trading-post delivery request returned no data; check the API key has the 'tradingpost' permission."
             );
             return;
         }

@@ -22,6 +22,8 @@ public sealed class FeatureSettingsStore
     private static readonly HashSet<string> OffByDefault = new(StringComparer.OrdinalIgnoreCase)
     {
         WorkerFeatures.PricesSync.Key,
+        // Costs one API request per character (1 + N per account sync); opt-in.
+        WorkerFeatures.CharacterInventory.Key,
     };
 
     private readonly string _path;

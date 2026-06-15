@@ -1,0 +1,25 @@
+<Page x:Class="Gw2Gizmos.Desktop.CharacterPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Character">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <!-- Per-character sub-sections (currently just the bags). The character name is the breadcrumb, so
+                 it isn't repeated as a header here. -->
+            <ui:CardAction Click="OnOpenInventory" Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="Backpack24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Inventory" FontWeight="Medium" FontSize="14" />
+                        <TextBlock Text="Items in this character's bags" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:CardAction>
+        </StackPanel>
+    </c:PageShell>
+</Page>

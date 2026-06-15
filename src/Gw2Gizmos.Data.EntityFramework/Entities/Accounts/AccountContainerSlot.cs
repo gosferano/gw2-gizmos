@@ -14,7 +14,8 @@ public class AccountContainerSlot
     [MaxLength(64)]
     public string AccountId { get; set; } = "";
 
-    public AccountContainer Store { get; set; }
+    [MaxLength(32)]
+    public string Store { get; set; } = "";
 
     public int SlotIndex { get; set; }
 
