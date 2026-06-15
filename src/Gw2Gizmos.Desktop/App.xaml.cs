@@ -346,6 +346,11 @@ public partial class App : Application
         builder.Services.AddTransient<MaterialStorageViewModel>();
         builder.Services.AddTransient<BankViewModel>();
         builder.Services.AddTransient<SharedInventoryViewModel>();
+        // Characters: the drilled-into character (transient nav context), the hub + per-character VMs.
+        builder.Services.AddSingleton<SelectedCharacterService>();
+        builder.Services.AddTransient<CharactersViewModel>();
+        builder.Services.AddTransient<CharacterViewModel>();
+        builder.Services.AddTransient<CharacterInventoryViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
         // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
@@ -356,6 +361,9 @@ public partial class App : Application
         builder.Services.AddTransient<MaterialStoragePage>();
         builder.Services.AddTransient<BankPage>();
         builder.Services.AddTransient<SharedInventoryPage>();
+        builder.Services.AddTransient<CharactersPage>();
+        builder.Services.AddTransient<CharacterPage>();
+        builder.Services.AddTransient<CharacterInventoryPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();

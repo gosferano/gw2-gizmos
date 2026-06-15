@@ -1,0 +1,41 @@
+<Page x:Class="Gw2Gizmos.Desktop.CharactersPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Characters">
+    <c:PageShell Title="Characters">
+        <StackPanel>
+            <!-- No account picked yet -->
+            <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasAccount, Converter={StaticResource InverseBool}}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </ui:Card>
+
+            <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource Bool}}">
+                <!-- Account selected but nothing synced yet -->
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Visibility="{Binding HasCharacters, Converter={StaticResource InverseBool}}" />
+
+                <!-- One card per character → its page. -->
+                <ItemsControl ItemsSource="{Binding Characters}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:CardAction Margin="0,0,0,8"
+                                           Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Person24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding}" FontWeight="Medium" FontSize="14" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </ui:CardAction>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</Page>

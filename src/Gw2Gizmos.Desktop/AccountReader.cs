@@ -154,6 +154,41 @@ public sealed class AccountReader
             .ToList();
     }
 
+    /// <summary>The names of the account's characters that have a synced bag snapshot, alphabetical.</summary>
+    public List<string> GetCharacterNames(string accountId)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        return db.CharacterItemSlots.AsNoTracking()
+            .Where(s => s.AccountId == accountId)
+            .Select(s => s.CharacterName)
+            .Distinct()
+            .OrderBy(name => name)
+            .ToList();
+    }
+
+    /// <summary>One character's current bag layout (slot order, empties included) for the inventory grid.</summary>
+    public List<SlotRow> GetCharacterInventory(string accountId, string characterName)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        List<CharacterItemSlot> slots = db.CharacterItemSlots.AsNoTracking()
+            .Where(s => s.AccountId == accountId && s.CharacterName == characterName)
+            .OrderBy(s => s.SlotIndex)
+            .ToList();
+
+        Dictionary<int, string> names = LoadNames(slots.Where(s => s.ItemId.HasValue).Select(s => s.ItemId!.Value), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+
+        return slots
+            .Select(s => s.ItemId is int itemId
+                ? new SlotRow(itemId, names.GetValueOrDefault(itemId) ?? $"Item {itemId}", s.Count)
+                : SlotRow.Empty)
+            .ToList();
+    }
+
     /// <summary>
     /// The account's total count of each item across every location (material storage, bank, shared inventory,
     /// character bags) from the latest observation per (location, item). Backs the unified-inventory / play-session
