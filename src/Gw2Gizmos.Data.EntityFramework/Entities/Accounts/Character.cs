@@ -10,14 +10,16 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 /// from the bag snapshot. Race/Gender/Profession are stored as their API enum names for direct display. Guild id
 /// and title are nullable; the build/equipment tab counts need the key's <c>builds</c> permission (otherwise 0).
 /// </summary>
-[PrimaryKey(nameof(AccountId), nameof(Name))]
+[PrimaryKey(nameof(Name))]
 public class Character
 {
-    [MaxLength(64)]
-    public string AccountId { get; set; } = "";
-
+    /// <summary>The GW2 character name — globally unique across all accounts, so it's the primary key.</summary>
     [MaxLength(64)]
     public string Name { get; set; } = "";
+
+    /// <summary>The account this character belongs to (a plain column, for scoping the list to one account).</summary>
+    [MaxLength(64)]
+    public string AccountId { get; set; } = "";
 
     [MaxLength(16)]
     public string Race { get; set; } = "";

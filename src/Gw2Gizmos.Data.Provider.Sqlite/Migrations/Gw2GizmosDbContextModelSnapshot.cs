@@ -127,11 +127,12 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.Character", b =>
                 {
-                    b.Property<string>("AccountId")
+                    b.Property<string>("Name")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("AccountId")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
@@ -184,23 +185,24 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int?>("Title")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("AccountId", "Name");
+                    b.HasKey("Name");
 
                     b.ToTable("Characters");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterItemSlot", b =>
                 {
-                    b.Property<string>("AccountId")
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("CharacterName")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("Charges")
                         .HasColumnType("INTEGER");
@@ -211,7 +213,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int?>("ItemId")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("AccountId", "CharacterName", "SlotIndex");
+                    b.HasKey("CharacterName", "SlotIndex");
 
                     b.ToTable("CharacterItemSlots");
                 });

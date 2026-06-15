@@ -78,24 +78,24 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "CharacterItemSlots",
                 columns: table => new
                 {
-                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     CharacterName = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     SlotIndex = table.Column<int>(type: "INTEGER", nullable: false),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: true),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
                     Charges = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CharacterItemSlots", x => new { x.AccountId, x.CharacterName, x.SlotIndex });
+                    table.PrimaryKey("PK_CharacterItemSlots", x => new { x.CharacterName, x.SlotIndex });
                 });
 
             migrationBuilder.CreateTable(
                 name: "Characters",
                 columns: table => new
                 {
-                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     Race = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
                     Gender = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
                     Profession = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
@@ -113,7 +113,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Characters", x => new { x.AccountId, x.Name });
+                    table.PrimaryKey("PK_Characters", x => x.Name);
                 });
 
             migrationBuilder.CreateTable(

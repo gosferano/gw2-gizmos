@@ -11,14 +11,15 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 /// <see cref="AccountContainer.CharacterInventory"/>. Item cosmetics (skin/dyes/upgrades) are deferred — a JSON
 /// column here, additive later.
 /// </summary>
-[PrimaryKey(nameof(AccountId), nameof(CharacterName), nameof(SlotIndex))]
+[PrimaryKey(nameof(CharacterName), nameof(SlotIndex))]
 public class CharacterItemSlot
 {
-    [MaxLength(64)]
-    public string AccountId { get; set; } = "";
-
+    /// <summary>The owning character — globally unique, so (name, slot) is the key; AccountId is a plain column.</summary>
     [MaxLength(64)]
     public string CharacterName { get; set; } = "";
+
+    [MaxLength(64)]
+    public string AccountId { get; set; } = "";
 
     /// <summary>Flat slot index across the character's bags, in bag-then-slot order.</summary>
     public int SlotIndex { get; set; }
