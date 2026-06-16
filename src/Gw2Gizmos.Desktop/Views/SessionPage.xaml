@@ -1,0 +1,70 @@
+<Page x:Class="Gw2Gizmos.Desktop.SessionPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Session">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,8"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Visibility="{Binding HasSegments, Converter={StaticResource InverseBool}}" />
+
+            <!-- One card per character segment, in order — consecutive cards are the switches within the sitting.
+                 Click a segment to see its full loot. -->
+            <ItemsControl ItemsSource="{Binding Segments}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:CardAction Margin="0,0,0,8"
+                                       Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                       CommandParameter="{Binding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                    <ui:SymbolIcon Symbol="Person24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CharacterName}" FontWeight="Medium" FontSize="14" />
+                                        <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <Run Text="{Binding TimeRange, Mode=OneWay}" />
+                                            <Run Text=" · " />
+                                            <Run Text="{Binding DurationDisplay, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0">
+                                    <TextBlock Text="{Binding CoinDisplay}" FontWeight="Medium" FontSize="13"
+                                               HorizontalAlignment="Right"
+                                               Visibility="{Binding HasCoin, Converter={StaticResource Bool}}" />
+                                    <TextBlock Text="{Binding ItemsDisplay}" FontSize="12" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Visibility="{Binding HasItems, Converter={StaticResource Bool}}" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:CardAction>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Whole-session aggregated loot, under the character cards. -->
+            <StackPanel Margin="0,18,0,0" Visibility="{Binding HasSegments, Converter={StaticResource Bool}}">
+                <TextBlock Text="Session total" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6" />
+
+                <TextBlock Text="No currency or item changes recorded for this session."
+                           TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Visibility="{Binding HasNoLoot, Converter={StaticResource Bool}}" />
+
+                <ItemsControl ItemsSource="{Binding Currencies}" ItemTemplate="{StaticResource SessionCurrencyRowTemplate}"
+                              Visibility="{Binding HasCurrencies, Converter={StaticResource Bool}}" Margin="0,0,0,6" />
+                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource SessionItemRowTemplate}"
+                              Visibility="{Binding HasItems, Converter={StaticResource Bool}}" />
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</Page>

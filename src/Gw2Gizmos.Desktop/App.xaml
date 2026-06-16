@@ -55,6 +55,48 @@
                 </Grid>
             </DataTemplate>
 
+            <!-- Subtle hover highlight, identical to the Account → Wallet rows: the default Transparent comes
+                 from a style setter (not a local value) so the IsMouseOver trigger can override it. -->
+            <Style x:Key="SessionLootRowStyle" TargetType="Border">
+                <Setter Property="Padding" Value="8,5" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Background" Value="Transparent" />
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- A session "hoarded" currency row — same size/layout + hover highlight as the Wallet entries, with a
+                 hover tooltip. DeltaDisplay is the signed gain/loss. -->
+            <DataTemplate x:Key="SessionCurrencyRowTemplate">
+                <Border Style="{StaticResource SessionLootRowStyle}" ToolTip="{Binding Name}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
+                                   Text="{Binding DeltaDisplay}" />
+                        <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
+                                         VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+
+            <!-- A session "hoarded" item row — matches the currency row (wallet-sized, hover highlight + tooltip). -->
+            <DataTemplate x:Key="SessionItemRowTemplate">
+                <Border Style="{StaticResource SessionLootRowStyle}" ToolTip="{Binding Name}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
+                                   Text="{Binding DeltaDisplay}" />
+                        <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                     CornerRadius="4" Stretch="Uniform" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+
             <!-- Win11-Settings-style page chrome: a pinned title/breadcrumb over a width-capped, centered
                  body. Scrollable bodies scroll under the header; non-scrollable ones (grids) fill the
                  height and scroll internally. -->

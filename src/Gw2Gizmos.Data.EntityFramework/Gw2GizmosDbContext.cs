@@ -69,4 +69,10 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<AccountItemObservation> AccountItemObservations { get; set; }
     public DbSet<AccountContainerSlot> AccountContainerSlots { get; set; }
     public DbSet<CharacterItemSlot> CharacterItemSlots { get; set; }
+
+    // Play sessions detected from MumbleLink: a GameSession per sitting, with an ordered set of CharacterSegments
+    // (the per-character stretches / switches). "Hoarded" deltas are reconstructed from the observation logs above
+    // at read time, not stored.
+    public DbSet<GameSession> GameSessions { get; set; }
+    public DbSet<CharacterSegment> CharacterSegments { get; set; }
 }
