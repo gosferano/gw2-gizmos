@@ -221,7 +221,11 @@ public partial class App : Application
     }
 
     private static UpdateManager CreateUpdateManager() =>
-        new(new GithubSource("https://github.com/gosferano/gw2-gizmos", null, prerelease: false));
+        // Read the feed as a plain release *asset* via GitHub's stable /releases/latest/download URL (a CDN
+        // redirect), NOT GithubSource — whose REST release enumeration is throttled to 60 req/hr per IP and
+        // 403s ("rate limit exceeded") behind shared/CGNAT addresses, which is what broke the update check.
+        // CI always packs full-only, so the feed at "latest" only references that release's own assets.
+        new(new SimpleWebSource("https://github.com/gosferano/gw2-gizmos/releases/latest/download"));
 
     /// <summary>True for a Velopack-installed build, false for a dev/bin run; never throws.</summary>
     private static bool TryIsInstalled(UpdateManager updateManager)
@@ -242,18 +246,25 @@ public partial class App : Application
         {
             if (!updateManager.IsInstalled)
             {
+                Log.Information("Update check skipped: not a Velopack install (dev/bin run).");
                 return;
             }
 
+            Log.Information("Checking for updates (current version {Version})…", updateManager.CurrentVersion);
             UpdateInfo? update = await updateManager.CheckForUpdatesAsync();
-            if (update is not null)
+            if (update is null)
             {
-                // Download now; Velopack applies it on the next restart so the session isn't interrupted.
-                await updateManager.DownloadUpdatesAsync(update);
-                // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart,
-                // or immediately via the card's "Restart now" button.
-                updateStatus.SetPending(updateManager, update);
+                Log.Information("Update check: no newer release available.");
+                return;
             }
+
+            Log.Information("Update {Version} found; downloading…", update.TargetFullRelease.Version);
+            // Download now; Velopack applies it on the next restart so the session isn't interrupted.
+            await updateManager.DownloadUpdatesAsync(update);
+            // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart,
+            // or immediately via the card's "Restart now" button.
+            updateStatus.SetPending(updateManager, update);
+            Log.Information("Update {Version} downloaded and staged.", update.TargetFullRelease.Version);
         }
         catch (Exception ex)
         {

@@ -34,6 +34,8 @@ public sealed class DashboardViewModel : ViewModelBase
     private string _sessionStatus = "No sessions yet";
     private bool _hasSessions;
     private string _workerUpdated = "";
+    private bool _updateReady;
+    private string _updateText = "";
 
     public DashboardViewModel(
         IServiceScopeFactory scopeFactory,
@@ -49,9 +51,12 @@ public sealed class DashboardViewModel : ViewModelBase
         ApiKeyConfigured = apiKeyStore.HasApiKey;
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
 
-        UpdateReady = updateStatus.UpdateReady;
-        UpdateText = updateStatus.UpdateReady ? $"Update {updateStatus.PendingVersion} ready" : "";
         RestartCommand = new RelayCommand(updateStatus.ApplyAndRestart);
+        ApplyUpdateStatus(updateStatus);
+        // The startup update check runs in the background and completes after this VM is built and shown, so
+        // reflect its result reactively rather than only snapshotting it here (off the UI thread → marshal).
+        updateStatus.Changed += () =>
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => ApplyUpdateStatus(updateStatus));
 
         System.Reflection.Assembly assembly = typeof(DashboardViewModel).Assembly;
         string informational = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
@@ -70,6 +75,12 @@ public sealed class DashboardViewModel : ViewModelBase
         _ = LoadCountsAsync(scopeFactory);
         _ = LoadAccountStatsAsync(reader);
         _ = LoadTokenInfoAsync();
+    }
+
+    private void ApplyUpdateStatus(UpdateStatus updateStatus)
+    {
+        UpdateReady = updateStatus.UpdateReady;
+        UpdateText = updateStatus.UpdateReady ? $"Update {updateStatus.PendingVersion} ready" : "";
     }
 
     private async Task LoadCountsAsync(IServiceScopeFactory scopeFactory)
@@ -269,10 +280,18 @@ public sealed class DashboardViewModel : ViewModelBase
     public string DatabaseSize { get; }
 
     /// <summary>True when an update has been downloaded and will apply on the next restart.</summary>
-    public bool UpdateReady { get; }
+    public bool UpdateReady
+    {
+        get => _updateReady;
+        private set => SetProperty(ref _updateReady, value);
+    }
 
     /// <summary>"Update X.Y.Z ready", or empty.</summary>
-    public string UpdateText { get; }
+    public string UpdateText
+    {
+        get => _updateText;
+        private set => SetProperty(ref _updateText, value);
+    }
 
     /// <summary>Applies the staged update and restarts the app.</summary>
     public RelayCommand RestartCommand { get; }
