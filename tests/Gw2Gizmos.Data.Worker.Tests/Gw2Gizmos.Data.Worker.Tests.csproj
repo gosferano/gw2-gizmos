@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test SDK + xunit packages and the Xunit using come from tests/Directory.Build.props.
+       Assembly name must stay Gw2Gizmos.Data.Worker.Tests — the worker grants it InternalsVisibleTo. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The real Gw2ApiClient is built via the DI extension; BuildServiceProvider needs the implementation package. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+</Project>
