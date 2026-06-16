@@ -246,12 +246,28 @@ public sealed class AccountReader
             .GroupBy(s => s.GameSessionId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.CharacterName).Distinct().ToList());
 
+        // Reconstruct each sitting's item + coin delta over its window, then value them all with one shared
+        // price/vendor lookup so the list badge matches the session-detail summary.
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Dictionary<long, (Dictionary<int, int> Items, long Coin)> deltas = sessions.ToDictionary(
+            s => s.Id,
+            s => (
+                ItemDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now),
+                CoinDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now)));
+        Dictionary<int, long> values = BuildItemValues(db, deltas.Values.SelectMany(d => d.Items.Keys).ToList());
+
         return sessions
-            .Select(s => new GameSessionRow(
-                s.Id,
-                s.StartedAtUtc,
-                s.EndedAtUtc,
-                charactersBySession.TryGetValue(s.Id, out List<string>? chars) ? string.Join(", ", chars) : "—"))
+            .Select(s =>
+            {
+                (Dictionary<int, int> items, long coin) = deltas[s.Id];
+                long total = coin + items.Sum(kv => (long)kv.Value * values.GetValueOrDefault(kv.Key));
+                return new GameSessionRow(
+                    s.Id,
+                    s.StartedAtUtc,
+                    s.EndedAtUtc,
+                    charactersBySession.TryGetValue(s.Id, out List<string>? chars) ? string.Join(", ", chars) : "—",
+                    total);
+            })
             .ToList();
     }
 
@@ -272,34 +288,40 @@ public sealed class AccountReader
             .OrderBy(s => s.Sequence)
             .ToList();
 
-        var rows = new List<SessionSegmentRow>();
-        foreach (CharacterSegment segment in segments)
-        {
-            DateTimeOffset end = segment.EndedAtUtc ?? DateTimeOffset.UtcNow;
-            Dictionary<int, int> startItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, segment.StartedAtUtc);
-            Dictionary<int, int> endItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, end);
+        // Reconstruct each segment's item + coin delta over its window, then value the items with one shared
+        // price/vendor lookup (so a per-segment value can sit beside the existing gained/lost counts).
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        var perSegment = segments
+            .Select(seg => (
+                Segment: seg,
+                Items: ItemDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now),
+                Coin: CoinDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now)))
+            .ToList();
+        Dictionary<int, long> values = BuildItemValues(db, perSegment.SelectMany(x => x.Items.Keys).ToList());
 
+        var rows = new List<SessionSegmentRow>();
+        foreach ((CharacterSegment segment, Dictionary<int, int> items, long coin) in perSegment)
+        {
             int gained = 0;
             int lost = 0;
-            foreach (int itemId in startItems.Keys.Union(endItems.Keys))
+            long loot = 0;
+            foreach ((int itemId, int delta) in items)
             {
-                int delta = endItems.GetValueOrDefault(itemId) - startItems.GetValueOrDefault(itemId);
                 if (delta > 0)
                 {
                     gained += delta;
                 }
-                else if (delta < 0)
+                else
                 {
                     lost += -delta;
                 }
-            }
 
-            long coinDelta = AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, end)
-                - AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, segment.StartedAtUtc);
+                loot += (long)delta * values.GetValueOrDefault(itemId);
+            }
 
             rows.Add(new SessionSegmentRow(
                 segment.Id, segment.Sequence, segment.CharacterName,
-                segment.StartedAtUtc, segment.EndedAtUtc, coinDelta, gained, lost));
+                segment.StartedAtUtc, segment.EndedAtUtc, coin, gained, lost, loot));
         }
 
         return rows;
@@ -370,6 +392,99 @@ public sealed class AccountReader
             .ToList();
 
         return new SessionLoot(currencyRows, items);
+    }
+
+    /// <summary>Estimated value of a whole session: coin gained plus the instant-sell value of net item loot,
+    /// over the sitting's window (or up to now while it's still open).</summary>
+    public SessionValueSummary GetSessionValue(string accountId, long gameSessionId) =>
+        SafeRead(db => GetSessionValue(db, accountId, gameSessionId), SessionValueSummary.Empty);
+
+    private static SessionValueSummary GetSessionValue(Gw2GizmosDbContext db, string accountId, long gameSessionId)
+    {
+        GameSession? session = db.GameSessions.AsNoTracking()
+            .FirstOrDefault(s => s.Id == gameSessionId && s.AccountId == accountId);
+        if (session is null)
+        {
+            return SessionValueSummary.Empty;
+        }
+
+        DateTimeOffset end = session.EndedAtUtc ?? DateTimeOffset.UtcNow;
+        Dictionary<int, int> deltas = ItemDeltaOver(db, accountId, session.StartedAtUtc, end);
+        Dictionary<int, long> values = BuildItemValues(db, deltas.Keys.ToList());
+        long loot = deltas.Sum(kv => (long)kv.Value * values.GetValueOrDefault(kv.Key));
+        long coin = CoinDeltaOver(db, accountId, session.StartedAtUtc, end);
+        return new SessionValueSummary(coin, loot, session.StartedAtUtc, session.EndedAtUtc);
+    }
+
+    // 15% trading-post fee taken on a sale — the buy-order value is kept at this percent so loot reads as the
+    // realistic take-home if sold instantly.
+    private const long TradingPostTakePercent = 85;
+
+    /// <summary>Net per-item holdings delta over a window (end totals minus start totals); zero deltas dropped.</summary>
+    private static Dictionary<int, int> ItemDeltaOver(Gw2GizmosDbContext db, string accountId, DateTimeOffset start, DateTimeOffset end)
+    {
+        Dictionary<int, int> startItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, start);
+        Dictionary<int, int> endItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, end);
+
+        var deltas = new Dictionary<int, int>();
+        foreach (int id in startItems.Keys.Union(endItems.Keys))
+        {
+            int delta = endItems.GetValueOrDefault(id) - startItems.GetValueOrDefault(id);
+            if (delta != 0)
+            {
+                deltas[id] = delta;
+            }
+        }
+
+        return deltas;
+    }
+
+    private static long CoinDeltaOver(Gw2GizmosDbContext db, string accountId, DateTimeOffset start, DateTimeOffset end) =>
+        AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, end)
+        - AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, start);
+
+    /// <summary>Per-item "instant-sell" unit value in copper: the latest trading-post buy order minus the 15% fee
+    /// where one exists, otherwise the item's vendor value. Items with neither resolve to 0.</summary>
+    private static Dictionary<int, long> BuildItemValues(Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds)
+    {
+        var values = new Dictionary<int, long>();
+        int[] distinct = itemIds.Distinct().ToArray();
+        if (distinct.Length == 0)
+        {
+            return values;
+        }
+
+        // Batched to stay under SQLite's parameter cap (as LoadNames does).
+        foreach (int[] batch in distinct.Chunk(500))
+        {
+            IQueryable<long> latestIds = db.PriceSnapshots
+                .Where(s => batch.Contains(s.ItemId))
+                .GroupBy(s => s.ItemId)
+                .Select(g => g.Max(s => s.Id));
+            Dictionary<int, int> buy = db.PriceSnapshots.AsNoTracking()
+                .Where(s => latestIds.Contains(s.Id) && s.Buy != null && s.Buy > 0)
+                .ToDictionary(s => s.ItemId, s => s.Buy!.Value);
+
+            foreach (var item in db.Items.AsNoTracking()
+                         .Where(i => batch.Contains(i.Id))
+                         .Select(i => new { i.Id, i.VendorValue }))
+            {
+                values[item.Id] = buy.TryGetValue(item.Id, out int b)
+                    ? b * TradingPostTakePercent / 100
+                    : item.VendorValue;
+            }
+
+            // A priced item missing from the catalog (shouldn't happen) — still value it from the buy order.
+            foreach ((int id, int b) in buy)
+            {
+                if (!values.ContainsKey(id))
+                {
+                    values[id] = b * TradingPostTakePercent / 100;
+                }
+            }
+        }
+
+        return values;
     }
 
     /// <summary>The number of characters synced for an account (for the dashboard).</summary>
@@ -514,10 +629,35 @@ public sealed record DashboardSessionStats(
     DateTimeOffset? LastPlayedUtc
 );
 
-/// <summary>One play session for the Sessions hub: when it ran and which characters were played.</summary>
-public sealed record GameSessionRow(long Id, DateTimeOffset StartedAtUtc, DateTimeOffset? EndedAtUtc, string CharactersDisplay)
+/// <summary>One play session for the Sessions hub: when it ran, which characters were played, and the estimated
+/// value (coin + instant-sell loot) earned that sitting.</summary>
+public sealed record GameSessionRow(
+    long Id,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset? EndedAtUtc,
+    string CharactersDisplay,
+    long TotalValueCopper
+)
 {
     public bool IsActive => EndedAtUtc is null;
+
+    public bool HasValue => TotalValueCopper != 0;
+
+    /// <summary>Signed estimated value earned, e.g. "+42g 50s".</summary>
+    public string ValueDisplay => SessionFormat.SignedCoin(TotalValueCopper);
+
+    /// <summary>Hours the sitting lasted (open sessions measured to now); 0 when unknown/negative.</summary>
+    private double DurationHours
+    {
+        get
+        {
+            TimeSpan span = (EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc;
+            return span > TimeSpan.Zero ? span.TotalHours : 0;
+        }
+    }
+
+    /// <summary>Estimated value earned per hour (copper), for sorting; 0 for sub-minute sittings.</summary>
+    public long ProfitPerHourCopper => DurationHours <= 1.0 / 60 ? 0 : (long)(TotalValueCopper / DurationHours);
 
     /// <summary>Card title, e.g. "Mon 16 Jun, 19:04".</summary>
     public string Title => StartedAtUtc.LocalDateTime.ToString("ddd d MMM, HH:mm");
@@ -536,10 +676,19 @@ public sealed record SessionSegmentRow(
     DateTimeOffset? EndedAtUtc,
     long CoinDelta,
     int ItemsGained,
-    int ItemsLost
+    int ItemsLost,
+    long LootValueCopper
 )
 {
     public bool IsActive => EndedAtUtc is null;
+
+    /// <summary>Coin gained plus the instant-sell value of the net item loot.</summary>
+    public long TotalValueCopper => CoinDelta + LootValueCopper;
+
+    public bool HasValue => TotalValueCopper != 0;
+
+    /// <summary>Signed estimated value earned in this segment, e.g. "+8g 12s".</summary>
+    public string ValueDisplay => SessionFormat.SignedCoin(TotalValueCopper);
 
     /// <summary>Local time range, e.g. "19:04 – 19:48" (or "19:04 – now" while active).</summary>
     public string TimeRange =>
@@ -594,6 +743,42 @@ public sealed record SessionLoot(IReadOnlyList<SessionLootCurrency> Currencies, 
     public bool HasCurrencies => Currencies.Count > 0;
     public bool HasItems => Items.Count > 0;
     public bool IsEmpty => Currencies.Count == 0 && Items.Count == 0;
+}
+
+/// <summary>A session's estimated worth: coin gained plus the instant-sell value of net item loot, with the
+/// gold-per-hour rate over the sitting's duration. Item value is the latest trading-post buy order minus the 15%
+/// fee, falling back to vendor value for untradeable loot.</summary>
+public sealed record SessionValueSummary(
+    long CoinDeltaCopper,
+    long LootValueCopper,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset? EndedAtUtc
+)
+{
+    public static SessionValueSummary Empty { get; } = new(0, 0, DateTimeOffset.UnixEpoch, null);
+
+    public long TotalValueCopper => CoinDeltaCopper + LootValueCopper;
+
+    public string TotalDisplay => SessionFormat.SignedCoin(TotalValueCopper);
+
+    public string CoinDisplay => SessionFormat.SignedCoin(CoinDeltaCopper);
+
+    public string LootDisplay => SessionFormat.SignedCoin(LootValueCopper);
+
+    /// <summary>Estimated value earned per hour over the sitting, e.g. "+12g 30s / h" (— for sub-minute sessions).</summary>
+    public string GoldPerHourDisplay
+    {
+        get
+        {
+            double hours = ((EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc).TotalHours;
+            if (hours <= 1.0 / 60)
+            {
+                return "—";
+            }
+
+            return SessionFormat.SignedCoin((long)(TotalValueCopper / hours)) + " / h";
+        }
+    }
 }
 
 /// <summary>Shared formatting for the session views (durations and signed coin amounts).</summary>

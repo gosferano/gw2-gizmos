@@ -18,7 +18,53 @@
                 <!-- Account selected but nothing recorded yet -->
                 <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Visibility="{Binding HasSessions, Converter={StaticResource InverseBool}}" />
+                           Visibility="{Binding HasAnySessions, Converter={StaticResource InverseBool}}" />
+
+                <!-- Date-range filter on the left, sort on the right. Dropdowns keep their natural height (MinHeight
+                     only, never forced smaller); the buttons are sized to match. -->
+                <DockPanel Margin="0,4,0,10" LastChildFill="False"
+                           Visibility="{Binding HasAnySessions, Converter={StaticResource Bool}}">
+                    <!-- Filter -->
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <TextBlock Text="From" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <!-- Short format + en-CA → the short-date pattern is yyyy-MM-dd (ISO), no day name. -->
+                        <DatePicker SelectedDate="{Binding FromDate}" Width="130" MinHeight="38" Margin="0,0,10,0"
+                                    SelectedDateFormat="Short" Language="en-CA" VerticalContentAlignment="Center" />
+                        <TextBlock Text="To" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <DatePicker SelectedDate="{Binding ToDate}" Width="130" MinHeight="38" Margin="0,0,8,0"
+                                    SelectedDateFormat="Short" Language="en-CA" VerticalContentAlignment="Center" />
+                        <ui:Button Command="{Binding ClearFilterCommand}" Content="Clear" Appearance="Transparent"
+                                   Height="38" />
+                    </StackPanel>
+
+                    <!-- Sort -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <TextBlock Text="Sort" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,8,0" />
+                        <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
+                                  MinWidth="130" MinHeight="38" Margin="0,0,8,0" VerticalContentAlignment="Center" />
+                        <ui:Button Command="{Binding ToggleDirectionCommand}" Height="38" Padding="9,0"
+                                   ToolTip="{Binding DirectionLabel}">
+                            <ui:SymbolIcon FontSize="16">
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="ui:SymbolIcon">
+                                        <!-- Arrow up = descending (the default), down = ascending. -->
+                                        <Setter Property="Symbol" Value="ArrowUp24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Descending}" Value="False">
+                                                <Setter Property="Symbol" Value="ArrowDown24" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Filter excludes every session -->
+                <TextBlock Text="No sessions in the selected date range." TextWrapping="Wrap" Margin="0,4,0,8"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Visibility="{Binding FilteredEmpty, Converter={StaticResource Bool}}" />
 
                 <!-- One card per play session → its character timeline. -->
                 <ItemsControl ItemsSource="{Binding Sessions}">
@@ -27,14 +73,24 @@
                             <ui:CardAction Margin="0,0,0,8"
                                            Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                            CommandParameter="{Binding}">
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:SymbolIcon Symbol="History24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="14" />
-                                        <TextBlock Text="{Binding Subtitle}" FontSize="12"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                        <ui:SymbolIcon Symbol="History24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="14" />
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
-                                </StackPanel>
+                                    <!-- Estimated value earned that sitting (coin + instant-sell loot). -->
+                                    <TextBlock Grid.Column="1" Text="{Binding ValueDisplay}" VerticalAlignment="Center"
+                                               Margin="12,0,0,0" FontWeight="Medium" FontSize="13"
+                                               Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                                </Grid>
                             </ui:CardAction>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
