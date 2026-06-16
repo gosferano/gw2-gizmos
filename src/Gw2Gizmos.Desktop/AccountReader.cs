@@ -37,8 +37,9 @@ public sealed class AccountReader
             using IServiceScope scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-            // SQLite can't ORDER BY a DateTimeOffset; there are only ever a few accounts, so pick in memory.
-            Account? account = db.Accounts.AsNoTracking().AsEnumerable().MaxBy(a => a.LastSyncedUtc);
+            Account? account = db.Accounts.AsNoTracking()
+                .OrderByDescending(a => a.LastSyncedUtc)
+                .FirstOrDefault();
             return account is null
                 ? null
                 : new AccountInfo(account.AccountId, account.Name, account.World, account.LastSyncedUtc);
@@ -57,7 +58,7 @@ public sealed class AccountReader
             using IServiceScope scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-            return db.Accounts.AsNoTracking().AsEnumerable()
+            return db.Accounts.AsNoTracking()
                 .OrderByDescending(a => a.LastSyncedUtc)
                 .Select(a => new AccountInfo(a.AccountId, a.Name, a.World, a.LastSyncedUtc))
                 .ToList();
@@ -225,10 +226,8 @@ public sealed class AccountReader
 
     private static List<GameSessionRow> GetGameSessions(Gw2GizmosDbContext db, string accountId)
     {
-        // SQLite can't ORDER BY a DateTimeOffset; order in memory (sessions are few).
         List<GameSession> sessions = db.GameSessions.AsNoTracking()
             .Where(s => s.AccountId == accountId)
-            .AsEnumerable()
             .OrderByDescending(s => s.StartedAtUtc)
             .ToList();
         if (sessions.Count == 0)
@@ -272,15 +271,12 @@ public sealed class AccountReader
             .OrderBy(s => s.Sequence)
             .ToList();
 
-        List<ItemObs> itemObs = LoadItemObservations(db, accountId);
-        List<WalletObs> walletObs = LoadWalletObservations(db, accountId);
-
         var rows = new List<SessionSegmentRow>();
         foreach (CharacterSegment segment in segments)
         {
             DateTimeOffset end = segment.EndedAtUtc ?? DateTimeOffset.UtcNow;
-            Dictionary<int, int> startItems = ItemTotalsAsOf(itemObs, segment.StartedAtUtc);
-            Dictionary<int, int> endItems = ItemTotalsAsOf(itemObs, end);
+            Dictionary<int, int> startItems = ItemTotalsAsOf(db, accountId, segment.StartedAtUtc);
+            Dictionary<int, int> endItems = ItemTotalsAsOf(db, accountId, end);
 
             int gained = 0;
             int lost = 0;
@@ -297,8 +293,8 @@ public sealed class AccountReader
                 }
             }
 
-            long coinDelta = WalletValueAsOf(walletObs, CoinCurrencyId, end)
-                - WalletValueAsOf(walletObs, CoinCurrencyId, segment.StartedAtUtc);
+            long coinDelta = WalletValueAsOf(db, accountId, CoinCurrencyId, end)
+                - WalletValueAsOf(db, accountId, CoinCurrencyId, segment.StartedAtUtc);
 
             rows.Add(new SessionSegmentRow(
                 segment.Id, segment.Sequence, segment.CharacterName,
@@ -338,12 +334,9 @@ public sealed class AccountReader
     /// <summary>Reconstructs the currencies and items gained/lost between two instants, with names/icons resolved.</summary>
     private SessionLoot ComputeLoot(Gw2GizmosDbContext db, string accountId, DateTimeOffset startUtc, DateTimeOffset endUtc)
     {
-        List<ItemObs> itemObs = LoadItemObservations(db, accountId);
-        List<WalletObs> walletObs = LoadWalletObservations(db, accountId);
-
         // Item deltas across all containers.
-        Dictionary<int, int> startItems = ItemTotalsAsOf(itemObs, startUtc);
-        Dictionary<int, int> endItems = ItemTotalsAsOf(itemObs, endUtc);
+        Dictionary<int, int> startItems = ItemTotalsAsOf(db, accountId, startUtc);
+        Dictionary<int, int> endItems = ItemTotalsAsOf(db, accountId, endUtc);
         var itemDeltas = startItems.Keys.Union(endItems.Keys)
             .Select(id => (Id: id, Delta: endItems.GetValueOrDefault(id) - startItems.GetValueOrDefault(id)))
             .Where(x => x.Delta != 0)
@@ -356,8 +349,8 @@ public sealed class AccountReader
             .ToList();
 
         // Currency deltas.
-        Dictionary<int, long> startWallet = WalletTotalsAsOf(walletObs, startUtc);
-        Dictionary<int, long> endWallet = WalletTotalsAsOf(walletObs, endUtc);
+        Dictionary<int, long> startWallet = WalletTotalsAsOf(db, accountId, startUtc);
+        Dictionary<int, long> endWallet = WalletTotalsAsOf(db, accountId, endUtc);
         var currencyDeltas = startWallet.Keys.Union(endWallet.Keys)
             .Select(id => (Id: id, Delta: endWallet.GetValueOrDefault(id) - startWallet.GetValueOrDefault(id)))
             .Where(x => x.Delta != 0)
@@ -417,7 +410,7 @@ public sealed class AccountReader
                     }
                 }
 
-                // Most recent sitting (order in memory — avoid DateTimeOffset ordering server-side).
+                // Most recent sitting (the list is already materialised for the playtime sum above).
                 var latest = sessions.OrderByDescending(s => s.StartedAtUtc).First();
                 bool isPlaying = latest.EndedAtUtc is null;
                 string? character = db.CharacterSegments.AsNoTracking()
@@ -431,66 +424,45 @@ public sealed class AccountReader
             },
             new DashboardSessionStats(0, TimeSpan.Zero, null, false, null));
 
-    // The "as-of" reconstruction runs in memory: EF's SQLite provider can't compare/order DateTimeOffset
-    // server-side (the rest of this reader works around the same limitation), so we materialise the account's
-    // observations once and pick the latest-before-t per key in C#. Observation ids are monotonic, so "latest" is
-    // simply the max id among rows at or before t.
-    private static List<ItemObs> LoadItemObservations(Gw2GizmosDbContext db, string accountId) =>
-        db.AccountItemObservations.AsNoTracking()
-            .Where(o => o.AccountId == accountId)
-            .Select(o => new ItemObs(o.Id, o.Container, o.ItemId, o.Count, o.ObservedAtUtc))
-            .ToList();
-
-    private static List<WalletObs> LoadWalletObservations(Gw2GizmosDbContext db, string accountId) =>
-        db.AccountWalletObservations.AsNoTracking()
-            .Where(o => o.AccountId == accountId)
-            .Select(o => new WalletObs(o.Id, o.CurrencyId, o.Value, o.ObservedAtUtc))
-            .ToList();
-
-    // Per-item totals across every container at or before t: the latest observation per (container, item), summed.
-    private static Dictionary<int, int> ItemTotalsAsOf(List<ItemObs> observations, DateTimeOffset asOfUtc)
+    // Per-item totals across every container as of a point in time: the latest observation per (container, item)
+    // with ObservedAtUtc at or before t, summed per item. Reconstructs the account's item holdings at that instant.
+    // Runs server-side now that dates are stored as ticks (SQLite can order/compare/aggregate them).
+    private static Dictionary<int, int> ItemTotalsAsOf(Gw2GizmosDbContext db, string accountId, DateTimeOffset asOfUtc)
     {
+        IQueryable<long> maxIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc <= asOfUtc)
+            .GroupBy(o => new { o.Container, o.ItemId })
+            .Select(g => g.Max(x => x.Id));
+
         var totals = new Dictionary<int, int>();
-        foreach (ItemObs latest in observations
-                     .Where(o => o.ObservedAtUtc <= asOfUtc)
-                     .GroupBy(o => (o.Container, o.ItemId))
-                     .Select(g => g.MaxBy(o => o.Id)))
+        foreach (var row in db.AccountItemObservations.AsNoTracking()
+                     .Where(o => maxIds.Contains(o.Id) && o.Count > 0)
+                     .Select(o => new { o.ItemId, o.Count }))
         {
-            if (latest.Count > 0)
-            {
-                totals[latest.ItemId] = totals.GetValueOrDefault(latest.ItemId) + latest.Count;
-            }
+            totals[row.ItemId] = totals.GetValueOrDefault(row.ItemId) + row.Count;
         }
 
         return totals;
     }
 
-    private static Dictionary<int, long> WalletTotalsAsOf(List<WalletObs> observations, DateTimeOffset asOfUtc) =>
-        observations
-            .Where(o => o.ObservedAtUtc <= asOfUtc)
-            .GroupBy(o => o.CurrencyId)
-            .Select(g => g.MaxBy(o => o.Id))
-            .ToDictionary(o => o.CurrencyId, o => o.Value);
-
-    private static long WalletValueAsOf(List<WalletObs> observations, int currencyId, DateTimeOffset asOfUtc)
+    private static Dictionary<int, long> WalletTotalsAsOf(Gw2GizmosDbContext db, string accountId, DateTimeOffset asOfUtc)
     {
-        long bestId = -1;
-        long value = 0;
-        foreach (WalletObs o in observations)
-        {
-            if (o.CurrencyId == currencyId && o.ObservedAtUtc <= asOfUtc && o.Id > bestId)
-            {
-                bestId = o.Id;
-                value = o.Value;
-            }
-        }
+        IQueryable<long> maxIds = db.AccountWalletObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc <= asOfUtc)
+            .GroupBy(o => o.CurrencyId)
+            .Select(g => g.Max(x => x.Id));
 
-        return value;
+        return db.AccountWalletObservations.AsNoTracking()
+            .Where(o => maxIds.Contains(o.Id))
+            .ToDictionary(o => o.CurrencyId, o => o.Value);
     }
 
-    private readonly record struct ItemObs(long Id, string Container, int ItemId, int Count, DateTimeOffset ObservedAtUtc);
-
-    private readonly record struct WalletObs(long Id, int CurrencyId, long Value, DateTimeOffset ObservedAtUtc);
+    private static long WalletValueAsOf(Gw2GizmosDbContext db, string accountId, int currencyId, DateTimeOffset asOfUtc) =>
+        db.AccountWalletObservations.AsNoTracking()
+            .Where(o => o.AccountId == accountId && o.CurrencyId == currencyId && o.ObservedAtUtc <= asOfUtc)
+            .OrderByDescending(o => o.Id)
+            .Select(o => o.Value)
+            .FirstOrDefault();
 
     // Runs a read in a fresh scope, returning the fallback on any error — notably "no such table" during the brief
     // window after an upgrade where the desktop has the new code but the worker hasn't applied the migration yet.
