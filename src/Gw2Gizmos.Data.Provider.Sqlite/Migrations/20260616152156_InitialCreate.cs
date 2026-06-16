@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -37,7 +36,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     Container = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: false),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
-                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    ObservedAtUtc = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,7 +50,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     World = table.Column<int>(type: "INTEGER", nullable: false),
-                    LastSyncedUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    LastSyncedUtc = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -67,7 +66,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     CurrencyId = table.Column<int>(type: "INTEGER", nullable: false),
                     Value = table.Column<long>(type: "INTEGER", nullable: false),
-                    ObservedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    ObservedAtUtc = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -102,8 +101,8 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     Level = table.Column<int>(type: "INTEGER", nullable: false),
                     Guild = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
                     Age = table.Column<int>(type: "INTEGER", nullable: false),
-                    Created = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    LastModified = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    Created = table.Column<long>(type: "INTEGER", nullable: false),
+                    LastModified = table.Column<long>(type: "INTEGER", nullable: false),
                     Deaths = table.Column<int>(type: "INTEGER", nullable: false),
                     Title = table.Column<int>(type: "INTEGER", nullable: true),
                     BuildTabsUnlocked = table.Column<int>(type: "INTEGER", nullable: false),
@@ -114,6 +113,23 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Characters", x => x.Name);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CharacterSegments",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    GameSessionId = table.Column<long>(type: "INTEGER", nullable: false),
+                    Sequence = table.Column<int>(type: "INTEGER", nullable: false),
+                    CharacterName = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    StartedAtUtc = table.Column<long>(type: "INTEGER", nullable: false),
+                    EndedAtUtc = table.Column<long>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CharacterSegments", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -130,6 +146,21 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Currencies", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GameSessions",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    AccountId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    StartedAtUtc = table.Column<long>(type: "INTEGER", nullable: false),
+                    EndedAtUtc = table.Column<long>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameSessions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -150,7 +181,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 {
                     ItemId = table.Column<int>(type: "INTEGER", nullable: false),
                     CraftingCost = table.Column<double>(type: "REAL", nullable: false),
-                    ComputedAtUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    ComputedAtUtc = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -224,7 +255,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     ItemId = table.Column<int>(type: "INTEGER", nullable: false),
-                    TimestampUtc = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    TimestampUtc = table.Column<long>(type: "INTEGER", nullable: false),
                     Buy = table.Column<int>(type: "INTEGER", nullable: true),
                     Sell = table.Column<int>(type: "INTEGER", nullable: true),
                     Demand = table.Column<int>(type: "INTEGER", nullable: false),
@@ -1272,6 +1303,11 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 column: "BackItemDetailsId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CharacterSegments_GameSessionId_Sequence",
+                table: "CharacterSegments",
+                columns: new[] { "GameSessionId", "Sequence" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ConsumableExtraRecipes_ConsumableId",
                 table: "ConsumableExtraRecipes",
                 column: "ConsumableId");
@@ -1280,6 +1316,11 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "IX_ConsumableSkins_ConsumableId",
                 table: "ConsumableSkins",
                 column: "ConsumableId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameSessions_AccountId_StartedAtUtc",
+                table: "GameSessions",
+                columns: new[] { "AccountId", "StartedAtUtc" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_InfixUpgradeAttributes_InfixUpgradeId",
@@ -1414,6 +1455,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 name: "Characters");
 
             migrationBuilder.DropTable(
+                name: "CharacterSegments");
+
+            migrationBuilder.DropTable(
                 name: "ConsumableExtraRecipes");
 
             migrationBuilder.DropTable(
@@ -1424,6 +1468,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "Currencies");
+
+            migrationBuilder.DropTable(
+                name: "GameSessions");
 
             migrationBuilder.DropTable(
                 name: "GatheringDetails");

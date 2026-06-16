@@ -15,13 +15,10 @@ public sealed class SqliteDesignTimeDbContextFactory : IDesignTimeDbContextFacto
 {
     public Gw2GizmosDbContext CreateDbContext(string[] args)
     {
-        DbContextOptions<Gw2GizmosDbContext> options = new DbContextOptionsBuilder<Gw2GizmosDbContext>()
-            .UseSqlite(
-                "Data Source=designtime.sqlite",
-                sqlite => sqlite.MigrationsAssembly(typeof(SqliteDbProvider).Assembly.GetName().Name)
-            )
-            .Options;
-
-        return new Gw2GizmosDbContext(options);
+        // Go through the provider's own Configure so the design-time model matches runtime — including the
+        // DateTimeOffset→ticks converter, so generated migrations have the right (INTEGER) column types.
+        var builder = new DbContextOptionsBuilder<Gw2GizmosDbContext>();
+        new SqliteDbProvider().Configure(builder, "Data Source=designtime.sqlite");
+        return new Gw2GizmosDbContext(builder.Options);
     }
 }

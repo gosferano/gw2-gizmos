@@ -455,21 +455,22 @@ public sealed class SessionTracker : BackgroundService
         await db.SaveChangesAsync(stoppingToken);
     }
 
-    /// <summary>The most recent observation timestamp for the account, or null if there are none (max in memory —
-    /// SQLite can't aggregate DateTimeOffset server-side here).</summary>
+    /// <summary>The most recent observation timestamp for the account, or null if there are none.</summary>
     private static async Task<DateTimeOffset?> LastActivityUtcAsync(Gw2GizmosDbContext db, string accountId, CancellationToken stoppingToken)
     {
-        List<DateTimeOffset> itemTimes = await db.AccountItemObservations
+        DateTimeOffset? itemMax = await db.AccountItemObservations
             .Where(o => o.AccountId == accountId)
-            .Select(o => o.ObservedAtUtc)
-            .ToListAsync(stoppingToken);
-        List<DateTimeOffset> walletTimes = await db.AccountWalletObservations
+            .MaxAsync(o => (DateTimeOffset?)o.ObservedAtUtc, stoppingToken);
+        DateTimeOffset? walletMax = await db.AccountWalletObservations
             .Where(o => o.AccountId == accountId)
-            .Select(o => o.ObservedAtUtc)
-            .ToListAsync(stoppingToken);
+            .MaxAsync(o => (DateTimeOffset?)o.ObservedAtUtc, stoppingToken);
 
-        IEnumerable<DateTimeOffset> all = itemTimes.Concat(walletTimes);
-        return all.Any() ? all.Max() : null;
+        if (itemMax is null)
+        {
+            return walletMax;
+        }
+
+        return walletMax is null || itemMax > walletMax ? itemMax : walletMax;
     }
 
     private void ResetState()
