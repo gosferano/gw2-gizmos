@@ -12,6 +12,7 @@
             <conv:WidthToColumnsConverter x:Key="WidthToColumns" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
             <conv:BoolToStatusBrushConverter x:Key="StatusBrush" />
+            <conv:CoinConverter x:Key="Coin" />
         </c:PageShell.Resources>
 
         <!-- Columns collapse 3 -> 2 -> 1 with width; UniformGrid keeps every cell the same size. The -6
@@ -51,6 +52,41 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- Account -->
+            <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Account" Opacity="0.7" />
+                    <TextBlock Text="{Binding AccountName}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding CharacterCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Characters" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding CoinBalance, Converter={StaticResource Coin}}" />
+                        <TextBlock Text="Coin" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding AccountSynced}" Opacity="0.6" FontSize="12" Margin="0,12,0,0" />
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Play sessions -->
+            <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Play sessions" Opacity="0.7" />
+                    <TextBlock Text="{Binding SessionCount, StringFormat='{}{0:N0}'}" FontSize="26" FontWeight="Medium"
+                               Margin="0,6,0,0" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding Playtime}" />
+                        <TextBlock Text="Total recorded" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding SessionStatus}" Opacity="0.6" FontSize="12" Margin="0,12,0,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+
             <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
                 <StackPanel>
                     <DockPanel Margin="0,0,0,10">
@@ -82,6 +118,21 @@
                         <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
                                    Text="{Binding PriceSnapshotCount, StringFormat='{}{0:N0}'}" />
                         <TextBlock Text="Price points" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding WorkerUpdated}" Opacity="0.6" FontSize="12" Margin="0,10,0,0" />
+                </StackPanel>
+            </ui:Card>
+
+            <!-- App -->
+            <ui:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="App" Opacity="0.7" />
+                    <TextBlock Text="{Binding AppVersion}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding AppEnvironment}" Opacity="0.8" Margin="0,2,0,0" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding DatabaseSize}" />
+                        <TextBlock Text="Database" Opacity="0.8" />
                     </DockPanel>
                 </StackPanel>
             </ui:Card>

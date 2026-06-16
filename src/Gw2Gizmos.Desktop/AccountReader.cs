@@ -378,6 +378,59 @@ public sealed class AccountReader
         return new SessionLoot(currencyRows, items);
     }
 
+    /// <summary>The number of characters synced for an account (for the dashboard).</summary>
+    public int GetCharacterCount(string accountId) =>
+        SafeRead(db => db.Characters.AsNoTracking().Count(c => c.AccountId == accountId), 0);
+
+    /// <summary>The account's current coin balance (currency 1), in copper.</summary>
+    public long GetCoinBalance(string accountId) =>
+        SafeRead(
+            db => db.AccountWalletObservations.AsNoTracking()
+                .Where(o => o.AccountId == accountId && o.CurrencyId == CoinCurrencyId)
+                .OrderByDescending(o => o.Id)
+                .Select(o => o.Value)
+                .FirstOrDefault(),
+            0L);
+
+    /// <summary>Aggregate play-session stats for the dashboard: count, total play time, and the current/last character.</summary>
+    public DashboardSessionStats GetSessionStats(string accountId) =>
+        SafeRead(
+            db =>
+            {
+                var sessions = db.GameSessions.AsNoTracking()
+                    .Where(s => s.AccountId == accountId)
+                    .Select(s => new { s.Id, s.StartedAtUtc, s.EndedAtUtc })
+                    .ToList();
+                if (sessions.Count == 0)
+                {
+                    return new DashboardSessionStats(0, TimeSpan.Zero, null, false, null);
+                }
+
+                DateTimeOffset now = DateTimeOffset.UtcNow;
+                TimeSpan total = TimeSpan.Zero;
+                foreach (var s in sessions)
+                {
+                    DateTimeOffset end = s.EndedAtUtc ?? now;
+                    if (end > s.StartedAtUtc)
+                    {
+                        total += end - s.StartedAtUtc;
+                    }
+                }
+
+                // Most recent sitting (order in memory — avoid DateTimeOffset ordering server-side).
+                var latest = sessions.OrderByDescending(s => s.StartedAtUtc).First();
+                bool isPlaying = latest.EndedAtUtc is null;
+                string? character = db.CharacterSegments.AsNoTracking()
+                    .Where(seg => seg.GameSessionId == latest.Id)
+                    .OrderByDescending(seg => seg.Sequence)
+                    .Select(seg => seg.CharacterName)
+                    .FirstOrDefault();
+
+                return new DashboardSessionStats(
+                    sessions.Count, total, character, isPlaying, latest.EndedAtUtc ?? latest.StartedAtUtc);
+            },
+            new DashboardSessionStats(0, TimeSpan.Zero, null, false, null));
+
     // The "as-of" reconstruction runs in memory: EF's SQLite provider can't compare/order DateTimeOffset
     // server-side (the rest of this reader works around the same limitation), so we materialise the account's
     // observations once and pick the latest-before-t per key in C#. Observation ids are monotonic, so "latest" is
@@ -490,6 +543,15 @@ public sealed record AccountInfo(string Id, string Name, int World, DateTimeOffs
     /// <summary>Card subtitle, e.g. "World 1001 · synced 14/06/2026 04:12".</summary>
     public string Subtitle => $"World {World} · synced {LastSyncedUtc.LocalDateTime:g}";
 }
+
+/// <summary>Aggregate play-session stats for the dashboard.</summary>
+public sealed record DashboardSessionStats(
+    int Count,
+    TimeSpan TotalPlaytime,
+    string? Character,
+    bool IsPlaying,
+    DateTimeOffset? LastPlayedUtc
+);
 
 /// <summary>One play session for the Sessions hub: when it ran and which characters were played.</summary>
 public sealed record GameSessionRow(long Id, DateTimeOffset StartedAtUtc, DateTimeOffset? EndedAtUtc, string CharactersDisplay)
