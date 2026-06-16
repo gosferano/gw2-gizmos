@@ -157,7 +157,7 @@ public partial class App : Application
         SetupTrayIcon(appTitle);
 
         // Check for updates in the background; no-op when run from bin (not Velopack-installed).
-        _ = CheckForUpdatesAsync(updateManager);
+        _ = CheckForUpdatesAsync(updateManager, _host.Services.GetRequiredService<UpdateStatus>());
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -236,7 +236,7 @@ public partial class App : Application
         }
     }
 
-    private static async Task CheckForUpdatesAsync(UpdateManager updateManager)
+    private static async Task CheckForUpdatesAsync(UpdateManager updateManager, UpdateStatus updateStatus)
     {
         try
         {
@@ -250,6 +250,8 @@ public partial class App : Application
             {
                 // Download now; Velopack applies it on the next restart so the session isn't interrupted.
                 await updateManager.DownloadUpdatesAsync(update);
+                // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart.
+                updateStatus.SetPending(update.TargetFullRelease.Version.ToString());
             }
         }
         catch (Exception ex)
@@ -301,6 +303,8 @@ public partial class App : Application
         builder.Services.AddSingleton(new AppPaths(dataDir));
         // "Launch at Windows startup" registration (HKCU Run); per-build value name so dev/release don't collide.
         builder.Services.AddSingleton(new StartupRegistration(AppDataFolderName));
+        // Shared app-update state — set by the startup update check, read by the dashboard's App card.
+        builder.Services.AddSingleton<UpdateStatus>();
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
         // that data immediately. Registered first — the key/feature stores bump it.
         builder.Services.AddSingleton<SyncTriggerStore>();
