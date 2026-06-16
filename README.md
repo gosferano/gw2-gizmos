@@ -1,40 +1,45 @@
 # Gw2Gizmos
 
 A suite of [Guild Wars 2](https://www.guildwars2.com/) helper tools: a Windows desktop companion app,
-backed by reusable, strongly-typed .NET libraries for the GW2 API that are published as NuGet
-packages in their own right.
+backed by reusable, strongly-typed .NET libraries for the GW2 API that are published as NuGet packages in
+their own right.
 
-## What's inside
+> **Status:** pre-release. Components are baselined until the first tagged release, so the NuGet packages
+> and installer below aren't published yet.
 
-| Component | What it is | Distribution |
-| --- | --- | --- |
-| **Gw2Gizmos** (desktop app) | Windows tray companion that ingests GW2 data and surfaces notifications, logs, and a dashboard | [GitHub Releases](https://github.com/gosferano/gw2-gizmos/releases) installer |
-| **Gw2Gizmos.Gw2Api.Client** | Typed HTTP client for the GW2 API v2 (resilience, `IHttpClientFactory`, bulk/pagination) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Client) |
-| **Gw2Gizmos.Gw2Api.Contract** | Request/response DTOs for the GW2 API v2 (a dependency of the client) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Contract) |
+## Components
 
-Each component is **versioned and released independently** — see [Releases & versioning](#releases--versioning).
+| Component | What it is | Distribution | Docs |
+| --- | --- | --- | --- |
+| **Gw2Gizmos** (desktop app) | Windows tray companion that ingests GW2 data and surfaces a dashboard, account/character/session views, events, prices, and notifications | [GitHub Releases](https://github.com/gosferano/gw2-gizmos/releases) installer | [README](src/Gw2Gizmos.Desktop/README.md) |
+| **Gw2Gizmos.Gw2Api.Client** | Typed HTTP client for the GW2 API v2 (resilience, `IHttpClientFactory`, bulk/pagination) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Client) | [README](src/Gw2Gizmos.Gw2Api.Client/README.md) |
+| **Gw2Gizmos.Gw2Api.Contract** | Request/response DTOs for the GW2 API v2 (a dependency of the client) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Contract) | [README](src/Gw2Gizmos.Gw2Api.Contract/README.md) |
+| **Gw2Gizmos.Data.Worker** | Background data-ingestion engine (the desktop's worker process) | — (internal) | [README](src/Gw2Gizmos.Data.Worker/README.md) |
 
-> **Status:** pre-release. Components are baselined at `0.0.0` until the first tagged release, so the
-> NuGet packages and installer above are not published yet.
-
----
+Each component is **versioned and released independently**.
 
 ## Desktop app
 
-**Gw2Gizmos** is a Windows companion that runs a background worker to ingest GW2 API data into a local
-SQLite database, then presents it through a [WPF-UI](https://github.com/lepoco/wpfui) shell:
+A Windows companion that runs a background worker to ingest GW2 API data into a local SQLite database,
+then presents it through a [WPF-UI](https://github.com/lepoco/wpfui) shell:
 
-- **Dashboard** — at-a-glance status of the data ingestion
-- **Notifications** — in-app feed plus native Windows toast notifications
-- **Logs** — live viewer tailing the worker's output
-- **Settings** — API key and preferences (the API key is stored encrypted via Windows DPAPI)
+- **Dashboard** — at-a-glance app/worker/account/session stats.
+- **Account** — wallet, material storage, bank, shared inventory, and per-character inventories, with
+  account-wide item totals reconstructed from an event-sourced history.
+- **Sessions** — play sessions detected from MumbleLink, with per-character switches and the currency/items
+  "hoarded" during each.
+- **Events** — scheduled world-boss / meta-event reminders with native Windows toasts.
+- **Items** — the item catalog with live trading-post prices and crafting-cost.
+- **Notifications & Logs** — an in-app feed (plus toasts) and a live viewer tailing the worker.
+- **Settings** — feature toggles, sync intervals, launch-at-startup, and per-account stored-data management.
 
 It self-updates via [Velopack](https://github.com/velopack/velopack): install once, and new releases are
-downloaded and applied on the next restart.
+downloaded and applied on the next restart (the dashboard shows a "restart to update" prompt when one's
+ready). API keys are stored encrypted via Windows DPAPI.
 
 **Install:** download the latest `Setup.exe` from [Releases](https://github.com/gosferano/gw2-gizmos/releases)
-and run it. The app installs per-user under `%LocalAppData%\Gw2Gizmos`, with its database and encrypted
-key in `%APPDATA%\Gw2Gizmos`.
+and run it. The app installs per-user under `%LocalAppData%\Gw2Gizmos`, with its database and encrypted key
+in `%APPDATA%\Gw2Gizmos`. See the [desktop README](src/Gw2Gizmos.Desktop/README.md) for how it's built.
 
 ## GW2 API libraries
 
@@ -55,59 +60,16 @@ Account? account = await client.V2.Account.GetBlob();
 var items = await client.V2.Items.GetByIds([19684, 19721]);
 ```
 
-Construction is routed through `IHttpClientFactory` (pooled handlers, fresh DNS), and calls retry
-transient failures and HTTP 429 — honoring `Retry-After` — with a per-attempt timeout. For dependency
-injection use `services.AddGw2ApiClient()`. Full quickstart, the DI path, and the endpoint coverage
-checklist are in the [client README](src/Gw2Gizmos.Gw2Api.Client/README.md).
+Construction is routed through `IHttpClientFactory` (pooled handlers, fresh DNS), and calls retry transient
+failures and HTTP 429 — honoring `Retry-After` — with a per-attempt timeout. For dependency injection use
+`services.AddGw2ApiClient()`. Full quickstart, the DI path, and endpoint coverage are in the
+[client README](src/Gw2Gizmos.Gw2Api.Client/README.md). Reference **Gw2Gizmos.Gw2Api.Contract** directly
+only if you want the DTOs without the client.
 
-Reference **Gw2Gizmos.Gw2Api.Contract** directly only if you want the DTOs without the client.
+## Contributing
 
-## Repository layout
-
-```
-Gw2Gizmos.sln
-Directory.Build.props        # universal build settings (net10, nullable-as-error)
-Directory.Packages.props     # central package management for the whole repo
-src/
-  Directory.Build.props      # + packaging metadata & SourceLink (shippable libs)
-  Gw2Gizmos.Gw2Api.Contract/ # ── NuGet package
-  Gw2Gizmos.Gw2Api.Client/   # ── NuGet package
-  Gw2Gizmos.Desktop/         # ── desktop app (builds Gw2Gizmos.exe)
-  Gw2Gizmos.Data.Worker[.Cli]/   # background data-ingestion worker
-  Gw2Gizmos.Data.EntityFramework/ # EF Core model + SQLite store
-  …and supporting CLIs/utilities
-tools/
-  Gw2Gizmos.Gw2Api.NullabilityAudit/  # samples the live API to audit DTO nullability
-```
-
-All projects target **.NET 10** and use Central Package Management; shared settings live in the
-root `Directory.*.props`.
-
-## Building
-
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
-
-```bash
-dotnet build Gw2Gizmos.sln                       # build everything
-dotnet run --project src/Gw2Gizmos.Desktop       # run the desktop app (Windows)
-dotnet test                                       # run the test suite (tests/)
-```
-
-The desktop app is Windows-only (WPF + DPAPI + Velopack); the API libraries are cross-platform.
-
-## Releases & versioning
-
-Each component carries its own `<Version>` and is released by GitHub Actions on push to `main` when
-that version is new (bumping a project's version is what triggers its release):
-
-| Component | Tag | Published to |
-| --- | --- | --- |
-| Contract | `gw2-api-contract-<v>` | NuGet.org |
-| Client | `gw2-api-client-<v>` | NuGet.org |
-| Desktop | `gw2gizmos-desktop-<v>` | GitHub Release (Velopack installer) |
-
-NuGet publishing uses [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)
-(OIDC, no API keys). Packages ship with SourceLink and `.snupkg` symbols for step-into debugging.
+Build instructions, repository layout, the architecture overview, migrations, and the release process are
+in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
