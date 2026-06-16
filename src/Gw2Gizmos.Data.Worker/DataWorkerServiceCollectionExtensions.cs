@@ -47,6 +47,10 @@ public static class DataWorkerServiceCollectionExtensions
 
         // Serializes the periodic account loop with the session tracker's on-demand boundary syncs.
         services.AddSingleton<AccountSyncGate>();
+
+        // User-initiated "delete stored data" requests from the desktop, run here (the worker is the sole writer).
+        services.AddScoped<AccountDataDeleter>();
+        services.AddHostedService<DeleteRequestProcessor>();
         // Play-session tracking reads MumbleLink (Windows named shared memory), so it's Windows-only; the rest of
         // the worker stays portable. The OS guard also satisfies the reader's [SupportedOSPlatform] surface.
         if (OperatingSystem.IsWindows())
@@ -94,6 +98,9 @@ public static class DataWorkerServiceCollectionExtensions
         // The sync-trigger source: standalone has no desktop to signal it, so it's a no-op; a desktop-launched
         // worker registers the IPC provider (which carries generations) first.
         services.TryAddSingleton<ISyncTriggerSource, NullSyncTriggerSource>();
+        // Likewise the delete-request source: standalone never has any; the desktop-launched worker registers the
+        // IPC provider first.
+        services.TryAddSingleton<IDeleteRequestSource, NullDeleteRequestSource>();
 
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();

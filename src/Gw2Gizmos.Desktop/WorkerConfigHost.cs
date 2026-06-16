@@ -24,6 +24,7 @@ public sealed class WorkerConfigHost : BackgroundService
     private readonly FeatureSettingsStore _featureSettings;
     private readonly IntervalSettingsStore _intervalSettings;
     private readonly SyncTriggerStore _triggers;
+    private readonly DeleteRequestStore _deleteRequests;
     private readonly ILogger<WorkerConfigHost> _logger;
 
     public WorkerConfigHost(
@@ -32,6 +33,7 @@ public sealed class WorkerConfigHost : BackgroundService
         FeatureSettingsStore featureSettings,
         IntervalSettingsStore intervalSettings,
         SyncTriggerStore triggers,
+        DeleteRequestStore deleteRequests,
         ILogger<WorkerConfigHost> logger
     )
     {
@@ -40,6 +42,7 @@ public sealed class WorkerConfigHost : BackgroundService
         _featureSettings = featureSettings;
         _intervalSettings = intervalSettings;
         _triggers = triggers;
+        _deleteRequests = deleteRequests;
         _logger = logger;
     }
 
@@ -84,6 +87,7 @@ public sealed class WorkerConfigHost : BackgroundService
             EnabledFeatures = _featureSettings.EnabledKeys().ToArray(),
             Intervals = _intervalSettings.AllIntervals().ToDictionary(entry => entry.Key, entry => entry.Value),
             SyncGenerations = _triggers.Snapshot(),
+            DeleteRequests = _deleteRequests.Snapshot(),
         };
 
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(payload);

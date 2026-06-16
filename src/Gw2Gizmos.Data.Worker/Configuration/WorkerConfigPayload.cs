@@ -25,4 +25,8 @@ public sealed class WorkerConfigPayload
     /// adds a key; the worker runs that sync immediately when it sees the value increase. Monotonic; an absent
     /// key means zero.</summary>
     public Dictionary<string, long> SyncGenerations { get; set; } = new();
+
+    /// <summary>Pending one-shot data-delete requests (see <see cref="DeleteRequest"/>); the worker runs each id
+    /// it hasn't processed yet. In-memory on the desktop, so they don't survive a restart.</summary>
+    public DeleteRequest[] DeleteRequests { get; set; } = System.Array.Empty<DeleteRequest>();
 }

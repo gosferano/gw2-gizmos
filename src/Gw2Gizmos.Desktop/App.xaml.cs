@@ -131,7 +131,22 @@ public partial class App : Application
                 _window.Hide();
             }
         };
-        _window.Show();
+
+        // Launched at Windows startup (--minimized): come up in the tray, not on screen. Show then hide off the
+        // taskbar so the window handle exists (theming below needs it) without a visible flash.
+        if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
+        {
+            _window.ShowInTaskbar = false;
+            _window.WindowState = WindowState.Minimized;
+            _window.Show();
+            _window.Hide();
+            _window.ShowInTaskbar = true;
+            _window.WindowState = WindowState.Normal;
+        }
+        else
+        {
+            _window.Show();
+        }
 
         // Follow the OS *app* theme. WPF-UI's own system-theme detection is unreliable here (it reports Light
         // while the OS is Dark), so read AppsUseLightTheme directly and re-apply when the user switches themes.
@@ -142,7 +157,7 @@ public partial class App : Application
         SetupTrayIcon(appTitle);
 
         // Check for updates in the background; no-op when run from bin (not Velopack-installed).
-        _ = CheckForUpdatesAsync(updateManager);
+        _ = CheckForUpdatesAsync(updateManager, _host.Services.GetRequiredService<UpdateStatus>());
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -221,7 +236,7 @@ public partial class App : Application
         }
     }
 
-    private static async Task CheckForUpdatesAsync(UpdateManager updateManager)
+    private static async Task CheckForUpdatesAsync(UpdateManager updateManager, UpdateStatus updateStatus)
     {
         try
         {
@@ -235,6 +250,9 @@ public partial class App : Application
             {
                 // Download now; Velopack applies it on the next restart so the session isn't interrupted.
                 await updateManager.DownloadUpdatesAsync(update);
+                // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart,
+                // or immediately via the card's "Restart now" button.
+                updateStatus.SetPending(updateManager, update);
             }
         }
         catch (Exception ex)
@@ -284,9 +302,15 @@ public partial class App : Application
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton(new AppPaths(dataDir));
+        // "Launch at Windows startup" registration (HKCU Run); per-build value name so dev/release don't collide.
+        builder.Services.AddSingleton(new StartupRegistration(AppDataFolderName));
+        // Shared app-update state — set by the startup update check, read by the dashboard's App card.
+        builder.Services.AddSingleton<UpdateStatus>();
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
         // that data immediately. Registered first — the key/feature stores bump it.
         builder.Services.AddSingleton<SyncTriggerStore>();
+        // Queues user "delete stored data" requests; shipped to the worker (sole DB writer) over the config pipe.
+        builder.Services.AddSingleton<DeleteRequestStore>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
         // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
@@ -301,6 +325,7 @@ public partial class App : Application
             sp.GetRequiredService<FeatureSettingsStore>(),
             sp.GetRequiredService<IntervalSettingsStore>(),
             sp.GetRequiredService<SyncTriggerStore>(),
+            sp.GetRequiredService<DeleteRequestStore>(),
             sp.GetRequiredService<ILogger<WorkerConfigHost>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
@@ -334,6 +359,8 @@ public partial class App : Application
         builder.Services.AddTransient<ApiKeysViewModel>();
         // Transient so the page reflects the current toggle/permission state on every navigation.
         builder.Services.AddTransient<SettingsViewModel>();
+        builder.Services.AddTransient<StoredDataViewModel>();
+        builder.Services.AddTransient<StoredDataPage>();
         builder.Services.AddTransient<AdvancedSettingsViewModel>();
         // Transient so the grid re-reads the worker's latest item/market data on every navigation.
         builder.Services.AddTransient<ItemsViewModel>();

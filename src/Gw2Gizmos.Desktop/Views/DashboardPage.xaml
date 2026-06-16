@@ -134,6 +134,12 @@
                         <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding DatabaseSize}" />
                         <TextBlock Text="Database" Opacity="0.8" />
                     </DockPanel>
+                    <StackPanel Margin="0,12,0,0" Visibility="{Binding UpdateReady, Converter={StaticResource Bool}}">
+                        <TextBlock Text="{Binding UpdateText}" FontSize="12" TextWrapping="Wrap" FontWeight="Medium"
+                                   Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                        <ui:Button Content="Restart now" Appearance="Primary" Margin="0,6,0,0"
+                                   Command="{Binding RestartCommand}" />
+                    </StackPanel>
                 </StackPanel>
             </ui:Card>
         </UniformGrid>

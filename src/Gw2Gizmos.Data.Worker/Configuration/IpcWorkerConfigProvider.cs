@@ -11,7 +11,8 @@ namespace Gw2Gizmos.Data.Worker.Configuration;
 /// it isn't a connection per call; changes in the desktop are picked up on the next refresh. Used only when the
 /// desktop spawned the worker (pipe name passed in); standalone runs use the configuration/env providers.
 /// </summary>
-public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, IIntervalGate, ISyncTriggerSource
+public sealed class IpcWorkerConfigProvider
+    : IGw2ApiKeyProvider, IFeatureGate, IIntervalGate, ISyncTriggerSource, IDeleteRequestSource
 {
     // Short so a feature the user just enabled is seen — and its sync triggered — within a few seconds. The
     // generation map and the feature/key/interval values ride the same payload, so this also keeps the gate
@@ -26,6 +27,7 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
     private IReadOnlyList<string> _cachedEnabledFeatures = Array.Empty<string>();
     private IReadOnlyDictionary<string, TimeSpan> _cachedIntervals = new Dictionary<string, TimeSpan>();
     private IReadOnlyDictionary<string, long> _cachedGenerations = new Dictionary<string, long>();
+    private IReadOnlyList<DeleteRequest> _cachedDeleteRequests = Array.Empty<DeleteRequest>();
     private DateTime _fetchedAtUtc = DateTime.MinValue;
 
     public IpcWorkerConfigProvider(string pipeName, ILogger<IpcWorkerConfigProvider> logger)
@@ -81,6 +83,15 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
         }
     }
 
+    public IReadOnlyList<DeleteRequest> GetDeleteRequests()
+    {
+        Refresh();
+        lock (_gate)
+        {
+            return _cachedDeleteRequests;
+        }
+    }
+
     /// <summary>Refreshes the cached keys + features + intervals + generations from the desktop, no more often than the TTL.</summary>
     private void Refresh()
     {
@@ -105,6 +116,7 @@ public sealed class IpcWorkerConfigProvider : IGw2ApiKeyProvider, IFeatureGate, 
                 _cachedEnabledFeatures = payload.EnabledFeatures ?? Array.Empty<string>();
                 _cachedIntervals = payload.Intervals ?? new Dictionary<string, TimeSpan>();
                 _cachedGenerations = payload.SyncGenerations ?? new Dictionary<string, long>();
+                _cachedDeleteRequests = payload.DeleteRequests ?? Array.Empty<DeleteRequest>();
             }
             _fetchedAtUtc = DateTime.UtcNow;
         }

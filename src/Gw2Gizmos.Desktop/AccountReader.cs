@@ -5,6 +5,7 @@ using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -374,6 +375,34 @@ public sealed class AccountReader
     /// <summary>The number of characters synced for an account (for the dashboard).</summary>
     public int GetCharacterCount(string accountId) =>
         SafeRead(db => db.Characters.AsNoTracking().Count(c => c.AccountId == accountId), 0);
+
+    /// <summary>Row counts for each deletable data category of an account (for the Stored data section).</summary>
+    public Dictionary<string, int> GetAccountDataCounts(string accountId) =>
+        SafeRead(
+            db => new Dictionary<string, int>
+            {
+                [DeletableData.Wallet] = db.AccountWalletObservations.Count(o => o.AccountId == accountId),
+                [DeletableData.Materials] = db.AccountItemObservations
+                    .Count(o => o.AccountId == accountId && o.Container == AccountContainer.MaterialStorage),
+                [DeletableData.Bank] = db.AccountItemObservations
+                    .Count(o => o.AccountId == accountId && o.Container == AccountContainer.Bank)
+                    + db.AccountContainerSlots.Count(s => s.AccountId == accountId && s.Store == AccountContainer.Bank),
+                [DeletableData.SharedInventory] = db.AccountItemObservations
+                    .Count(o => o.AccountId == accountId && o.Container == AccountContainer.SharedInventory)
+                    + db.AccountContainerSlots.Count(s => s.AccountId == accountId && s.Store == AccountContainer.SharedInventory),
+                [DeletableData.Characters] = db.AccountItemObservations
+                    .Count(o => o.AccountId == accountId && o.Container == AccountContainer.CharacterInventory)
+                    + db.CharacterItemSlots.Count(s => s.AccountId == accountId)
+                    + db.Characters.Count(c => c.AccountId == accountId),
+                [DeletableData.Sessions] = db.GameSessions.Count(g => g.AccountId == accountId)
+                    + db.CharacterSegments.Count(seg =>
+                        db.GameSessions.Any(g => g.Id == seg.GameSessionId && g.AccountId == accountId)),
+            },
+            new Dictionary<string, int>());
+
+    /// <summary>The number of stored trading-post price points (global, not per-account).</summary>
+    public int GetPriceHistoryCount() =>
+        SafeRead(db => db.PriceSnapshots.Count(), 0);
 
     /// <summary>The account's current coin balance (currency 1), in copper.</summary>
     public long GetCoinBalance(string accountId) =>
