@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <!-- User-facing brand name; project stays Gw2Gizmos.Desktop. -->
     <AssemblyName>Gw2Gizmos</AssemblyName>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <!-- Use our explicit Program.Main (so VelopackApp.Run() runs before WPF) instead of the WPF SDK's
          auto-generated entry point. -->
     <StartupObject>Gw2Gizmos.Desktop.Program</StartupObject>
