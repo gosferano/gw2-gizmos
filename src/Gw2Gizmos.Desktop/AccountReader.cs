@@ -276,8 +276,8 @@ public sealed class AccountReader
         foreach (CharacterSegment segment in segments)
         {
             DateTimeOffset end = segment.EndedAtUtc ?? DateTimeOffset.UtcNow;
-            Dictionary<int, int> startItems = ItemTotalsAsOf(db, accountId, segment.StartedAtUtc);
-            Dictionary<int, int> endItems = ItemTotalsAsOf(db, accountId, end);
+            Dictionary<int, int> startItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, segment.StartedAtUtc);
+            Dictionary<int, int> endItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, end);
 
             int gained = 0;
             int lost = 0;
@@ -294,8 +294,8 @@ public sealed class AccountReader
                 }
             }
 
-            long coinDelta = WalletValueAsOf(db, accountId, CoinCurrencyId, end)
-                - WalletValueAsOf(db, accountId, CoinCurrencyId, segment.StartedAtUtc);
+            long coinDelta = AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, end)
+                - AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, segment.StartedAtUtc);
 
             rows.Add(new SessionSegmentRow(
                 segment.Id, segment.Sequence, segment.CharacterName,
@@ -336,8 +336,8 @@ public sealed class AccountReader
     private SessionLoot ComputeLoot(Gw2GizmosDbContext db, string accountId, DateTimeOffset startUtc, DateTimeOffset endUtc)
     {
         // Item deltas across all containers.
-        Dictionary<int, int> startItems = ItemTotalsAsOf(db, accountId, startUtc);
-        Dictionary<int, int> endItems = ItemTotalsAsOf(db, accountId, endUtc);
+        Dictionary<int, int> startItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, startUtc);
+        Dictionary<int, int> endItems = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, endUtc);
         var itemDeltas = startItems.Keys.Union(endItems.Keys)
             .Select(id => (Id: id, Delta: endItems.GetValueOrDefault(id) - startItems.GetValueOrDefault(id)))
             .Where(x => x.Delta != 0)
@@ -350,8 +350,8 @@ public sealed class AccountReader
             .ToList();
 
         // Currency deltas.
-        Dictionary<int, long> startWallet = WalletTotalsAsOf(db, accountId, startUtc);
-        Dictionary<int, long> endWallet = WalletTotalsAsOf(db, accountId, endUtc);
+        Dictionary<int, long> startWallet = AccountHoldingsReconstructor.WalletTotalsAsOf(db, accountId, startUtc);
+        Dictionary<int, long> endWallet = AccountHoldingsReconstructor.WalletTotalsAsOf(db, accountId, endUtc);
         var currencyDeltas = startWallet.Keys.Union(endWallet.Keys)
             .Select(id => (Id: id, Delta: endWallet.GetValueOrDefault(id) - startWallet.GetValueOrDefault(id)))
             .Where(x => x.Delta != 0)
@@ -452,46 +452,6 @@ public sealed class AccountReader
                     sessions.Count, total, character, isPlaying, latest.EndedAtUtc ?? latest.StartedAtUtc);
             },
             new DashboardSessionStats(0, TimeSpan.Zero, null, false, null));
-
-    // Per-item totals across every container as of a point in time: the latest observation per (container, item)
-    // with ObservedAtUtc at or before t, summed per item. Reconstructs the account's item holdings at that instant.
-    // Runs server-side now that dates are stored as ticks (SQLite can order/compare/aggregate them).
-    private static Dictionary<int, int> ItemTotalsAsOf(Gw2GizmosDbContext db, string accountId, DateTimeOffset asOfUtc)
-    {
-        IQueryable<long> maxIds = db.AccountItemObservations
-            .Where(o => o.AccountId == accountId && o.ObservedAtUtc <= asOfUtc)
-            .GroupBy(o => new { o.Container, o.ItemId })
-            .Select(g => g.Max(x => x.Id));
-
-        var totals = new Dictionary<int, int>();
-        foreach (var row in db.AccountItemObservations.AsNoTracking()
-                     .Where(o => maxIds.Contains(o.Id) && o.Count > 0)
-                     .Select(o => new { o.ItemId, o.Count }))
-        {
-            totals[row.ItemId] = totals.GetValueOrDefault(row.ItemId) + row.Count;
-        }
-
-        return totals;
-    }
-
-    private static Dictionary<int, long> WalletTotalsAsOf(Gw2GizmosDbContext db, string accountId, DateTimeOffset asOfUtc)
-    {
-        IQueryable<long> maxIds = db.AccountWalletObservations
-            .Where(o => o.AccountId == accountId && o.ObservedAtUtc <= asOfUtc)
-            .GroupBy(o => o.CurrencyId)
-            .Select(g => g.Max(x => x.Id));
-
-        return db.AccountWalletObservations.AsNoTracking()
-            .Where(o => maxIds.Contains(o.Id))
-            .ToDictionary(o => o.CurrencyId, o => o.Value);
-    }
-
-    private static long WalletValueAsOf(Gw2GizmosDbContext db, string accountId, int currencyId, DateTimeOffset asOfUtc) =>
-        db.AccountWalletObservations.AsNoTracking()
-            .Where(o => o.AccountId == accountId && o.CurrencyId == currencyId && o.ObservedAtUtc <= asOfUtc)
-            .OrderByDescending(o => o.Id)
-            .Select(o => o.Value)
-            .FirstOrDefault();
 
     // Runs a read in a fresh scope, returning the fallback on any error — notably "no such table" during the brief
     // window after an upgrade where the desktop has the new code but the worker hasn't applied the migration yet.
