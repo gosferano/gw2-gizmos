@@ -22,9 +22,13 @@ namespace Gw2Gizmos.Data.Worker;
 /// </summary>
 public sealed class SessionTracker : BackgroundService
 {
-    // Poll the (cheap, in-memory) shared block once a second. Game-end is normally detected from the game process
-    // exiting; the tick-freeze timeout is only a fallback for when the process id can't be read.
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
+    // Adaptive polling: poll once a second while a game/session is live (so switches are caught promptly), but back
+    // off to every few seconds when idle — when the game is closed, each tick's shared-memory open and process
+    // lookup throw caught exceptions, and doing that every second is needless CPU while nothing is happening.
+    private static readonly TimeSpan ActivePollInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan IdlePollInterval = TimeSpan.FromSeconds(5);
+    // Game-end is normally detected from the game process exiting; the tick-freeze timeout is only a fallback for
+    // when the process id can't be read.
     private static readonly TimeSpan FreezeTimeout = TimeSpan.FromSeconds(60);
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -40,6 +44,8 @@ public sealed class SessionTracker : BackgroundService
     private int _nextSequence;
     private uint _lastTick;
     private DateTimeOffset _lastTickChangeUtc;
+    // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
+    private bool _gameActive;
 
     public SessionTracker(
         IServiceScopeFactory scopeFactory,
@@ -61,7 +67,7 @@ public sealed class SessionTracker : BackgroundService
         await ResumeOrCloseOpenSessionsAsync(stoppingToken);
 
         _lastTickChangeUtc = DateTimeOffset.UtcNow;
-        using var timer = new PeriodicTimer(PollInterval);
+        using var timer = new PeriodicTimer(ActivePollInterval);
         do
         {
             try
@@ -76,6 +82,9 @@ public sealed class SessionTracker : BackgroundService
             {
                 _logger.LogError(ex, "Session tracker tick failed; continuing.");
             }
+
+            // Fast while a game/session is live, slow (low idle CPU) otherwise — applies to the next wait.
+            timer.Period = _gameActive ? ActivePollInterval : IdlePollInterval;
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
@@ -83,6 +92,8 @@ public sealed class SessionTracker : BackgroundService
     {
         if (!_featureGate.IsEnabled(WorkerFeatures.PlaySessions.Key))
         {
+            _gameActive = false;
+
             // Feature turned off mid-session — close cleanly so we don't leave a dangling open session.
             if (_gameSessionId is not null)
             {
@@ -115,6 +126,9 @@ public sealed class SessionTracker : BackgroundService
         // determined — the tick has been frozen past the fallback timeout. A live process keeps the session open
         // through a long alt-tab/minimise (when the tick freezes but the game is still running).
         bool ended = snapshot is null || processAlive == false || (processAlive is null && tickFrozen);
+
+        // Live game (or an open session mid-shutdown) → keep polling fast; idle → back off next wait.
+        _gameActive = !ended;
 
         if (_gameSessionId is not null && ended)
         {
