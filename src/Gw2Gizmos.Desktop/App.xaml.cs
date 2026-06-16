@@ -250,8 +250,9 @@ public partial class App : Application
             {
                 // Download now; Velopack applies it on the next restart so the session isn't interrupted.
                 await updateManager.DownloadUpdatesAsync(update);
-                // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart.
-                updateStatus.SetPending(update.TargetFullRelease.Version.ToString());
+                // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart,
+                // or immediately via the card's "Restart now" button.
+                updateStatus.SetPending(updateManager, update);
             }
         }
         catch (Exception ex)

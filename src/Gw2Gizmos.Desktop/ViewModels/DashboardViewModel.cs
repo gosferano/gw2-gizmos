@@ -50,9 +50,8 @@ public sealed class DashboardViewModel : ViewModelBase
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
 
         UpdateReady = updateStatus.UpdateReady;
-        UpdateText = updateStatus.UpdateReady
-            ? $"Update {updateStatus.PendingVersion} ready — restart to apply"
-            : "";
+        UpdateText = updateStatus.UpdateReady ? $"Update {updateStatus.PendingVersion} ready" : "";
+        RestartCommand = new RelayCommand(updateStatus.ApplyAndRestart);
 
         System.Reflection.Assembly assembly = typeof(DashboardViewModel).Assembly;
         string informational = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
@@ -272,8 +271,11 @@ public sealed class DashboardViewModel : ViewModelBase
     /// <summary>True when an update has been downloaded and will apply on the next restart.</summary>
     public bool UpdateReady { get; }
 
-    /// <summary>"Update X.Y.Z ready — restart to apply", or empty.</summary>
+    /// <summary>"Update X.Y.Z ready", or empty.</summary>
     public string UpdateText { get; }
+
+    /// <summary>Applies the staged update and restarts the app.</summary>
+    public RelayCommand RestartCommand { get; }
 
     // --- Account ---
     public string AccountName
