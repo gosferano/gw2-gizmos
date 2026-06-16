@@ -160,7 +160,7 @@ public sealed class AccountReader
             .ToList();
     }
 
-    /// <summary>The account's character names from the synced character details, alphabetical.</summary>
+    /// <summary>The account's character names from the synced character details, most recently played first.</summary>
     public List<string> GetCharacterNames(string accountId)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
@@ -168,8 +168,8 @@ public sealed class AccountReader
 
         return db.Characters.AsNoTracking()
             .Where(c => c.AccountId == accountId)
+            .OrderByDescending(c => c.LastModified)
             .Select(c => c.Name)
-            .OrderBy(name => name)
             .ToList();
     }
 
