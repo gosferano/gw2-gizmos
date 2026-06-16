@@ -22,6 +22,16 @@
                  spacing on both axes. The icon has a uniform margin so there's always an equal gap. -->
             <DataTemplate x:Key="SlotTemplate">
                 <Grid Height="{Binding ActualWidth, RelativeSource={RelativeSource Self}}" ToolTip="{Binding Name}">
+                    <!-- Empty slots have no name, so suppress the (otherwise blank) tooltip on hover. -->
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter Property="ToolTipService.IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
                     <!-- Placeholder tile, always drawn: an empty slot shows it alone, and a filled slot whose
                          item hasn't synced yet (icon not downloaded) still reads as occupied — with its known
                          count — instead of a blank gap. The icon paints over the tile once it's available. -->
