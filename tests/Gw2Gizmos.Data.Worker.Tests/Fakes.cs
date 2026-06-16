@@ -14,6 +14,15 @@ internal sealed class FakeApiKeyProvider : IGw2ApiKeyProvider
     public IReadOnlyList<string> GetApiKeys() => new[] { _key };
 }
 
+/// <summary>An <see cref="IGw2ApiKeyProvider"/> with no keys, so a triggered account sync no-ops without any HTTP —
+/// used by the session-tracker tests, where the boundary sync is incidental and shouldn't need the API stub.</summary>
+internal sealed class EmptyApiKeyProvider : IGw2ApiKeyProvider
+{
+    public string? GetApiKey() => null;
+
+    public IReadOnlyList<string> GetApiKeys() => Array.Empty<string>();
+}
+
 /// <summary>An <see cref="IFeatureGate"/> that enables every feature, so all account sections run.</summary>
 internal sealed class AllEnabledFeatureGate : IFeatureGate
 {

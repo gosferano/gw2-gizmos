@@ -16,6 +16,10 @@ public class WorkerDbFixture : IDisposable
     private readonly string _dbPath;
     private readonly DbContextOptions<Gw2GizmosDbContext> _options;
 
+    /// <summary>Connection string for the temp database — for tests that build their own DI container/scope factory
+    /// over the same file (e.g. the session tracker, which resolves scoped contexts itself).</summary>
+    public string ConnectionString => $"Data Source={_dbPath}";
+
     /// <summary>A long-lived context for reading assertions. Each sync should use a fresh <see cref="NewContext"/>
     /// instead, mirroring the worker's scoped-per-cycle DbContext (so stale change-tracking can't mask bugs).</summary>
     public Gw2GizmosDbContext Db { get; }
