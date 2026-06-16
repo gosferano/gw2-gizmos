@@ -7,9 +7,6 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Mvvm;
-using Gw2Gizmos.Gw2Api.Client;
-using ApiAccount = Gw2Gizmos.Gw2Api.Contract.V2.Account.Account;
-using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -22,7 +19,7 @@ namespace Gw2Gizmos.Desktop;
 public sealed class ApiKeysViewModel : ViewModelBase
 {
     private readonly FileGw2ApiKeyStore _keyStore;
-    private readonly IGw2ApiClientFactory _clientFactory;
+    private readonly ApiKeyRegistrar _registrar;
     private readonly SelectedAccountService _selected;
     private readonly FeatureSettingsStore _features;
     private string _apiKeyInput = "";
@@ -31,13 +28,13 @@ public sealed class ApiKeysViewModel : ViewModelBase
 
     public ApiKeysViewModel(
         FileGw2ApiKeyStore keyStore,
-        IGw2ApiClientFactory clientFactory,
+        ApiKeyRegistrar registrar,
         SelectedAccountService selected,
         FeatureSettingsStore features
     )
     {
         _keyStore = keyStore;
-        _clientFactory = clientFactory;
+        _registrar = registrar;
         _selected = selected;
         _features = features;
         AddCommand = new RelayCommand(() => _ = AddAsync(), () => !_busy);
@@ -126,57 +123,26 @@ public sealed class ApiKeysViewModel : ViewModelBase
 
     private async Task AddAsync()
     {
-        string key = ApiKeyInput.Trim();
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            Status = "Paste a key first.";
-            return;
-        }
-
         _busy = true;
         Status = "Validating…";
         try
         {
-            Gw2ApiClient client = _clientFactory.Create(key, Locale.English);
-
-            ApiAccount? account = await client.V2.Account.GetBlob(CancellationToken.None);
-            if (account is null || string.IsNullOrEmpty(account.Id))
+            ApiKeyRegistrationResult result = await _registrar.RegisterAsync(ApiKeyInput, CancellationToken.None);
+            Status = result.Outcome switch
             {
-                Status = "Key is invalid or missing the 'account' permission.";
-                return;
-            }
-
-            ApiTokenInfo? token = await client.V2.TokenInfo.GetBlob(CancellationToken.None);
-
-            var stored = new StoredApiKey
-            {
-                Key = key,
-                AccountId = account.Id,
-                AccountName = account.Name,
-                KeyName = token?.Name ?? "",
-                Permissions = token?.Permissions.Select(p => p.ToString().ToLowerInvariant()).ToArray()
-                    ?? Array.Empty<string>(),
+                ApiKeyRegistration.Empty => "Paste a key first.",
+                ApiKeyRegistration.Invalid => "Key is invalid or missing the 'account' permission.",
+                ApiKeyRegistration.Duplicate => $"An API key for {result.AccountName} is already added.",
+                ApiKeyRegistration.Error => "Couldn't validate the key — check it's correct and you're online.",
+                ApiKeyRegistration.Added => $"Added {result.AccountName}.",
+                _ => Status,
             };
 
-            if (!_keyStore.AddApiKey(stored))
+            if (result.Outcome == ApiKeyRegistration.Added)
             {
-                Status = $"An API key for {account.Name} is already added.";
-                return;
+                ApiKeyInput = "";
+                LoadKeys();
             }
-
-            // First account added becomes the active context automatically.
-            if (string.IsNullOrEmpty(_selected.AccountId))
-            {
-                _selected.Select(account.Id, account.Name);
-            }
-
-            ApiKeyInput = "";
-            Status = $"Added {account.Name}.";
-            LoadKeys();
-        }
-        catch (Exception)
-        {
-            Status = "Couldn't validate the key — check it's correct and you're online.";
         }
         finally
         {
