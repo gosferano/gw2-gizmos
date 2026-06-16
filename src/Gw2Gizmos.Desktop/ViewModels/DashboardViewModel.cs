@@ -18,6 +18,12 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly FileGw2ApiKeyStore _apiKeyStore;
     private readonly FeatureSettingsStore _features;
     private string _apiKeyStatus;
+    private int _itemCount;
+    private int _recipeCount;
+    private int _tradeableItemCount;
+    private int _currencyCount;
+    private int _priceSnapshotCount;
+    private bool _workerOperational;
 
     public DashboardViewModel(
         IServiceScopeFactory scopeFactory,
@@ -30,34 +36,59 @@ public sealed class DashboardViewModel : ViewModelBase
         ApiKeyConfigured = apiKeyStore.HasApiKey;
         _apiKeyStatus = ApiKeyConfigured ? "Checking…" : "Not set";
 
-        // The worker owns the database and opens it read-only here; on a fresh install it may not exist yet
-        // (the worker creates it shortly after launch). Treat an absent/locked DB as "no data yet" rather
-        // than crashing — the dashboard then shows zeros until the first sync lands.
+        // The count queries scan large tables (item catalog, full price history) against a DB that's cold on first
+        // open — so they run off the UI thread and populate the cards when ready, rather than freezing navigation.
+        _ = LoadCountsAsync(scopeFactory);
+        _ = LoadTokenInfoAsync();
+    }
+
+    private async Task LoadCountsAsync(IServiceScopeFactory scopeFactory)
+    {
+        DashboardCounts counts = await Task.Run(() => ReadCounts(scopeFactory));
+
+        // Back on the UI thread (post-await) — assigning raises PropertyChanged so the cards update.
+        ItemCount = counts.Items;
+        RecipeCount = counts.Recipes;
+        TradeableItemCount = counts.Tradeable;
+        CurrencyCount = counts.Currencies;
+        PriceSnapshotCount = counts.PriceSnapshots;
+        WorkerOperational = counts.WorkerOperational;
+    }
+
+    /// <summary>
+    /// Reads the dashboard counts. The worker owns the database and we open it read-only; on a fresh install it
+    /// may not exist yet (the worker creates it shortly after launch), so an absent/locked DB yields zeros rather
+    /// than throwing — the dashboard then shows zeros until the first sync lands.
+    /// </summary>
+    private static DashboardCounts ReadCounts(IServiceScopeFactory scopeFactory)
+    {
         try
         {
             using IServiceScope scope = scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-            ItemCount = dbContext.Items.Count();
-            RecipeCount = dbContext.Recipes.Count();
+
+            int items = dbContext.Items.Count();
+            int recipes = dbContext.Recipes.Count();
             // Distinct items that have ever been price-polled (on the trading post); derived from snapshots
             // since the order-book table is gone.
-            TradeableItemCount = dbContext.PriceSnapshots.AsNoTracking().Select(s => s.ItemId).Distinct().Count();
-            CurrencyCount = dbContext.Currencies.Count();
-            PriceSnapshotCount = dbContext.PriceSnapshots.Count();
+            int tradeable = dbContext.PriceSnapshots.AsNoTracking().Select(s => s.ItemId).Distinct().Count();
+            int currencies = dbContext.Currencies.Count();
+            int priceSnapshots = dbContext.PriceSnapshots.Count();
 
             // The price poller runs every 5 min, so a recent snapshot means the worker is alive and updating.
             DateTimeOffset? lastPoll = dbContext
                 .PriceSnapshots.OrderByDescending(p => p.Id)
                 .Select(p => (DateTimeOffset?)p.TimestampUtc)
                 .FirstOrDefault();
-            WorkerOperational = lastPoll is { } poll && DateTimeOffset.UtcNow - poll < TimeSpan.FromMinutes(15);
+            bool operational = lastPoll is { } poll && DateTimeOffset.UtcNow - poll < TimeSpan.FromMinutes(15);
+
+            return new DashboardCounts(items, recipes, tradeable, currencies, priceSnapshots, operational);
         }
         catch (Exception)
         {
             // Database not ready yet (fresh install) — counts stay zero, worker shows not-operational.
+            return default;
         }
-
-        _ = LoadTokenInfoAsync();
     }
 
     /// <summary>Configured/not-set state — becomes the token name once verified against the API.</summary>
@@ -71,20 +102,44 @@ public sealed class DashboardViewModel : ViewModelBase
     public bool ApiKeyConfigured { get; }
 
     /// <summary>True when the worker has produced data recently — drives the Worker card's status dot.</summary>
-    public bool WorkerOperational { get; }
+    public bool WorkerOperational
+    {
+        get => _workerOperational;
+        private set => SetProperty(ref _workerOperational, value);
+    }
 
     /// <summary>The token's granted permissions (plus any required-but-missing), shown as badges.</summary>
     public ObservableCollection<ScopeBadge> Scopes { get; } = new();
 
-    public int ItemCount { get; }
+    public int ItemCount
+    {
+        get => _itemCount;
+        private set => SetProperty(ref _itemCount, value);
+    }
 
-    public int RecipeCount { get; }
+    public int RecipeCount
+    {
+        get => _recipeCount;
+        private set => SetProperty(ref _recipeCount, value);
+    }
 
-    public int TradeableItemCount { get; }
+    public int TradeableItemCount
+    {
+        get => _tradeableItemCount;
+        private set => SetProperty(ref _tradeableItemCount, value);
+    }
 
-    public int CurrencyCount { get; }
+    public int CurrencyCount
+    {
+        get => _currencyCount;
+        private set => SetProperty(ref _currencyCount, value);
+    }
 
-    public int PriceSnapshotCount { get; }
+    public int PriceSnapshotCount
+    {
+        get => _priceSnapshotCount;
+        private set => SetProperty(ref _priceSnapshotCount, value);
+    }
 
     private async Task LoadTokenInfoAsync()
     {
@@ -140,3 +195,13 @@ public sealed class DashboardViewModel : ViewModelBase
 
 /// <summary>One API-key scope for the dashboard: granted-and-required (good), granted-extra, or missing.</summary>
 public sealed record ScopeBadge(string Name, bool IsRequired, bool IsGranted);
+
+/// <summary>The dashboard's DB-derived counts, read off the UI thread.</summary>
+internal readonly record struct DashboardCounts(
+    int Items,
+    int Recipes,
+    int Tradeable,
+    int Currencies,
+    int PriceSnapshots,
+    bool WorkerOperational
+);
