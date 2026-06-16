@@ -60,9 +60,15 @@ public static class WorkerFeatures
         "CharacterInventory", "Characters", "Character details and bag contents (one request per character).",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Characters), Perm(TokenPermission.Inventories) });
 
+    public static readonly WorkerFeature PlaySessions = new(
+        "PlaySessions", "Play sessions",
+        "Tracks play sessions and per-character switches from MumbleLink (Windows only); loot deltas use the "
+            + "account features above.",
+        new[] { Perm(TokenPermission.Account) });
+
     /// <summary>All worker features, in display order (public data first, then account-bound).</summary>
     public static IReadOnlyList<WorkerFeature> All { get; } =
-        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory };
+        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory, PlaySessions };
 
     /// <summary>
     /// Every GW2 permission that can appear on a key — shown in full on the API Keys page. Sourced from

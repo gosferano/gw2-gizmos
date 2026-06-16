@@ -24,6 +24,8 @@ public sealed class FeatureSettingsStore
         WorkerFeatures.PricesSync.Key,
         // Costs one API request per character (1 + N per account sync); opt-in.
         WorkerFeatures.CharacterInventory.Key,
+        // Polls MumbleLink and triggers account syncs at session boundaries; opt-in (Windows only).
+        WorkerFeatures.PlaySessions.Key,
     };
 
     private readonly string _path;

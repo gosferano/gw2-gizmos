@@ -10,6 +10,7 @@ public class Worker : BackgroundService
     private readonly IFeatureGate _featureGate;
     private readonly IIntervalGate _intervalGate;
     private readonly SyncTriggers _triggers;
+    private readonly AccountSyncGate _accountSyncGate;
     private readonly ILogger<Worker> _logger;
 
     // Serializes craft-cost refreshes so the 15-minute timer and the after-price trigger can never run
@@ -21,12 +22,14 @@ public class Worker : BackgroundService
         IFeatureGate featureGate,
         IIntervalGate intervalGate,
         SyncTriggers triggers,
+        AccountSyncGate accountSyncGate,
         ILogger<Worker> logger)
     {
         _scopeFactory = scopeFactory;
         _featureGate = featureGate;
         _intervalGate = intervalGate;
         _triggers = triggers;
+        _accountSyncGate = accountSyncGate;
         _logger = logger;
     }
 
@@ -237,7 +240,8 @@ public class Worker : BackgroundService
                 async scope =>
                 {
                     var accountSyncUpdater = scope.ServiceProvider.GetRequiredService<AccountSyncUpdater>();
-                    await accountSyncUpdater.SyncAccount(stoppingToken);
+                    // Gated so the session tracker's boundary syncs and this loop never write the account tables at once.
+                    await _accountSyncGate.RunExclusivelyAsync(() => accountSyncUpdater.SyncAccount(stoppingToken), stoppingToken);
                 },
                 stoppingToken
             );

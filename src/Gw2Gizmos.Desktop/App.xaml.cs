@@ -351,6 +351,11 @@ public partial class App : Application
         builder.Services.AddTransient<CharactersViewModel>();
         builder.Services.AddTransient<CharacterViewModel>();
         builder.Services.AddTransient<CharacterInventoryViewModel>();
+        // Sessions: the drilled-into session/segment (transient nav context), the hub + per-session/segment VMs.
+        builder.Services.AddSingleton<SelectedSessionService>();
+        builder.Services.AddTransient<SessionsViewModel>();
+        builder.Services.AddTransient<SessionViewModel>();
+        builder.Services.AddTransient<SessionLootViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
         // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
@@ -364,6 +369,9 @@ public partial class App : Application
         builder.Services.AddTransient<CharactersPage>();
         builder.Services.AddTransient<CharacterPage>();
         builder.Services.AddTransient<CharacterInventoryPage>();
+        builder.Services.AddTransient<SessionsPage>();
+        builder.Services.AddTransient<SessionPage>();
+        builder.Services.AddTransient<SessionLootPage>();
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();

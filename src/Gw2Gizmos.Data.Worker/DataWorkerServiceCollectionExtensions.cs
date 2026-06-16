@@ -4,6 +4,7 @@ using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Gw2Api.Client;
+using Gw2Gizmos.MumbleLink.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -43,6 +44,16 @@ public static class DataWorkerServiceCollectionExtensions
         services.AddScoped<AccountSyncUpdater>();
         // Singleton so it keeps the previous poll's totals in memory to compute per-interval volume.
         services.AddSingleton<PriceSnapshotUpdater>();
+
+        // Serializes the periodic account loop with the session tracker's on-demand boundary syncs.
+        services.AddSingleton<AccountSyncGate>();
+        // Play-session tracking reads MumbleLink (Windows named shared memory), so it's Windows-only; the rest of
+        // the worker stays portable. The OS guard also satisfies the reader's [SupportedOSPlatform] surface.
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddMumbleLink();
+            services.AddHostedService<SessionTracker>();
+        }
 
         // Channel consumer + queue that connects the ingestion updaters: ItemsUpdater discovers item ids the
         // catalog is missing and queues them; ItemsMissingUpdater is the single consumer that fetches + upserts.
