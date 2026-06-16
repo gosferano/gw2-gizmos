@@ -646,6 +646,19 @@ public sealed record GameSessionRow(
     /// <summary>Signed estimated value earned, e.g. "+42g 50s".</summary>
     public string ValueDisplay => SessionFormat.SignedCoin(TotalValueCopper);
 
+    /// <summary>Hours the sitting lasted (open sessions measured to now); 0 when unknown/negative.</summary>
+    private double DurationHours
+    {
+        get
+        {
+            TimeSpan span = (EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc;
+            return span > TimeSpan.Zero ? span.TotalHours : 0;
+        }
+    }
+
+    /// <summary>Estimated value earned per hour (copper), for sorting; 0 for sub-minute sittings.</summary>
+    public long ProfitPerHourCopper => DurationHours <= 1.0 / 60 ? 0 : (long)(TotalValueCopper / DurationHours);
+
     /// <summary>Card title, e.g. "Mon 16 Jun, 19:04".</summary>
     public string Title => StartedAtUtc.LocalDateTime.ToString("ddd d MMM, HH:mm");
 
