@@ -1,17 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <IsPackable>true</IsPackable>
-    <PackageId>Gw2Gizmos.MumbleLink.Client</PackageId>
-    <Version>0.1.0</Version>
-    <Description>Reads the Guild Wars 2 MumbleLink shared-memory block into immutable snapshots. Depends on the contract package for its DTOs.</Description>
-    <PackageTags>guildwars2;gw2;mumblelink;client;reader</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+  <!-- Internal library (not a NuGet package): reads the MumbleLink shared-memory block; consumed by the worker. -->
 
   <ItemGroup>
     <ProjectReference Include="..\Gw2Gizmos.MumbleLink.Contract\Gw2Gizmos.MumbleLink.Contract.csproj" />

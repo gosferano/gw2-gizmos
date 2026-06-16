@@ -22,6 +22,6 @@ services.AddMumbleLink();
 the block has not been populated yet — these are expected, not errors.
 
 **Windows only.** The reader opens the named memory-mapped file the game publishes; its surface is annotated
-`[SupportedOSPlatform("windows")]`. The contract package is fully portable. The byte-level parsing
+`[SupportedOSPlatform("windows")]`. The contract library is fully portable. The byte-level parsing
 (`Marshalling/`) is implemented as pure functions over `ReadOnlySpan<byte>`/`string`, so it is unit-testable
 without the game running.
