@@ -30,4 +30,9 @@
     <Folder Include="Data\" />
   </ItemGroup>
 
+  <!-- Let the integration tests drive SessionTracker's internal tick/state-machine seams directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gw2Gizmos.Data.Worker.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -35,6 +35,7 @@ public sealed class SessionTracker : BackgroundService
     private readonly IMumbleLinkReader _reader;
     private readonly IFeatureGate _featureGate;
     private readonly AccountSyncGate _accountSyncGate;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<SessionTracker> _logger;
 
     // In-memory state for the currently-open session/segment.
@@ -52,6 +53,7 @@ public sealed class SessionTracker : BackgroundService
         IMumbleLinkReader reader,
         IFeatureGate featureGate,
         AccountSyncGate accountSyncGate,
+        TimeProvider timeProvider,
         ILogger<SessionTracker> logger
     )
     {
@@ -59,6 +61,7 @@ public sealed class SessionTracker : BackgroundService
         _reader = reader;
         _featureGate = featureGate;
         _accountSyncGate = accountSyncGate;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -66,7 +69,7 @@ public sealed class SessionTracker : BackgroundService
     {
         await ResumeOrCloseOpenSessionsAsync(stoppingToken);
 
-        _lastTickChangeUtc = DateTimeOffset.UtcNow;
+        _lastTickChangeUtc = _timeProvider.GetUtcNow();
         using var timer = new PeriodicTimer(ActivePollInterval);
         do
         {
@@ -88,7 +91,9 @@ public sealed class SessionTracker : BackgroundService
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task TickAsync(CancellationToken stoppingToken)
+    // internal (not private) so integration tests can drive the state machine one tick at a time with a fake reader
+    // and a controllable TimeProvider, instead of racing the real PeriodicTimer loop.
+    internal async Task TickAsync(CancellationToken stoppingToken)
     {
         if (!_featureGate.IsEnabled(WorkerFeatures.PlaySessions.Key))
         {
@@ -104,7 +109,7 @@ public sealed class SessionTracker : BackgroundService
         }
 
         MumbleLinkSnapshot? snapshot = _reader.Read();
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         string? character = null;
         bool? processAlive = null;
@@ -334,7 +339,7 @@ public sealed class SessionTracker : BackgroundService
             _logger.LogWarning(ex, "Session-boundary account sync failed; recording the boundary anyway.");
         }
 
-        return DateTimeOffset.UtcNow;
+        return _timeProvider.GetUtcNow();
     }
 
     /// <summary>
@@ -404,7 +409,7 @@ public sealed class SessionTracker : BackgroundService
     /// sessions (and the newest when the game isn't running) are closed at the last observed activity time — not at
     /// their start, which would zero the window — so their deltas stay meaningful.
     /// </summary>
-    private async Task ResumeOrCloseOpenSessionsAsync(CancellationToken stoppingToken)
+    internal async Task ResumeOrCloseOpenSessionsAsync(CancellationToken stoppingToken)
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();

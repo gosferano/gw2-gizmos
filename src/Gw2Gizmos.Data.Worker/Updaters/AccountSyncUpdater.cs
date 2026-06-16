@@ -26,6 +26,7 @@ public class AccountSyncUpdater
     private readonly IGw2ApiClientFactory _apiClientFactory;
     private readonly IGw2ApiKeyProvider _apiKeyProvider;
     private readonly IFeatureGate _featureGate;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AccountSyncUpdater> _logger;
     private bool _warnedNoKey;
 
@@ -34,6 +35,7 @@ public class AccountSyncUpdater
         IGw2ApiClientFactory apiClientFactory,
         IGw2ApiKeyProvider apiKeyProvider,
         IFeatureGate featureGate,
+        TimeProvider timeProvider,
         ILogger<AccountSyncUpdater> logger
     )
     {
@@ -41,6 +43,7 @@ public class AccountSyncUpdater
         _apiClientFactory = apiClientFactory;
         _apiKeyProvider = apiKeyProvider;
         _featureGate = featureGate;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -115,7 +118,7 @@ public class AccountSyncUpdater
             return null;
         }
 
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
         await UpsertAccountAsync(account, now, stoppingToken);
 
         // The key's live permissions, so an enabled feature whose key lacks a permission can be warned about
