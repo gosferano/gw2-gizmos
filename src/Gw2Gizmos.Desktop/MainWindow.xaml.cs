@@ -18,6 +18,6 @@ public partial class MainWindow : FluentWindow
         App.MainNavigation = RootNavigation;
 
         // Navigate once the control's visual tree is ready (navigating in the ctor NREs).
-        Loaded += (_, _) => RootNavigation.Navigate(typeof(NotificationsPage));
+        Loaded += (_, _) => RootNavigation.Navigate(typeof(DashboardPage));
     }
 }
