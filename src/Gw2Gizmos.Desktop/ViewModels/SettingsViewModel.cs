@@ -17,12 +17,19 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly FeatureSettingsStore _features;
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly SelectedAccountService _selected;
+    private readonly StartupRegistration _startup;
 
-    public SettingsViewModel(FeatureSettingsStore features, FileGw2ApiKeyStore keyStore, SelectedAccountService selected)
+    public SettingsViewModel(
+        FeatureSettingsStore features,
+        FileGw2ApiKeyStore keyStore,
+        SelectedAccountService selected,
+        StartupRegistration startup
+    )
     {
         _features = features;
         _keyStore = keyStore;
         _selected = selected;
+        _startup = startup;
 
         foreach (WorkerFeature feature in WorkerFeatures.All)
         {
@@ -33,6 +40,20 @@ public sealed class SettingsViewModel : ViewModelBase
     }
 
     public ObservableCollection<FeatureToggle> Features { get; } = new();
+
+    /// <summary>Whether the app launches (into the tray, spawning the worker) when Windows starts.</summary>
+    public bool LaunchAtStartup
+    {
+        get => _startup.IsEnabled;
+        set
+        {
+            if (value != _startup.IsEnabled)
+            {
+                _startup.SetEnabled(value);
+                OnPropertyChanged();
+            }
+        }
+    }
 
     private void OnToggled(FeatureToggle toggle)
     {

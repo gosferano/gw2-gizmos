@@ -131,7 +131,22 @@ public partial class App : Application
                 _window.Hide();
             }
         };
-        _window.Show();
+
+        // Launched at Windows startup (--minimized): come up in the tray, not on screen. Show then hide off the
+        // taskbar so the window handle exists (theming below needs it) without a visible flash.
+        if (args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
+        {
+            _window.ShowInTaskbar = false;
+            _window.WindowState = WindowState.Minimized;
+            _window.Show();
+            _window.Hide();
+            _window.ShowInTaskbar = true;
+            _window.WindowState = WindowState.Normal;
+        }
+        else
+        {
+            _window.Show();
+        }
 
         // Follow the OS *app* theme. WPF-UI's own system-theme detection is unreliable here (it reports Light
         // while the OS is Dark), so read AppsUseLightTheme directly and re-apply when the user switches themes.
@@ -284,6 +299,8 @@ public partial class App : Application
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton(new AppPaths(dataDir));
+        // "Launch at Windows startup" registration (HKCU Run); per-build value name so dev/release don't collide.
+        builder.Services.AddSingleton(new StartupRegistration(AppDataFolderName));
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
         // that data immediately. Registered first — the key/feature stores bump it.
         builder.Services.AddSingleton<SyncTriggerStore>();

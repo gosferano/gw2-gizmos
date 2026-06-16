@@ -8,6 +8,21 @@
       Title="Settings">
     <c:PageShell Title="Settings">
         <StackPanel>
+            <!-- Launch at Windows startup (HKCU Run); starts in the tray and spawns the worker. -->
+            <ui:Card Margin="0,0,0,14" Padding="16,12">
+                <DockPanel>
+                    <ui:ToggleSwitch DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"
+                                     IsChecked="{Binding LaunchAtStartup, Mode=TwoWay}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Launch at Windows startup" FontWeight="Medium" FontSize="14"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <TextBlock TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Start Gw2Gizmos in the tray when you sign in to Windows (the background worker starts with it)." />
+                    </StackPanel>
+                </DockPanel>
+            </ui:Card>
+
             <TextBlock Margin="0,0,0,14" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="Turn the data the worker syncs on or off. A feature that's on but whose API key lacks the permission it needs is flagged here and in red on the API keys page." />
