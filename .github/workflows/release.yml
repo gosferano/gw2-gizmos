@@ -5,27 +5,77 @@ name: release
 #     then a plain git tag to record the publish (no GitHub Release — the NuGet page is the home)
 #   - the desktop app                 -> a GitHub Release carrying the Velopack Windows installer
 # Each component is tagged independently (gw2-api-contract-<v>, gw2-api-client-<v>, gw2gizmos-desktop-<v>).
+#
+# A cheap "detect" job reads the versions (just grep + git, no SDK) and gates the heavy "release" job, so a
+# push that bumps nothing never spins up the Windows runner or installs dotnet/vpk.
 on:
   push:
     branches: [main]
-    # Only spin up the runner when something releasable changed; the version-gate below still
-    # decides what actually publishes. workflow_dispatch ignores this filter (always available).
     paths:
       - "src/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
-
-permissions:
-  contents: write # create tags + GitHub Releases
-  id-token: write # OIDC token for NuGet Trusted Publishing
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
+  # Lightweight gate: figure out what (if anything) is new without installing the toolchain.
+  detect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      any: ${{ steps.detect.outputs.any }}
+      contract_v: ${{ steps.detect.outputs.contract_v }}
+      contract_new: ${{ steps.detect.outputs.contract_new }}
+      client_v: ${{ steps.detect.outputs.client_v }}
+      client_new: ${{ steps.detect.outputs.client_new }}
+      desktop_v: ${{ steps.detect.outputs.desktop_v }}
+      desktop_new: ${{ steps.detect.outputs.desktop_new }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history + tags so existing releases can be detected
+
+      # Read each csproj's literal <Version> (no dotnet); a component is "new" when its tag doesn't exist yet.
+      - name: Detect new versions
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          version() { grep -oP '(?<=<Version>)[^<]+' "$1" | head -n1 | tr -d '[:space:]'; }
+          is_new() { if git rev-parse "$1" >/dev/null 2>&1; then echo false; else echo true; fi; }
+
+          contract_v=$(version src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj)
+          client_v=$(version src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj)
+          desktop_v=$(version src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj)
+
+          contract_new=$(is_new "gw2-api-contract-$contract_v")
+          client_new=$(is_new "gw2-api-client-$client_v")
+          desktop_new=$(is_new "gw2gizmos-desktop-$desktop_v")
+
+          any=false
+          if [ "$contract_new" = true ] || [ "$client_new" = true ] || [ "$desktop_new" = true ]; then any=true; fi
+
+          {
+            echo "contract_v=$contract_v"
+            echo "contract_new=$contract_new"
+            echo "client_v=$client_v"
+            echo "client_new=$client_new"
+            echo "desktop_v=$desktop_v"
+            echo "desktop_new=$desktop_new"
+            echo "any=$any"
+          } >> "$GITHUB_OUTPUT"
+
   release:
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
     runs-on: windows-latest
+    permissions:
+      contents: write # create tags + GitHub Releases
+      id-token: write # OIDC token for NuGet Trusted Publishing
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,34 +85,17 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # Only the desktop release needs Velopack — skip it for a NuGet-only run.
       - name: Install vpk (Velopack CLI)
+        if: needs.detect.outputs.desktop_new == 'true'
         shell: bash
         run: |
           dotnet tool install -g vpk
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
-      # Read each csproj <Version>; a component is "new" when its tag doesn't exist yet.
-      - name: Detect new versions
-        id: detect
-        shell: bash
-        run: |
-          set -euo pipefail
-          contract_v=$(dotnet msbuild src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj -getProperty:Version)
-          client_v=$(dotnet msbuild src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj -getProperty:Version)
-          desktop_v=$(dotnet msbuild src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -getProperty:Version)
-          is_new() { if git rev-parse "$1" >/dev/null 2>&1; then echo false; else echo true; fi; }
-          {
-            echo "contract_v=$contract_v"
-            echo "contract_new=$(is_new "gw2-api-contract-$contract_v")"
-            echo "client_v=$client_v"
-            echo "client_new=$(is_new "gw2-api-client-$client_v")"
-            echo "desktop_v=$desktop_v"
-            echo "desktop_new=$(is_new "gw2gizmos-desktop-$desktop_v")"
-          } >> "$GITHUB_OUTPUT"
-
       # Mint a short-lived NuGet API key via OIDC (only when a library is being published).
       - name: NuGet login (Trusted Publishing)
-        if: steps.detect.outputs.contract_new == 'true' || steps.detect.outputs.client_new == 'true'
+        if: needs.detect.outputs.contract_new == 'true' || needs.detect.outputs.client_new == 'true'
         id: nuget-login
         uses: NuGet/login@v1
         with:
@@ -73,49 +106,49 @@ jobs:
       # push ever fails after a successful push. A tag push does not re-trigger this workflow (it's
       # gated on branch pushes, not tags).
       - name: Pack, push & tag Contract
-        if: steps.detect.outputs.contract_new == 'true'
+        if: needs.detect.outputs.contract_new == 'true'
         shell: bash
         run: |
           dotnet pack src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj -c Release -o dist/contract
           dotnet nuget push dist/contract/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
-          tag="gw2-api-contract-${{ steps.detect.outputs.contract_v }}"
+          tag="gw2-api-contract-${{ needs.detect.outputs.contract_v }}"
           git tag "$tag"
           git push origin "$tag"
 
       # --- Client ---
       - name: Pack, push & tag Client
-        if: steps.detect.outputs.client_new == 'true'
+        if: needs.detect.outputs.client_new == 'true'
         shell: bash
         run: |
           dotnet pack src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj -c Release -o dist/client
           dotnet nuget push dist/client/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
-          tag="gw2-api-client-${{ steps.detect.outputs.client_v }}"
+          tag="gw2-api-client-${{ needs.detect.outputs.client_v }}"
           git tag "$tag"
           git push origin "$tag"
 
       # --- Desktop app: self-contained publish (incl. Worker/) -> Velopack installer + update feed ---
       - name: Publish & pack desktop app
-        if: steps.detect.outputs.desktop_new == 'true'
+        if: needs.detect.outputs.desktop_new == 'true'
         shell: bash
         run: |
           dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ steps.detect.outputs.desktop_v }}" --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
 
       # Scope the notes' baseline to the desktop tag series; otherwise GitHub's auto previous-tag
       # detection could pick a library tag (gw2-api-*). Empty on the first release -> action falls
       # back to GitHub's default (notes from the repo start).
       - name: Previous desktop tag
         id: prev_desktop
-        if: steps.detect.outputs.desktop_new == 'true'
+        if: needs.detect.outputs.desktop_new == 'true'
         shell: bash
         run: echo "tag=$(git tag --list 'gw2gizmos-desktop-*' --sort=-v:refname | head -n1)" >> "$GITHUB_OUTPUT"
 
       - name: Release desktop app
-        if: steps.detect.outputs.desktop_new == 'true'
+        if: needs.detect.outputs.desktop_new == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: gw2gizmos-desktop-${{ steps.detect.outputs.desktop_v }}
-          name: Gw2Gizmos ${{ steps.detect.outputs.desktop_v }}
+          tag_name: gw2gizmos-desktop-${{ needs.detect.outputs.desktop_v }}
+          name: Gw2Gizmos ${{ needs.detect.outputs.desktop_v }}
           previous_tag: ${{ steps.prev_desktop.outputs.tag }}
           generate_release_notes: true
           files: Releases/*
