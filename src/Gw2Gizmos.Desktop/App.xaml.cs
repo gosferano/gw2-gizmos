@@ -309,6 +309,8 @@ public partial class App : Application
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
         // that data immediately. Registered first — the key/feature stores bump it.
         builder.Services.AddSingleton<SyncTriggerStore>();
+        // Queues user "delete stored data" requests; shipped to the worker (sole DB writer) over the config pipe.
+        builder.Services.AddSingleton<DeleteRequestStore>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
         // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
@@ -323,6 +325,7 @@ public partial class App : Application
             sp.GetRequiredService<FeatureSettingsStore>(),
             sp.GetRequiredService<IntervalSettingsStore>(),
             sp.GetRequiredService<SyncTriggerStore>(),
+            sp.GetRequiredService<DeleteRequestStore>(),
             sp.GetRequiredService<ILogger<WorkerConfigHost>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
@@ -356,6 +359,8 @@ public partial class App : Application
         builder.Services.AddTransient<ApiKeysViewModel>();
         // Transient so the page reflects the current toggle/permission state on every navigation.
         builder.Services.AddTransient<SettingsViewModel>();
+        builder.Services.AddTransient<StoredDataViewModel>();
+        builder.Services.AddTransient<StoredDataPage>();
         builder.Services.AddTransient<AdvancedSettingsViewModel>();
         // Transient so the grid re-reads the worker's latest item/market data on every navigation.
         builder.Services.AddTransient<ItemsViewModel>();

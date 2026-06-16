@@ -12,4 +12,6 @@ public partial class SettingsPage : Page
     }
 
     private void OnOpenAdvanced(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(AdvancedSettingsPage));
+
+    private void OnOpenStoredData(object sender, RoutedEventArgs e) => App.NavigateTo(typeof(StoredDataPage));
 }
