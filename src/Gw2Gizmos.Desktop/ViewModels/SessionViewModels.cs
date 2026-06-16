@@ -81,6 +81,7 @@ public sealed class SessionViewModel : ViewModelBase
 {
     private readonly SelectedSessionService _selected;
     private string _status = "";
+    private SessionValueSummary _value = SessionValueSummary.Empty;
 
     public SessionViewModel(AccountReader reader, SelectedAccountService account, SelectedSessionService selected)
     {
@@ -102,6 +103,13 @@ public sealed class SessionViewModel : ViewModelBase
     public ObservableCollection<SessionLootItem> Items { get; } = new();
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    /// <summary>The session's estimated worth (coin + instant-sell loot) and gold-per-hour, shown as a summary row.</summary>
+    public SessionValueSummary Value
+    {
+        get => _value;
+        private set => SetProperty(ref _value, value);
+    }
 
     public bool HasSegments => Segments.Count > 0;
 
@@ -132,6 +140,8 @@ public sealed class SessionViewModel : ViewModelBase
 
             OnPropertyChanged(nameof(HasSegments));
             Status = segments.Count == 0 ? "No characters recorded for this session." : "";
+
+            Value = await Task.Run(() => reader.GetSessionValue(accountId, sessionId));
 
             SessionLoot loot = await Task.Run(() => reader.GetGameSessionLoot(accountId, sessionId));
             foreach (SessionLootCurrency currency in loot.Currencies)
