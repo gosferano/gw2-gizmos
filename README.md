@@ -4,9 +4,6 @@ A suite of [Guild Wars 2](https://www.guildwars2.com/) helper tools: a Windows d
 backed by reusable, strongly-typed .NET libraries for the GW2 API that are published as NuGet packages in
 their own right.
 
-> **Status:** pre-release. Components are baselined until the first tagged release, so the NuGet packages
-> and installer below aren't published yet.
-
 ## Components
 
 | Component | What it is | Distribution | Docs |
