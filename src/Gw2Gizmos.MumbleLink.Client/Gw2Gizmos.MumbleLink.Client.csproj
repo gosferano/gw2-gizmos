@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Gw2Gizmos.MumbleLink.Client</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Reads the Guild Wars 2 MumbleLink shared-memory block into immutable snapshots. Depends on the contract package for its DTOs.</Description>
+    <PackageTags>guildwars2;gw2;mumblelink;client;reader</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gw2Gizmos.MumbleLink.Contract\Gw2Gizmos.MumbleLink.Contract.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The reader and parsers traffic in the contract DTOs; this import keeps them off every using list. -->
+    <Using Include="Gw2Gizmos.MumbleLink.Contract" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The parsers and the decoded LinkedMem are internal implementation details; the test project exercises
+         them directly rather than only through the public reader. -->
+    <InternalsVisibleTo Include="Gw2Gizmos.MumbleLink.Client.Tests" />
+  </ItemGroup>
+
+</Project>

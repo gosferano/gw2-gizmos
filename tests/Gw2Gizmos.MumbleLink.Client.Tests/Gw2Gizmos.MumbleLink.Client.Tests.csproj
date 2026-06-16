@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test SDK + xunit packages and the Xunit using come from tests/Directory.Build.props. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gw2Gizmos.MumbleLink.Client\Gw2Gizmos.MumbleLink.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The client depends only on the DI abstractions; BuildServiceProvider needs the implementation package. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+</Project>

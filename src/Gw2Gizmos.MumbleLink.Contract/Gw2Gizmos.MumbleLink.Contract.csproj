@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Gw2Gizmos.MumbleLink.Contract</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Snapshot DTOs and value types for the Guild Wars 2 MumbleLink shared-memory block.</Description>
+    <PackageTags>guildwars2;gw2;mumblelink;contract;dto</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
