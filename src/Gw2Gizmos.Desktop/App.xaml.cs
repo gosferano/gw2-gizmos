@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -156,8 +158,9 @@ public partial class App : Application
 
         SetupTrayIcon(appTitle);
 
-        // Check for updates in the background; no-op when run from bin (not Velopack-installed).
-        _ = CheckForUpdatesAsync(updateManager, _host.Services.GetRequiredService<UpdateStatus>());
+        // Check at startup and then on an interval, so a release published while the app is running surfaces
+        // in-app (the dashboard reacts to UpdateStatus) without needing a restart. No-op when run from bin.
+        _ = RunPeriodicUpdateChecksAsync(updateManager, _host.Services.GetRequiredService<UpdateStatus>());
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -238,6 +241,25 @@ public partial class App : Application
         {
             return false;
         }
+    }
+
+    /// <summary>How often to re-check for updates while the app is running.</summary>
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromMinutes(30);
+
+    /// <summary>Checks for updates immediately, then every <see cref="UpdateCheckInterval"/>, so a release
+    /// published mid-session is detected without a restart. Stops once one is staged — a pending update
+    /// doesn't change until the next launch applies it.</summary>
+    private static async Task RunPeriodicUpdateChecksAsync(UpdateManager updateManager, UpdateStatus updateStatus)
+    {
+        using var timer = new PeriodicTimer(UpdateCheckInterval);
+        do
+        {
+            await CheckForUpdatesAsync(updateManager, updateStatus);
+            if (updateStatus.UpdateReady)
+            {
+                return;
+            }
+        } while (await timer.WaitForNextTickAsync());
     }
 
     private static async Task CheckForUpdatesAsync(UpdateManager updateManager, UpdateStatus updateStatus)
