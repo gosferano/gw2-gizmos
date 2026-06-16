@@ -102,6 +102,10 @@ public static class DataWorkerServiceCollectionExtensions
         // IPC provider first.
         services.TryAddSingleton<IDeleteRequestSource, NullDeleteRequestSource>();
 
+        // Clock seam: the real system clock in production; tests substitute a controllable TimeProvider so
+        // observation/session-boundary timestamps are deterministic.
+        services.TryAddSingleton(TimeProvider.System);
+
         // Named "Gw2Api" HttpClient + IGw2ApiClientFactory, with built-in retry/429 resilience.
         services.AddGw2ApiClient();
 
