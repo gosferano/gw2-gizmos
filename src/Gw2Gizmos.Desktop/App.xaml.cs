@@ -346,6 +346,9 @@ public partial class App : Application
         builder.Services.AddSingleton<DeleteRequestStore>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
+        // Shared validate-and-store path for the API Keys page and first-run onboarding.
+        builder.Services.AddSingleton<ApiKeyRegistrar>();
+        builder.Services.AddSingleton<OnboardingStore>();
         // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
         // config pipe: feature on/off toggles, per-sync intervals, and the trigger generations.
         builder.Services.AddSingleton<FeatureSettingsStore>();
@@ -435,6 +438,8 @@ public partial class App : Application
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();
+        builder.Services.AddTransient<OnboardingViewModel>();
+        builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<AdvancedSettingsPage>();
 

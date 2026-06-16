@@ -1,3 +1,4 @@
+using System;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
 
@@ -9,7 +10,7 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public partial class MainWindow : FluentWindow
 {
-    public MainWindow(INavigationViewPageProvider pageProvider)
+    public MainWindow(INavigationViewPageProvider pageProvider, OnboardingStore onboarding)
     {
         InitializeComponent();
         RootNavigation.SetPageProviderService(pageProvider);
@@ -17,7 +18,9 @@ public partial class MainWindow : FluentWindow
         // Expose the nav view so Account cards + breadcrumbs can navigate to sub-pages.
         App.MainNavigation = RootNavigation;
 
-        // Navigate once the control's visual tree is ready (navigating in the ctor NREs).
-        Loaded += (_, _) => RootNavigation.Navigate(typeof(DashboardPage));
+        // Navigate once the control's visual tree is ready (navigating in the ctor NREs). First launch lands on the
+        // one-time welcome/onboarding page; afterwards (and on every later launch) straight to the dashboard.
+        Type landing = onboarding.IsCompleted ? typeof(DashboardPage) : typeof(OnboardingPage);
+        Loaded += (_, _) => RootNavigation.Navigate(landing);
     }
 }
