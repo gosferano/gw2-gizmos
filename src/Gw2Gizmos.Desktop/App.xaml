@@ -82,7 +82,7 @@
             <!-- A session "hoarded" currency row — same size/layout + hover highlight as the Wallet entries, with a
                  hover tooltip. DeltaDisplay is the signed gain/loss. -->
             <DataTemplate x:Key="SessionCurrencyRowTemplate">
-                <Border Style="{StaticResource SessionLootRowStyle}" ToolTip="{Binding Name}">
+                <Border Style="{StaticResource SessionLootRowStyle}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
                                    Text="{Binding DeltaDisplay}" />
@@ -96,7 +96,7 @@
 
             <!-- A session "hoarded" item row — matches the currency row (wallet-sized, hover highlight + tooltip). -->
             <DataTemplate x:Key="SessionItemRowTemplate">
-                <Border Style="{StaticResource SessionLootRowStyle}" ToolTip="{Binding Name}">
+                <Border Style="{StaticResource SessionLootRowStyle}">
                     <DockPanel>
                         <!-- Gold value (instant-sell) is the headline; quantity sits below it. -->
                         <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right"
