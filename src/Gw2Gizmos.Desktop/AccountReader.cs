@@ -254,7 +254,7 @@ public sealed class AccountReader
             s => (
                 ItemDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now),
                 CoinDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now)));
-        Dictionary<int, long> values = BuildItemValues(db, deltas.Values.SelectMany(d => d.Items.Keys).ToList());
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, deltas.Values.SelectMany(d => d.Items.Keys).ToList());
 
         return sessions
             .Select(s =>
@@ -297,7 +297,7 @@ public sealed class AccountReader
                 Items: ItemDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now),
                 Coin: CoinDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now)))
             .ToList();
-        Dictionary<int, long> values = BuildItemValues(db, perSegment.SelectMany(x => x.Items.Keys).ToList());
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, perSegment.SelectMany(x => x.Items.Keys).ToList());
 
         var rows = new List<SessionSegmentRow>();
         foreach ((CharacterSegment segment, Dictionary<int, int> items, long coin) in perSegment)
@@ -366,7 +366,7 @@ public sealed class AccountReader
             .ToList();
         Dictionary<int, string> itemNames = LoadNames(itemDeltas.Select(x => x.Id), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
-        Dictionary<int, long> itemValues = BuildItemValues(db, itemDeltas.Select(x => x.Id).ToList());
+        Dictionary<int, long> itemValues = AccountHoldingsReconstructor.ItemValues(db, itemDeltas.Select(x => x.Id).ToList());
         List<SessionLootItem> items = itemDeltas
             .Select(x => new SessionLootItem(
                 x.Id,
@@ -415,15 +415,11 @@ public sealed class AccountReader
 
         DateTimeOffset end = session.EndedAtUtc ?? DateTimeOffset.UtcNow;
         Dictionary<int, int> deltas = ItemDeltaOver(db, accountId, session.StartedAtUtc, end);
-        Dictionary<int, long> values = BuildItemValues(db, deltas.Keys.ToList());
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, deltas.Keys.ToList());
         long loot = deltas.Sum(kv => (long)kv.Value * values.GetValueOrDefault(kv.Key));
         long coin = CoinDeltaOver(db, accountId, session.StartedAtUtc, end);
         return new SessionValueSummary(coin, loot, session.StartedAtUtc, session.EndedAtUtc);
     }
-
-    // 15% trading-post fee taken on a sale — the buy-order value is kept at this percent so loot reads as the
-    // realistic take-home if sold instantly.
-    private const long TradingPostTakePercent = 85;
 
     /// <summary>Net per-item holdings delta over a window (end totals minus start totals); zero deltas dropped.</summary>
     private static Dictionary<int, int> ItemDeltaOver(Gw2GizmosDbContext db, string accountId, DateTimeOffset start, DateTimeOffset end)
@@ -447,50 +443,6 @@ public sealed class AccountReader
     private static long CoinDeltaOver(Gw2GizmosDbContext db, string accountId, DateTimeOffset start, DateTimeOffset end) =>
         AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, end)
         - AccountHoldingsReconstructor.WalletValueAsOf(db, accountId, CoinCurrencyId, start);
-
-    /// <summary>Per-item "instant-sell" unit value in copper: the latest trading-post buy order minus the 15% fee
-    /// where one exists, otherwise the item's vendor value. Items with neither resolve to 0.</summary>
-    private static Dictionary<int, long> BuildItemValues(Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds)
-    {
-        var values = new Dictionary<int, long>();
-        int[] distinct = itemIds.Distinct().ToArray();
-        if (distinct.Length == 0)
-        {
-            return values;
-        }
-
-        // Batched to stay under SQLite's parameter cap (as LoadNames does).
-        foreach (int[] batch in distinct.Chunk(500))
-        {
-            IQueryable<long> latestIds = db.PriceSnapshots
-                .Where(s => batch.Contains(s.ItemId))
-                .GroupBy(s => s.ItemId)
-                .Select(g => g.Max(s => s.Id));
-            Dictionary<int, int> buy = db.PriceSnapshots.AsNoTracking()
-                .Where(s => latestIds.Contains(s.Id) && s.Buy != null && s.Buy > 0)
-                .ToDictionary(s => s.ItemId, s => s.Buy!.Value);
-
-            foreach (var item in db.Items.AsNoTracking()
-                         .Where(i => batch.Contains(i.Id))
-                         .Select(i => new { i.Id, i.VendorValue }))
-            {
-                values[item.Id] = buy.TryGetValue(item.Id, out int b)
-                    ? b * TradingPostTakePercent / 100
-                    : item.VendorValue;
-            }
-
-            // A priced item missing from the catalog (shouldn't happen) — still value it from the buy order.
-            foreach ((int id, int b) in buy)
-            {
-                if (!values.ContainsKey(id))
-                {
-                    values[id] = b * TradingPostTakePercent / 100;
-                }
-            }
-        }
-
-        return values;
-    }
 
     /// <summary>The number of characters synced for an account (for the dashboard).</summary>
     public int GetCharacterCount(string accountId) =>
