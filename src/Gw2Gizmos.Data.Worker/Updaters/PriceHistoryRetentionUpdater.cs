@@ -75,6 +75,12 @@ public class PriceHistoryRetentionUpdater
         CancellationToken stoppingToken
     )
     {
+        // The time bounds are compared against TimestampUtc, which is stored as UTC ticks (the model's value
+        // converter) — and raw SQL bypasses that converter, so bind the bounds as ticks too. Binding DateTimeOffset
+        // here would compare an integer column to a text datetime and match nothing (so nothing would ever collapse).
+        long lowerTicks = lower.UtcTicks;
+        long upperTicks = upper.UtcTicks;
+
         // bucketOf builds the time-bucket expression for a given table qualifier; it's fixed code (not
         // user input) so it's interpolated as literal SQL, while the time bounds are bound as parameters.
         // The inner subquery aliases the table 'p', so the outer row must be qualified explicitly —
@@ -99,7 +105,7 @@ public class PriceHistoryRetentionUpdater
                                AND p.TimestampUtc >= {{0}} AND p.TimestampUtc < {{1}})
                WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}}
                  AND Id IN ({survivors})",
-            new object[] { lower, upper },
+            new object[] { lowerTicks, upperTicks },
             stoppingToken
         );
 
@@ -107,7 +113,7 @@ public class PriceHistoryRetentionUpdater
             $@"DELETE FROM PriceSnapshots
                WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}}
                  AND Id NOT IN ({survivors})",
-            new object[] { lower, upper },
+            new object[] { lowerTicks, upperTicks },
             stoppingToken
         );
 #pragma warning restore EF1002
