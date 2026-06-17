@@ -213,7 +213,8 @@ public sealed class SessionViewModel : ViewModelBase
     /// <summary>The whole session's aggregated loot, shown under the character cards.</summary>
     public ObservableCollection<SessionLootCurrency> Currencies { get; } = new();
 
-    public ObservableCollection<SessionLootItem> Items { get; } = new();
+    /// <summary>The aggregated item loot, sortable by gold value or quantity (asc/desc).</summary>
+    public LootItemsSorter ItemsSorter { get; } = new();
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
 
@@ -228,10 +229,8 @@ public sealed class SessionViewModel : ViewModelBase
 
     public bool HasCurrencies => Currencies.Count > 0;
 
-    public bool HasItems => Items.Count > 0;
-
     /// <summary>True once loaded with no recorded changes — shows the "no loot" note under the cards.</summary>
-    public bool HasNoLoot => Currencies.Count == 0 && Items.Count == 0;
+    public bool HasNoLoot => Currencies.Count == 0 && !ItemsSorter.HasItems;
 
     public string Status
     {
@@ -262,13 +261,9 @@ public sealed class SessionViewModel : ViewModelBase
                 Currencies.Add(currency);
             }
 
-            foreach (SessionLootItem item in loot.Items)
-            {
-                Items.Add(item);
-            }
+            ItemsSorter.SetItems(loot.Items);
 
             OnPropertyChanged(nameof(HasCurrencies));
-            OnPropertyChanged(nameof(HasItems));
             OnPropertyChanged(nameof(HasNoLoot));
         }
         catch (Exception)
@@ -307,13 +302,12 @@ public sealed class SessionLootViewModel : ViewModelBase
 
     public ObservableCollection<SessionLootCurrency> Currencies { get; } = new();
 
-    public ObservableCollection<SessionLootItem> Items { get; } = new();
+    /// <summary>The segment's item loot, sortable by gold value or quantity (asc/desc).</summary>
+    public LootItemsSorter ItemsSorter { get; } = new();
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
 
     public bool HasCurrencies => Currencies.Count > 0;
-
-    public bool HasItems => Items.Count > 0;
 
     /// <summary>True once loaded and nothing changed — shows the "no loot recorded" note.</summary>
     public bool IsEmpty
@@ -332,18 +326,87 @@ public sealed class SessionLootViewModel : ViewModelBase
                 Currencies.Add(currency);
             }
 
-            foreach (SessionLootItem item in loot.Items)
-            {
-                Items.Add(item);
-            }
+            ItemsSorter.SetItems(loot.Items);
 
             OnPropertyChanged(nameof(HasCurrencies));
-            OnPropertyChanged(nameof(HasItems));
             IsEmpty = loot.IsEmpty;
         }
         catch (Exception)
         {
             // Leave empty on a read failure.
+        }
+    }
+}
+
+/// <summary>
+/// Holds a session/segment's item loot and exposes a sorted <see cref="View"/> the UI binds to — by gold value or
+/// quantity, ascending or descending, mirroring the sessions-hub sorter. Sorting is on the signed delta/value
+/// (descending shows the biggest gains first; losses fall to the bottom).
+/// </summary>
+public sealed class LootItemsSorter : ViewModelBase
+{
+    private IReadOnlyList<SessionLootItem> _source = Array.Empty<SessionLootItem>();
+    private int _selectedSortIndex; // 0 = gold value, 1 = quantity
+    private bool _descending = true;
+
+    public LootItemsSorter()
+    {
+        ToggleDirectionCommand = new RelayCommand(() => Descending = !Descending);
+    }
+
+    /// <summary>The sorted view bound by the list.</summary>
+    public ObservableCollection<SessionLootItem> View { get; } = new();
+
+    public IReadOnlyList<string> SortOptions { get; } = new[] { "Gold value", "Quantity" };
+
+    public bool HasItems => _source.Count > 0;
+
+    public int SelectedSortIndex
+    {
+        get => _selectedSortIndex;
+        set
+        {
+            if (SetProperty(ref _selectedSortIndex, value))
+            {
+                Resort();
+            }
+        }
+    }
+
+    public bool Descending
+    {
+        get => _descending;
+        set
+        {
+            if (SetProperty(ref _descending, value))
+            {
+                OnPropertyChanged(nameof(DirectionLabel));
+                Resort();
+            }
+        }
+    }
+
+    public string DirectionLabel => Descending ? "Descending" : "Ascending";
+
+    public RelayCommand ToggleDirectionCommand { get; }
+
+    /// <summary>Replaces the backing items and re-sorts (preserving the current sort + direction).</summary>
+    public void SetItems(IEnumerable<SessionLootItem> items)
+    {
+        _source = items.ToList();
+        OnPropertyChanged(nameof(HasItems));
+        Resort();
+    }
+
+    private void Resort()
+    {
+        Func<SessionLootItem, IComparable> key = _selectedSortIndex == 1 ? i => i.Delta : i => i.ValueCopper;
+        IEnumerable<SessionLootItem> ordered = _descending ? _source.OrderByDescending(key) : _source.OrderBy(key);
+
+        View.Clear();
+        foreach (SessionLootItem item in ordered)
+        {
+            View.Add(item);
         }
     }
 }

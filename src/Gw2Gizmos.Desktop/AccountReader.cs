@@ -366,9 +366,14 @@ public sealed class AccountReader
             .ToList();
         Dictionary<int, string> itemNames = LoadNames(itemDeltas.Select(x => x.Id), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+        Dictionary<int, long> itemValues = BuildItemValues(db, itemDeltas.Select(x => x.Id).ToList());
         List<SessionLootItem> items = itemDeltas
-            .OrderByDescending(x => Math.Abs(x.Delta))
-            .Select(x => new SessionLootItem(x.Id, itemNames.GetValueOrDefault(x.Id) ?? $"Item {x.Id}", x.Delta))
+            .Select(x => new SessionLootItem(
+                x.Id,
+                itemNames.GetValueOrDefault(x.Id) ?? $"Item {x.Id}",
+                x.Delta,
+                x.Delta * itemValues.GetValueOrDefault(x.Id)))
+            .OrderByDescending(i => i.ValueCopper)
             .ToList();
 
         // Currency deltas.
@@ -731,10 +736,15 @@ public sealed record SessionLootCurrency(int CurrencyId, string Name, string Ico
         : (Delta >= 0 ? "+" : "−") + Math.Abs(Delta).ToString("N0");
 }
 
-/// <summary>An item gained/lost over a segment.</summary>
-public sealed record SessionLootItem(int ItemId, string Name, int Delta)
+/// <summary>An item gained/lost over a segment, with the instant-sell gold value of that delta.</summary>
+public sealed record SessionLootItem(int ItemId, string Name, int Delta, long ValueCopper)
 {
     public string DeltaDisplay => (Delta >= 0 ? "+" : "−") + Math.Abs(Delta).ToString("N0");
+
+    public bool HasValue => ValueCopper != 0;
+
+    /// <summary>Signed gold value of the delta (instant-sell), e.g. "+12g 50s".</summary>
+    public string ValueDisplay => SessionFormat.SignedCoin(ValueCopper);
 }
 
 /// <summary>A segment's full hoarded delta: currencies and items gained/lost over its window.</summary>

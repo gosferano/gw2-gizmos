@@ -20,30 +20,33 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Visibility="{Binding HasAnySessions, Converter={StaticResource InverseBool}}" />
 
-                <!-- Date-range filter on the left, sort on the right. Dropdowns keep their natural height (MinHeight
-                     only, never forced smaller); the buttons are sized to match. -->
+                <!-- Date-range filter on the left, sort on the right. Control heights come from the global
+                     FormControlHeight styles in App.xaml, so inputs and buttons line up. -->
                 <DockPanel Margin="0,4,0,10" LastChildFill="False"
                            Visibility="{Binding HasAnySessions, Converter={StaticResource Bool}}">
                     <!-- Filter -->
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                         <TextBlock Text="From" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
-                        <!-- Short format + en-CA → the short-date pattern is yyyy-MM-dd (ISO), no day name. -->
-                        <DatePicker SelectedDate="{Binding FromDate}" Width="130" MinHeight="38" Margin="0,0,10,0"
-                                    SelectedDateFormat="Short" Language="en-CA" VerticalContentAlignment="Center" />
+                        <!-- Short format + en-CA → the short-date pattern is yyyy-MM-dd (ISO), no day name.
+                             Height pinned to the shared FormControlHeight (no global DatePicker style — see App.xaml). -->
+                        <DatePicker SelectedDate="{Binding FromDate}" Width="130" Margin="0,0,10,0"
+                                    Height="{StaticResource FormControlHeight}"
+                                    SelectedDateFormat="Short" Language="en-CA" />
                         <TextBlock Text="To" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
-                        <DatePicker SelectedDate="{Binding ToDate}" Width="130" MinHeight="38" Margin="0,0,8,0"
-                                    SelectedDateFormat="Short" Language="en-CA" VerticalContentAlignment="Center" />
+                        <DatePicker SelectedDate="{Binding ToDate}" Width="130" Margin="0,0,8,0"
+                                    Height="{StaticResource FormControlHeight}"
+                                    SelectedDateFormat="Short" Language="en-CA" />
                         <ui:Button Command="{Binding ClearFilterCommand}" Content="Clear" Appearance="Transparent"
-                                   Height="38" />
+                                   Height="{StaticResource FormControlHeight}" />
                     </StackPanel>
 
                     <!-- Sort -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                         <TextBlock Text="Sort" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,8,0" />
                         <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
-                                  MinWidth="130" MinHeight="38" Margin="0,0,8,0" VerticalContentAlignment="Center" />
-                        <ui:Button Command="{Binding ToggleDirectionCommand}" Height="38" Padding="9,0"
-                                   ToolTip="{Binding DirectionLabel}">
+                                  MinWidth="130" Height="{StaticResource FormControlHeight}" Margin="0,0,8,0" />
+                        <ui:Button Command="{Binding ToggleDirectionCommand}" Padding="9,0"
+                                   Height="{StaticResource FormControlHeight}" ToolTip="{Binding DirectionLabel}">
                             <ui:SymbolIcon FontSize="16">
                                 <ui:SymbolIcon.Style>
                                     <Style TargetType="ui:SymbolIcon">

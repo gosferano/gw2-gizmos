@@ -72,8 +72,35 @@
 
                 <ItemsControl ItemsSource="{Binding Currencies}" ItemTemplate="{StaticResource SessionCurrencyRowTemplate}"
                               Visibility="{Binding HasCurrencies, Converter={StaticResource Bool}}" Margin="0,0,0,6" />
-                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource SessionItemRowTemplate}"
-                              Visibility="{Binding HasItems, Converter={StaticResource Bool}}" />
+
+                <!-- Items, with a gold-value / quantity sorter (asc/desc) -->
+                <StackPanel Visibility="{Binding ItemsSorter.HasItems, Converter={StaticResource Bool}}">
+                    <DockPanel Margin="0,2,0,6">
+                        <TextBlock Text="Items" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"
+                                   DockPanel.Dock="Left" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ComboBox ItemsSource="{Binding ItemsSorter.SortOptions}"
+                                      SelectedIndex="{Binding ItemsSorter.SelectedSortIndex, Mode=TwoWay}"
+                                      MinWidth="120" Height="{StaticResource FormControlHeight}" Margin="0,0,6,0" />
+                            <ui:Button Command="{Binding ItemsSorter.ToggleDirectionCommand}" Padding="9,0"
+                                       Height="{StaticResource FormControlHeight}" ToolTip="{Binding ItemsSorter.DirectionLabel}">
+                                <ui:SymbolIcon FontSize="16">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Symbol" Value="ArrowUp24" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ItemsSorter.Descending}" Value="False">
+                                                    <Setter Property="Symbol" Value="ArrowDown24" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                            </ui:Button>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding ItemsSorter.View}" ItemTemplate="{StaticResource SessionItemRowTemplate}" />
+                </StackPanel>
             </StackPanel>
         </StackPanel>
     </c:PageShell>

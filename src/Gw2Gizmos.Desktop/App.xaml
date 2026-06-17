@@ -5,6 +5,7 @@
              xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls"
              xmlns:conv="clr-namespace:Gw2Gizmos.Desktop.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
@@ -97,8 +98,14 @@
             <DataTemplate x:Key="SessionItemRowTemplate">
                 <Border Style="{StaticResource SessionLootRowStyle}" ToolTip="{Binding Name}">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
-                                   Text="{Binding DeltaDisplay}" />
+                        <!-- Gold value (instant-sell) is the headline; quantity sits below it. -->
+                        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                    Margin="10,0,0,0">
+                            <TextBlock Text="{Binding ValueDisplay}" FontWeight="Medium" HorizontalAlignment="Right"
+                                       Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                            <TextBlock Text="{Binding DeltaDisplay}" FontSize="12" HorizontalAlignment="Right"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
                         <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                                      CornerRadius="4" Stretch="Uniform" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -106,6 +113,12 @@
                     </DockPanel>
                 </Border>
             </DataTemplate>
+
+            <!-- Shared height for form controls (inputs + buttons) so they line up on a row. Applied INLINE on the
+                 controls (Height="{StaticResource FormControlHeight}"), not as an implicit Style: an implicit
+                 TargetType style would replace WPF-UI's own implicit style and strip the Fluent look (BasedOn the
+                 WPF-UI default isn't reliably resolvable by type key here). One constant to retune them all. -->
+            <sys:Double x:Key="FormControlHeight">38</sys:Double>
 
             <!-- Win11-Settings-style page chrome: a pinned title/breadcrumb over a width-capped, centered
                  body. Scrollable bodies scroll under the header; non-scrollable ones (grids) fill the
