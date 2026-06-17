@@ -17,7 +17,8 @@
                     <TextBlock Text="1 · Create an API key" FontWeight="SemiBold" FontSize="15" />
                     <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,10"
                                Text="Open the Guild Wars 2 account site and create a new API key (you'll need to log in)." />
-                    <ui:Button Content="Open account.arena.net" Command="{Binding OpenApiKeyPageCommand}">
+                    <ui:Button Content="Open account.arena.net" Command="{Binding OpenApiKeyPageCommand}"
+                               Height="{StaticResource FormControlHeight}">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="Open24" />
                         </ui:Button.Icon>
@@ -65,9 +66,10 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBox Grid.Column="0" Text="{Binding ApiKeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                    PlaceholderText="paste key here" FontFamily="Consolas" />
+                                    PlaceholderText="paste key here" FontFamily="Consolas"
+                                    Height="{StaticResource FormControlHeight}" />
                         <ui:Button Grid.Column="1" Content="Connect" Command="{Binding AddCommand}"
-                                   Appearance="Primary" Margin="8,0,0,0" />
+                                   Appearance="Primary" Height="{StaticResource FormControlHeight}" Margin="8,0,0,0" />
                     </Grid>
                     <TextBlock Text="{Binding Status}" Opacity="0.85" Margin="0,8,0,0" TextWrapping="Wrap" />
 
@@ -87,7 +89,8 @@
                             <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,10"
                                        Text="Your data will start syncing in the background. You can add more accounts or change what's tracked any time in API keys and Settings." />
                             <ui:Button Content="Continue to dashboard" Command="{Binding ContinueCommand}"
-                                       Appearance="Primary" HorizontalAlignment="Left" />
+                                       Appearance="Primary" HorizontalAlignment="Left"
+                                       Height="{StaticResource FormControlHeight}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -95,7 +98,7 @@
 
             <!-- Escape hatch: explore first, set up later -->
             <ui:Button Content="Skip for now" Command="{Binding SkipCommand}" Appearance="Transparent"
-                       HorizontalAlignment="Left" Margin="0,4,0,0" />
+                       HorizontalAlignment="Left" Margin="0,4,0,0" Height="{StaticResource FormControlHeight}" />
         </StackPanel>
     </c:PageShell>
 </Page>

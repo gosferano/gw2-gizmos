@@ -24,6 +24,7 @@
                     <TextBlock Text="Remind me" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <ComboBox Margin="8,0" MinWidth="56" VerticalAlignment="Center"
+                              Height="{StaticResource FormControlHeight}"
                               ItemsSource="{Binding LeadTimeOptions}"
                               SelectedItem="{Binding SelectedLeadTimeMinutes, Mode=TwoWay}" />
                     <TextBlock Text="min before" VerticalAlignment="Center"
@@ -54,6 +55,7 @@
                 </StackPanel>
 
                 <ui:TextBox x:Name="SearchBox" PlaceholderText="Search events…" VerticalAlignment="Center"
+                            Height="{StaticResource FormControlHeight}"
                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
             </DockPanel>
 

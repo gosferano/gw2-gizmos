@@ -138,7 +138,7 @@
                         <TextBlock Text="{Binding UpdateText}" FontSize="12" TextWrapping="Wrap" FontWeight="Medium"
                                    Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
                         <ui:Button Content="Restart now" Appearance="Primary" Margin="0,6,0,0"
-                                   Command="{Binding RestartCommand}" />
+                                   Height="{StaticResource FormControlHeight}" Command="{Binding RestartCommand}" />
                     </StackPanel>
                 </StackPanel>
             </ui:Card>
