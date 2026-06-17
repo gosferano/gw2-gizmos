@@ -54,4 +54,58 @@ public static class AccountHoldingsReconstructor
             .OrderByDescending(o => o.Id)
             .Select(o => o.Value)
             .FirstOrDefault();
+
+    // 15% trading-post fee taken on a sale — the buy-order value is kept at this percent so loot reads as the
+    // realistic take-home if sold instantly.
+    private const long TradingPostTakePercent = 85;
+
+    // GW2 item flag for items that can't be sold to a vendor — their vendor value isn't realizable.
+    private const string NoSellFlag = "NoSell";
+
+    /// <summary>
+    /// Per-item "instant-sell" unit value in copper: the latest trading-post buy order minus the 15% fee where one
+    /// exists, otherwise the item's vendor value — but only when it's sellable ("NoSell" items can't be vendored, so
+    /// they're worth 0). Items with neither resolve to 0. Used to value session loot/profit.
+    /// </summary>
+    public static Dictionary<int, long> ItemValues(Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds)
+    {
+        var values = new Dictionary<int, long>();
+        int[] distinct = itemIds.Distinct().ToArray();
+        if (distinct.Length == 0)
+        {
+            return values;
+        }
+
+        // Batched to stay under SQLite's parameter cap.
+        foreach (int[] batch in distinct.Chunk(500))
+        {
+            IQueryable<long> latestIds = db.PriceSnapshots
+                .Where(s => batch.Contains(s.ItemId))
+                .GroupBy(s => s.ItemId)
+                .Select(g => g.Max(s => s.Id));
+            Dictionary<int, int> buy = db.PriceSnapshots.AsNoTracking()
+                .Where(s => latestIds.Contains(s.Id) && s.Buy != null && s.Buy > 0)
+                .ToDictionary(s => s.ItemId, s => s.Buy!.Value);
+
+            foreach (var item in db.Items.AsNoTracking()
+                         .Where(i => batch.Contains(i.Id))
+                         .Select(i => new { i.Id, i.VendorValue, NoSell = i.Flags.Any(f => f.Value == NoSellFlag) }))
+            {
+                values[item.Id] = buy.TryGetValue(item.Id, out int b)
+                    ? b * TradingPostTakePercent / 100
+                    : item.NoSell ? 0 : item.VendorValue;
+            }
+
+            // A priced item missing from the catalog (shouldn't happen) — still value it from the buy order.
+            foreach ((int id, int b) in buy)
+            {
+                if (!values.ContainsKey(id))
+                {
+                    values[id] = b * TradingPostTakePercent / 100;
+                }
+            }
+        }
+
+        return values;
+    }
 }
