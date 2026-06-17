@@ -132,8 +132,12 @@ public sealed class SessionTrackerTests : IDisposable
     {
         await Live("Alice");
 
+        // Activity recorded mid-session, so it isn't discarded as empty on end.
+        _time.Advance(TimeSpan.FromMinutes(10));
+        SeedObservation(_time.Now);
+
         // Game process gone: the reader returns no block at all → session and its open segment close.
-        _time.Advance(TimeSpan.FromMinutes(30));
+        _time.Advance(TimeSpan.FromMinutes(20));
         _reader.Snapshot = null;
         await _tracker.TickAsync(CancellationToken.None);
 
@@ -144,12 +148,30 @@ public sealed class SessionTrackerTests : IDisposable
     }
 
     [Fact]
+    public async Task GameClose_WithNoActivity_DiscardsEmptySession()
+    {
+        await Live("Alice"); // no observations recorded during the sitting
+
+        _time.Advance(TimeSpan.FromMinutes(30));
+        _reader.Snapshot = null;
+        await _tracker.TickAsync(CancellationToken.None);
+
+        // An empty session (and its segments) is dropped rather than kept.
+        Assert.Equal(0, await Db.GameSessions.CountAsync());
+        Assert.Equal(0, await Db.CharacterSegments.CountAsync());
+    }
+
+    [Fact]
     public async Task TickFreeze_EndsSession_WhenProcessIdUnknown()
     {
         await Live("Alice"); // opens with a tick; ProcessId is 0 (unknown) so the freeze timeout is the fallback
 
-        // Same UiTick on the next reads (frozen), and time advances past the 60s fallback → game-end inferred.
-        _time.Advance(TimeSpan.FromSeconds(90));
+        // Activity recorded so the session survives the end (not discarded as empty).
+        _time.Advance(TimeSpan.FromSeconds(30));
+        SeedObservation(_time.Now);
+
+        // Same UiTick on the next read (frozen), and time advances past the 60s fallback → game-end inferred.
+        _time.Advance(TimeSpan.FromSeconds(60));
         _reader.Snapshot = Snapshot(_tick, "Alice"); // note: NOT advancing _tick → UiTick unchanged
         await _tracker.TickAsync(CancellationToken.None);
 
@@ -190,6 +212,22 @@ public sealed class SessionTrackerTests : IDisposable
         // Roster so the tracker resolves the character→account link (it also has a sole-account fallback).
         db.Characters.Add(new Character { AccountId = AccountId, Name = "Alice" });
         db.Characters.Add(new Character { AccountId = AccountId, Name = "Bob" });
+        db.SaveChanges();
+    }
+
+    /// <summary>Records one item observation at <paramref name="at"/>, marking real activity in a session's window
+    /// (so the tracker doesn't discard the session as empty when it ends).</summary>
+    private void SeedObservation(DateTimeOffset at)
+    {
+        using Gw2GizmosDbContext db = _fixture.NewContext();
+        db.AccountItemObservations.Add(new AccountItemObservation
+        {
+            AccountId = AccountId,
+            Container = AccountContainer.Bank,
+            ItemId = 1,
+            Count = 1,
+            ObservedAtUtc = at,
+        });
         db.SaveChanges();
     }
 

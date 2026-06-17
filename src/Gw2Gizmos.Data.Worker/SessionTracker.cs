@@ -280,23 +280,60 @@ public sealed class SessionTracker : BackgroundService
     {
         DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
 
-        if (_segmentId is not null)
-        {
-            await CloseSegmentAsync(boundary, stoppingToken);
-        }
-
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
         GameSession? session = await db.GameSessions.FirstOrDefaultAsync(s => s.Id == _gameSessionId, stoppingToken);
-        if (session is { EndedAtUtc: null })
+        if (session is null)
         {
-            session.EndedAtUtc = boundary;
-            await db.SaveChangesAsync(stoppingToken);
+            ResetState();
+            return;
         }
 
-        _logger.LogInformation("Play session ended for {Account}.", session?.AccountId ?? "(unknown)");
+        // A sitting that captured no item/wallet change isn't worth keeping (its loot/value would all be zero) —
+        // drop it and its segments instead of leaving an empty session in the list.
+        if (!await HadActivityAsync(db, session.AccountId, session.StartedAtUtc, boundary, stoppingToken))
+        {
+            await db.CharacterSegments.Where(s => s.GameSessionId == session.Id).ExecuteDeleteAsync(stoppingToken);
+            await db.GameSessions.Where(s => s.Id == session.Id).ExecuteDeleteAsync(stoppingToken);
+            _logger.LogInformation("Discarded empty play session {Id} for {Account} (no activity recorded).", session.Id, session.AccountId);
+            ResetState();
+            return;
+        }
+
+        // Close the open segment (if any) and the session at the boundary.
+        foreach (CharacterSegment open in await db.CharacterSegments
+                     .Where(s => s.GameSessionId == session.Id && s.EndedAtUtc == null)
+                     .ToListAsync(stoppingToken))
+        {
+            open.EndedAtUtc = boundary;
+        }
+
+        if (session.EndedAtUtc is null)
+        {
+            session.EndedAtUtc = boundary;
+        }
+
+        await db.SaveChangesAsync(stoppingToken);
+        _logger.LogInformation("Play session ended for {Account}.", session.AccountId);
         ResetState();
+    }
+
+    /// <summary>Whether any item or wallet observation was recorded for the account within (start, end] — i.e. the
+    /// session captured a real change. Used to discard empty sittings on end.</summary>
+    private static async Task<bool> HadActivityAsync(
+        Gw2GizmosDbContext db,
+        string accountId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken stoppingToken
+    )
+    {
+        bool items = await db.AccountItemObservations
+            .AnyAsync(o => o.AccountId == accountId && o.ObservedAtUtc > start && o.ObservedAtUtc <= end, stoppingToken);
+        return items
+            || await db.AccountWalletObservations
+                .AnyAsync(o => o.AccountId == accountId && o.ObservedAtUtc > start && o.ObservedAtUtc <= end, stoppingToken);
     }
 
     private async Task CloseSegmentAsync(DateTimeOffset boundary, CancellationToken stoppingToken)
@@ -449,6 +486,16 @@ public sealed class SessionTracker : BackgroundService
             // falling back to the latest segment boundary.
             DateTimeOffset endedAt = await LastActivityUtcAsync(db, session.AccountId, stoppingToken)
                 ?? segments.Select(s => s.EndedAtUtc ?? s.StartedAtUtc).DefaultIfEmpty(session.StartedAtUtc).Max();
+
+            // Same rule as a live end: a sitting that captured no change is discarded rather than closed.
+            if (!await HadActivityAsync(db, session.AccountId, session.StartedAtUtc, endedAt, stoppingToken))
+            {
+                db.CharacterSegments.RemoveRange(segments);
+                db.GameSessions.Remove(session);
+                _logger.LogInformation("Discarded empty open play session {Id} for {Account} on startup.", session.Id, session.AccountId);
+                continue;
+            }
+
             foreach (CharacterSegment segment in segments.Where(s => s.EndedAtUtc is null))
             {
                 segment.EndedAtUtc = endedAt;
