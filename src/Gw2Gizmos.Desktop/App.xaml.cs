@@ -211,7 +211,30 @@ public partial class App : Application
     private void ApplyWindowsTheme()
     {
         ApplicationThemeManager.ApplySystemTheme();
+        ApplyPageBackgroundOverride();
         Log.Information("Applied {Theme} theme.", ApplicationThemeManager.GetAppTheme());
+    }
+
+    /// <summary>
+    /// WPF-UI's light <c>ApplicationBackgroundBrush</c> is near-white, which reads too bright behind the cards.
+    /// Override it with a softer grey in light theme (so cards stand out on a calmer surface); leave dark theme on
+    /// the WPF-UI default. The window grid binds this brush dynamically, so it updates on a live theme switch too.
+    /// </summary>
+    private static void ApplyPageBackgroundOverride()
+    {
+        const string key = "ApplicationBackgroundBrush";
+        if (ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Light)
+        {
+            var brush = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xE6, 0xE6, 0xE6));
+            brush.Freeze();
+            Current.Resources[key] = brush;
+        }
+        else
+        {
+            // Drop our override so the WPF-UI dark theme's own background applies.
+            Current.Resources.Remove(key);
+        }
     }
 
     private void OnUserPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
