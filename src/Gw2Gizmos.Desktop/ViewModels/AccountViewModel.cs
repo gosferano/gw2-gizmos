@@ -12,6 +12,7 @@ namespace Gw2Gizmos.Desktop;
 public sealed class AccountViewModel : ViewModelBase
 {
     private string _summary = "";
+    private string? _summaryTooltip;
 
     public AccountViewModel(SelectedAccountService selected, AccountReader reader)
     {
@@ -29,20 +30,32 @@ public sealed class AccountViewModel : ViewModelBase
     /// <summary>False when no account is selected/added yet; the page shows a "pick an account" note.</summary>
     public bool HasAccount { get; }
 
-    /// <summary>When this account last synced (no world id — it was noise).</summary>
+    /// <summary>When this account last synced, relative (e.g. "Synced 3m ago").</summary>
     public string Summary
     {
         get => _summary;
         private set => SetProperty(ref _summary, value);
     }
 
+    /// <summary>Exact last-sync timestamp, shown as the tooltip beside <see cref="Summary"/>; null until loaded.</summary>
+    public string? SummaryTooltip
+    {
+        get => _summaryTooltip;
+        private set => SetProperty(ref _summaryTooltip, value);
+    }
+
     private async Task LoadSyncTimeAsync(AccountReader reader, string accountId)
     {
         // Off the UI thread; the synced Account row may not exist yet on a freshly-added key.
         AccountInfo? account = await Task.Run(() => reader.GetAccounts().FirstOrDefault(a => a.Id == accountId));
-        Summary = account is null
-            ? "Waiting for first sync…"
-            : $"Synced {account.LastSyncedUtc.LocalDateTime:g}";
+        if (account is null)
+        {
+            Summary = "Waiting for first sync…";
+            return;
+        }
+
+        Summary = $"Synced {RelativeTime.Format(account.LastSyncedUtc)}";
+        SummaryTooltip = RelativeTime.Exact(account.LastSyncedUtc);
     }
 }
 

@@ -85,7 +85,8 @@
 
             <StackPanel Grid.Row="0" Margin="0,0,0,8">
                 <!-- Sync notice spans the full width, above the search row. -->
-                <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.7">
+                <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.7"
+                           ToolTip="{Binding PricesUpdatedTooltip}">
                     <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable." />
                     <Run Text="{Binding PricesStatus, Mode=OneWay}" />
                 </TextBlock>
