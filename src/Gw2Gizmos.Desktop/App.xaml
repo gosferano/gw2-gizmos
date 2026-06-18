@@ -17,6 +17,7 @@
             <!-- Shared by the Account sub-pages (bank / shared inventory / material storage grids). -->
             <conv:BoolToVisibilityConverter x:Key="Bool" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
+            <conv:NotNullConverter x:Key="NotNull" />
 
             <!-- A bank/shared-inventory slot, or a placeholder when empty. The cell fills its 10-column
                  UniformGrid column and is square (Height tracks width) → exactly 10 per row with equal
@@ -101,8 +102,9 @@
                         <!-- Gold value (instant-sell) is the headline; quantity sits below it. -->
                         <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right"
                                     Margin="10,0,0,0">
-                            <TextBlock Text="{Binding ValueDisplay}" FontWeight="Medium" HorizontalAlignment="Right"
-                                       Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                            <c:CoinDisplay Copper="{Binding ValueCopper}" Signed="True" FontWeight="Medium"
+                                           HorizontalAlignment="Right"
+                                           Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
                             <TextBlock Text="{Binding DeltaDisplay}" FontSize="12" HorizontalAlignment="Right"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
@@ -140,8 +142,24 @@
                                                       ItemsSource="{TemplateBinding ResolvedBreadcrumbs}">
                                         <ui:BreadcrumbBar.ItemTemplate>
                                             <DataTemplate>
+                                                <!-- Parent crumbs (a non-null Target → clickable) read dimmer, back to
+                                                     full colour on hover; the current crumb (Target null) stays full. -->
                                                 <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Opacity" Value="0.85" />
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Opacity" Value="1" />
+                                                                </Trigger>
+                                                                <DataTrigger Binding="{Binding Target}" Value="{x:Null}">
+                                                                    <Setter Property="Opacity" Value="1" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </DataTemplate>
                                         </ui:BreadcrumbBar.ItemTemplate>
                                     </ui:BreadcrumbBar>

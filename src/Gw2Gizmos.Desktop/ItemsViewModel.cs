@@ -87,6 +87,7 @@ public sealed class ItemsViewModel : ViewModelBase
 
             PricesUpdatedAt = updatedAt;
             OnPropertyChanged(nameof(PricesUpdatedAt));
+            OnPropertyChanged(nameof(PricesUpdatedTooltip));
             OnPropertyChanged(nameof(PricesSyncing));
             OnPropertyChanged(nameof(PricesStatus));
             OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
@@ -244,8 +245,11 @@ public sealed class ItemsViewModel : ViewModelBase
     /// <summary>Header status: price history off, the first-poll syncing note, or when prices last polled.</summary>
     public string PricesStatus =>
         !PricesEnabled ? "Price history is off — enable it in Settings to see prices and craft costs."
-        : PricesUpdatedAt is { } updated ? $"Prices as of {updated:yyyy-MM-dd HH:mm}."
+        : PricesUpdatedAt is { } updated ? $"Prices updated {RelativeTime.Format(updated)}."
         : "Prices syncing…";
+
+    /// <summary>Exact last-poll timestamp for the header tooltip; null (no tooltip) when prices haven't polled.</summary>
+    public string? PricesUpdatedTooltip => PricesUpdatedAt is { } updated ? RelativeTime.Exact(updated) : null;
 
     /// <summary>Free-text name filter applied to the grid.</summary>
     public string FilterText

@@ -27,13 +27,16 @@ public sealed class DashboardViewModel : ViewModelBase
     private bool _workerOperational;
     private string _accountName = "—";
     private string _accountSynced = "";
+    private string? _accountSyncedTooltip;
     private int _characterCount;
     private long _coinBalance;
     private int _sessionCount;
     private string _playtime = "—";
     private string _sessionStatus = "No sessions yet";
+    private string? _sessionStatusTooltip;
     private bool _hasSessions;
     private string _workerUpdated = "";
+    private string? _workerUpdatedTooltip;
     private bool _updateReady;
     private string _updateText = "";
 
@@ -95,6 +98,7 @@ public sealed class DashboardViewModel : ViewModelBase
         PriceSnapshotCount = counts.PriceSnapshots;
         WorkerOperational = counts.WorkerOperational;
         WorkerUpdated = FormatUpdated(counts.LastPollUtc);
+        WorkerUpdatedTooltip = counts.LastPollUtc is { } poll ? RelativeTime.Exact(poll) : null;
     }
 
     /// <summary>The on-disk size of the SQLite database (+ its WAL), or "—" if it can't be read.</summary>
@@ -125,19 +129,8 @@ public sealed class DashboardViewModel : ViewModelBase
         : bytes >= 1L << 20 ? $"{bytes / (double)(1L << 20):0.0} MB"
         : $"{Math.Max(1, bytes / 1024)} KB";
 
-    private static string FormatUpdated(DateTimeOffset? lastPollUtc)
-    {
-        if (lastPollUtc is not { } poll)
-        {
-            return "No data yet";
-        }
-
-        TimeSpan ago = DateTimeOffset.UtcNow - poll;
-        return ago < TimeSpan.FromMinutes(1) ? "Updated just now"
-            : ago < TimeSpan.FromHours(1) ? $"Updated {(int)ago.TotalMinutes}m ago"
-            : ago < TimeSpan.FromDays(1) ? $"Updated {(int)ago.TotalHours}h ago"
-            : $"Updated {(int)ago.TotalDays}d ago";
-    }
+    private static string FormatUpdated(DateTimeOffset? lastPollUtc) =>
+        lastPollUtc is { } poll ? $"Updated {RelativeTime.Format(poll)}" : "No data yet";
 
     private async Task LoadAccountStatsAsync(AccountReader reader)
     {
@@ -153,7 +146,8 @@ public sealed class DashboardViewModel : ViewModelBase
         if (account is not null)
         {
             AccountName = account.Name;
-            AccountSynced = $"Synced {account.LastSyncedUtc.LocalDateTime:g}";
+            AccountSynced = $"Synced {RelativeTime.Format(account.LastSyncedUtc)}";
+            AccountSyncedTooltip = RelativeTime.Exact(account.LastSyncedUtc);
             CharacterCount = characters;
             CoinBalance = coin;
         }
@@ -165,7 +159,8 @@ public sealed class DashboardViewModel : ViewModelBase
             ? "No sessions yet"
             : sessions.IsPlaying
                 ? $"Playing now · {sessions.Character ?? "?"}"
-                : $"Last played {sessions.LastPlayedUtc?.LocalDateTime:g} · {sessions.Character ?? "?"}";
+                : $"Last played {(sessions.LastPlayedUtc is { } lastPlayed ? RelativeTime.Format(lastPlayed) : "—")} · {sessions.Character ?? "?"}";
+        SessionStatusTooltip = !sessions.IsPlaying && sessions.LastPlayedUtc is { } played ? RelativeTime.Exact(played) : null;
     }
 
     private static string FormatPlaytime(TimeSpan span)
@@ -271,6 +266,13 @@ public sealed class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _workerUpdated, value);
     }
 
+    /// <summary>Exact last-poll timestamp, shown as the tooltip beside the relative text; null until loaded.</summary>
+    public string? WorkerUpdatedTooltip
+    {
+        get => _workerUpdatedTooltip;
+        private set => SetProperty(ref _workerUpdatedTooltip, value);
+    }
+
     // --- App ---
     public string AppVersion { get; }
 
@@ -307,6 +309,13 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         get => _accountSynced;
         private set => SetProperty(ref _accountSynced, value);
+    }
+
+    /// <summary>Exact last-sync timestamp for the account card's tooltip; null (no tooltip) until loaded.</summary>
+    public string? AccountSyncedTooltip
+    {
+        get => _accountSyncedTooltip;
+        private set => SetProperty(ref _accountSyncedTooltip, value);
     }
 
     public int CharacterCount
@@ -346,6 +355,13 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         get => _sessionStatus;
         private set => SetProperty(ref _sessionStatus, value);
+    }
+
+    /// <summary>Exact last-played time for the session card's tooltip; null while playing or with no sessions.</summary>
+    public string? SessionStatusTooltip
+    {
+        get => _sessionStatusTooltip;
+        private set => SetProperty(ref _sessionStatusTooltip, value);
     }
 
     private async Task LoadTokenInfoAsync()

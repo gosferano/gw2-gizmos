@@ -17,7 +17,7 @@
             <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource Bool}}">
                 <!-- Current account (the global selection), shown here instead of as a breadcrumb crumb. -->
                 <TextBlock Text="{Binding AccountName}" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Summary}" Margin="0,2,0,14"
+                <TextBlock Text="{Binding Summary}" ToolTip="{Binding SummaryTooltip}" Margin="0,2,0,14"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
                 <!-- Per-section sub-pages for the selected account. -->

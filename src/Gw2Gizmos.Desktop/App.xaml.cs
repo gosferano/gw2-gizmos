@@ -42,6 +42,113 @@ public partial class App : Application
     /// <summary>Navigates the shell to a page type (used by Account cards and breadcrumbs).</summary>
     public static void NavigateTo(Type pageType) => MainNavigation?.Navigate(pageType);
 
+    /// <summary>
+    /// Highlights the rail item a page belongs under, so a section stays selected while you're on its sub-pages.
+    /// The section is the page's root-breadcrumb <c>Target</c> (every sub-page already declares it); top-level pages
+    /// pass null and fall back to the rail's own current selection. Called by <c>PageShell</c> on load, so any new
+    /// page or hierarchy works with no extra wiring or mapping.
+    /// </summary>
+    public static void HighlightNavSection(Type? breadcrumbRoot)
+    {
+        if (MainNavigation is null)
+        {
+            return;
+        }
+
+        Type? section = breadcrumbRoot
+            ?? (MainNavigation.SelectedItem as Wpf.Ui.Controls.NavigationViewItem)?.TargetPageType;
+        if (section is null)
+        {
+            return;
+        }
+
+        foreach (Wpf.Ui.Controls.NavigationViewItem item in MainNavigation.MenuItems
+                     .OfType<Wpf.Ui.Controls.NavigationViewItem>()
+                     .Concat(MainNavigation.FooterMenuItems.OfType<Wpf.Ui.Controls.NavigationViewItem>()))
+        {
+            item.SetValue(Wpf.Ui.Controls.NavigationViewItem.IsActiveProperty, item.TargetPageType == section);
+        }
+    }
+
+    // --- Back navigation: WPF-UI journals the page sequence, but it recreates each page's view-model on back,
+    // which would re-read the *current* selection singletons. So we snapshot the selection per visited page and
+    // restore the previous one just before each back, so a detail page shows the item it originally did. ---
+    private static IServiceProvider? _services;
+    private static readonly List<NavSelection> _trail = new();
+    private static bool _inBack;
+
+    private readonly record struct NavSelection(
+        string? AccountId, string? AccountName,
+        long? SessionId, string SessionTitle, long? SegmentId, string SegmentTitle,
+        string? Character);
+
+    /// <summary>Records the selection of the page just navigated to (skipped while going back). Call on Navigated.</summary>
+    internal static void OnNavigated()
+    {
+        if (_inBack)
+        {
+            _inBack = false;
+        }
+        else if (_services is not null)
+        {
+            _trail.Add(Capture());
+        }
+    }
+
+    /// <summary>Back via Alt+Left / mouse: restore the previous page's selection, then walk WPF-UI's journal so the
+    /// rebuilt page shows the item it originally did.</summary>
+    public static void GoBack()
+    {
+        if (MainNavigation is not { CanGoBack: true } || _trail.Count < 2)
+        {
+            return;
+        }
+
+        _trail.RemoveAt(_trail.Count - 1);
+        _inBack = true; // skip the capture from the back navigation below
+        Apply(_trail[^1]);
+        MainNavigation.GoBack();
+    }
+
+    private static NavSelection Capture()
+    {
+        IServiceProvider services = _services!;
+        var account = services.GetRequiredService<SelectedAccountService>();
+        var session = services.GetRequiredService<SelectedSessionService>();
+        var character = services.GetRequiredService<SelectedCharacterService>();
+        return new NavSelection(
+            account.AccountId, account.AccountName,
+            session.GameSessionId, session.GameSessionTitle, session.SegmentId, session.SegmentTitle,
+            character.CharacterName);
+    }
+
+    private static void Apply(NavSelection s)
+    {
+        IServiceProvider services = _services!;
+        var account = services.GetRequiredService<SelectedAccountService>();
+        // Only re-select the account when it actually differs (its setter persists + fires change events).
+        if (s.AccountId is not null && !string.Equals(account.AccountId, s.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            account.Select(s.AccountId, s.AccountName ?? "");
+        }
+
+        var session = services.GetRequiredService<SelectedSessionService>();
+        if (s.SessionId is { } sessionId)
+        {
+            session.SelectSession(sessionId, s.SessionTitle);
+        }
+
+        if (s.SegmentId is { } segmentId)
+        {
+            session.SelectSegment(segmentId, s.SegmentTitle);
+        }
+
+        if (s.Character is { } character)
+        {
+            services.GetRequiredService<SelectedCharacterService>().Select(character);
+        }
+    }
+
     private NotifyIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
@@ -112,6 +219,7 @@ public partial class App : Application
         await _host.StartAsync();
 
         Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
+        _services = _host.Services; // for back-navigation selection snapshots
 
         // The worker shares the same database (same provider + connection string) and fetches its config from
         // the config service over the pipe whose name we pass here.
@@ -211,7 +319,30 @@ public partial class App : Application
     private void ApplyWindowsTheme()
     {
         ApplicationThemeManager.ApplySystemTheme();
+        ApplyPageBackgroundOverride();
         Log.Information("Applied {Theme} theme.", ApplicationThemeManager.GetAppTheme());
+    }
+
+    /// <summary>
+    /// WPF-UI's light <c>ApplicationBackgroundBrush</c> is near-white, which reads too bright behind the cards.
+    /// Override it with a softer grey in light theme (so cards stand out on a calmer surface); leave dark theme on
+    /// the WPF-UI default. The window grid binds this brush dynamically, so it updates on a live theme switch too.
+    /// </summary>
+    private static void ApplyPageBackgroundOverride()
+    {
+        const string key = "ApplicationBackgroundBrush";
+        if (ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Light)
+        {
+            var brush = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xE6, 0xE6, 0xE6));
+            brush.Freeze();
+            Current.Resources[key] = brush;
+        }
+        else
+        {
+            // Drop our override so the WPF-UI dark theme's own background applies.
+            Current.Resources.Remove(key);
+        }
     }
 
     private void OnUserPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)

@@ -14,11 +14,12 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding LevelFilter}" Width="90" />
+                <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding LevelFilter}" Width="90"
+                          Height="{StaticResource FormControlHeight}" />
                 <CheckBox Content="Desktop" IsChecked="{Binding ShowDesktop}" Margin="12,0,0,0" VerticalAlignment="Center" />
                 <CheckBox Content="Worker" IsChecked="{Binding ShowWorker}" Margin="8,0,0,0" VerticalAlignment="Center" />
                 <ui:TextBox PlaceholderText="filter text" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                            Width="200" Margin="12,0,0,0" />
+                            Width="200" Height="{StaticResource FormControlHeight}" Margin="12,0,0,0" />
             </StackPanel>
 
             <DataGrid Grid.Row="1" x:Name="LogList" ItemsSource="{Binding Entries}" AutoGenerateColumns="False" IsReadOnly="True"

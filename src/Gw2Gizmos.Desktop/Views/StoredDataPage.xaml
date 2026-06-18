@@ -16,7 +16,7 @@
             <ui:Card Padding="12,8" Margin="0,0,0,8">
                 <DockPanel>
                     <ui:Button DockPanel.Dock="Right" Content="Delete" Appearance="Danger" VerticalAlignment="Center"
-                               Command="{Binding PriceHistory.Delete}" />
+                               Height="{StaticResource FormControlHeight}" Command="{Binding PriceHistory.Delete}" />
                     <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="0,0,12,0" MinWidth="80"
                                TextAlignment="Right" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Text="{Binding PriceHistory.CountDisplay}" />
@@ -35,7 +35,8 @@
                                         <DataTemplate>
                                             <DockPanel Margin="0,0,0,6">
                                                 <ui:Button DockPanel.Dock="Right" Content="Delete" Appearance="Danger"
-                                                           VerticalAlignment="Center" Command="{Binding Delete}" />
+                                                           VerticalAlignment="Center" Height="{StaticResource FormControlHeight}"
+                                                           Command="{Binding Delete}" />
                                                 <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="0,0,12,0"
                                                            MinWidth="80" TextAlignment="Right"
                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -46,7 +47,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <ui:Button Content="Delete all data for this account" Appearance="Danger"
-                                           Margin="0,4,0,0" HorizontalAlignment="Left" Command="{Binding DeleteAll}" />
+                                           Margin="0,4,0,0" HorizontalAlignment="Left"
+                                           Height="{StaticResource FormControlHeight}" Command="{Binding DeleteAll}" />
                             </StackPanel>
                         </ui:CardExpander>
                     </DataTemplate>

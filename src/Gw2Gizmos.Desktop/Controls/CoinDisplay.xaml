@@ -1,0 +1,25 @@
+<UserControl x:Class="Gw2Gizmos.Desktop.Controls.CoinDisplay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Renders a copper amount as gold/silver/copper numbers each followed by their coin icon; leading-zero
+         denominations are dropped (copper always shown), matching the text Coin formatter. Numbers inherit the
+         ambient font/colour; icons scale with IconSize. -->
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock x:Name="Sign" VerticalAlignment="Center" />
+        <TextBlock x:Name="GoldNum" VerticalAlignment="Center" />
+        <Image x:Name="GoldIcon" Source="pack://application:,,,/Assets/coin_gold.png" Margin="1,0,5,0"
+               VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+        <TextBlock x:Name="SilverNum" VerticalAlignment="Center" />
+        <Image x:Name="SilverIcon" Source="pack://application:,,,/Assets/coin_silver.png" Margin="1,0,5,0"
+               VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+        <TextBlock x:Name="CopperNum" VerticalAlignment="Center" />
+        <Image x:Name="CopperIcon" Source="pack://application:,,,/Assets/coin_copper.png" Margin="1,0,0,0"
+               VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+    </StackPanel>
+</UserControl>

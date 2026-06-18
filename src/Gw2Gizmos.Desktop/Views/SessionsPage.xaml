@@ -90,9 +90,10 @@
                                         </StackPanel>
                                     </StackPanel>
                                     <!-- Estimated value earned that sitting (coin + instant-sell loot). -->
-                                    <TextBlock Grid.Column="1" Text="{Binding ValueDisplay}" VerticalAlignment="Center"
-                                               Margin="12,0,0,0" FontWeight="Medium" FontSize="13"
-                                               Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                                    <c:CoinDisplay Grid.Column="1" Copper="{Binding TotalValueCopper}" Signed="True"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="Medium"
+                                                   FontSize="13"
+                                                   Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
                                 </Grid>
                             </ui:CardAction>
                         </DataTemplate>
