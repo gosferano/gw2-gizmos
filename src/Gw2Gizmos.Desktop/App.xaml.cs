@@ -42,6 +42,34 @@ public partial class App : Application
     /// <summary>Navigates the shell to a page type (used by Account cards and breadcrumbs).</summary>
     public static void NavigateTo(Type pageType) => MainNavigation?.Navigate(pageType);
 
+    /// <summary>
+    /// Highlights the rail item a page belongs under, so a section stays selected while you're on its sub-pages.
+    /// The section is the page's root-breadcrumb <c>Target</c> (every sub-page already declares it); top-level pages
+    /// pass null and fall back to the rail's own current selection. Called by <c>PageShell</c> on load, so any new
+    /// page or hierarchy works with no extra wiring or mapping.
+    /// </summary>
+    public static void HighlightNavSection(Type? breadcrumbRoot)
+    {
+        if (MainNavigation is null)
+        {
+            return;
+        }
+
+        Type? section = breadcrumbRoot
+            ?? (MainNavigation.SelectedItem as Wpf.Ui.Controls.NavigationViewItem)?.TargetPageType;
+        if (section is null)
+        {
+            return;
+        }
+
+        foreach (Wpf.Ui.Controls.NavigationViewItem item in MainNavigation.MenuItems
+                     .OfType<Wpf.Ui.Controls.NavigationViewItem>()
+                     .Concat(MainNavigation.FooterMenuItems.OfType<Wpf.Ui.Controls.NavigationViewItem>()))
+        {
+            item.SetValue(Wpf.Ui.Controls.NavigationViewItem.IsActiveProperty, item.TargetPageType == section);
+        }
+    }
+
     // --- Back navigation: WPF-UI journals the page sequence, but it recreates each page's view-model on back,
     // which would re-read the *current* selection singletons. So we snapshot the selection per visited page and
     // restore the previous one just before each back, so a detail page shows the item it originally did. ---

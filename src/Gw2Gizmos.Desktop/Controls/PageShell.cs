@@ -93,6 +93,15 @@ public class PageShell : ContentControl
         set => SetValue(MaxContentWidthProperty, value);
     }
 
+    public PageShell()
+    {
+        // Highlight the nav section this page belongs under: its root breadcrumb's Target (sub-pages declare it);
+        // top-level pages pass null and App falls back to the rail's own selection. Driven here so any page — and
+        // any future hierarchy — keeps the rail in sync with no extra wiring.
+        Loaded += (_, _) =>
+            App.HighlightNavSection(ResolvedBreadcrumbs.Count > 0 ? ResolvedBreadcrumbs[0].Target : null);
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
