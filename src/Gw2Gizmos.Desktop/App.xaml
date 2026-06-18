@@ -140,8 +140,24 @@
                                                       ItemsSource="{TemplateBinding ResolvedBreadcrumbs}">
                                         <ui:BreadcrumbBar.ItemTemplate>
                                             <DataTemplate>
+                                                <!-- Parent crumbs (a non-null Target → clickable) read dimmer, back to
+                                                     full colour on hover; the current crumb (Target null) stays full. -->
                                                 <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Opacity" Value="0.85" />
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Opacity" Value="1" />
+                                                                </Trigger>
+                                                                <DataTrigger Binding="{Binding Target}" Value="{x:Null}">
+                                                                    <Setter Property="Opacity" Value="1" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </DataTemplate>
                                         </ui:BreadcrumbBar.ItemTemplate>
                                     </ui:BreadcrumbBar>
