@@ -30,6 +30,21 @@ public partial class StatCard : UserControl
         new PropertyMetadata("")
     );
 
+    // When set, the value is shown as coins (CoinDisplay) instead of the Value string.
+    public static readonly DependencyProperty CoinProperty = DependencyProperty.Register(
+        nameof(Coin),
+        typeof(object),
+        typeof(StatCard),
+        new PropertyMetadata(null)
+    );
+
+    public static readonly DependencyProperty CoinSignedProperty = DependencyProperty.Register(
+        nameof(CoinSigned),
+        typeof(bool),
+        typeof(StatCard),
+        new PropertyMetadata(false)
+    );
+
     public StatCard()
     {
         InitializeComponent();
@@ -51,5 +66,19 @@ public partial class StatCard : UserControl
     {
         get => (string)GetValue(CaptionProperty);
         set => SetValue(CaptionProperty, value);
+    }
+
+    /// <summary>A copper amount to render as coins in place of <see cref="Value"/>; null shows the string value.</summary>
+    public object? Coin
+    {
+        get => GetValue(CoinProperty);
+        set => SetValue(CoinProperty, value);
+    }
+
+    /// <summary>Whether the coin value shows a +/− sign (for gains/losses).</summary>
+    public bool CoinSigned
+    {
+        get => (bool)GetValue(CoinSignedProperty);
+        set => SetValue(CoinSignedProperty, value);
     }
 }

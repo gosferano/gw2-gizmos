@@ -15,10 +15,10 @@
             <!-- Estimated worth of the sitting: coin + instant-sell loot value, and the gold-per-hour rate. -->
             <UniformGrid Columns="3" Margin="-6,0,-6,14"
                          Visibility="{Binding HasSegments, Converter={StaticResource Bool}}">
-                <c:StatCard Margin="6" Title="Estimated value" Value="{Binding Value.TotalDisplay}"
+                <c:StatCard Margin="6" Title="Estimated value" Coin="{Binding Value.TotalValueCopper}" CoinSigned="True"
                             Caption="instant-sell + coin" />
                 <c:StatCard Margin="6" Title="Gold / hour" Value="{Binding Value.GoldPerHourDisplay}" />
-                <c:StatCard Margin="6" Title="Coin" Value="{Binding Value.CoinDisplay}" />
+                <c:StatCard Margin="6" Title="Coin" Coin="{Binding Value.CoinDeltaCopper}" CoinSigned="True" />
             </UniformGrid>
 
             <!-- One card per character segment, in order — consecutive cards are the switches within the sitting.
@@ -49,9 +49,9 @@
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0">
                                     <!-- Estimated value (coin + instant-sell loot) is the headline; item counts below. -->
-                                    <TextBlock Text="{Binding ValueDisplay}" FontWeight="Medium" FontSize="13"
-                                               HorizontalAlignment="Right"
-                                               Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                                    <c:CoinDisplay Copper="{Binding TotalValueCopper}" Signed="True" FontWeight="Medium"
+                                                   FontSize="13" HorizontalAlignment="Right"
+                                                   Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
                                     <TextBlock Text="{Binding ItemsDisplay}" FontSize="12" HorizontalAlignment="Right"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                Visibility="{Binding HasItems, Converter={StaticResource Bool}}" />

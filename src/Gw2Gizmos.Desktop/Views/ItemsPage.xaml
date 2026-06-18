@@ -130,24 +130,49 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Buy" Width="95"
-                                        Binding="{Binding Buy, Converter={StaticResource Coin}}" />
+                    <DataGridTemplateColumn Header="Buy" Width="95" SortMemberPath="Buy">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <c:CoinDisplay Copper="{Binding Buy}" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Demand" Width="70"
                                         Binding="{Binding Demand, StringFormat='{}{0:N0}'}" />
-                    <DataGridTextColumn Header="Sell" Width="95"
-                                        Binding="{Binding Sell, Converter={StaticResource Coin}}" />
+                    <DataGridTemplateColumn Header="Sell" Width="95" SortMemberPath="Sell">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <c:CoinDisplay Copper="{Binding Sell}" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Supply" Width="70"
                                         Binding="{Binding Supply, StringFormat='{}{0:N0}'}" />
-                    <DataGridTextColumn Header="Craft cost" Width="120"
-                                        Binding="{Binding CraftingCost, Converter={StaticResource Coin}}" />
+                    <DataGridTemplateColumn Header="Craft cost" Width="120" SortMemberPath="CraftingCost">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <c:CoinDisplay Copper="{Binding CraftingCost}" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <!-- Profit/margin selling instantly into buy orders, and listing at the sell price; both
                          net the 15% trading-post fee. -->
-                    <DataGridTextColumn Header="Buy profit" Width="120"
-                                        Binding="{Binding BuyProfit, Converter={StaticResource Coin}}" />
+                    <DataGridTemplateColumn Header="Buy profit" Width="120" SortMemberPath="BuyProfit">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <c:CoinDisplay Copper="{Binding BuyProfit}" Signed="True" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Buy margin" Width="80"
                                         Binding="{Binding BuyMargin, StringFormat='{}{0:F0}%'}" />
-                    <DataGridTextColumn Header="Sell profit" Width="120"
-                                        Binding="{Binding SellProfit, Converter={StaticResource Coin}}" />
+                    <DataGridTemplateColumn Header="Sell profit" Width="120" SortMemberPath="SellProfit">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <c:CoinDisplay Copper="{Binding SellProfit}" Signed="True" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Sell margin" Width="80"
                                         Binding="{Binding SellMargin, StringFormat='{}{0:F0}%'}" />
                 </DataGrid.Columns>
@@ -224,25 +249,18 @@
                                             <TextBlock Text="  ·  " Opacity="0.6" />
                                             <TextBlock Text="craft " Opacity="0.6"
                                                        FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
-                                            <TextBlock Opacity="0.6"
-                                                       FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <!-- Craft cost, or an em-dash when the item has no recipe (a 0 here would read as "free"). -->
-                                                        <Setter Property="Text" Value="{Binding CraftingCost, Converter={StaticResource Coin}}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCraftable}" Value="False">
-                                                                <Setter Property="Text" Value="—" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                            <!-- Craft cost as coins, or an em-dash when the item has no recipe (a 0 would read as "free"). -->
+                                            <c:CoinDisplay Copper="{Binding CraftingCost}" Opacity="0.6"
+                                                           FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                           Visibility="{Binding IsCraftable, Converter={StaticResource Bool}}" />
+                                            <TextBlock Text="—" Opacity="0.6"
+                                                       FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                       Visibility="{Binding IsCraftable, Converter={StaticResource InverseBool}}" />
                                             <TextBlock Text="  ·  " Opacity="0.6" />
                                             <TextBlock Text="buy " Opacity="0.6"
                                                        FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
-                                            <TextBlock Text="{Binding BuyPrice, Converter={StaticResource Coin}}" Opacity="0.6"
-                                                       FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
+                                            <c:CoinDisplay Copper="{Binding BuyPrice}" Opacity="0.6"
+                                                           FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
                                         </StackPanel>
                                     </StackPanel>
                                 </HierarchicalDataTemplate>

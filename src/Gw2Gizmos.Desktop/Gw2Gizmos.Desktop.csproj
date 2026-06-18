@@ -51,6 +51,9 @@
 
   <ItemGroup>
     <Resource Include="Assets\gw2gizmos.png" />
+    <Resource Include="Assets\coin_gold.png" />
+    <Resource Include="Assets\coin_silver.png" />
+    <Resource Include="Assets\coin_copper.png" />
   </ItemGroup>
 
   <!-- Dev (F5/run-from-bin): merge the worker CLI's build output into the app's output dir so the app

@@ -64,8 +64,8 @@
                         <TextBlock Text="Characters" Opacity="0.8" />
                     </DockPanel>
                     <DockPanel Margin="0,3,0,0">
-                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
-                                   Text="{Binding CoinBalance, Converter={StaticResource Coin}}" />
+                        <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding CoinBalance}" FontWeight="Medium"
+                                       HorizontalAlignment="Right" />
                         <TextBlock Text="Coin" Opacity="0.8" />
                     </DockPanel>
                     <TextBlock Text="{Binding AccountSynced}" ToolTip="{Binding AccountSyncedTooltip}"

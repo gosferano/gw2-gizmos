@@ -1,14 +1,42 @@
 <UserControl x:Class="Gw2Gizmos.Desktop.Controls.StatCard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Controls">
     <ui:Card Padding="20" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
              VerticalContentAlignment="Top">
         <StackPanel>
             <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        Opacity="0.7" />
+            <!-- String value, shown unless a coin amount is bound. -->
             <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                       FontSize="26" FontWeight="Medium" Margin="0,6,0,0" />
+                       FontSize="26" FontWeight="Medium" Margin="0,6,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Coin, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NotNull}}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <!-- Coin value, shown when Coin is set (replaces the string value). -->
+            <c:CoinDisplay Copper="{Binding Coin, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Signed="{Binding CoinSigned, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontSize="26" FontWeight="Medium" IconSize="20" Margin="0,6,0,0" HorizontalAlignment="Left">
+                <c:CoinDisplay.Style>
+                    <Style TargetType="c:CoinDisplay">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Coin, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NotNull}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </c:CoinDisplay.Style>
+            </c:CoinDisplay>
             <TextBlock Text="{Binding Caption, RelativeSource={RelativeSource AncestorType=UserControl}}"
                        Opacity="0.6" FontSize="12" Margin="0,4,0,0">
                 <TextBlock.Style>
