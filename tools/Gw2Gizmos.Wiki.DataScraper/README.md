@@ -66,13 +66,20 @@ wikitext:
    `Mystic Forge` or the shorthand `mystic`, used on infused trinkets). Output comes from `link`/`result`/
    `name`, falling back to the page title; same-named ingredient slots are folded into one summed quantity.
 
-**Vendor prices** are structured in SMW, queried via the `ask` API:
+**Vendor prices** are structured in SMW (`[[Sells item::X]]` / `Has vendor` / `Has item cost` / …), queried via
+the `ask` API. We pull the **whole catalog**, keyed by GW2 item id (`?Sells item.Has game id`), keeping every
+item — a vendor can undercut the trading post, so valuation needs `min(vendor, TP)` for everything, not just
+untradeable items.
 
-4. For the recipes' distinct ingredients, ask `[[Sells item::A||B||…]]` with `?Has vendor`, `?Has item cost`
-   (a record of value + currency), `?Has item quantity`, `?Sells item`.
-5. SMW caps OR-query depth (~15 disjuncts; we batch **12**) and the `ask` endpoint is burst-protected, so
-   requests are small, paced ~1.5 s, and retried with backoff. If throttling outlasts the retry budget the
-   pass stops and keeps what it has — just re-run `vendors`.
+4. SMW silently truncates any single query at a result-offset cap (~6,000), so we **partition** instead of
+   sweeping. First a quick sweep discovers the distinct cost-currencies, then each currency is paged to
+   completion (`[[Has vendor::+]][[Has item cost.Has item currency::C]]`).
+5. A currency still over the cap (Coin, Karma) is **sub-split by the sold item's rarity**. Multi-currency
+   offers appear in several partitions, so offers are de-duped by content. Paced ~1 s, retried with backoff;
+   a partition that *still* exceeds the cap after the rarity split is logged as `*** STILL CAPPED ***` so
+   incompleteness is never silent.
+
+As of 2026-06 this yields **~10,600 vendor-sold items**.
 
 ## Being a good wiki citizen
 
@@ -84,9 +91,11 @@ game changes.
 
 - **`{{recipe table}}` pages are skipped** (~60): dynamic SMW skin-forge queries (random weapon/armor skins,
   no fixed value) rather than concrete recipes. The run prints how many pages this affects.
-- **Vendor pass only covers Mystic Forge recipe ingredients.** Generic crafting-supply vendor items
-  (thread, oil, …) used by *regular* crafting recipes aren't here yet — they arrive with a future regular-recipe
-  scrape.
+- **Two vendor buckets stay capped:** `Coin/Basic` and `Karma/Rare` exceed the offset cap even after the rarity
+  split (they're huge sets of low-value vendor *gear* — basic coin weapons, rare karma armor stat-combos). These
+  aren't recipe ingredients and their worth isn't a vendor buy-price, so they're left partial (and logged). To
+  close them, add a second sub-split dimension (item type) in `FetchPartitionAsync`. Valuation-relevant items
+  (crafting mats, forge/currency conversions) are fully covered.
 
 ## Notes
 
