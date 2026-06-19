@@ -1,6 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Hardcoded reference data the GW2 API doesn't expose: world-boss / meta-event schedules (no timer
-       endpoint exists), and later things like Mystic Forge recipes. Pure data + models, no dependencies. -->
+       endpoint exists), Mystic Forge recipes, and vendor buy-prices. Pure data + models, no dependencies. -->
+
+  <!-- Curated tables scraped from the wiki (see tools/Gw2Gizmos.Wiki.DataScraper), embedded so the engine can
+       price vendor-bought items and Mystic-Forge intermediates that the API doesn't cover. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Crafting\Data\*.json" />
+    <EmbeddedResource Include="Crafting\Data\*.json.gz" />
+  </ItemGroup>
 
 </Project>
