@@ -83,19 +83,38 @@ foreach (string s in nonMysticSamples)
     Console.Error.WriteLine($"  {s}");
 }
 
-// 3. Write the artifact next to the binary.
+// 3. Resolve each output/ingredient name → GW2 item id (Data.Static keys by id), then enrich the recipes.
+List<string> recipeItemNames = recipes
+    .SelectMany(r => r.Ingredients.Select(ing => ing.Name).Append(r.Output))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+Console.Error.WriteLine($"Resolving ids for {recipeItemNames.Count} distinct recipe item name(s)…");
+Dictionary<string, int> recipeIds = await ResolveIdsAsync(recipeItemNames);
+
+List<Recipe> recipesWithIds = recipes
+    .Select(r => r with
+    {
+        OutputId = recipeIds.TryGetValue(r.Output, out int oid) ? oid : null,
+        Ingredients = r.Ingredients
+            .Select(ing => ing with { Id = recipeIds.TryGetValue(ing.Name, out int iid) ? iid : null })
+            .ToList(),
+    })
+    .OrderBy(r => r.Output, StringComparer.OrdinalIgnoreCase)
+    .ToList();
+
+// 4. Write the artifact next to the binary.
 string outPath = Path.Combine(AppContext.BaseDirectory, "mystic-forge-recipes.json");
 string json = JsonSerializer.Serialize(
     new
     {
         source = "https://wiki.guildwars2.com",
         category = Category,
-        count = recipes.Count,
-        recipes = recipes.OrderBy(r => r.Output, StringComparer.OrdinalIgnoreCase).ToList(),
+        count = recipesWithIds.Count,
+        recipes = recipesWithIds,
     },
     new JsonSerializerOptions { WriteIndented = true });
 await File.WriteAllTextAsync(outPath, json);
-Console.Error.WriteLine($"Wrote {recipes.Count} recipe(s) to {outPath}");
+Console.Error.WriteLine($"Wrote {recipesWithIds.Count} recipe(s) to {outPath}");
 Console.Error.WriteLine("Next: 'dotnet run -- vendors' to scrape vendor prices for these recipes' ingredients.");
 
 // --- helpers ---
@@ -141,7 +160,7 @@ async Task ScrapeVendorsAsync()
                 $"[[Has vendor::+]][[Has item cost.Has item currency::{currency}]]",
                 byItem,
                 seenOffers,
-                canSplit: true);
+                dimIndex: 0);
         }
     }
     catch (HttpRequestException ex)
@@ -150,13 +169,44 @@ async Task ScrapeVendorsAsync()
             $"  [warn] wiki throttled us ({ex.Message}); stopping early with {byItem.Count} item(s). Re-run 'vendors' to continue.");
     }
 
-    List<VendorItem> vendorItems = byItem.Values.OrderBy(v => v.Item, StringComparer.OrdinalIgnoreCase).ToList();
+    // Resolve each cost currency to an id so a price is joinable: an item-currency (ecto, tokens, candy) → its
+    // /v2/items id via the wiki's Has game id; an account currency (Coin, Karma, Volatile Magic, …) → its
+    // /v2/currencies id from the official API. A name may be both; we set whichever applies (or both).
+    List<string> currencyNames = byItem.Values
+        .SelectMany(v => v.Offers)
+        .SelectMany(o => o.Cost)
+        .Select(c => c.Currency)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    Console.Error.WriteLine($"Resolving ids for {currencyNames.Count} distinct cost-currenc(ies)…");
+    Dictionary<string, int> costItemIds = await ResolveIdsAsync(currencyNames);
+    Dictionary<string, int> costCurrencyIds = await FetchCurrencyIdsAsync();
+
+    List<VendorItem> vendorItems = byItem.Values
+        .Select(v => v with
+        {
+            Offers = v.Offers
+                .Select(o => o with
+                {
+                    Cost = o.Cost
+                        .Select(c => c with
+                        {
+                            ItemId = costItemIds.TryGetValue(c.Currency, out int iid) ? iid : null,
+                            CurrencyId = costCurrencyIds.TryGetValue(c.Currency, out int cid) ? cid : null,
+                        })
+                        .ToList(),
+                })
+                .ToList(),
+        })
+        .OrderBy(v => v.Item, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     string vendorPath = Path.Combine(AppContext.BaseDirectory, "vendor-items.json");
     string vendorJson = JsonSerializer.Serialize(
         new
         {
             source = "https://wiki.guildwars2.com",
-            note = "Every item sold by a vendor, keyed by GW2 item id. Cost may be coin or a currency, possibly multi-component.",
+            note = "Every item sold by a vendor, keyed by GW2 item id. Cost may be coin or a currency/item (with its id), possibly multi-component.",
             count = vendorItems.Count,
             items = vendorItems,
         },
@@ -165,33 +215,221 @@ async Task ScrapeVendorsAsync()
     Console.Error.WriteLine($"Wrote {vendorItems.Count} vendor-sold item(s) to {vendorPath}");
 }
 
-// Fetch one partition to completion; if it hits SMW's offset cap, sub-split it by the sold item's rarity
-// (one level) and fetch each leaf. De-dup across the partial parent fetch and the leaves handles overlap.
+// Fetch one partition to completion. If it hits SMW's offset cap, sub-split by the next dimension — the sold
+// item's rarity, then its type — and recurse. Split values are *discovered* from the capped fetch itself (no
+// hardcoded vocabulary to drift), and the partial parent fetch + per-leaf overlap is handled by de-dup.
 async Task FetchPartitionAsync(
-    string label, string baseCondition, Dictionary<string, VendorItem> byItem, HashSet<string> seen, bool canSplit)
+    string label, string baseCondition, Dictionary<string, VendorItem> byItem, HashSet<string> seen, int dimIndex)
 {
-    const string OfferPrintouts = "|?Sells item|?Sells item.Has game id|?Has vendor|?Has item cost|?Has item quantity";
-    string[] rarities = ["Junk", "Basic", "Fine", "Masterwork", "Rare", "Exotic", "Ascended", "Legendary"];
+    const string OfferPrintouts =
+        "|?Sells item|?Sells item.Has game id|?Has vendor|?Has item cost|?Has item quantity"
+        + "|?Sells item.Has item rarity|?Sells item.Has item type";
+    // Each split dimension: the condition property (chained onto the sold item, or direct on the offer) and
+    // the JSON printout key it returns under. Ordered coarse → fine; the last (vendor) breaks up anything that
+    // a single rarity+type leaf still can't fit (e.g. the huge karma recipe-sheet catalog).
+    (string Condition, string Key)[] dims =
+    [
+        ("Sells item.Has item rarity", "Has item rarity"),
+        ("Sells item.Has item type", "Has item type"),
+    ];
 
-    (int count, bool capped) = await ForEachOfferAsync(baseCondition + OfferPrintouts, po => AddOffer(po, byItem, seen));
-
-    if (capped && canSplit)
+    var nextValues = new SortedSet<string>(StringComparer.Ordinal);
+    (int count, bool capped) = await ForEachOfferAsync(baseCondition + OfferPrintouts, po =>
     {
-        Console.Error.WriteLine($"  [{label}] {count} offer(s) — hit cap, splitting by rarity…");
-        foreach (string rarity in rarities)
+        AddOffer(po, byItem, seen);
+        if (dimIndex < dims.Length)
         {
+            foreach (string v in AllValues(po, dims[dimIndex].Key))
+            {
+                nextValues.Add(v);
+            }
+        }
+    });
+
+    if (capped && dimIndex < dims.Length)
+    {
+        Console.Error.WriteLine(
+            $"  [{label}] {count} offer(s) — hit cap, splitting by {dims[dimIndex].Key} ({nextValues.Count} values)…");
+        foreach (string value in nextValues)
+        {
+            if (value.IndexOfAny(['|', '[', ']', '{', '}', '=', '#', '<', '>']) >= 0)
+            {
+                continue;
+            }
+
             await FetchPartitionAsync(
-                $"{label}/{rarity}",
-                $"{baseCondition}[[Sells item.Has item rarity::{rarity}]]",
+                $"{label}/{value}",
+                $"{baseCondition}[[{dims[dimIndex].Condition}::{value}]]",
                 byItem,
                 seen,
-                canSplit: false);
+                dimIndex + 1);
         }
+    }
+    else if (capped)
+    {
+        // Out of split dimensions but still over the cap (e.g. the huge karma recipe-sheet leaf). Finish it
+        // with keyset (cursor) pagination by game id — one walk instead of fanning out by vendor.
+        Console.Error.WriteLine($"  [{label}] {count} offer(s) — capped after all splits; finishing via keyset pagination…");
+        int got = await FetchByKeysetAsync(baseCondition, po => AddOffer(po, byItem, seen));
+        Console.Error.WriteLine($"  [{label}] keyset added {got} more offer(s); {byItem.Count} item(s) total");
     }
     else
     {
-        Console.Error.WriteLine(
-            $"  [{label}] {count} offer(s){(capped ? "  *** STILL CAPPED — INCOMPLETE ***" : "")}; {byItem.Count} item(s) total");
+        Console.Error.WriteLine($"  [{label}] {count} offer(s); {byItem.Count} item(s) total");
+    }
+}
+
+// Walk a leaf that still exceeds the offset cap using keyset pagination: sort by the sold item's game id and
+// each page ask for ids greater than the last seen, so we never use a growing (capped) offset. Safe within a
+// narrow leaf (a single rarity+type), where items are effectively single-id and none has >500 vendor offers.
+async Task<int> FetchByKeysetAsync(string baseCondition, Action<JsonElement> handle)
+{
+    const string OfferPrintouts =
+        "|?Sells item|?Sells item.Has game id|?Has vendor|?Has item cost|?Has item quantity"
+        + "|?Sells item.Has item rarity|?Sells item.Has item type";
+    int cursor = -1;
+    int total = 0;
+    while (true)
+    {
+        string query = $"{baseCondition}[[Sells item.Has game id::>{cursor}]]{OfferPrintouts}"
+            + "|sort=Sells item.Has game id|order=asc|limit=500";
+        string url = $"{ApiUrl}?action=ask&format=json&query={Uri.EscapeDataString(query)}";
+
+        using JsonDocument doc = JsonDocument.Parse(await GetWithRetryAsync(url));
+        if (!doc.RootElement.TryGetProperty("query", out JsonElement qn) || !qn.TryGetProperty("results", out JsonElement rn))
+        {
+            break;
+        }
+
+        IEnumerable<JsonElement> offers = rn.ValueKind == JsonValueKind.Object
+            ? rn.EnumerateObject().Select(p => p.Value)
+            : rn.EnumerateArray();
+        int page = 0;
+        int maxId = cursor;
+        foreach (JsonElement offer in offers)
+        {
+            if (offer.TryGetProperty("printouts", out JsonElement po))
+            {
+                handle(po);
+                if (FirstInt(po, "Has game id") is int id && id > maxId)
+                {
+                    maxId = id;
+                }
+            }
+
+            page++;
+            total++;
+        }
+
+        if (page == 0 || maxId <= cursor)
+        {
+            break; // no rows, or the cursor can't advance (all share one id) — stop rather than loop
+        }
+
+        cursor = maxId;
+        await Task.Delay(500);
+    }
+
+    return total;
+}
+
+// Account currencies (Karma, Coin, Volatile Magic, …) have /v2/currencies ids, not item ids. One API call
+// gives the full name → currency-id map.
+async Task<Dictionary<string, int>> FetchCurrencyIdsAsync()
+{
+    var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    try
+    {
+        string body = await http.GetStringAsync("https://api.guildwars2.com/v2/currencies?ids=all");
+        using JsonDocument doc = JsonDocument.Parse(body);
+        foreach (JsonElement c in doc.RootElement.EnumerateArray())
+        {
+            if (c.TryGetProperty("name", out JsonElement n) && n.GetString() is { } name
+                && c.TryGetProperty("id", out JsonElement id) && id.ValueKind == JsonValueKind.Number)
+            {
+                map[name] = id.GetInt32();
+            }
+        }
+
+        Console.Error.WriteLine($"  fetched {map.Count} currency id(s) from /v2/currencies.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"  [warn] /v2/currencies fetch failed: {ex.Message}");
+    }
+
+    return map;
+}
+
+// Resolve item/currency page names → GW2 game id via SMW's Has game id, OR-batched under the depth cap.
+// Pages with a multi-valued game id resolve to the first. Throttling is caught: returns what it has.
+async Task<Dictionary<string, int>> ResolveIdsAsync(IEnumerable<string> rawNames)
+{
+    var idByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    List<string> names = rawNames
+        .Where(n => !string.IsNullOrWhiteSpace(n) && n.IndexOfAny(['|', '[', ']', '{', '}', '=', '#', '<', '>']) < 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    const int Batch = 12; // SMW OR-query depth cap
+
+    try
+    {
+        for (int i = 0; i < names.Count; i += Batch)
+        {
+            List<string> group = names.GetRange(i, Math.Min(Batch, names.Count - i));
+            string query = "[[" + string.Join("||", group) + "]]|?Has game id|limit=500";
+            string url = $"{ApiUrl}?action=ask&format=json&query={Uri.EscapeDataString(query)}";
+
+            using JsonDocument doc = JsonDocument.Parse(await GetWithRetryAsync(url));
+            if (doc.RootElement.TryGetProperty("query", out JsonElement qn)
+                && qn.TryGetProperty("results", out JsonElement rn)
+                && rn.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty res in rn.EnumerateObject())
+                {
+                    string? title = res.Value.TryGetProperty("fulltext", out JsonElement ft) ? ft.GetString() : null;
+                    int? id = res.Value.TryGetProperty("printouts", out JsonElement po) ? FirstInt(po, "Has game id") : null;
+                    if (title is not null && id is not null)
+                    {
+                        idByName[title] = id.Value;
+                    }
+                }
+            }
+
+            if (i % (Batch * 20) == 0)
+            {
+                Console.Error.WriteLine($"  ids: {Math.Min(i + Batch, names.Count)}/{names.Count} names queried, {idByName.Count} resolved…");
+            }
+
+            await Task.Delay(500);
+        }
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.Error.WriteLine($"  [warn] id resolution throttled ({ex.Message}); {idByName.Count} resolved. Re-run to fill the rest.");
+    }
+
+    return idByName;
+}
+
+// Distinct values of a printout, handling both plain-text properties (rarity, type) and page properties
+// (vendor → an object carrying `fulltext`).
+static IEnumerable<string> AllValues(JsonElement printouts, string property)
+{
+    if (printouts.TryGetProperty(property, out JsonElement arr) && arr.ValueKind == JsonValueKind.Array)
+    {
+        foreach (JsonElement e in arr.EnumerateArray())
+        {
+            if (e.ValueKind == JsonValueKind.String && e.GetString() is { Length: > 0 } s)
+            {
+                yield return s;
+            }
+            else if (e.ValueKind == JsonValueKind.Object && e.TryGetProperty("fulltext", out JsonElement ft)
+                     && ft.GetString() is { Length: > 0 } page)
+            {
+                yield return page;
+            }
+        }
     }
 }
 
@@ -249,7 +487,7 @@ async Task<(int Count, bool Capped)> ForEachOfferAsync(string queryBody, Action<
             break; // no continuation → clean end
         }
 
-        await Task.Delay(1000);
+        await Task.Delay(500);
     }
 
     return (count, capped);
@@ -265,7 +503,7 @@ static List<CostComponent> ReadCost(JsonElement printouts)
             if (RecordItem(c, "Has item currency") is { } currency
                 && int.TryParse(RecordItem(c, "Has item value"), out int value))
             {
-                cost.Add(new CostComponent(value, currency));
+                cost.Add(new CostComponent(value, currency, null, null)); // ItemId/CurrencyId filled in a later pass
             }
         }
     }
@@ -468,7 +706,7 @@ static IEnumerable<Recipe> ParseMysticForgeRecipes(string title, string wikitext
             (int count, string ingName) = SplitQtyName(ing);
             if (!string.IsNullOrWhiteSpace(ingName))
             {
-                ingredients.Add(new Ingredient(count, ingName));
+                ingredients.Add(new Ingredient(count, ingName, null));
             }
         }
 
@@ -481,10 +719,10 @@ static IEnumerable<Recipe> ParseMysticForgeRecipes(string title, string wikitext
         // entries into a single summed quantity so consumers can cost the recipe directly.
         List<Ingredient> merged = ingredients
             .GroupBy(ing => ing.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new Ingredient(g.Sum(x => x.Count), g.First().Name))
+            .Select(g => new Ingredient(g.Sum(x => x.Count), g.First().Name, null))
             .ToList();
 
-        yield return new Recipe(CleanWiki(output).Trim(), LeadingInt(nameField) ?? 1, merged, title);
+        yield return new Recipe(CleanWiki(output).Trim(), null, LeadingInt(nameField) ?? 1, merged, title);
     }
 }
 
@@ -630,12 +868,14 @@ static bool IsMysticForge(string source) =>
     source.Equals("Mystic Forge", StringComparison.OrdinalIgnoreCase)
     || source.Equals("mystic", StringComparison.OrdinalIgnoreCase);
 
-internal sealed record Recipe(string Output, int OutputCount, List<Ingredient> Ingredients, string SourcePage);
+internal sealed record Recipe(string Output, int? OutputId, int OutputCount, List<Ingredient> Ingredients, string SourcePage);
 
-internal sealed record Ingredient(int Count, string Name);
+internal sealed record Ingredient(int Count, string Name, int? Id);
 
 internal sealed record VendorItem(int? GameId, string Item, List<VendorOffer> Offers);
 
 internal sealed record VendorOffer(string Vendor, int Quantity, List<CostComponent> Cost);
 
-internal sealed record CostComponent(int Value, string Currency);
+// A price component: paid in `Value` of `Currency`. The currency is either a tradeable item (then ItemId is
+// its /v2/items id) or an account currency (then CurrencyId is its /v2/currencies id). Coin sets CurrencyId.
+internal sealed record CostComponent(int Value, string Currency, int? ItemId, int? CurrencyId);

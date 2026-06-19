@@ -31,28 +31,35 @@ and **488 vendor-sold ingredients**.
 
 ```jsonc
 {
-  "Output": "Mystic Clover", "OutputCount": 1,
+  "Output": "Mystic Clover", "OutputId": 19675, "OutputCount": 1,
   "Ingredients": [
-    { "Count": 1, "Name": "Obsidian Shard" },
-    { "Count": 6, "Name": "Philosopher's Stone" }
+    { "Count": 1, "Name": "Obsidian Shard", "Id": 19925 },
+    { "Count": 6, "Name": "Philosopher's Stone", "Id": 20796 }
   ],
   "SourcePage": "Mystic Clover"
 }
 ```
 
+Output/ingredient ids come from a resolve pass (SMW `Has game id`); a few stay null when the name is a generic
+non-item page (e.g. "Ascended armor").
+
 ### `vendor-items.json`
 
 ```jsonc
 {
-  "Item": "Mystic Crystal",
+  "GameId": 19663, "Item": "Bottle of Elonian Wine",
   "Offers": [
-    { "Vendor": "Miyani", "Quantity": 5, "Cost": [ { "Value": 3, "Currency": "Spirit Shard" } ] }
+    { "Vendor": "Miyani", "Quantity": 1,
+      "Cost": [ { "Value": 2504, "Currency": "Coin", "ItemId": null, "CurrencyId": 1 } ] }
   ]
 }
 ```
 
-Costs can have multiple components (e.g. Obsidian Shard = `100 Volatile Magic + 96 Coin`); a coin price uses
-`Currency: "Coin"`.
+Costs can have multiple components (e.g. `100 Volatile Magic + 96 Coin`). Each component carries the cost's id,
+split by kind: **`ItemId`** when the currency is a tradeable item (`Bauble Bubble` → 41886), **`CurrencyId`**
+when it's an account currency (`Coin` → 1, `Volatile Magic` → 45). ~1% of components resolve to neither —
+alias spellings the wiki uses in cost fields ("Gold", "Laurels", "Globs of Ectoplasm") that don't match a
+canonical page/currency name; reconcile those by name at curation time.
 
 ## How it works
 
@@ -65,6 +72,7 @@ wikitext:
 3. Brace-match every `{{recipe | ... }}` and keep those whose `source` is the Mystic Forge (written as
    `Mystic Forge` or the shorthand `mystic`, used on infused trinkets). Output comes from `link`/`result`/
    `name`, falling back to the page title; same-named ingredient slots are folded into one summed quantity.
+   Finally, resolve every output/ingredient name → game id (SMW `Has game id`, OR-batched ≤12).
 
 **Vendor prices** are structured in SMW (`[[Sells item::X]]` / `Has vendor` / `Has item cost` / …), queried via
 the `ask` API. We pull the **whole catalog**, keyed by GW2 item id (`?Sells item.Has game id`), keeping every
@@ -74,12 +82,15 @@ untradeable items.
 4. SMW silently truncates any single query at a result-offset cap (~6,000), so we **partition** instead of
    sweeping. First a quick sweep discovers the distinct cost-currencies, then each currency is paged to
    completion (`[[Has vendor::+]][[Has item cost.Has item currency::C]]`).
-5. A currency still over the cap (Coin, Karma) is **sub-split by the sold item's rarity**. Multi-currency
-   offers appear in several partitions, so offers are de-duped by content. Paced ~1 s, retried with backoff;
-   a partition that *still* exceeds the cap after the rarity split is logged as `*** STILL CAPPED ***` so
-   incompleteness is never silent.
+5. A currency still over the cap (Coin, Karma) is **sub-split by the sold item's rarity, then its type** (split
+   values discovered from the over-cap fetch itself, no hardcoded vocabulary). A leaf that *still* exceeds the
+   cap (the huge karma recipe-sheet catalog) is finished with **keyset pagination**: sort by the item's game id
+   and page `[[Sells item.Has game id::>lastId]]`, so the growing (capped) offset is never used. Multi-currency
+   offers repeat across partitions and are de-duped by content. Paced ~0.5 s, retried with backoff.
+6. Cost currencies are then resolved to ids two ways so a price is joinable: the wiki `Has game id` pass gives
+   `ItemId` for item-currencies, and one `/v2/currencies` call gives `CurrencyId` for account currencies.
 
-As of 2026-06 this yields **~10,600 vendor-sold items**.
+As of 2026-06 this yields **~10,850 vendor-sold items, no partition left capped**.
 
 ## Being a good wiki citizen
 
@@ -91,11 +102,10 @@ game changes.
 
 - **`{{recipe table}}` pages are skipped** (~60): dynamic SMW skin-forge queries (random weapon/armor skins,
   no fixed value) rather than concrete recipes. The run prints how many pages this affects.
-- **Two vendor buckets stay capped:** `Coin/Basic` and `Karma/Rare` exceed the offset cap even after the rarity
-  split (they're huge sets of low-value vendor *gear* — basic coin weapons, rare karma armor stat-combos). These
-  aren't recipe ingredients and their worth isn't a vendor buy-price, so they're left partial (and logged). To
-  close them, add a second sub-split dimension (item type) in `FetchPartitionAsync`. Valuation-relevant items
-  (crafting mats, forge/currency conversions) are fully covered.
+- **A few ids stay null:** recipe outputs whose name is a generic non-item page ("Ascended armor"), and ~1% of
+  cost components whose currency is an alias spelling the wiki uses in cost fields ("Gold", "Laurels", "Globs of
+  Ectoplasm") that matches neither a canonical item page nor a `/v2/currencies` name. Reconcile those by name at
+  curation time against the app's own item/currency tables.
 
 ## Notes
 
