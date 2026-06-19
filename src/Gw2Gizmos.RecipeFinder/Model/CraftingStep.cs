@@ -4,6 +4,6 @@ public class CraftingStep
 {
     public int ItemId { get; set; }
     public string OutputName { get; set; } = string.Empty;
-    public int OutputCount { get; set; }
+    public long OutputCount { get; set; }
     public List<CraftingStepIngredient> Ingredients { get; set; } = new();
 }

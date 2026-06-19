@@ -7,7 +7,11 @@ public class RecipeNode
     public int SellPricePerUnit { get; set; }
     public int BuyPricePerUnit { get; set; }
     public decimal CraftingCostPerUnit { get; set; }
-    public int Count { get; set; }
+
+    // long, not int: material-promotion chains (e.g. promoting Copper Ore all the way up) multiply the required
+    // count ~250x per tier, which blows past int.MaxValue and would wrap negative. The cycle guard keeps the
+    // tree finite, but the quantities along it are still genuinely in the billions.
+    public long Count { get; set; }
     public int OutputItemCount { get; set; } = 1;
     public bool IsCurrency { get; set; }
     public List<RecipeNode> Ingredients { get; set; } = new();

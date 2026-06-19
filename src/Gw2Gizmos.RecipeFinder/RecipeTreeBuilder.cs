@@ -70,13 +70,13 @@ public class RecipeTreeBuilder
             .ToList();
     }
 
-    // Safety backstop against a cycle in the recipe data (e.g. a Mystic Forge promotion loop): GW2 craft trees
-    // are only a handful deep, so past this depth we stop expanding and price the node as a leaf rather than
-    // recursing forever.
-    private const int MaxRecipeDepth = 40;
-
-    public async Task<RecipeNode> BuildTreeAsync(int rootItemId, CancellationToken ct, int parentMultiplier = 1, int depth = 0)
+    /// <param name="path">Item ids on the current branch from the root, used to detect recipe cycles (e.g. a
+    /// material-promotion loop) — an item that is its own ancestor is priced as a leaf instead of recursing.
+    /// This bounds every branch to the distinct item count, so recursion always terminates.</param>
+    public async Task<RecipeNode> BuildTreeAsync(
+        int rootItemId, CancellationToken ct, long parentMultiplier = 1, HashSet<int>? path = null)
     {
+        path ??= new HashSet<int>();
         var rootNode = new RecipeNode { ItemId = rootItemId, Count = parentMultiplier };
         var stack = new Stack<(RecipeNode Node, bool Processed)>();
         stack.Push((rootNode, false));
@@ -127,61 +127,70 @@ public class RecipeTreeBuilder
             // Fetch item name with fallback
             currentNode.ItemName = await GetItemNameAsync(currentNode.ItemId, ct);
 
-            // Too deep (almost certainly a recipe-data cycle) — stop expanding and treat as a priced leaf.
-            if (depth >= MaxRecipeDepth)
+            // Cycle: this item is its own ancestor (e.g. a material-promotion loop). Stop and leave it as a
+            // trading-post-priced leaf so the tree is finite. Not memoized — its value is path-dependent (it
+            // assumes the recursive copy is bought, not re-crafted).
+            if (path.Contains(currentNode.ItemId))
             {
-                stack.Push((currentNode, true));
                 continue;
             }
 
-            // Fetch ALL recipes for this item
-            var recipes = await _dbContext
-                .Recipes.Include(r => r.Ingredients)
-                .Where(r => r.OutputItemId == currentNode.ItemId)
-                .ToListAsync(ct);
-
-            if (recipes is { Count: > 0 })
+            path.Add(currentNode.ItemId);
+            try
             {
-                RecipeNode? bestRecipeTree = null;
-                var lowestCraftingCost = decimal.MaxValue;
+                // Fetch ALL recipes for this item
+                var recipes = await _dbContext
+                    .Recipes.Include(r => r.Ingredients)
+                    .Where(r => r.OutputItemId == currentNode.ItemId)
+                    .ToListAsync(ct);
 
-                foreach (Recipe recipe in recipes)
+                if (recipes is { Count: > 0 })
                 {
-                    // Build a separate tree for each recipe
-                    RecipeNode recipeTree = await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct, depth);
+                    RecipeNode? bestRecipeTree = null;
+                    var lowestCraftingCost = decimal.MaxValue;
 
-                    if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                    foreach (Recipe recipe in recipes)
                     {
-                        lowestCraftingCost = recipeTree.CraftingCostPerUnit;
-                        bestRecipeTree = recipeTree;
+                        // Build a separate tree for each recipe
+                        RecipeNode recipeTree = await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct, path);
+
+                        if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                        {
+                            lowestCraftingCost = recipeTree.CraftingCostPerUnit;
+                            bestRecipeTree = recipeTree;
+                        }
+                    }
+
+                    if (bestRecipeTree != null)
+                    {
+                        // Copy the best recipe's data to current node
+                        currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
+                        currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                        currentNode.Ingredients = bestRecipeTree.Ingredients;
+
+                        // Mark as processed since we've built the complete subtree
+                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                     }
                 }
-
-                if (bestRecipeTree != null)
+                else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out StaticRecipe? staticRecipe))
                 {
-                    // Copy the best recipe's data to current node
-                    currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
-                    currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
-                    currentNode.Ingredients = bestRecipeTree.Ingredients;
-
-                    // Mark as processed since we've built the complete subtree
+                    // No API recipe, but a hardcoded one (Mystic Forge / daily craft) — price it from its inputs
+                    // so an otherwise account-bound intermediate isn't a 0-cost leaf.
+                    RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, path);
+                    currentNode.OutputItemCount = recipeTree.OutputItemCount;
+                    currentNode.CraftingCostPerUnit = recipeTree.CraftingCostPerUnit;
+                    currentNode.Ingredients = recipeTree.Ingredients;
                     _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                 }
+                else
+                {
+                    // Leaf node - no recipe, mark as processed
+                    stack.Push((currentNode, true));
+                }
             }
-            else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out StaticRecipe? staticRecipe))
+            finally
             {
-                // No API recipe, but a hardcoded one (Mystic Forge / daily craft) — price it from its inputs
-                // so an otherwise account-bound intermediate isn't a 0-cost leaf.
-                RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, depth);
-                currentNode.OutputItemCount = recipeTree.OutputItemCount;
-                currentNode.CraftingCostPerUnit = recipeTree.CraftingCostPerUnit;
-                currentNode.Ingredients = recipeTree.Ingredients;
-                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
-            }
-            else
-            {
-                // Leaf node - no recipe, mark as processed
-                stack.Push((currentNode, true));
+                path.Remove(currentNode.ItemId);
             }
         }
 
@@ -190,11 +199,11 @@ public class RecipeTreeBuilder
 
     private readonly ConcurrentDictionary<int, RecipeNode> _memoizationCache = new();
 
-    private RecipeNode CopyForMemo(RecipeNode node, int targetCount)
+    private RecipeNode CopyForMemo(RecipeNode node, long targetCount)
     {
         // Calculate crafts needed for both cached node and target
-        int cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
-        int targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
+        long cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
+        long targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
         double scalingFactor = (double)targetCraftsNeeded / cachedCraftsNeeded;
 
         return new RecipeNode
@@ -209,14 +218,15 @@ public class RecipeTreeBuilder
             Ingredients = node
                 .Ingredients.Select(ingredient =>
                 {
-                    var scaledCount = (int)Math.Round(ingredient.Count * scalingFactor);
+                    var scaledCount = (long)Math.Round(ingredient.Count * scalingFactor);
                     return CopyForMemo(ingredient, scaledCount);
                 })
                 .ToList()
         };
     }
 
-    private async Task<RecipeNode> BuildRecipeTreeForComparison(Recipe recipe, int targetCount, CancellationToken ct, int depth = 0)
+    private async Task<RecipeNode> BuildRecipeTreeForComparison(
+        Recipe recipe, long targetCount, CancellationToken ct, HashSet<int> path)
     {
         var recipeNode = new RecipeNode
         {
@@ -225,12 +235,12 @@ public class RecipeTreeBuilder
             OutputItemCount = recipe.OutputItemCount
         };
 
-        int recipeCraftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+        long recipeCraftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
 
         // Build ingredient trees recursively
         foreach (var ingredient in recipe.Ingredients)
         {
-            int requiredCount = ingredient.Count * recipeCraftsNeeded;
+            long requiredCount = ingredient.Count * recipeCraftsNeeded;
             if (requiredCount == 0)
                 requiredCount = 1;
 
@@ -252,7 +262,7 @@ public class RecipeTreeBuilder
             }
             else
             {
-                ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount, depth + 1);
+                ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount, path);
             }
 
             recipeNode.Ingredients.Add(ingredientTree);
@@ -270,7 +280,8 @@ public class RecipeTreeBuilder
     /// <see cref="BuildRecipeTreeForComparison"/>, but every ingredient is a real item (no currency inputs),
     /// so each recurses through <see cref="BuildTreeAsync"/> and is priced from the trading post / vendors.
     /// </summary>
-    private async Task<RecipeNode> BuildStaticRecipeTree(StaticRecipe recipe, int targetCount, CancellationToken ct, int depth = 0)
+    private async Task<RecipeNode> BuildStaticRecipeTree(
+        StaticRecipe recipe, long targetCount, CancellationToken ct, HashSet<int> path)
     {
         var recipeNode = new RecipeNode
         {
@@ -279,17 +290,17 @@ public class RecipeTreeBuilder
             OutputItemCount = recipe.OutputItemCount
         };
 
-        int craftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+        long craftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
 
         foreach (StaticIngredient ingredient in recipe.Ingredients)
         {
-            int requiredCount = ingredient.Count * craftsNeeded;
+            long requiredCount = ingredient.Count * (long)craftsNeeded;
             if (requiredCount == 0)
             {
                 requiredCount = 1;
             }
 
-            recipeNode.Ingredients.Add(await BuildTreeAsync(ingredient.ItemId, ct, requiredCount, depth + 1));
+            recipeNode.Ingredients.Add(await BuildTreeAsync(ingredient.ItemId, ct, requiredCount, path));
         }
 
         recipeNode.CraftingCostPerUnit =
