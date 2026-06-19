@@ -2,16 +2,16 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-// Scrapes Mystic Forge recipes from the GW2 wiki and writes them to a JSON artifact.
+// Scrapes game data the GW2 API doesn't expose from the wiki. Two modes (the vendor pass is separate so it
+// runs "cold" — the recipe pass fires enough requests to prime the wiki CDN's burst protection):
 //
-// Why the wiki: Mystic Forge recipes are NOT in the official GW2 v2 API, but they're needed to value
-// untradeable currencies/items by the tradeable outputs they can be forged into. The wiki's Semantic
-// MediaWiki layer has no clean recipe schema (the recipe subobjects aren't queryable by property), so we
-// enumerate Category:Mystic Forge recipes and parse the {{recipe|source=Mystic Forge|...}} templates out
-// of each page's wikitext.
+//   dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper            # Mystic Forge recipes → mystic-forge-recipes.json
+//   dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper -- vendors # vendor prices for those recipes' ingredients → vendor-items.json
 //
-// Usage: dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper
-//   Writes mystic-forge-recipes.json to the build output directory (bin/Debug/net10.0/).
+// Why the wiki: Mystic Forge recipes and vendor buy-prices aren't in the official v2 API, but they're needed
+// to value untradeable currencies/items (the forge outputs they make, the vendor cost of recipe ingredients)
+// for an honest account-worth calculation. Recipes are parsed from {{recipe|source=Mystic Forge}} wikitext;
+// vendor offers come from the structured Semantic MediaWiki [[Sells item::X]] relation.
 
 const string ApiUrl = "https://wiki.guildwars2.com/api.php";
 const string ExportUrl = "https://wiki.guildwars2.com/index.php?title=Special:Export";
@@ -23,6 +23,13 @@ using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
 http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
 http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+
+// Vendor mode: read the ingredients of the already-scraped recipes and look up who sells each, for how much.
+if (args.Length > 0 && args[0].Equals("vendors", StringComparison.OrdinalIgnoreCase))
+{
+    await ScrapeVendorsAsync();
+    return;
+}
 
 // 1. Enumerate every page in the Mystic Forge recipes category.
 List<string> titles = await ListCategoryPagesAsync(Category);
@@ -89,8 +96,192 @@ string json = JsonSerializer.Serialize(
     new JsonSerializerOptions { WriteIndented = true });
 await File.WriteAllTextAsync(outPath, json);
 Console.Error.WriteLine($"Wrote {recipes.Count} recipe(s) to {outPath}");
+Console.Error.WriteLine("Next: 'dotnet run -- vendors' to scrape vendor prices for these recipes' ingredients.");
 
 // --- helpers ---
+
+// Vendor mode entry point: read the recipe artifact's ingredients and write their vendor offers.
+async Task ScrapeVendorsAsync()
+{
+    string recipesFile = Path.Combine(AppContext.BaseDirectory, "mystic-forge-recipes.json");
+    if (!File.Exists(recipesFile))
+    {
+        Console.Error.WriteLine($"Run the default (recipe) mode first — {recipesFile} not found.");
+        return;
+    }
+
+    var ingredientNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+    using (JsonDocument rdoc = JsonDocument.Parse(await File.ReadAllTextAsync(recipesFile)))
+    {
+        foreach (JsonElement r in rdoc.RootElement.GetProperty("recipes").EnumerateArray())
+        {
+            foreach (JsonElement ing in r.GetProperty("Ingredients").EnumerateArray())
+            {
+                if (ing.GetProperty("Name").GetString() is { } n)
+                {
+                    ingredientNames.Add(n);
+                }
+            }
+        }
+    }
+
+    Console.Error.WriteLine($"Querying vendor offers for {ingredientNames.Count} distinct ingredient(s)…");
+    List<VendorItem> vendorItems = await ScrapeVendorOffersAsync([.. ingredientNames]);
+
+    string vendorPath = Path.Combine(AppContext.BaseDirectory, "vendor-items.json");
+    string vendorJson = JsonSerializer.Serialize(
+        new
+        {
+            source = "https://wiki.guildwars2.com",
+            note = "Vendors selling ingredients used in Mystic Forge recipes (cost may be coin or a currency).",
+            count = vendorItems.Count,
+            items = vendorItems,
+        },
+        new JsonSerializerOptions { WriteIndented = true });
+    await File.WriteAllTextAsync(vendorPath, vendorJson);
+    Console.Error.WriteLine($"Wrote {vendorItems.Count} vendor-sold ingredient(s) to {vendorPath}");
+}
+
+// Ask the wiki, in small OR-batches, which vendors sell each ingredient and at what cost/quantity. Batches
+// stay small (SMW caps OR-query depth) and slow (the ask endpoint is burst-protected). If the CDN throttles
+// us past the retry budget, stop and keep whatever we have rather than crashing — re-run to fill the rest.
+async Task<List<VendorItem>> ScrapeVendorOffersAsync(List<string> itemNames)
+{
+    var byItem = new Dictionary<string, VendorItem>(StringComparer.OrdinalIgnoreCase);
+    // SMW query values can't contain the markup delimiters; such names are never wiki page titles anyway.
+    List<string> names = itemNames.Where(n => n.IndexOfAny(['|', '[', ']', '{', '}', '=', '#', '<', '>']) < 0).ToList();
+    const int NamesPerQuery = 12; // SMW caps OR-query depth; ~15 is the ceiling, so 12 is a safe batch size.
+    try
+    {
+        for (int i = 0; i < names.Count; i += NamesPerQuery)
+        {
+            List<string> group = names.GetRange(i, Math.Min(NamesPerQuery, names.Count - i));
+            int offset = 0;
+            while (true)
+            {
+                string query = "[[Sells item::" + string.Join("||", group) + "]]"
+                    + $"|?Sells item|?Has vendor|?Has item cost|?Has item quantity|limit=500|offset={offset}";
+                string url = $"{ApiUrl}?action=ask&format=json&query={Uri.EscapeDataString(query)}";
+
+                using JsonDocument doc = JsonDocument.Parse(await GetWithRetryAsync(url));
+                if (!doc.RootElement.TryGetProperty("query", out JsonElement queryNode)
+                    || !queryNode.TryGetProperty("results", out JsonElement resultsNode))
+                {
+                    // SMW returns a 200 with an "error" body for a malformed query — log and skip this batch.
+                    string detail = doc.RootElement.TryGetProperty("error", out JsonElement err) ? err.ToString() : "(no query node)";
+                    Console.Error.WriteLine($"  [warn] vendor query returned no results node; skipping batch. {detail}");
+                    break;
+                }
+
+                // SMW returns results as an object (keyed by subobject id) when there are matches, but an
+                // empty array [] when a batch matches nothing — handle both shapes.
+                IEnumerable<JsonElement> offers = resultsNode.ValueKind == JsonValueKind.Object
+                    ? resultsNode.EnumerateObject().Select(p => p.Value)
+                    : resultsNode.EnumerateArray();
+                foreach (JsonElement offer in offers)
+                {
+                    AddOffer(offer, byItem);
+                }
+
+                // More results than the page limit → follow the offset, guarding against a non-advancing loop.
+                if (doc.RootElement.TryGetProperty("query-continue-offset", out JsonElement off)
+                    && off.ValueKind == JsonValueKind.Number
+                    && off.GetInt32() > offset)
+                {
+                    offset = off.GetInt32();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            Console.Error.WriteLine(
+                $"  vendor offers: {Math.Min(i + NamesPerQuery, names.Count)}/{names.Count} ingredients "
+                + $"queried, {byItem.Count} vendor-sold so far…");
+            await Task.Delay(1500);
+        }
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.Error.WriteLine(
+            $"  [warn] wiki throttled us ({ex.Message}); stopping early with {byItem.Count} item(s). Re-run 'vendors' to continue.");
+    }
+
+    return byItem.Values.OrderBy(v => v.Item, StringComparer.OrdinalIgnoreCase).ToList();
+}
+
+static void AddOffer(JsonElement offer, Dictionary<string, VendorItem> byItem)
+{
+    if (!offer.TryGetProperty("printouts", out JsonElement po) || FirstFulltext(po, "Sells item") is not { } item)
+    {
+        return;
+    }
+
+    var cost = new List<CostComponent>();
+    if (po.TryGetProperty("Has item cost", out JsonElement costs) && costs.ValueKind == JsonValueKind.Array)
+    {
+        foreach (JsonElement c in costs.EnumerateArray())
+        {
+            if (RecordItem(c, "Has item currency") is { } currency
+                && int.TryParse(RecordItem(c, "Has item value"), out int value))
+            {
+                cost.Add(new CostComponent(value, currency));
+            }
+        }
+    }
+
+    if (!byItem.TryGetValue(item, out VendorItem? vi))
+    {
+        vi = new VendorItem(item, []);
+        byItem[item] = vi;
+    }
+
+    vi.Offers.Add(new VendorOffer(FirstFulltext(po, "Has vendor") ?? "", FirstInt(po, "Has item quantity") ?? 1, cost));
+}
+
+static string? FirstFulltext(JsonElement printouts, string property)
+{
+    if (printouts.TryGetProperty(property, out JsonElement arr) && arr.ValueKind == JsonValueKind.Array
+        && arr.GetArrayLength() > 0 && arr[0].TryGetProperty("fulltext", out JsonElement ft))
+    {
+        return ft.GetString();
+    }
+
+    return null;
+}
+
+static int? FirstInt(JsonElement printouts, string property)
+{
+    if (printouts.TryGetProperty(property, out JsonElement arr) && arr.ValueKind == JsonValueKind.Array
+        && arr.GetArrayLength() > 0)
+    {
+        JsonElement e = arr[0];
+        if (e.ValueKind == JsonValueKind.Number)
+        {
+            return e.GetInt32();
+        }
+
+        if (e.ValueKind == JsonValueKind.String && int.TryParse(e.GetString(), out int n))
+        {
+            return n;
+        }
+    }
+
+    return null;
+}
+
+// A record-typed SMW value: { "<sub>": { "item": ["<value>"] } }.
+static string? RecordItem(JsonElement record, string subProperty)
+{
+    if (record.TryGetProperty(subProperty, out JsonElement s) && s.TryGetProperty("item", out JsonElement items)
+        && items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
+    {
+        return items[0].GetString();
+    }
+
+    return null;
+}
 
 // The wiki sits behind a CDN that 403/429s bursty automated traffic, so every request retries with
 // exponential backoff. A request can't be re-sent, so callers pass a factory we re-invoke per attempt.
@@ -381,3 +572,9 @@ static bool IsMysticForge(string source) =>
 internal sealed record Recipe(string Output, int OutputCount, List<Ingredient> Ingredients, string SourcePage);
 
 internal sealed record Ingredient(int Count, string Name);
+
+internal sealed record VendorItem(string Item, List<VendorOffer> Offers);
+
+internal sealed record VendorOffer(string Vendor, int Quantity, List<CostComponent> Cost);
+
+internal sealed record CostComponent(int Value, string Currency);
