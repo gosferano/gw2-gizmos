@@ -722,7 +722,11 @@ static IEnumerable<Recipe> ParseMysticForgeRecipes(string title, string wikitext
             .Select(g => new Ingredient(g.Sum(x => x.Count), g.First().Name, null))
             .ToList();
 
-        yield return new Recipe(CleanWiki(output).Trim(), null, LeadingInt(nameField) ?? 1, merged, title);
+        // Output yield lives in the template's `quantity` field (e.g. promotions: quantity=40, upper quantity=200);
+        // fall back to a leading qty on the name, then 1. The upper bound defaults to the lower (fixed yield).
+        int lower = LeadingInt(f.GetValueOrDefault("quantity") ?? "") ?? LeadingInt(nameField) ?? 1;
+        int upper = LeadingInt(f.GetValueOrDefault("upper quantity") ?? "") ?? lower;
+        yield return new Recipe(CleanWiki(output).Trim(), null, lower, upper, merged, title);
     }
 }
 
@@ -868,7 +872,10 @@ static bool IsMysticForge(string source) =>
     source.Equals("Mystic Forge", StringComparison.OrdinalIgnoreCase)
     || source.Equals("mystic", StringComparison.OrdinalIgnoreCase);
 
-internal sealed record Recipe(string Output, int? OutputId, int OutputCount, List<Ingredient> Ingredients, string SourcePage);
+// OutputCountLower/Upper bound the yield: equal (usually 1) for an ordinary fixed-yield recipe, a range for the
+// random-yield Mystic Forge material promotions (e.g. Mithril Ore "40 – 200"). Consumers average them.
+internal sealed record Recipe(
+    string Output, int? OutputId, int OutputCountLower, int OutputCountUpper, List<Ingredient> Ingredients, string SourcePage);
 
 internal sealed record Ingredient(int Count, string Name, int? Id);
 

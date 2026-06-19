@@ -11,8 +11,10 @@ public sealed record StaticRecipe
     /// <summary>The item this recipe produces.</summary>
     public required int OutputItemId { get; init; }
 
-    /// <summary>How many of <see cref="OutputItemId"/> a single craft yields (usually 1).</summary>
-    public int OutputItemCount { get; init; } = 1;
+    /// <summary>Expected number of <see cref="OutputItemId"/> a single craft yields — usually 1, but fractional
+    /// for random-yield recipes (a Mystic Clover forge averages ~3.1 per 10-forge; material promotions average a
+    /// range). Kept as a real number, not rounded, so the per-output cost is exact.</summary>
+    public decimal OutputItemCount { get; init; } = 1;
 
     /// <summary>What the craft consumes. Reference tradeable items where possible so the cost is priceable.</summary>
     public required IReadOnlyList<StaticIngredient> Ingredients { get; init; }

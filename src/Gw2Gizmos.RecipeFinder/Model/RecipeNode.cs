@@ -12,7 +12,11 @@ public class RecipeNode
     // count ~250x per tier, which blows past int.MaxValue and would wrap negative. The cycle guard keeps the
     // tree finite, but the quantities along it are still genuinely in the billions.
     public long Count { get; set; }
-    public int OutputItemCount { get; set; } = 1;
+
+    // Expected yield per craft: 1 for ordinary recipes, but fractional for random-yield Mystic Forge recipes
+    // (a Mystic Clover forge averages ~3.1, material promotions a wide range). Decimal, not rounded, so the
+    // per-output craft cost stays exact.
+    public decimal OutputItemCount { get; set; } = 1;
 
     /// <summary>Depth from the root (root = 0), set after the tree is built. Drives default expansion so a huge
     /// tree (a legendary's promotion chains) doesn't render every node at once and freeze the UI.</summary>

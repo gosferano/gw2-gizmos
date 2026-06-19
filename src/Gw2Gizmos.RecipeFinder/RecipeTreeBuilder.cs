@@ -220,15 +220,30 @@ public class RecipeTreeBuilder
                         _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                     }
                 }
-                else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out StaticRecipe? staticRecipe))
+                else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out IReadOnlyList<StaticRecipe>? staticRecipes))
                 {
-                    // No API recipe, but a hardcoded one (Mystic Forge / daily craft) — price it from its inputs
-                    // so an otherwise account-bound intermediate isn't a 0-cost leaf.
-                    RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, path);
-                    currentNode.OutputItemCount = recipeTree.OutputItemCount;
-                    currentNode.CraftingCostPerUnit = recipeTree.CraftingCostPerUnit;
-                    currentNode.Ingredients = recipeTree.Ingredients;
-                    _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                    // No API recipe, but hardcoded ones (Mystic Forge / daily craft) — price each from its inputs
+                    // and keep the cheapest, so a forge-only intermediate isn't a 0-cost leaf and we don't have to
+                    // guess which forge variant is best (e.g. the 1- vs 10-forge Mystic Clover).
+                    RecipeNode? bestRecipeTree = null;
+                    var lowestCraftingCost = decimal.MaxValue;
+                    foreach (StaticRecipe staticRecipe in staticRecipes)
+                    {
+                        RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, path);
+                        if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                        {
+                            lowestCraftingCost = recipeTree.CraftingCostPerUnit;
+                            bestRecipeTree = recipeTree;
+                        }
+                    }
+
+                    if (bestRecipeTree != null)
+                    {
+                        currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
+                        currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                        currentNode.Ingredients = bestRecipeTree.Ingredients;
+                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                    }
                 }
                 else
                 {
@@ -265,9 +280,9 @@ public class RecipeTreeBuilder
 
     private RecipeNode CopyForMemo(RecipeNode node, long targetCount)
     {
-        // Calculate crafts needed for both cached node and target
-        long cachedCraftsNeeded = (node.Count + node.OutputItemCount - 1) / node.OutputItemCount;
-        long targetCraftsNeeded = (targetCount + node.OutputItemCount - 1) / node.OutputItemCount;
+        // Calculate crafts needed for both cached node and target (whole forges; yield may be fractional)
+        long cachedCraftsNeeded = (long)Math.Ceiling(node.Count / node.OutputItemCount);
+        long targetCraftsNeeded = (long)Math.Ceiling(targetCount / node.OutputItemCount);
         double scalingFactor = (double)targetCraftsNeeded / cachedCraftsNeeded;
 
         return new RecipeNode
@@ -300,6 +315,7 @@ public class RecipeTreeBuilder
         };
 
         long recipeCraftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+        decimal producedCount = recipeCraftsNeeded * (decimal)recipe.OutputItemCount;
 
         // Build ingredient trees recursively
         foreach (var ingredient in recipe.Ingredients)
@@ -332,9 +348,10 @@ public class RecipeTreeBuilder
             recipeNode.Ingredients.Add(ingredientTree);
         }
 
-        // Calculate crafting cost
+        // Cost per output = total ingredient cost / total produced (crafts × yield), not / target — so a craft
+        // that makes more than asked (or, for random recipes, a fractional expected yield) is costed exactly.
         recipeNode.CraftingCostPerUnit =
-            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / targetCount;
+            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / producedCount;
 
         return recipeNode;
     }
@@ -354,11 +371,13 @@ public class RecipeTreeBuilder
             OutputItemCount = recipe.OutputItemCount
         };
 
-        long craftsNeeded = (targetCount + recipe.OutputItemCount - 1) / recipe.OutputItemCount;
+        // Whole forges to cover the target (yield may be fractional for random/promotion recipes).
+        long craftsNeeded = (long)Math.Ceiling(targetCount / recipe.OutputItemCount);
+        decimal producedCount = craftsNeeded * recipe.OutputItemCount;
 
         foreach (StaticIngredient ingredient in recipe.Ingredients)
         {
-            long requiredCount = ingredient.Count * (long)craftsNeeded;
+            long requiredCount = ingredient.Count * craftsNeeded;
             if (requiredCount == 0)
             {
                 requiredCount = 1;
@@ -367,8 +386,10 @@ public class RecipeTreeBuilder
             recipeNode.Ingredients.Add(await BuildTreeAsync(ingredient.ItemId, ct, requiredCount, path));
         }
 
+        // Cost per output = total ingredient cost / total produced (crafts × expected yield), so a fractional
+        // expected yield (e.g. a Mystic Clover forge's ~3.1) is costed exactly, not rounded.
         recipeNode.CraftingCostPerUnit =
-            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / targetCount;
+            recipeNode.Ingredients.Where(child => !child.IsCurrency).Sum(child => child.EffectiveCost) / producedCount;
 
         return recipeNode;
     }

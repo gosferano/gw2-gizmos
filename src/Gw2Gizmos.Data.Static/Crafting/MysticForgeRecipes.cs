@@ -10,6 +10,16 @@ namespace Gw2Gizmos.Data.Static.Crafting;
 /// </summary>
 public static class MysticForgeRecipes
 {
+    // Declared before All: static fields initialize in textual order, and All = Load() reads KnownChances.
+    /// <summary>
+    /// Success chance for the few recipes whose output isn't guaranteed. The wiki documents these only in prose
+    /// (not a parseable template field), so they're maintained here by hand; every other recipe defaults to 1.0.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<int, double> KnownChances = new Dictionary<int, double>
+    {
+        [19675] = 0.31, // Mystic Clover — ~31% chance per forge (community drop research)
+    };
+
     public static readonly IReadOnlyList<MysticForgeRecipe> All = Load();
 
     /// <summary>Recipes grouped by output item id (an item can have several forge recipes), for the UI to show
@@ -27,7 +37,14 @@ public static class MysticForgeRecipes
         using Stream compressed = EmbeddedData.Open("mystic-forge-recipes.json.gz");
         using var json = new GZipStream(compressed, CompressionMode.Decompress);
         RecipeCatalog? catalog = JsonSerializer.Deserialize<RecipeCatalog>(json, options);
-        return catalog?.Recipes ?? [];
+        IReadOnlyList<MysticForgeRecipe> recipes = catalog?.Recipes ?? [];
+
+        // Fill in known success chances (absent from the scrape — see KnownChances); the rest keep their 1.0.
+        return recipes
+            .Select(recipe => recipe.OutputId is { } id && KnownChances.TryGetValue(id, out double chance)
+                ? recipe with { Chance = chance }
+                : recipe)
+            .ToList();
     }
 
     private sealed record RecipeCatalog
