@@ -95,10 +95,19 @@ public sealed class EventReminderService : BackgroundService
             _logger.LogInformation(
                 "Reminder: {Event} starts in {Minutes} min on {Map}.",
                 scheduledEvent.Name, minutes, scheduledEvent.Map);
-            _notifier.Notify(
-                $"{scheduledEvent.Name} starting soon",
-                $"Begins in {minutes} min on {scheduledEvent.Map}.",
-                "Events");
+            string title = $"{scheduledEvent.Name} starting soon";
+            string body = $"Begins in {minutes} min on {scheduledEvent.Map}.";
+
+            // Events with a fixed waypoint offer a one-click copy of its chat link straight from the toast;
+            // those without (e.g. roaming invasions) get a plain reminder.
+            if (!string.IsNullOrEmpty(scheduledEvent.ChatLink))
+            {
+                _notifier.Notify(title, body, "Events", scheduledEvent.ChatLink, "Copy waypoint");
+            }
+            else
+            {
+                _notifier.Notify(title, body, "Events");
+            }
         }
     }
 }
