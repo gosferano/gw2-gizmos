@@ -147,9 +147,12 @@ public sealed class ItemsViewModel : ViewModelBase
             ? db.ItemCraftCosts.AsNoTracking().ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost)
             : new Dictionary<int, double>();
 
-        // Every item any recipe outputs — craftable even if it never reaches the trading post.
+        // Every item any recipe outputs — craftable even if it never reaches the trading post. Includes the
+        // static recipes the API doesn't expose (Mystic Forge / Place-of-Power), so forge-only items like
+        // legendaries are marked craftable and get their recipe tree, not just API-craftable items.
         HashSet<int> craftableIds = db.Recipes.AsNoTracking()
             .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
+        craftableIds.UnionWith(Gw2Gizmos.Data.Static.Crafting.StaticRecipes.ByOutputItemId.Keys);
 
         // Every item with a trading-post listing — "tradeable" independent of whether prices are being recorded,
         // so tradeable items still appear (with blank price columns) when price history is off.

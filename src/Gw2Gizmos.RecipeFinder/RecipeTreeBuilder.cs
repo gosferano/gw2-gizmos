@@ -21,22 +21,30 @@ public class RecipeTreeBuilder
     public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
     {
         var allRecipes = await _dbContext.Recipes.Include(r => r.Ingredients).ToArrayAsync(stoppingToken);
-        var recipeTrees = new List<RecipeNode>();
 
-        for (var i = 0; i < allRecipes.Length; i++)
+        // Roots = every item any recipe produces: API recipes plus the static (Mystic Forge / Place-of-Power)
+        // recipes, so forge-only outputs like legendaries are priced too, not just API-craftable items.
+        var outputItemIds = allRecipes
+            .Select(recipe => recipe.OutputItemId)
+            .Concat(StaticRecipes.ByOutputItemId.Keys)
+            .Distinct()
+            .ToList();
+
+        var recipeTrees = new List<RecipeNode>();
+        for (var i = 0; i < outputItemIds.Count; i++)
         {
             if (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
 
-            // Report progress every 100 recipes
+            // Report progress every 100 items
             if (i % 100 == 0)
             {
-                Console.WriteLine($"Processing recipe {i + 1}/{allRecipes.Length}");
+                Console.WriteLine($"Processing recipe {i + 1}/{outputItemIds.Count}");
             }
 
-            RecipeNode rootNode = await BuildTreeAsync(allRecipes[i].OutputItemId, stoppingToken);
+            RecipeNode rootNode = await BuildTreeAsync(outputItemIds[i], stoppingToken);
 
             recipeTrees.Add(rootNode);
         }
