@@ -25,4 +25,14 @@ public sealed class NotificationDispatcher : INotifier
 
         ToastService.Show(title, message);
     }
+
+    public void Notify(string title, string message, string category, string copyText, string copyLabel)
+    {
+        if (!_settings.IsEnabled(category))
+        {
+            return;
+        }
+
+        ToastService.Show(title, message, copyText, copyLabel);
+    }
 }
