@@ -225,10 +225,16 @@
                                        Visibility="{Binding ShowCraftTreePlaceholder, Converter={StaticResource Bool}}" />
                             <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
                                   Margin="0,8,0,0"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True"
                                   Visibility="{Binding PricesSyncing, Converter={StaticResource InverseBool}}">
                             <TreeView.ItemContainerStyle>
                                 <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                                    <Setter Property="IsExpanded" Value="True" />
+                                    <!-- Only the top couple of levels expand by default; deeper nodes (a legendary's
+                                         promotion chains run to tens of thousands of nodes) render lazily on expand,
+                                         so opening a craft tree doesn't freeze the UI rendering every node at once. -->
+                                    <Setter Property="IsExpanded" Value="{Binding AutoExpand, Mode=OneTime}" />
                                 </Style>
                             </TreeView.ItemContainerStyle>
                             <TreeView.Resources>

@@ -13,6 +13,14 @@ public class RecipeNode
     // tree finite, but the quantities along it are still genuinely in the billions.
     public long Count { get; set; }
     public int OutputItemCount { get; set; } = 1;
+
+    /// <summary>Depth from the root (root = 0), set after the tree is built. Drives default expansion so a huge
+    /// tree (a legendary's promotion chains) doesn't render every node at once and freeze the UI.</summary>
+    public int Depth { get; set; }
+
+    /// <summary>Whether this node is expanded by default in the craft tree — only the top couple of levels, so
+    /// the rest renders lazily when the user expands it.</summary>
+    public bool AutoExpand => Depth < 2;
     public bool IsCurrency { get; set; }
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
