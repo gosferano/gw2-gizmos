@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Maintenance utility: scrapes game data the official GW2 API doesn't expose (today: Mystic Forge
+       recipes) from the GW2 wiki and writes a JSON artifact for the valuation model to consume. See
+       Program.cs / README.md for usage. Inherits the repo-wide Directory.Build.props (net10, nullable,
+       IsPackable=false) but lives outside src/, so it never ships. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+</Project>

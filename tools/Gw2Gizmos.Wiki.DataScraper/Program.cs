@@ -1,0 +1,383 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+
+// Scrapes Mystic Forge recipes from the GW2 wiki and writes them to a JSON artifact.
+//
+// Why the wiki: Mystic Forge recipes are NOT in the official GW2 v2 API, but they're needed to value
+// untradeable currencies/items by the tradeable outputs they can be forged into. The wiki's Semantic
+// MediaWiki layer has no clean recipe schema (the recipe subobjects aren't queryable by property), so we
+// enumerate Category:Mystic Forge recipes and parse the {{recipe|source=Mystic Forge|...}} templates out
+// of each page's wikitext.
+//
+// Usage: dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper
+//   Writes mystic-forge-recipes.json to the build output directory (bin/Debug/net10.0/).
+
+const string ApiUrl = "https://wiki.guildwars2.com/api.php";
+const string ExportUrl = "https://wiki.guildwars2.com/index.php?title=Special:Export";
+const string Category = "Category:Mystic Forge recipes";
+const string UserAgent =
+    "Gw2Gizmos-WikiDataScraper/0.1 (personal account-valuation tool; +https://github.com/gosferano/gw2-gizmos)";
+
+using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+
+// 1. Enumerate every page in the Mystic Forge recipes category.
+List<string> titles = await ListCategoryPagesAsync(Category);
+Console.Error.WriteLine($"{titles.Count} page(s) in {Category}.");
+
+// 2. Fetch wikitext in bulk via Special:Export (many pages per request → far fewer hits than the API's
+//    per-page content endpoint, which keeps us under the CDN's burst protection) and parse the recipes.
+var recipes = new List<Recipe>();
+int noTemplatePages = 0;   // page has no {{recipe}} of its own (e.g. it transcludes a /Recipes subpage)
+int nonMysticPages = 0;    // page has {{recipe}} blocks but none with source = Mystic Forge
+var recipeOpener = new Regex(@"\{\{\s*recipe\s*[|}]", RegexOptions.IgnoreCase);
+var nonMysticSamples = new List<string>();
+const int Batch = 100;
+for (int i = 0; i < titles.Count; i += Batch)
+{
+    List<string> slice = titles.GetRange(i, Math.Min(Batch, titles.Count - i));
+    foreach ((string title, string wikitext) in await FetchWikitextAsync(slice))
+    {
+        List<Recipe> pageRecipes = ParseMysticForgeRecipes(title, wikitext).ToList();
+        recipes.AddRange(pageRecipes);
+        if (pageRecipes.Count == 0)
+        {
+            if (recipeOpener.IsMatch(wikitext))
+            {
+                nonMysticPages++;
+                if (nonMysticSamples.Count < 25)
+                {
+                    IEnumerable<string> srcs = ExtractTemplates(wikitext, "recipe")
+                        .Select(b => ParseTemplateFields(b).GetValueOrDefault("source") ?? "(none)");
+                    nonMysticSamples.Add($"{title}: [{string.Join(" | ", srcs)}]");
+                }
+            }
+            else
+            {
+                noTemplatePages++;
+            }
+        }
+    }
+
+    Console.Error.WriteLine(
+        $"  {Math.Min(i + Batch, titles.Count)}/{titles.Count} pages parsed, {recipes.Count} recipe(s) so far…");
+    await Task.Delay(600); // be a courteous wiki citizen between requests
+}
+
+Console.Error.WriteLine(
+    $"Pages with no recipe template of their own (likely transclusions): {noTemplatePages}; "
+    + $"pages with recipes but none Mystic Forge: {nonMysticPages}.");
+Console.Error.WriteLine("Sample of rejected pages (title: [recipe source values]):");
+foreach (string s in nonMysticSamples)
+{
+    Console.Error.WriteLine($"  {s}");
+}
+
+// 3. Write the artifact next to the binary.
+string outPath = Path.Combine(AppContext.BaseDirectory, "mystic-forge-recipes.json");
+string json = JsonSerializer.Serialize(
+    new
+    {
+        source = "https://wiki.guildwars2.com",
+        category = Category,
+        count = recipes.Count,
+        recipes = recipes.OrderBy(r => r.Output, StringComparer.OrdinalIgnoreCase).ToList(),
+    },
+    new JsonSerializerOptions { WriteIndented = true });
+await File.WriteAllTextAsync(outPath, json);
+Console.Error.WriteLine($"Wrote {recipes.Count} recipe(s) to {outPath}");
+
+// --- helpers ---
+
+// The wiki sits behind a CDN that 403/429s bursty automated traffic, so every request retries with
+// exponential backoff. A request can't be re-sent, so callers pass a factory we re-invoke per attempt.
+async Task<string> SendWithRetryAsync(Func<HttpRequestMessage> makeRequest)
+{
+    for (int attempt = 1; ; attempt++)
+    {
+        try
+        {
+            using HttpRequestMessage req = makeRequest();
+            using HttpResponseMessage resp = await http.SendAsync(req);
+            int code = (int)resp.StatusCode;
+            if ((code == 403 || code == 429 || code >= 500) && attempt < 6)
+            {
+                int waitMs = 1000 * (int)Math.Pow(2, attempt); // 2s, 4s, 8s, 16s, 32s
+                Console.Error.WriteLine($"  HTTP {code}; backing off {waitMs}ms (attempt {attempt})…");
+                await Task.Delay(waitMs);
+                continue;
+            }
+
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadAsStringAsync();
+        }
+        catch (HttpRequestException) when (attempt < 6)
+        {
+            await Task.Delay(1000 * (int)Math.Pow(2, attempt));
+        }
+    }
+}
+
+// maxlag asks the wiki to shed our load first if its database replicas fall behind.
+Task<string> GetWithRetryAsync(string url) =>
+    SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Get, url + "&maxlag=5"));
+
+async Task<List<string>> ListCategoryPagesAsync(string category)
+{
+    var result = new List<string>();
+    string? cont = null;
+    do
+    {
+        string url = $"{ApiUrl}?action=query&list=categorymembers&format=json&formatversion=2"
+            + $"&cmtitle={Uri.EscapeDataString(category)}&cmtype=page&cmlimit=500"
+            + (cont is null ? "" : $"&cmcontinue={Uri.EscapeDataString(cont)}");
+
+        using JsonDocument doc = JsonDocument.Parse(await GetWithRetryAsync(url));
+        foreach (JsonElement m in doc.RootElement.GetProperty("query").GetProperty("categorymembers").EnumerateArray())
+        {
+            if (m.TryGetProperty("title", out JsonElement t) && t.GetString() is { } title)
+            {
+                result.Add(title);
+            }
+        }
+
+        cont = doc.RootElement.TryGetProperty("continue", out JsonElement c)
+               && c.TryGetProperty("cmcontinue", out JsonElement cc)
+            ? cc.GetString()
+            : null;
+        if (cont is not null)
+        {
+            await Task.Delay(600);
+        }
+    } while (cont is not null);
+
+    return result;
+}
+
+async Task<List<(string Title, string Wikitext)>> FetchWikitextAsync(List<string> batch)
+{
+    // Special:Export returns the current wikitext of all requested pages as one MediaWiki XML document.
+    string xml = await SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Post, ExportUrl)
+    {
+        Content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["pages"] = string.Join("\n", batch),
+            ["curonly"] = "1",
+            ["action"] = "submit",
+        }),
+    });
+
+    var result = new List<(string, string)>();
+    XDocument doc = XDocument.Parse(xml);
+    foreach (XElement page in doc.Descendants().Where(e => e.Name.LocalName == "page"))
+    {
+        string? title = page.Elements().FirstOrDefault(e => e.Name.LocalName == "title")?.Value;
+        string? text = page.Descendants().FirstOrDefault(e => e.Name.LocalName == "text")?.Value;
+        if (title is not null && text is not null)
+        {
+            result.Add((title, text));
+        }
+    }
+
+    return result;
+}
+
+// A page may hold several {{recipe}} blocks (different sources/disciplines); keep only Mystic Forge ones.
+static IEnumerable<Recipe> ParseMysticForgeRecipes(string title, string wikitext)
+{
+    foreach (string block in ExtractTemplates(wikitext, "recipe"))
+    {
+        Dictionary<string, string> f = ParseTemplateFields(block);
+        if (!f.TryGetValue("source", out string? source) || !IsMysticForge(CleanWiki(source).Trim()))
+        {
+            continue;
+        }
+
+        string nameField = f.GetValueOrDefault("name") ?? "";
+        string output = FirstNonEmpty(f.GetValueOrDefault("link"), f.GetValueOrDefault("result"), StripLeadingQty(nameField));
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            // On a dedicated item page the recipe omits its output name (it defaults to the page itself);
+            // fall back to the page title, dropping any "/Recipes"-style subpage suffix.
+            output = title.Split('/')[0];
+        }
+
+        var ingredients = new List<Ingredient>();
+        for (int n = 1; f.TryGetValue($"ingredient{n}", out string? ing); n++)
+        {
+            if (string.IsNullOrWhiteSpace(ing))
+            {
+                continue;
+            }
+
+            (int count, string ingName) = SplitQtyName(ing);
+            if (!string.IsNullOrWhiteSpace(ingName))
+            {
+                ingredients.Add(new Ingredient(count, ingName));
+            }
+        }
+
+        if (ingredients.Count == 0)
+        {
+            continue;
+        }
+
+        // The wiki sometimes spreads one ingredient across several slots (e.g. "3 Crest" ×3); fold same-named
+        // entries into a single summed quantity so consumers can cost the recipe directly.
+        List<Ingredient> merged = ingredients
+            .GroupBy(ing => ing.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new Ingredient(g.Sum(x => x.Count), g.First().Name))
+            .ToList();
+
+        yield return new Recipe(CleanWiki(output).Trim(), LeadingInt(nameField) ?? 1, merged, title);
+    }
+}
+
+// Returns the inner-to-outer text of each {{<name> ...}} invocation, brace-matched (templates nest).
+static IEnumerable<string> ExtractTemplates(string text, string name)
+{
+    var opener = new Regex(@"\{\{\s*" + Regex.Escape(name) + @"\s*(?=[|}])", RegexOptions.IgnoreCase);
+    int from = 0;
+    while (true)
+    {
+        Match m = opener.Match(text, from);
+        if (!m.Success)
+        {
+            yield break;
+        }
+
+        int start = m.Index;
+        int depth = 0;
+        int j = start;
+        for (; j < text.Length - 1; j++)
+        {
+            if (text[j] == '{' && text[j + 1] == '{')
+            {
+                depth++;
+                j++;
+            }
+            else if (text[j] == '}' && text[j + 1] == '}')
+            {
+                depth--;
+                j++;
+                if (depth == 0)
+                {
+                    j++;
+                    break;
+                }
+            }
+        }
+
+        yield return text.Substring(start, Math.Min(j, text.Length) - start);
+        from = j;
+    }
+}
+
+static Dictionary<string, string> ParseTemplateFields(string block)
+{
+    string inner = block.Trim();
+    if (inner.StartsWith("{{"))
+    {
+        inner = inner[2..];
+    }
+
+    if (inner.EndsWith("}}"))
+    {
+        inner = inner[..^2];
+    }
+
+    var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    List<string> parts = SplitTopLevel(inner, '|');
+    foreach (string part in parts.Skip(1)) // parts[0] is the template name
+    {
+        int eq = part.IndexOf('=');
+        if (eq < 0)
+        {
+            continue;
+        }
+
+        fields[part[..eq].Trim()] = part[(eq + 1)..].Trim();
+    }
+
+    return fields;
+}
+
+// Split on `sep` only at the top level — ignoring separators nested in {{...}} or [[...]].
+static List<string> SplitTopLevel(string s, char sep)
+{
+    var result = new List<string>();
+    int curly = 0;
+    int square = 0;
+    int last = 0;
+    for (int k = 0; k < s.Length; k++)
+    {
+        if (k < s.Length - 1 && s[k] == '{' && s[k + 1] == '{')
+        {
+            curly++;
+            k++;
+        }
+        else if (k < s.Length - 1 && s[k] == '}' && s[k + 1] == '}')
+        {
+            curly = Math.Max(0, curly - 1);
+            k++;
+        }
+        else if (k < s.Length - 1 && s[k] == '[' && s[k + 1] == '[')
+        {
+            square++;
+            k++;
+        }
+        else if (k < s.Length - 1 && s[k] == ']' && s[k + 1] == ']')
+        {
+            square = Math.Max(0, square - 1);
+            k++;
+        }
+        else if (s[k] == sep && curly == 0 && square == 0)
+        {
+            result.Add(s[last..k]);
+            last = k + 1;
+        }
+    }
+
+    result.Add(s[last..]);
+    return result;
+}
+
+// "6 Philosopher's Stone" -> (6, "Philosopher's Stone"); "Mystic Coin" -> (1, "Mystic Coin").
+static (int Count, string Name) SplitQtyName(string raw)
+{
+    string s = CleanWiki(raw).Trim();
+    Match m = Regex.Match(s, @"^(\d+)\s+(.+)$");
+    return m.Success ? (int.Parse(m.Groups[1].Value), m.Groups[2].Value.Trim()) : (1, s);
+}
+
+static int? LeadingInt(string s)
+{
+    Match m = Regex.Match(CleanWiki(s).Trim(), @"^(\d+)");
+    return m.Success ? int.Parse(m.Groups[1].Value) : null;
+}
+
+static string StripLeadingQty(string s) => Regex.Replace(CleanWiki(s).Trim(), @"^\d+\s+", "");
+
+// [[target|display]] -> display, [[target]] -> target; leaves plain text untouched.
+static string CleanWiki(string s)
+{
+    s = Regex.Replace(s, @"\[\[([^\]|]+)\|([^\]]+)\]\]", "$2");
+    s = Regex.Replace(s, @"\[\[([^\]]+)\]\]", "$1");
+    return s;
+}
+
+static string FirstNonEmpty(params string?[] values) =>
+    values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "";
+
+// The {{recipe}} template writes the Mystic Forge source as either "Mystic Forge" or the shorthand
+// "mystic" (used on infused ascended trinkets, which are forged). Both mean the Mystic Forge.
+static bool IsMysticForge(string source) =>
+    source.Equals("Mystic Forge", StringComparison.OrdinalIgnoreCase)
+    || source.Equals("mystic", StringComparison.OrdinalIgnoreCase);
+
+internal sealed record Recipe(string Output, int OutputCount, List<Ingredient> Ingredients, string SourcePage);
+
+internal sealed record Ingredient(int Count, string Name);
