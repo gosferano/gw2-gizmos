@@ -26,6 +26,12 @@ public class RecipeNode
     /// the rest renders lazily when the user expands it.</summary>
     public bool AutoExpand => Depth < 2;
     public bool IsCurrency { get; set; }
+
+    /// <summary>Whether some NPC vendor sells this item for <em>any</em> currency (coin, karma, laurels, …), set
+    /// by the builder from the vendor catalog. An uncraftable, untradeable item that's still vendor-acquirable is
+    /// obtainable (just not coin-priced), so it counts as known-cost rather than genuinely unpriceable.</summary>
+    public bool IsVendorAcquirable { get; set; }
+
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
 
@@ -49,10 +55,10 @@ public class RecipeNode
     /// <summary>
     /// The cheapest known cost to obtain this node as an ingredient of its parent — the lesser of buying
     /// it off the trading post or crafting it from its own ingredients — or <c>null</c> when neither is
-    /// known. Following gw2efficiency's model, a missing trading-post price is treated as <em>unknown</em>,
-    /// never as 0: a base item with no buy order and no recipe has an unknowable cost, and a craftable
-    /// item with no buy order must be costed at its craft cost. (gw2efficiency additionally prices known
-    /// vendor items from a static table; we don't have one yet, so such items read as unknown here.)
+    /// known. A missing trading-post price is treated as <em>unknown</em>, never as 0 — with one exception: an
+    /// uncraftable item a vendor sells for some non-coin currency (karma, laurels, …) is obtainable, so it reads
+    /// as 0 coin rather than unknown. Only a genuinely unobtainable item (no trading post, no recipe, and not
+    /// vendor-sold for any currency) is unknown.
     /// </summary>
     public decimal? EffectiveCostOrNull
     {
@@ -62,7 +68,9 @@ public class RecipeNode
 
             if (!IsCraftable)
             {
-                return buy;
+                // Coin price if any; else 0 when a vendor sells it for some currency (obtainable, not coin-priced);
+                // else genuinely unknown (account-bound, no acquisition path).
+                return buy ?? (IsVendorAcquirable ? 0m : null);
             }
 
             decimal craftSum = 0m;

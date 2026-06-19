@@ -61,6 +61,29 @@ public class RecipeNodeTests
     }
 
     [Fact]
+    public void EffectiveCost_OfAVendorAcquirableLeafWithoutABuyOrder_IsZero_NotUnknown()
+    {
+        // Untradeable but obtainable from a vendor for some (non-coin) currency, e.g. an Obsidian Shard for
+        // karma: obtainable, just not coin-priced, so it reads as 0 coin rather than unknown.
+        RecipeNode leaf = Leaf(buy: 0);
+        leaf.IsVendorAcquirable = true;
+
+        Assert.Equal(0m, leaf.EffectiveCostOrNull);
+    }
+
+    [Fact]
+    public void EffectiveCost_StaysKnown_WhenAnUnpricedIngredientIsVendorAcquirable()
+    {
+        // A craftable whose only un-coin-priced ingredient is vendor-acquirable is still fully known: the craft
+        // sum (10 + 0) wins over the buy order, instead of falling back to it.
+        RecipeNode vendorChild = Leaf(buy: 0);
+        vendorChild.IsVendorAcquirable = true;
+        RecipeNode root = Craftable(buy: 40, count: 1, Leaf(buy: 10), vendorChild);
+
+        Assert.Equal(10m, root.EffectiveCostOrNull);
+    }
+
+    [Fact]
     public void EffectiveCost_PrefersCrafting_WhenCheaperThanBuying()
     {
         RecipeNode root = Craftable(buy: 30, count: 1, Leaf(buy: 10), Leaf(buy: 10));
@@ -125,6 +148,28 @@ public class RecipeNodeTests
         RecipeNode root = Craftable(buy: 0, count: 1, sub, Leaf(buy: 3));
 
         Assert.Equal(13m, root.EffectiveCostOrNull);
+        Assert.True(root.CraftCostKnown);
+    }
+
+    [Fact]
+    public void CraftCostKnown_IsFalse_WhenAnIngredientIsGenuinelyUnobtainable()
+    {
+        // Dusk's case: a craftable whose ingredient has no buy order, no recipe, and no vendor (any currency) —
+        // its craft cost can't be known, so the parent's isn't either (it shows an em-dash, not a deflated sum).
+        RecipeNode root = Craftable(buy: 0, count: 1, Leaf(buy: 10), Leaf(buy: 0));
+
+        Assert.False(root.CraftCostKnown);
+    }
+
+    [Fact]
+    public void CraftCostKnown_IsTrue_WhenAnUnpricedIngredientIsVendorAcquirable()
+    {
+        // The same shape but the unpriced ingredient is vendor-acquirable (some currency): obtainable, so the
+        // craft cost is considered known.
+        RecipeNode vendorChild = Leaf(buy: 0);
+        vendorChild.IsVendorAcquirable = true;
+        RecipeNode root = Craftable(buy: 0, count: 1, Leaf(buy: 10), vendorChild);
+
         Assert.True(root.CraftCostKnown);
     }
 

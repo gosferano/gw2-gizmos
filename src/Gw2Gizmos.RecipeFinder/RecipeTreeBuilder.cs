@@ -160,6 +160,7 @@ public class RecipeTreeBuilder
                 currentNode.BuyPricePerUnit = scaledNode.BuyPricePerUnit;
                 currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
+                currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
                 currentNode.Ingredients = scaledNode.Ingredients;
                 continue;
             }
@@ -174,6 +175,10 @@ public class RecipeTreeBuilder
                 _priceConfiguration.SellPriceType == PriceType.BuyOrder
                     ? tradingPostPrices.BuyOrderPrice
                     : tradingPostPrices.SellOrderPrice;
+
+            // Obtainable from any vendor (for any currency), so a coin-less untradeable item still counts as
+            // acquirable rather than genuinely unpriceable. CopperPriceFor already folded coin vendors into price.
+            currentNode.IsVendorAcquirable = VendorItems.ByItemId.ContainsKey(currentNode.ItemId);
 
             // Fetch item name with fallback
             currentNode.ItemName = GetItemName(currentNode.ItemId);
@@ -294,6 +299,7 @@ public class RecipeTreeBuilder
             CraftingCostPerUnit = node.CraftingCostPerUnit,
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
+            IsVendorAcquirable = node.IsVendorAcquirable,
             Ingredients = node
                 .Ingredients.Select(ingredient =>
                 {
