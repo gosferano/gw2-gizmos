@@ -15,6 +15,7 @@
             <conv:BoolToVisibilityConverter x:Key="Bool" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
             <conv:BoolToFontWeightConverter x:Key="Bold" />
+            <conv:VendorOfferCostConverter x:Key="VendorOfferCost" />
 
             <!-- One tab header: a rounded-top "browser tab". Selected = brighter (blends into the card body),
                  unselected = dimmer, with a hover step. -->
@@ -294,31 +295,21 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                                 <ItemsControl.ToolTip>
-                                                    <StackPanel MinWidth="170">
-                                                        <TextBlock Text="Sold by a vendor for" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,4" />
-                                                        <ItemsControl ItemsSource="{Binding VendorPurchases}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <StackPanel Orientation="Horizontal" Margin="0,1">
-                                                                        <TextBlock Text="{Binding Quantity}" Opacity="0.6" VerticalAlignment="Center" />
-                                                                        <TextBlock Text=" for " Opacity="0.5" VerticalAlignment="Center" />
-                                                                        <ItemsControl ItemsSource="{Binding Cost}">
-                                                                            <ItemsControl.ItemsPanel>
-                                                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                                                                            </ItemsControl.ItemsPanel>
-                                                                            <ItemsControl.ItemTemplate>
-                                                                                <DataTemplate>
-                                                                                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
-                                                                                        <Run Text="{Binding Amount, Mode=OneWay}" FontWeight="Medium" /><Run Text=" " /><Run Text="{Binding Currency, Mode=OneWay}" />
-                                                                                    </TextBlock>
-                                                                                </DataTemplate>
-                                                                            </ItemsControl.ItemTemplate>
-                                                                        </ItemsControl>
-                                                                    </StackPanel>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                    <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled">
+                                                        <StackPanel MaxWidth="320">
+                                                            <TextBlock Text="Sold by a vendor for" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,4" />
+                                                            <ItemsControl ItemsSource="{Binding VendorPurchases}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <!-- One offer per line; wraps so long multi-currency costs fit. -->
+                                                                        <TextBlock Text="{Binding Converter={StaticResource VendorOfferCost}}"
+                                                                                   TextWrapping="Wrap" Margin="0,1" />
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </ScrollViewer>
                                                 </ItemsControl.ToolTip>
                                             </ItemsControl>
                                             <!-- Unpurchasable: no trade offer, no vendor (account-bound). -->
