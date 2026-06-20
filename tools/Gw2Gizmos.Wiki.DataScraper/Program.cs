@@ -127,10 +127,23 @@ Console.Error.WriteLine("Next: 'dotnet run -- vendors' to scrape vendor prices f
 // ?Sells item.Has game id printout supplies each item's id.
 async Task ScrapeVendorsAsync()
 {
-    // Phase 1: discover the distinct cost-currencies. Currencies are far fewer than offers, so this sweep —
-    // even though it itself truncates at the cap — sees every currency type in practice.
+    // Phase 1: discover the distinct cost-currencies. The SMW partition queries below match a currency's exact
+    // text, so account currencies are seeded from the wiki's own Category:Currencies — those page titles are the
+    // SMW-canonical names (e.g. "Tale of Dungeon Delving"). /v2/currencies names can differ ("Tales of Dungeon
+    // Delving") and would silently match nothing, so they're only a belt-and-suspenders addition (and the source
+    // of currency ids later). The SMW sweep then adds item-currencies (ecto, tokens, candy) — not account
+    // currencies — that the catalog also prices in.
+    Dictionary<string, int> costCurrencyIds = await FetchCurrencyIdsAsync();
     var currencies = new SortedSet<string>(StringComparer.Ordinal);
-    Console.Error.WriteLine("Discovering cost-currencies…");
+    foreach (string c in await ListCategoryPagesAsync("Category:Currencies"))
+    {
+        currencies.Add(c);
+    }
+    foreach (string c in costCurrencyIds.Keys)
+    {
+        currencies.Add(c);
+    }
+    Console.Error.WriteLine($"Seeded {currencies.Count} account currenc(ies) from Category:Currencies + /v2; sweeping SMW for item-currencies…");
     await ForEachOfferAsync("[[Has vendor::+]]|?Has item cost", po =>
     {
         foreach (CostComponent c in ReadCost(po))
@@ -180,7 +193,7 @@ async Task ScrapeVendorsAsync()
         .ToList();
     Console.Error.WriteLine($"Resolving ids for {currencyNames.Count} distinct cost-currenc(ies)…");
     Dictionary<string, int> costItemIds = await ResolveIdsAsync(currencyNames);
-    Dictionary<string, int> costCurrencyIds = await FetchCurrencyIdsAsync();
+    // costCurrencyIds was already fetched in Phase 1 (used to seed the currency partitions).
 
     List<VendorItem> vendorItems = byItem.Values
         .Select(v => v with
@@ -518,8 +531,17 @@ static void AddOffer(JsonElement po, Dictionary<string, VendorItem> byItem, Hash
         return;
     }
 
-    List<CostComponent> cost = ReadCost(po);
     string vendor = FirstFulltext(po, "Has vendor") ?? "";
+
+    // Skip retired offers. The wiki keeps superseded vendor data on ".../historical" subpages — e.g. the old
+    // per-dungeon-token price (Ascalonian Tear) before dungeon tokens were unified into Tale of Dungeon Delving.
+    // Ingesting them tags an item with a stale, no-longer-spendable currency alongside its current one.
+    if (vendor.Contains("/historical", StringComparison.OrdinalIgnoreCase))
+    {
+        return;
+    }
+
+    List<CostComponent> cost = ReadCost(po);
     int quantity = FirstInt(po, "Has item quantity") ?? 1;
 
     // A multi-currency offer appears once per cost-currency partition; collapse those repeats.

@@ -179,6 +179,42 @@ public class RecipeNodeTests
         Assert.False(Leaf(buy: 10).CraftCostKnown);
     }
 
+    [Fact]
+    public void ShowCraftCost_IsFalse_AndCollapsesToBuy_WhenADirectIngredientIsAnUnobtainableDeadEnd()
+    {
+        // Dusk's case: a craftable with a buy order whose direct ingredient is a dead-end (no buy, no recipe, no
+        // vendor — Spirit/Essence). The craft can't be performed, so it collapses to buy: craft shown as em-dash,
+        // buy bolded as the value.
+        RecipeNode dusk = Craftable(buy: 160, count: 1, Leaf(buy: 0), Leaf(buy: 50));
+
+        Assert.False(dusk.ShowCraftCost);
+        Assert.True(dusk.BuyIsCheaper);
+        Assert.False(dusk.CraftIsCheaper);
+    }
+
+    [Fact]
+    public void ShowCraftCost_IsTrue_WhenTheDeadEndIsBuriedBelowACraftableIngredient()
+    {
+        // Twilight's case: its direct ingredients are all craftable (a gift with a buried dead-end, plus a priced
+        // leaf) — no *direct* dead-end — so it keeps its craft estimate instead of collapsing.
+        RecipeNode giftWithBuriedDeadEnd = Craftable(buy: 0, count: 1, Leaf(buy: 0));
+        RecipeNode twilight = Craftable(buy: 2085, count: 1, giftWithBuriedDeadEnd, Leaf(buy: 100));
+
+        Assert.False(giftWithBuriedDeadEnd.ShowCraftCost); // it has a direct dead-end
+        Assert.True(twilight.ShowCraftCost);               // its direct ingredients are all obtainable/craftable
+    }
+
+    [Fact]
+    public void ShowCraftCost_IsTrue_WhenAnUnpricedDirectIngredientIsVendorAcquirable()
+    {
+        // A vendor-acquirable leaf (some currency) is obtainable, not a dead-end, so it doesn't force a collapse.
+        RecipeNode vendorLeaf = Leaf(buy: 0);
+        vendorLeaf.IsVendorAcquirable = true;
+        RecipeNode node = Craftable(buy: 50, count: 1, vendorLeaf, Leaf(buy: 10));
+
+        Assert.True(node.ShowCraftCost);
+    }
+
     [Theory]
     [InlineData(5, 10, 12, true)] // craftable below the buy order → profitable
     [InlineData(15, 10, 12, false)] // costs more than the buy order, and it sells → not profitable

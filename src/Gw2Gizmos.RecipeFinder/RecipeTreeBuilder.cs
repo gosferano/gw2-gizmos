@@ -178,7 +178,7 @@ public class RecipeTreeBuilder
 
             // Obtainable from any vendor (for any currency), so a coin-less untradeable item still counts as
             // acquirable rather than genuinely unpriceable. CopperPriceFor already folded coin vendors into price.
-            currentNode.IsVendorAcquirable = VendorItems.ByItemId.ContainsKey(currentNode.ItemId);
+            currentNode.IsVendorAcquirable = VendorItems.IsAcquirable(currentNode.ItemId);
 
             // Fetch item name with fallback
             currentNode.ItemName = GetItemName(currentNode.ItemId);

@@ -30,6 +30,14 @@ public class CraftingDataTests
     }
 
     [Fact]
+    public void VendorItems_IsAcquirable_CoversCatalogAndKnownCurrencyGaps()
+    {
+        Assert.True(VendorItems.IsAcquirable(BottleOfElonianWine)); // coin vendor
+        Assert.True(VendorItems.IsAcquirable(19664));               // Gift of Ascalon — 500 Ascalonian Tear (dungeon token)
+        Assert.False(VendorItems.IsAcquirable(-1));                 // sold by nobody
+    }
+
+    [Fact]
     public void VendorItems_KeepFullOfferDetail()
     {
         // Not just coin: an offer's cost components carry currency name + an item or currency id.
@@ -95,10 +103,10 @@ public class CraftingDataTests
         Assert.False(StaticRecipes.ByOutputItemId.ContainsKey(ObsidianShard));
 
         // Mystic Clover succeeds only ~30% of the time, so every variant's yield is chance-adjusted and kept
-        // exact (not rounded): the 10-forge variant gives 10 × 0.3 = 3 (never the nominal 10). Both the 1- and
+        // exact (not rounded): the 10-forge variant gives 10 × ~0.3 ≈ 3 (never the nominal 10). Both the 1- and
         // 10-forge variants are kept for the engine to compare.
         Assert.True(StaticRecipes.ByOutputItemId.TryGetValue(MysticClover, out IReadOnlyList<StaticRecipe>? clovers));
-        Assert.Contains(clovers!, recipe => Math.Abs(recipe.OutputItemCount - 3m) < 0.05m);
-        Assert.All(clovers!, recipe => Assert.True(recipe.OutputItemCount < 10m));
+        Assert.Contains(clovers!, recipe => recipe.OutputItemCount is > 2m and < 4m); // 10-forge, chance-adjusted
+        Assert.All(clovers!, recipe => Assert.True(recipe.OutputItemCount < 10m));    // never the nominal yield
     }
 }

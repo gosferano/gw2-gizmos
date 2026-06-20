@@ -24,6 +24,12 @@ public static class VendorItems
     public static int? CopperPriceFor(int itemId) =>
         ByItemId.TryGetValue(itemId, out VendorItem? item) ? item.CopperPerUnit : null;
 
+    /// <summary>Whether any vendor sells this item for any currency (coin, karma, dungeon tokens, …). Used to
+    /// tell a coin-less-but-obtainable item (e.g. a dungeon-token legendary gift) from a genuine dead-end. The
+    /// scraped catalog is comprehensive — the scraper seeds every account currency from /v2/currencies before
+    /// the SMW sweep — so a plain catalog lookup suffices.</summary>
+    public static bool IsAcquirable(int itemId) => ByItemId.ContainsKey(itemId);
+
     private static IReadOnlyList<VendorItem> Load()
     {
         // Options are inlined (not a static field): static fields initialize in textual order, and `All` above

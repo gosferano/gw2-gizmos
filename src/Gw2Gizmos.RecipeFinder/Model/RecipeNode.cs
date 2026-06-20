@@ -35,6 +35,20 @@ public class RecipeNode
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
 
+    /// <summary>A direct ingredient is a genuine dead-end: a leaf (no recipe) with no obtainable price at all —
+    /// no trading post, and no vendor in any currency (e.g. account-bound precursor-crafting parts like Spirit
+    /// of the Perfected Nightsword or Essence of Gloom). The craft can't actually be performed, so this node
+    /// should be valued at its own buy price instead.</summary>
+    public bool HasUnobtainableDirectIngredient =>
+        Ingredients.Any(child => !child.IsCurrency && !child.IsCraftable && child.EffectiveCostOrNull is null);
+
+    /// <summary>Whether to show a craft cost for this node in the tree. False for a leaf (no recipe) and for a
+    /// craftable whose craft can't be done because a direct ingredient is an unobtainable dead-end — that node
+    /// "collapses to buy" (craft shown as an em-dash, valued at its buy price). Items whose unobtainable parts
+    /// are buried deeper still show a craft estimate, so a legendary doesn't collapse just because a precursor
+    /// component is account-bound.</summary>
+    public bool ShowCraftCost => IsCraftable && !HasUnobtainableDirectIngredient;
+
     // long: deep trees (e.g. the Agony Infusion doubling chain) push Count into the millions, so a copper
     // total of pricePerUnit * Count easily exceeds int.MaxValue (~214,748g) and would wrap negative.
     public long SellPrice => (long)SellPricePerUnit * Count;
@@ -45,12 +59,13 @@ public class RecipeNode
 
     /// <summary>Crafting is strictly cheaper (or the only available way) to obtain this node — bolded in the
     /// recipe tree. When craft and buy are equal, neither is bolded; a 0 on either side means that option
-    /// isn't available rather than "free".</summary>
-    public bool CraftIsCheaper => CraftingCost > 0 && (BuyPrice <= 0 || CraftingCost < BuyPrice);
+    /// isn't available rather than "free". A node that collapses to buy (<see cref="ShowCraftCost"/> false)
+    /// never counts as craft-cheaper — its craft can't actually be performed.</summary>
+    public bool CraftIsCheaper => ShowCraftCost && CraftingCost > 0 && (BuyPrice <= 0 || CraftingCost < BuyPrice);
 
     /// <summary>Buying is strictly cheaper (or the only available way) to obtain this node — bolded in the
-    /// recipe tree. Equal craft/buy bolds neither.</summary>
-    public bool BuyIsCheaper => BuyPrice > 0 && (CraftingCost <= 0 || BuyPrice < CraftingCost);
+    /// recipe tree. Equal craft/buy bolds neither. When the craft collapses to buy, the buy order is the value.</summary>
+    public bool BuyIsCheaper => BuyPrice > 0 && (!ShowCraftCost || CraftingCost <= 0 || BuyPrice < CraftingCost);
 
     /// <summary>
     /// The cheapest known cost to obtain this node as an ingredient of its parent — the lesser of buying
