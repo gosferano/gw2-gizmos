@@ -187,6 +187,7 @@ public class RecipeTreeBuilder
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
                 currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
                 currentNode.VendorOffers = scaledNode.VendorOffers;
+                currentNode.VendorCoinCostPerUnit = scaledNode.VendorCoinCostPerUnit;
                 currentNode.Ingredients = scaledNode.Ingredients;
                 continue;
             }
@@ -328,6 +329,7 @@ public class RecipeTreeBuilder
             OutputItemCount = node.OutputItemCount,
             IsVendorAcquirable = node.IsVendorAcquirable,
             VendorOffers = node.VendorOffers,
+            VendorCoinCostPerUnit = node.VendorCoinCostPerUnit,
             Ingredients = node
                 .Ingredients.Select(ingredient =>
                 {
@@ -466,31 +468,33 @@ public class RecipeTreeBuilder
                 offer.Quantity,
                 offer.Cost
                     .Select(cost => new VendorCost(
-                        cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost), cost.CurrencyId == 1))
+                        cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost), cost.CurrencyId == 1, cost.CurrencyId))
                     .ToList()))
             .GroupBy(offer => $"{offer.Quantity}|{string.Join('+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}"))}")
             .Select(group => group.First())
-            // Cheapest coin-equivalent first (per the node's whole count), so PrimaryVendorOffer is the best buy.
-            // Offers we can't value (an unweighted account currency) sort last but stay listed.
-            .OrderBy(offer => PurchaseCoinValue(offer, node.Count) ?? decimal.MaxValue)
+            // Cheapest coin-equivalent per unit first, so PrimaryVendorOffer is the best buy. Offers we can't
+            // value (an unweighted account currency) sort last but stay listed.
+            .OrderBy(offer => OfferPerUnitCoinValue(offer) ?? decimal.MaxValue)
             .ThenBy(offer => offer.Cost.Count)
             .ToList();
+
+        // Per-unit coin-equivalent of the cheapest valued offer — what feeds the cost model (craft vs. buy and
+        // the roll-up into parents); null when no offer could be valued.
+        List<decimal> perUnit = node.VendorOffers
+            .Select(OfferPerUnitCoinValue)
+            .Where(value => value.HasValue)
+            .Select(value => value!.Value)
+            .ToList();
+        node.VendorCoinCostPerUnit = perUnit.Count > 0 ? perUnit.Min() : null;
     }
 
-    /// <summary>The coin-equivalent of buying the node's whole <paramref name="count"/> via this per-bundle
-    /// offer (bundles needed × the offer's valued cost), or null when a cost currency has no derived weight.</summary>
-    private decimal? PurchaseCoinValue(Model.VendorOffer offer, long count)
-    {
-        decimal? perBundle = OfferValuer.CoinValue(
-            offer, _currencyWeights!, itemId => _latestPrices!.GetValueOrDefault(itemId).Sell);
-        if (perBundle is not { } value)
-        {
-            return null;
-        }
-
-        long bundles = (count + offer.Quantity - 1) / offer.Quantity;
-        return value * bundles;
-    }
+    /// <summary>An offer's coin-equivalent per single unit it yields (its full valued cost ÷ its quantity), or
+    /// null when a cost currency has no derived weight.</summary>
+    private decimal? OfferPerUnitCoinValue(Model.VendorOffer offer) =>
+        OfferValuer.CoinValue(offer, _currencyWeights!, itemId => _latestPrices!.GetValueOrDefault(itemId).Sell)
+            is { } total
+            ? total / offer.Quantity
+            : null;
 
     /// <summary>The icon URL for a cost component's currency, or null for an item-currency (rendered via its item
     /// icon instead). Resolved by currency id, then by normalized name (singular/plural tolerant).</summary>

@@ -24,6 +24,22 @@ public static class CurrencyValuer
     /// <summary>Coin = currency id 1; valued 1:1, never derived.</summary>
     private const int CoinCurrencyId = 1;
 
+    /// <summary>
+    /// Per-currency scarcity multipliers applied on top of the arbitrage floor. The floor (best vendor → TP
+    /// resale) is a fair value for freely-farmable currencies whose earning effort ≈ their resale value, but it
+    /// badly undervalues effort-gated / capped currencies: a Fractal Relic resells for ~19c yet is far harder to
+    /// come by than 19c of karma. Market data carries no signal for "hard to come by", so these factors are a
+    /// deliberate, hand-maintained judgement. A currency not listed here keeps its raw arbitrage value (×1).
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, decimal> ScarcityMultipliers =
+        new Dictionary<string, decimal>(StringComparer.Ordinal)
+        {
+            ["Guild Commendation"] = 3m, // weekly-capped behind active guild missions — very hard to amass
+            ["Fractal Relic"] = 3m,
+            ["Ancient Coin"] = 3m,
+            ["Tale of Dungeon Delving"] = 2m,
+        };
+
     /// <inheritdoc cref="DeriveWeights(IEnumerable{VendorItem}, Func{int, ValueTuple{int, int}}, int, int)"/>
     public static IReadOnlyList<CurrencyWeight> DeriveWeights(
         Func<int, (int Sell, int Supply)> price, int minSupply = 500, int minSamples = 10) =>
@@ -83,7 +99,8 @@ public static class CurrencyValuer
 
         return samples
             .Where(entry => entry.Value.Count >= minSamples)
-            .Select(entry => new CurrencyWeight(entry.Key, Median(entry.Value), entry.Value.Count))
+            .Select(entry => new CurrencyWeight(
+                entry.Key, Median(entry.Value) * ScarcityMultipliers.GetValueOrDefault(entry.Key, 1m), entry.Value.Count))
             .OrderByDescending(weight => weight.CopperPerUnit)
             .ToList();
     }

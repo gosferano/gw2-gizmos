@@ -23,17 +23,32 @@ public static class OfferValuer
             {
                 total += cost.Amount;
             }
-            else if (cost.ItemId is > 0 and { } itemId)
-            {
-                total += cost.Amount * itemValue(itemId);
-            }
             else if (currencyWeights.TryGetValue(cost.Currency, out decimal weight))
             {
+                // A valued account currency — by name, so it wins over a spurious same-named item id (several
+                // account currencies, e.g. Festival Token, also have an untradeable same-named item).
                 total += cost.Amount * weight;
+            }
+            else if (cost.CurrencyId is > 0)
+            {
+                return null; // an account currency we couldn't value → the whole offer is unpriceable
+            }
+            else if (cost.ItemId is > 0 and { } itemId)
+            {
+                int unit = itemValue(itemId);
+                if (unit <= 0)
+                {
+                    // An account-bound token used as a currency (e.g. Found Belonging) — has an item id but no
+                    // trading-post price, so it isn't a tradeable-item currency at all. Don't price it at 0 (that
+                    // wrongly makes the whole offer "free" and win); leave the offer unpriceable so it sorts last.
+                    return null;
+                }
+
+                total += cost.Amount * unit; // a tradeable-item currency (ecto, tokens, …)
             }
             else
             {
-                return null; // an account currency with no derived weight → can't price this offer
+                return null; // an unresolved currency with no weight → can't price this offer
             }
         }
 

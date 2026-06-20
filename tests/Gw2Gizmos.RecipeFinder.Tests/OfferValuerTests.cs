@@ -39,4 +39,30 @@ public class OfferValuerTests
         var offer = new VendorOffer(1, [new VendorCost(5, "WvW Skirmish Claim Ticket", null, "icon", IsCoin: false)]);
         Assert.Null(OfferValuer.CoinValue(offer, Weights, ItemValue));
     }
+
+    [Fact]
+    public void CoinValue_IsNull_ForABoundTokenCurrencyWithNoTradingPostPrice_EvenAlongsideCoin()
+    {
+        // Found Belonging (item 50030) is an account-bound token used as a currency: it has an item id but no
+        // trading-post price (itemValue → 0). Pairing it with 5 gold must NOT price the offer at just the 5 gold.
+        var offer = new VendorOffer(1,
+        [
+            new VendorCost(12_500, "Found Belonging", 50030, "icon", IsCoin: false),
+            new VendorCost(50_000, "Coin", null, null, IsCoin: true),
+        ]);
+
+        Assert.Null(OfferValuer.CoinValue(offer, Weights, ItemValue));
+    }
+
+    [Fact]
+    public void CoinValue_IsNull_ForUnvaluedAccountCurrency_EvenWithASpuriousSameNamedItem()
+    {
+        // Festival Token is an account currency (CurrencyId set) with no weight, but it also has an untradeable
+        // same-named item (id 66224, value 0). It must NOT be priced at that item's 0 — that wrongly made the
+        // whole offer "free" and win the cheapest ranking.
+        var offer = new VendorOffer(1,
+            [new VendorCost(25_000, "Festival Token", 66224, "icon", IsCoin: false, CurrencyId: 50)]);
+
+        Assert.Null(OfferValuer.CoinValue(offer, Weights, ItemValue));
+    }
 }

@@ -92,6 +92,30 @@ public class RecipeNode
     /// <summary>The buy column shows an em-dash: the item is genuinely unpurchasable — no trading-post offer and
     /// no vendor in any currency (account-bound). A 0 would read as "free".</summary>
     public bool ShowBuyDash => !HasCoinBuyPrice && !ShowVendorPrice;
+
+    /// <summary>Coin-equivalent of the cheapest <em>valued</em> vendor offer, per single unit (each currency
+    /// amount × its derived weight). Set by the builder; null when no offer could be valued. This lets a vendor
+    /// purchase compete with the trading post and crafting in the cost model — it does not change the displayed
+    /// vendor amount + icon.</summary>
+    public decimal? VendorCoinCostPerUnit { get; set; }
+
+    /// <summary>The vendor coin-equivalent to acquire this node's whole <see cref="Count"/>.</summary>
+    public decimal? VendorCoinCost => VendorCoinCostPerUnit is { } perUnit ? perUnit * Count : null;
+
+    /// <summary>The cheapest coin-equivalent way to buy this node — a trading-post / coin-vendor price or a
+    /// valued vendor offer — or null when neither is known.</summary>
+    private decimal? CheapestAcquisition()
+    {
+        decimal? coin = BuyPrice > 0 ? BuyPrice : null;
+        return (coin, VendorCoinCost) switch
+        {
+            (not null, { } vendor) => Math.Min(coin.Value, vendor),
+            (not null, null) => coin,
+            (null, { } vendor) => vendor,
+            _ => null,
+        };
+    }
+
     public bool IsProfitable =>
         CraftingCostPerUnit > 0 && (CraftingCostPerUnit < BuyPricePerUnit || SellPricePerUnit == 0);
 
@@ -117,13 +141,13 @@ public class RecipeNode
     {
         get
         {
-            decimal? buy = BuyPricePerUnit > 0 ? BuyPrice : null;
+            decimal? acquire = CheapestAcquisition();
 
             if (!IsCraftable)
             {
-                // Coin price if any; else 0 when a vendor sells it for some currency (obtainable, not coin-priced);
-                // else genuinely unknown (account-bound, no acquisition path).
-                return buy ?? (IsVendorAcquirable ? 0m : null);
+                // Cheapest buy/vendor coin-equivalent; else 0 when a vendor sells it for a currency we couldn't
+                // value (obtainable, just uncosted); else genuinely unknown (account-bound, no acquisition path).
+                return acquire ?? (IsVendorAcquirable ? 0m : null);
             }
 
             decimal craftSum = 0m;
@@ -146,11 +170,11 @@ public class RecipeNode
             }
 
             decimal? craft = craftKnown ? craftSum : null;
-            return (craft, buy) switch
+            return (craft, acquire) switch
             {
-                (null, _) => buy,
+                (null, _) => acquire,
                 (_, null) => craft,
-                _ => Math.Min(craft.Value, buy.Value)
+                _ => Math.Min(craft.Value, acquire.Value)
             };
         }
     }
@@ -167,10 +191,10 @@ public class RecipeNode
     {
         get
         {
-            decimal? buy = BuyPricePerUnit > 0 ? BuyPrice : null;
+            decimal? acquire = CheapestAcquisition();
             if (!IsCraftable)
             {
-                return buy ?? 0m;
+                return acquire ?? 0m;
             }
 
             decimal craftSum = 0m;
@@ -191,12 +215,12 @@ public class RecipeNode
 
             if (craftFullyKnown)
             {
-                return buy is { } known ? Math.Min(known, craftSum) : craftSum;
+                return acquire is { } known ? Math.Min(known, craftSum) : craftSum;
             }
 
-            // Partially priced: the craft sum is only a lower bound, so prefer a known buy order; fall back to
-            // the partial craft only when the item is untradeable (no buy order to defer to).
-            return buy ?? craftSum;
+            // Partially priced: the craft sum is only a lower bound, so prefer a known buy/vendor cost; fall back
+            // to the partial craft only when the item can't be bought at all.
+            return acquire ?? craftSum;
         }
     }
 

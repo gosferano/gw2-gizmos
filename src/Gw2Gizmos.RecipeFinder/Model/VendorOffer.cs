@@ -12,7 +12,8 @@ public sealed record VendorOffer(long Quantity, IReadOnlyList<VendorCost> Cost);
 /// tradeable item (<see cref="ItemId"/> set — shown via its item icon) or an account currency
 /// (<see cref="IconUrl"/> set — shown via its currency icon); <see cref="Currency"/> is the name.
 /// </summary>
-public sealed record VendorCost(long Amount, string Currency, int? ItemId, string? IconUrl, bool IsCoin = false)
+public sealed record VendorCost(
+    long Amount, string Currency, int? ItemId, string? IconUrl, bool IsCoin = false, int? CurrencyId = null)
 {
     /// <summary>The currency is a tradeable item (not coin) — render its icon with the item-id <c>ItemImage</c>.</summary>
     public bool HasItemIcon => !IsCoin && ItemId is > 0;

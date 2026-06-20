@@ -180,6 +180,33 @@ public class RecipeNodeTests
     }
 
     [Fact]
+    public void EffectiveCost_UsesTheVendorCoinValue_AsAnAcquisitionOption()
+    {
+        // Untradeable leaf with a derived vendor coin value (e.g. an Obsidian Shard's karma cost) → that value,
+        // not 0 and not unknown.
+        RecipeNode leaf = Leaf(buy: 0);
+        leaf.VendorCoinCostPerUnit = 18m;
+        Assert.Equal(18m, leaf.EffectiveCostOrNull);
+        Assert.Equal(18m, leaf.EffectiveCost);
+
+        // Coin buy 30 vs vendor 18 → the vendor wins.
+        RecipeNode both = Leaf(buy: 30);
+        both.VendorCoinCostPerUnit = 18m;
+        Assert.Equal(18m, both.EffectiveCostOrNull);
+
+        // A craft whose ingredient is that vendor item counts it at 18, not 0 (no more deflation).
+        RecipeNode child = Leaf(buy: 0);
+        child.VendorCoinCostPerUnit = 18m;
+        RecipeNode root = Craftable(buy: 0, count: 1, child, Leaf(buy: 10));
+        Assert.Equal(28m, root.EffectiveCostOrNull); // 18 vendor + 10 buy
+
+        // Vendor-sold but the currency couldn't be valued → still obtainable (0), not unknown.
+        RecipeNode unvalued = Leaf(buy: 0);
+        unvalued.IsVendorAcquirable = true;
+        Assert.Equal(0m, unvalued.EffectiveCostOrNull);
+    }
+
+    [Fact]
     public void PrimaryVendorOffer_IsTheFirstOffer_WithItsFullMultiComponentCost()
     {
         RecipeNode node = Leaf(buy: 0);
