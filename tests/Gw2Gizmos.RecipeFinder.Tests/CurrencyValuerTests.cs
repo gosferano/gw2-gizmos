@@ -48,9 +48,33 @@ public class CurrencyValuerTests
 
         IReadOnlyList<CurrencyWeight> weights = CurrencyValuer.DeriveWeights(items, Price, minSupply: 500, minSamples: 10);
 
-        CurrencyWeight tokens = Assert.Single(weights); // only "Tokens" clears the sample gate
-        Assert.Equal("Tokens", tokens.Currency);
+        CurrencyWeight tokens = Assert.Single(weights, w => w.Currency == "Tokens"); // only "Tokens" clears the sample gate
         Assert.Equal(12, tokens.Samples);              // 11 normal + 1 outlier; the low-supply one didn't count
         Assert.Equal(85m, tokens.CopperPerUnit);       // median, unmoved by the 85,000 outlier
+    }
+
+    [Fact]
+    public void DeriveWeights_ValuesFarmableCurrenciesTheArbitrageCannotReach()
+    {
+        // No vendor offers at all → nothing derived, but the explicit value still surfaces a farmable currency
+        // (its real offers buy only account-bound rewards, so it would otherwise be unpriceable and never win).
+        IReadOnlyList<CurrencyWeight> weights = CurrencyValuer.DeriveWeights([], _ => (0, 0));
+
+        CurrencyWeight volatileMagic = Assert.Single(weights, w => w.Currency == "Volatile Magic");
+        Assert.Equal(0.2m, volatileMagic.CopperPerUnit);
+        Assert.Equal(0, volatileMagic.Samples); // hand-set, not data-derived
+    }
+
+    [Fact]
+    public void DeriveWeights_ExplicitValueOverridesTheDerivedFloor()
+    {
+        // Karma's liquidation floor would derive ~0.85c here, but the explicit value (near-free) must replace it,
+        // not be maxed against it — otherwise coin-bearing routes wrongly beat pure-karma ones.
+        var items = Enumerable.Range(1, 12).Select(i => Vendor(itemId: i, costAmount: 1, currency: "Karma", currencyId: 2)).ToList();
+
+        IReadOnlyList<CurrencyWeight> weights = CurrencyValuer.DeriveWeights(items, _ => (100, 1000));
+
+        CurrencyWeight karma = Assert.Single(weights, w => w.Currency == "Karma");
+        Assert.Equal(0.04m, karma.CopperPerUnit); // explicit value wins outright over the 0.85c derived floor
     }
 }

@@ -15,6 +15,9 @@ namespace Gw2Gizmos.RecipeFinder;
 /// and unresolved scrape-noise "currencies" (no currency id) are skipped;</item>
 /// <item>minimum sample size — a currency seen on too few liquid items is left unvalued, not guessed.</item>
 /// </list>
+/// Two hand-maintained tables then correct what the market can't show: <see cref="ScarcityMultipliers"/> raises
+/// effort-gated currencies the arbitrage floor undervalues, and <see cref="ExplicitValues"/> hard-sets currencies
+/// the floor gets wrong (farmable ones the sampler can't reach; karma, which the floor overstates).
 /// </summary>
 public static class CurrencyValuer
 {
@@ -38,6 +41,35 @@ public static class CurrencyValuer
             ["Fractal Relic"] = 3m,
             ["Ancient Coin"] = 3m,
             ["Tale of Dungeon Delving"] = 2m,
+        };
+
+    /// <summary>
+    /// Hand-set copper-per-unit values that <em>replace</em> the derived weight (and any multiplier), for the two
+    /// cases the market floor gets wrong:
+    /// <list type="bullet">
+    /// <item>farmable currencies the arbitrage sampler can't reach — their offers buy only account-bound rewards
+    /// (gear, recipes, obsidian shards), so there is no vendor → TP resale to measure; without a value a route
+    /// paying in (say) Volatile Magic would be unpriceable and never win;</item>
+    /// <item>Karma — its liquidation floor (~0.17c) overstates its real worth to a player who hoards millions and
+    /// never spends it otherwise, so coin-bearing routes wrongly beat pure-karma ones; valued near-free here.</item>
+    /// </list>
+    /// Currencies absent both here and from the derived weights stay unvalued on purpose — prestige, capped or
+    /// cosmetic currencies that should sort last.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, decimal> ExplicitValues =
+        new Dictionary<string, decimal>(StringComparer.Ordinal)
+        {
+            ["Karma"] = 0.04m, // near-free: hoarded by the million, rarely the limiting cost
+            ["Spirit Shard"] = 40m,
+            ["Geode"] = 0.5m,
+            ["Trade Contract"] = 0.5m,
+            ["Ley Line Crystal"] = 0.5m,
+            ["Lump of Aurillium"] = 0.5m,
+            ["Airship Part"] = 0.5m,
+            ["Bandit Crest"] = 0.5m,
+            ["War Supplies"] = 0.5m,
+            ["Volatile Magic"] = 0.2m,
+            ["Unbound Magic"] = 0.15m,
         };
 
     /// <inheritdoc cref="DeriveWeights(IEnumerable{VendorItem}, Func{int, ValueTuple{int, int}}, int, int)"/>
@@ -97,10 +129,20 @@ public static class CurrencyValuer
             }
         }
 
-        return samples
+        var derived = samples
             .Where(entry => entry.Value.Count >= minSamples)
-            .Select(entry => new CurrencyWeight(
-                entry.Key, Median(entry.Value) * ScarcityMultipliers.GetValueOrDefault(entry.Key, 1m), entry.Value.Count))
+            .ToDictionary(entry => entry.Key, entry => Median(entry.Value), StringComparer.Ordinal);
+
+        // Union the data-derived currencies with the explicit-value list so a farmable currency the arbitrage
+        // can't reach still gets a value. An explicit value wins outright; otherwise derived × scarcity multiplier.
+        return derived.Keys.Union(ExplicitValues.Keys, StringComparer.Ordinal)
+            .Select(name =>
+            {
+                decimal value = ExplicitValues.TryGetValue(name, out decimal fixedValue)
+                    ? fixedValue
+                    : derived.GetValueOrDefault(name) * ScarcityMultipliers.GetValueOrDefault(name, 1m);
+                return new CurrencyWeight(name, value, samples.TryGetValue(name, out List<decimal>? rates) ? rates.Count : 0);
+            })
             .OrderByDescending(weight => weight.CopperPerUnit)
             .ToList();
     }
