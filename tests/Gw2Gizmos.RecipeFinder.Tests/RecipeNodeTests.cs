@@ -180,6 +180,18 @@ public class RecipeNodeTests
     }
 
     [Fact]
+    public void IsPurchasable_TrueWithABuyOrderOrVendor_FalseWhenAccountBound()
+    {
+        Assert.True(Leaf(buy: 10).IsPurchasable);   // trading-post offer
+
+        RecipeNode vendor = Leaf(buy: 0);
+        vendor.IsVendorAcquirable = true;
+        Assert.True(vendor.IsPurchasable);           // sold by a vendor (any currency)
+
+        Assert.False(Leaf(buy: 0).IsPurchasable);    // no offer, no vendor → unpurchasable (em-dash)
+    }
+
+    [Fact]
     public void ShowCraftCost_IsFalse_AndCollapsesToBuy_WhenADirectIngredientIsAnUnobtainableDeadEnd()
     {
         // Dusk's case: a craftable with a buy order whose direct ingredient is a dead-end (no buy, no recipe, no

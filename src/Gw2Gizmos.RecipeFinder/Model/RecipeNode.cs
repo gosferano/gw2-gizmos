@@ -54,6 +54,12 @@ public class RecipeNode
     public long SellPrice => (long)SellPricePerUnit * Count;
     public long BuyPrice => (long)BuyPricePerUnit * Count;
     public decimal CraftingCost => CraftingCostPerUnit * Count;
+
+    /// <summary>Whether the item can be bought at all — a trading-post offer (folded into <see cref="BuyPrice"/>,
+    /// which also covers a coin vendor) or a vendor selling it for any currency. When false (no trade offers and
+    /// no vendor), the buy column shows an em-dash instead of a misleading 0: the item is account-bound and
+    /// genuinely unpurchasable.</summary>
+    public bool IsPurchasable => BuyPrice > 0 || IsVendorAcquirable;
     public bool IsProfitable =>
         CraftingCostPerUnit > 0 && (CraftingCostPerUnit < BuyPricePerUnit || SellPricePerUnit == 0);
 
