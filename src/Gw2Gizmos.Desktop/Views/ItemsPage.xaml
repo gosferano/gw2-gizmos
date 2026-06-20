@@ -284,7 +284,11 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center" />
+                                                            <!-- A coin component renders as gold/silver/copper; any other currency as amount + icon. -->
+                                                            <c:CoinDisplay Copper="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center"
+                                                                           Visibility="{Binding IsCoin, Converter={StaticResource Bool}}" />
+                                                            <TextBlock Text="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsCoin, Converter={StaticResource InverseBool}}" />
                                                             <c:ItemImage ItemId="{Binding ItemId}" Width="16" Height="16" Margin="2,0,0,0"
                                                                          VerticalAlignment="Center"
                                                                          Visibility="{Binding HasItemIcon, Converter={StaticResource Bool}}" />

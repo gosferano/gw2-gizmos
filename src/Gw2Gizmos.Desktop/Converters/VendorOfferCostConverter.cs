@@ -13,7 +13,8 @@ public sealed class VendorOfferCostConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is VendorOffer offer
-            ? string.Join(" + ", offer.Cost.Select(component => $"{component.Amount:N0} {component.Currency}"))
+            ? string.Join(" + ", offer.Cost.Select(component =>
+                component.IsCoin ? Coin.Format(component.Amount) : $"{component.Amount:N0} {component.Currency}"))
             : string.Empty;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

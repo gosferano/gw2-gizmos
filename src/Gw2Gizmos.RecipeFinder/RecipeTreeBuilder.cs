@@ -453,7 +453,8 @@ public class RecipeTreeBuilder
             .Select(offer => new Model.VendorOffer(
                 offer.Quantity,
                 offer.Cost
-                    .Select(cost => new VendorCost(cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost)))
+                    .Select(cost => new VendorCost(
+                        cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost), cost.CurrencyId == 1))
                     .ToList()))
             .GroupBy(offer => $"{offer.Quantity}|{string.Join('+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}"))}")
             .Select(group => group.First())
