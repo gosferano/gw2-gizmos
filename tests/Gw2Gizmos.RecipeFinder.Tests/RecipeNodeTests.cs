@@ -180,15 +180,69 @@ public class RecipeNodeTests
     }
 
     [Fact]
-    public void IsPurchasable_TrueWithABuyOrderOrVendor_FalseWhenAccountBound()
+    public void PrimaryVendorOffer_IsTheFirstOffer_WithItsFullMultiComponentCost()
     {
-        Assert.True(Leaf(buy: 10).IsPurchasable);   // trading-post offer
+        RecipeNode node = Leaf(buy: 0);
+        Assert.Null(node.PrimaryVendorOffer);
 
+        // A multi-component offer (25 Airship Part + 1050 Karma together) is kept whole, not split.
+        node.VendorOffers = new[]
+        {
+            new VendorOffer(1, new[]
+            {
+                new VendorCost(25, "Airship Part", null, "airship-icon"),
+                new VendorCost(1050, "Karma", null, "karma-icon"),
+            }),
+            new VendorOffer(5, new[] { new VendorCost(1, "Guild Commendation", null, "gc-icon") }),
+        };
+        Assert.Equal(2, node.PrimaryVendorOffer!.Cost.Count);
+        Assert.Equal(1050, node.PrimaryVendorOffer.Cost[1].Amount); // not divided per unit, not lost
+    }
+
+    [Fact]
+    public void VendorPurchase_ScalesTheCostToTheWholeRequiredCount()
+    {
+        // 250x Obsidian Shard, sold 1 per 25 Airship Part + 1050 Karma → the buy column shows the cost for 250.
+        RecipeNode node = Leaf(buy: 0, count: 250);
+        node.VendorOffers = new[]
+        {
+            new VendorOffer(1, new[]
+            {
+                new VendorCost(25, "Airship Part", null, "airship-icon"),
+                new VendorCost(1050, "Karma", null, "karma-icon"),
+            }),
+        };
+
+        VendorOffer purchase = node.PrimaryVendorPurchase!;
+        Assert.Equal(250, purchase.Quantity);
+        Assert.Equal(25 * 250, purchase.Cost[0].Amount);   // 6250 Airship Part
+        Assert.Equal(1050 * 250, purchase.Cost[1].Amount); // 262500 Karma
+    }
+
+    [Fact]
+    public void BuyColumn_ShowsCoin_Vendor_OrEmDash()
+    {
+        // Coin / trading-post price → coin amount.
+        RecipeNode coin = Leaf(buy: 10);
+        Assert.True(coin.HasCoinBuyPrice);
+        Assert.False(coin.ShowVendorPrice);
+        Assert.False(coin.ShowBuyDash);
+
+        // No coin price, but a vendor sells it for a currency → vendor cost + icon.
         RecipeNode vendor = Leaf(buy: 0);
-        vendor.IsVendorAcquirable = true;
-        Assert.True(vendor.IsPurchasable);           // sold by a vendor (any currency)
+        vendor.VendorOffers = new[]
+        {
+            new VendorOffer(1, new[] { new VendorCost(500, "Tale of Dungeon Delving", null, "icon-url") }),
+        };
+        Assert.False(vendor.HasCoinBuyPrice);
+        Assert.True(vendor.ShowVendorPrice);
+        Assert.False(vendor.ShowBuyDash);
+        Assert.Equal(500, vendor.PrimaryVendorOffer!.Cost[0].Amount);
 
-        Assert.False(Leaf(buy: 0).IsPurchasable);    // no offer, no vendor → unpurchasable (em-dash)
+        // No coin price, no vendor → em-dash.
+        RecipeNode bound = Leaf(buy: 0);
+        Assert.False(bound.ShowVendorPrice);
+        Assert.True(bound.ShowBuyDash);
     }
 
     [Fact]

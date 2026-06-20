@@ -25,6 +25,8 @@ public class RecipeTreeBuilder
     private Dictionary<int, List<Recipe>>? _recipesByOutput;
     private Dictionary<int, string>? _itemNames;
     private Dictionary<int, string>? _currencyNames;
+    private Dictionary<int, string>? _currencyIconById;
+    private Dictionary<string, string>? _currencyIconByName; // keyed by normalized name (singular/plural tolerant)
     private Dictionary<int, (int Buy, int Sell)>? _latestPrices;
 
     /// <summary>Supply the latest (buy, sell) prices the caller has already computed (the Items grid does this
@@ -45,9 +47,20 @@ public class RecipeTreeBuilder
             .Select(item => new { item.Id, item.Name })
             .ToDictionaryAsync(item => item.Id, item => item.Name, ct);
 
-        _currencyNames ??= await _dbContext.Currencies.AsNoTracking()
-            .Select(currency => new { currency.Id, currency.Name })
-            .ToDictionaryAsync(currency => currency.Id, currency => currency.Name, ct);
+        if (_currencyNames is null)
+        {
+            var currencies = await _dbContext.Currencies.AsNoTracking()
+                .Select(currency => new { currency.Id, currency.Name, currency.Icon })
+                .ToListAsync(ct);
+            _currencyNames = currencies.ToDictionary(c => c.Id, c => c.Name);
+            _currencyIconById = currencies.Where(c => !string.IsNullOrEmpty(c.Icon)).ToDictionary(c => c.Id, c => c.Icon);
+            // Normalized name → icon, so a scraped cost currency resolves even when its name differs from the API's
+            // (e.g. "Tale of Dungeon Delving" vs "Tales of Dungeon Delving"). Last write wins on collisions.
+            _currencyIconByName = currencies
+                .Where(c => !string.IsNullOrEmpty(c.Icon))
+                .GroupBy(c => NormalizeCurrencyName(c.Name))
+                .ToDictionary(g => g.Key, g => g.First().Icon);
+        }
 
         if (_latestPrices is null)
         {
@@ -161,6 +174,7 @@ public class RecipeTreeBuilder
                 currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
                 currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
+                currentNode.VendorOffers = scaledNode.VendorOffers;
                 currentNode.Ingredients = scaledNode.Ingredients;
                 continue;
             }
@@ -179,6 +193,7 @@ public class RecipeTreeBuilder
             // Obtainable from any vendor (for any currency), so a coin-less untradeable item still counts as
             // acquirable rather than genuinely unpriceable. CopperPriceFor already folded coin vendors into price.
             currentNode.IsVendorAcquirable = VendorItems.IsAcquirable(currentNode.ItemId);
+            AttachVendorCost(currentNode);
 
             // Fetch item name with fallback
             currentNode.ItemName = GetItemName(currentNode.ItemId);
@@ -300,6 +315,7 @@ public class RecipeTreeBuilder
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
             IsVendorAcquirable = node.IsVendorAcquirable,
+            VendorOffers = node.VendorOffers,
             Ingredients = node
                 .Ingredients.Select(ingredient =>
                 {
@@ -420,6 +436,55 @@ public class RecipeTreeBuilder
 
         return new TradingPostPrices(sellOrderPrice, latest.Buy);
     }
+
+    /// <summary>Attach the vendor sale terms to a node: each distinct offer kept whole — its quantity and its
+    /// full cost (every component together, amounts exactly as charged, each with its icon resolved). Offers are
+    /// ordered simplest first (single-unit, then fewest components, then cheapest), so the first is shown inline
+    /// and the rest on hover.</summary>
+    private void AttachVendorCost(RecipeNode node)
+    {
+        if (!VendorItems.ByItemId.TryGetValue(node.ItemId, out VendorItem? vendorItem))
+        {
+            return;
+        }
+
+        node.VendorOffers = vendorItem.Offers
+            .Where(offer => offer.Quantity > 0 && offer.Cost.Count > 0)
+            .Select(offer => new Model.VendorOffer(
+                offer.Quantity,
+                offer.Cost
+                    .Select(cost => new VendorCost(cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost)))
+                    .ToList()))
+            .GroupBy(offer => $"{offer.Quantity}|{string.Join('+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}"))}")
+            .Select(group => group.First())
+            .OrderBy(offer => offer.Quantity == 1 ? 0 : 1)
+            .ThenBy(offer => offer.Cost.Count)
+            .ThenBy(offer => offer.Cost[0].Amount)
+            .ToList();
+    }
+
+    /// <summary>The icon URL for a cost component's currency, or null for an item-currency (rendered via its item
+    /// icon instead). Resolved by currency id, then by normalized name (singular/plural tolerant).</summary>
+    private string? ResolveCurrencyIcon(CostComponent cost)
+    {
+        if (cost.ItemId is > 0)
+        {
+            return null; // an item-currency — the UI shows the item icon by id
+        }
+
+        if (cost.CurrencyId is { } id && _currencyIconById!.TryGetValue(id, out string? byId))
+        {
+            return byId;
+        }
+
+        return _currencyIconByName!.GetValueOrDefault(NormalizeCurrencyName(cost.Currency));
+    }
+
+    /// <summary>Normalize a currency name for matching: lower-cased, with a trailing 's' trimmed from each word,
+    /// so "Tale of Dungeon Delving" and the API's "Tales of Dungeon Delving" map to the same key.</summary>
+    private static string NormalizeCurrencyName(string name) =>
+        string.Join(' ', name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(word => word.EndsWith('s') ? word[..^1] : word));
 
     private string GetItemName(int itemId) =>
         _itemNames!.GetValueOrDefault(itemId) ?? $"Unknown Item ({itemId})";

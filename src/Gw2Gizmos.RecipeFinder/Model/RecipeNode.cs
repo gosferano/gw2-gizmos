@@ -55,11 +55,43 @@ public class RecipeNode
     public long BuyPrice => (long)BuyPricePerUnit * Count;
     public decimal CraftingCost => CraftingCostPerUnit * Count;
 
-    /// <summary>Whether the item can be bought at all — a trading-post offer (folded into <see cref="BuyPrice"/>,
-    /// which also covers a coin vendor) or a vendor selling it for any currency. When false (no trade offers and
-    /// no vendor), the buy column shows an em-dash instead of a misleading 0: the item is account-bound and
-    /// genuinely unpurchasable.</summary>
-    public bool IsPurchasable => BuyPrice > 0 || IsVendorAcquirable;
+    /// <summary>The ways a vendor sells this item — each offer keeps its full cost (all components together) and
+    /// quantity. Set by the builder, simplest/cheapest first; empty when no vendor sells it.</summary>
+    public IReadOnlyList<VendorOffer> VendorOffers { get; set; } = [];
+
+    /// <summary>The cheapest offer for one bundle, used to pick what to show.</summary>
+    public VendorOffer? PrimaryVendorOffer => VendorOffers.Count > 0 ? VendorOffers[0] : null;
+
+    /// <summary>The cheapest offer scaled to this node's whole required <see cref="Count"/> (the buy column shows
+    /// the cost for all of them, not one unit — matching the coin buy price, which is per-Count).</summary>
+    public VendorOffer? PrimaryVendorPurchase => ScaleToCount(PrimaryVendorOffer);
+
+    /// <summary>Every offer scaled to the whole <see cref="Count"/>, for the hover list.</summary>
+    public IReadOnlyList<VendorOffer> VendorPurchases => VendorOffers.Select(ScaleToCount).OfType<VendorOffer>().ToList();
+
+    /// <summary>Scale an offer's cost to acquire the node's whole <see cref="Count"/>: the number of bundles
+    /// needed (rounded up) times each component, with the offer's quantity set to that whole count.</summary>
+    private VendorOffer? ScaleToCount(VendorOffer? offer)
+    {
+        if (offer is null)
+        {
+            return null;
+        }
+
+        long bundles = (Count + offer.Quantity - 1) / offer.Quantity;
+        return new VendorOffer(Count, offer.Cost.Select(cost => cost with { Amount = cost.Amount * bundles }).ToList());
+    }
+
+    /// <summary>The buy column shows a coin amount: the item has a trading-post or coin-vendor price.</summary>
+    public bool HasCoinBuyPrice => BuyPrice > 0;
+
+    /// <summary>The buy column shows the vendor cost (amounts + currency icons) instead of coin: no coin/TP price,
+    /// but a vendor sells it for a currency.</summary>
+    public bool ShowVendorPrice => BuyPrice <= 0 && PrimaryVendorOffer is not null;
+
+    /// <summary>The buy column shows an em-dash: the item is genuinely unpurchasable — no trading-post offer and
+    /// no vendor in any currency (account-bound). A 0 would read as "free".</summary>
+    public bool ShowBuyDash => !HasCoinBuyPrice && !ShowVendorPrice;
     public bool IsProfitable =>
         CraftingCostPerUnit > 0 && (CraftingCostPerUnit < BuyPricePerUnit || SellPricePerUnit == 0);
 

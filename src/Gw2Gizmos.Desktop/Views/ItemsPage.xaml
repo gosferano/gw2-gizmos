@@ -267,14 +267,64 @@
                                             <TextBlock Text="  ·  " Opacity="0.6" />
                                             <TextBlock Text="buy " Opacity="0.6"
                                                        FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
-                                            <!-- Buy price, or an em-dash when the item is unpurchasable: no trading-post
-                                                 offer and no vendor (any currency). A 0 would read as "free". -->
+                                            <!-- Coin price (trading post / coin vendor). -->
                                             <c:CoinDisplay Copper="{Binding BuyPrice}" Opacity="0.6"
                                                            FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
-                                                           Visibility="{Binding IsPurchasable, Converter={StaticResource Bool}}" />
+                                                           Visibility="{Binding HasCoinBuyPrice, Converter={StaticResource Bool}}" />
+                                            <!-- Vendor price: the cheapest offer's full cost — every component (amount + the
+                                                 currency's icon) shown together, in place of a coin "0" when the item has no
+                                                 trade offer but a vendor sells it for a currency. Hover lists every offer. -->
+                                            <ItemsControl ItemsSource="{Binding PrimaryVendorPurchase.Cost}" VerticalAlignment="Center"
+                                                          ToolTipService.InitialShowDelay="200"
+                                                          Visibility="{Binding ShowVendorPrice, Converter={StaticResource Bool}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center" />
+                                                            <c:ItemImage ItemId="{Binding ItemId}" Width="16" Height="16" Margin="2,0,0,0"
+                                                                         VerticalAlignment="Center"
+                                                                         Visibility="{Binding HasItemIcon, Converter={StaticResource Bool}}" />
+                                                            <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="16" Height="16" Margin="2,0,0,0"
+                                                                             VerticalAlignment="Center"
+                                                                             Visibility="{Binding HasCurrencyIcon, Converter={StaticResource Bool}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                <ItemsControl.ToolTip>
+                                                    <StackPanel MinWidth="170">
+                                                        <TextBlock Text="Sold by a vendor for" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding VendorPurchases}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                                        <TextBlock Text="{Binding Quantity}" Opacity="0.6" VerticalAlignment="Center" />
+                                                                        <TextBlock Text=" for " Opacity="0.5" VerticalAlignment="Center" />
+                                                                        <ItemsControl ItemsSource="{Binding Cost}">
+                                                                            <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                                                            </ItemsControl.ItemsPanel>
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate>
+                                                                                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                                                                                        <Run Text="{Binding Amount, Mode=OneWay}" FontWeight="Medium" /><Run Text=" " /><Run Text="{Binding Currency, Mode=OneWay}" />
+                                                                                    </TextBlock>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </ItemsControl.ToolTip>
+                                            </ItemsControl>
+                                            <!-- Unpurchasable: no trade offer, no vendor (account-bound). -->
                                             <TextBlock Text="—" Opacity="0.6"
                                                        FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
-                                                       Visibility="{Binding IsPurchasable, Converter={StaticResource InverseBool}}" />
+                                                       Visibility="{Binding ShowBuyDash, Converter={StaticResource Bool}}" />
                                         </StackPanel>
                                     </StackPanel>
                                 </HierarchicalDataTemplate>
