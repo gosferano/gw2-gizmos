@@ -28,6 +28,7 @@ public class RecipeTreeBuilder
     private Dictionary<int, string>? _currencyIconById;
     private Dictionary<string, string>? _currencyIconByName; // keyed by normalized name (singular/plural tolerant)
     private Dictionary<int, (int Buy, int Sell)>? _latestPrices;
+    private Dictionary<string, decimal>? _currencyWeights;   // account currency name -> derived copper-per-unit
 
     /// <summary>Supply the latest (buy, sell) prices the caller has already computed (the Items grid does this
     /// once), so the builder skips re-running the heavy latest-price aggregation over the snapshot table.</summary>
@@ -62,17 +63,28 @@ public class RecipeTreeBuilder
                 .ToDictionary(g => g.Key, g => g.First().Icon);
         }
 
-        if (_latestPrices is null)
+        if (_latestPrices is null || _currencyWeights is null)
         {
-            // Latest snapshot per item (same shape as the Items grid uses), folded to a (buy, sell) map.
+            // Latest snapshot per item, fetched once for both the (buy, sell) price map and the currency
+            // weights (which also need supply, for the liquidity gate). The grid may already have supplied the
+            // price map via UseLatestPrices; the weights still need this pass (run in the background warm-up).
             IQueryable<long> latestIds = _dbContext.PriceSnapshots
                 .GroupBy(snapshot => snapshot.ItemId)
                 .Select(group => group.Max(snapshot => snapshot.Id));
             var latest = await _dbContext.PriceSnapshots.AsNoTracking()
                 .Where(snapshot => latestIds.Contains(snapshot.Id))
-                .Select(snapshot => new { snapshot.ItemId, snapshot.Buy, snapshot.Sell })
+                .Select(snapshot => new { snapshot.ItemId, snapshot.Buy, snapshot.Sell, snapshot.Supply })
                 .ToListAsync(ct);
-            _latestPrices = latest.ToDictionary(row => row.ItemId, row => (row.Buy ?? 0, row.Sell ?? 0));
+
+            _latestPrices ??= latest.ToDictionary(row => row.ItemId, row => (row.Buy ?? 0, row.Sell ?? 0));
+
+            if (_currencyWeights is null)
+            {
+                var sellSupply = latest.ToDictionary(row => row.ItemId, row => (row.Sell ?? 0, row.Supply));
+                _currencyWeights = CurrencyValuer
+                    .DeriveWeights(itemId => sellSupply.GetValueOrDefault(itemId))
+                    .ToDictionary(weight => weight.Currency, weight => weight.CopperPerUnit, StringComparer.Ordinal);
+            }
         }
 
         // Force the embedded static data (vendor catalog ~22 MB JSON, forge recipes) to parse now — it
@@ -458,10 +470,26 @@ public class RecipeTreeBuilder
                     .ToList()))
             .GroupBy(offer => $"{offer.Quantity}|{string.Join('+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}"))}")
             .Select(group => group.First())
-            .OrderBy(offer => offer.Quantity == 1 ? 0 : 1)
+            // Cheapest coin-equivalent first (per the node's whole count), so PrimaryVendorOffer is the best buy.
+            // Offers we can't value (an unweighted account currency) sort last but stay listed.
+            .OrderBy(offer => PurchaseCoinValue(offer, node.Count) ?? decimal.MaxValue)
             .ThenBy(offer => offer.Cost.Count)
-            .ThenBy(offer => offer.Cost[0].Amount)
             .ToList();
+    }
+
+    /// <summary>The coin-equivalent of buying the node's whole <paramref name="count"/> via this per-bundle
+    /// offer (bundles needed × the offer's valued cost), or null when a cost currency has no derived weight.</summary>
+    private decimal? PurchaseCoinValue(Model.VendorOffer offer, long count)
+    {
+        decimal? perBundle = OfferValuer.CoinValue(
+            offer, _currencyWeights!, itemId => _latestPrices!.GetValueOrDefault(itemId).Sell);
+        if (perBundle is not { } value)
+        {
+            return null;
+        }
+
+        long bundles = (count + offer.Quantity - 1) / offer.Quantity;
+        return value * bundles;
     }
 
     /// <summary>The icon URL for a cost component's currency, or null for an item-currency (rendered via its item
