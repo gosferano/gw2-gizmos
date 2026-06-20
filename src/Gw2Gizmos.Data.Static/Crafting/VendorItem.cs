@@ -1,37 +1,67 @@
 namespace Gw2Gizmos.Data.Static.Crafting;
 
-/// <summary>What an NPC vendor charges in. Only <see cref="Coin"/> gives a direct copper price the engine can
-/// use today; the others are recorded for completeness (and a future currency-to-coin conversion).</summary>
-public enum VendorCurrency
-{
-    Coin,
-    Karma,
-    SpiritShard,
-    Gem,
-    DungeonToken,
-    Other
-}
-
 /// <summary>
-/// A fixed price an NPC vendor sells an item for — data the GW2 API doesn't expose (it only has the
-/// merchant <em>sell-back</em> value). Used as a price floor/fallback when an item has no trading-post
-/// listing, so vendor-bought mats (Thermocatalytic Reagent, thread, scraps, …) aren't valued at 0.
+/// An item sold by one or more NPC vendors — data the GW2 API doesn't expose (it only has the merchant
+/// sell-back value). Scraped from the wiki (see <c>tools/Gw2Gizmos.Wiki.DataScraper</c>) and embedded whole,
+/// so the full price (every vendor, every currency) is available — not just coin. The recipe engine uses the
+/// derived <see cref="CopperPerUnit"/> as a price floor; the UI can show the complete offer list.
 /// </summary>
 public sealed record VendorItem
 {
-    public required int ItemId { get; init; }
+    /// <summary>The sold item's GW2 item id (null for the rare wiki page with no game id).</summary>
+    public int? GameId { get; init; }
 
-    public required VendorCurrency Currency { get; init; }
+    /// <summary>The item's wiki/display name.</summary>
+    public string Item { get; init; } = "";
 
-    /// <summary>Price charged for one purchase (in the unit of <see cref="Currency"/>).</summary>
-    public required int Cost { get; init; }
+    /// <summary>Every vendor offer for this item (different vendors, currencies, quantities).</summary>
+    public IReadOnlyList<VendorOffer> Offers { get; init; } = [];
 
-    /// <summary>How many items a single purchase yields (most are 1).</summary>
+    /// <summary>
+    /// Cheapest coin (copper) price per single unit across all offers, or null if no vendor sells it for plain
+    /// coin. This is what the recipe engine uses today; currency-priced offers await a currency→coin model.
+    /// </summary>
+    public int? CopperPerUnit
+    {
+        get
+        {
+            int? best = null;
+            foreach (VendorOffer offer in Offers)
+            {
+                if (offer.Quantity > 0 && offer.Cost is [{ Currency: "Coin", Value: > 0 } coin])
+                {
+                    int perUnit = coin.Value / offer.Quantity;
+                    best = best is null ? perUnit : Math.Min(best.Value, perUnit);
+                }
+            }
+
+            return best;
+        }
+    }
+}
+
+/// <summary>One vendor's offer for an item: a vendor, how many you get, and what it costs (possibly several
+/// components, e.g. coin + a currency).</summary>
+public sealed record VendorOffer
+{
+    public string Vendor { get; init; } = "";
+
     public int Quantity { get; init; } = 1;
 
-    /// <summary>Vendor name / location, informational (e.g. "Master Craftsman, Lion's Arch").</summary>
-    public string? Npc { get; init; }
+    public IReadOnlyList<CostComponent> Cost { get; init; } = [];
+}
 
-    /// <summary>Per-item cost in copper, or null when priced in a non-coin currency we don't convert yet.</summary>
-    public int? CopperPerUnit => Currency == VendorCurrency.Coin ? Cost / Quantity : null;
+/// <summary>One component of a price: <see cref="Value"/> of <see cref="Currency"/>. The currency is either a
+/// tradeable item (<see cref="ItemId"/> set) or an account currency (<see cref="CurrencyId"/> set; Coin = 1).</summary>
+public sealed record CostComponent
+{
+    public int Value { get; init; }
+
+    public string Currency { get; init; } = "";
+
+    /// <summary>/v2/items id when the currency paid is itself a tradeable item (ecto, tokens, …).</summary>
+    public int? ItemId { get; init; }
+
+    /// <summary>/v2/currencies id when the currency is an account currency (Coin, Karma, Volatile Magic, …).</summary>
+    public int? CurrencyId { get; init; }
 }

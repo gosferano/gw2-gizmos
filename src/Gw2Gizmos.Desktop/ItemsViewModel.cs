@@ -41,6 +41,11 @@ public sealed class ItemsViewModel : ViewModelBase
     private ICollectionView _view;
     private readonly DispatcherTimer _filterDebounce;
 
+    // The recipe-tree builder, warmed in the background as part of the grid load (reusing the grid's prices, so
+    // no second price aggregation) and reused across selections — memoized, all in-memory. Held as a task so a
+    // selection that lands before warm-up finishes just awaits it. Re-created on each grid refresh.
+    private Task<RecipeTreeBuilder>? _treeBuilderTask;
+
     public ItemsViewModel(IServiceScopeFactory scopeFactory, FeatureSettingsStore features)
     {
         _scopeFactory = scopeFactory;
@@ -76,7 +81,8 @@ public sealed class ItemsViewModel : ViewModelBase
         IsRefreshing = true;
         try
         {
-            (List<ItemRow> rows, DateTimeOffset? updatedAt) = await Task.Run(LoadRows);
+            (List<ItemRow> rows, DateTimeOffset? updatedAt, Dictionary<int, (int Buy, int Sell)> prices) =
+                await Task.Run(LoadRows);
 
             // Build the collection in one shot (the ObservableCollection constructor copies without per-item
             // events) and swap in a fresh view, rather than raising thousands of CollectionChanged events.
@@ -84,6 +90,10 @@ public sealed class ItemsViewModel : ViewModelBase
             ICollectionView view = CollectionViewSource.GetDefaultView(_items);
             view.Filter = MatchesFilter;
             View = view;
+
+            // Warm a fresh tree builder in the background with these prices, so the first craft-tree click is
+            // instant (and uses current prices) instead of paying the load on click.
+            _treeBuilderTask = BuildTreeBuilderAsync(prices);
 
             PricesUpdatedAt = updatedAt;
             OnPropertyChanged(nameof(PricesUpdatedAt));
@@ -107,7 +117,7 @@ public sealed class ItemsViewModel : ViewModelBase
     /// fresh install it may not exist yet, in which case the query throws and <see cref="LoadAsync"/> leaves
     /// the grid empty.
     /// </summary>
-    private (List<ItemRow> Rows, DateTimeOffset? UpdatedAt) LoadRows()
+    private (List<ItemRow> Rows, DateTimeOffset? UpdatedAt, Dictionary<int, (int Buy, int Sell)> Prices) LoadRows()
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -115,6 +125,7 @@ public sealed class ItemsViewModel : ViewModelBase
         // Live market figures: the most recent price poll per item (best buy/sell + demand/supply). Skipped
         // entirely when price history is off, so stale snapshots from an earlier run don't read as current.
         Dictionary<int, PricePoint> prices = new();
+        Dictionary<int, (int Buy, int Sell)> priceMap = new(); // reused by the craft-tree builder, so it skips re-aggregating
         DateTimeOffset? updatedAt = null;
         if (PricesEnabled)
         {
@@ -137,6 +148,7 @@ public sealed class ItemsViewModel : ViewModelBase
                 row => row.ItemId,
                 row => new PricePoint(row.Buy, row.Sell, row.Demand, row.Supply)
             );
+            priceMap = latest.ToDictionary(row => row.ItemId, row => (row.Buy ?? 0, row.Sell ?? 0));
             // Show the latest poll's time so users can see how fresh the grid's prices are.
             updatedAt = latest.Count > 0 ? latest.Max(row => row.TimestampUtc).LocalDateTime : null;
         }
@@ -147,9 +159,12 @@ public sealed class ItemsViewModel : ViewModelBase
             ? db.ItemCraftCosts.AsNoTracking().ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost)
             : new Dictionary<int, double>();
 
-        // Every item any recipe outputs — craftable even if it never reaches the trading post.
+        // Every item any recipe outputs — craftable even if it never reaches the trading post. Includes the
+        // static recipes the API doesn't expose (Mystic Forge / Place-of-Power), so forge-only items like
+        // legendaries are marked craftable and get their recipe tree, not just API-craftable items.
         HashSet<int> craftableIds = db.Recipes.AsNoTracking()
             .Select(recipe => recipe.OutputItemId).Distinct().ToHashSet();
+        craftableIds.UnionWith(Gw2Gizmos.Data.Static.Crafting.StaticRecipes.ByOutputItemId.Keys);
 
         // Every item with a trading-post listing — "tradeable" independent of whether prices are being recorded,
         // so tradeable items still appear (with blank price columns) when price history is off.
@@ -200,7 +215,7 @@ public sealed class ItemsViewModel : ViewModelBase
             ));
         }
 
-        return (rows, updatedAt);
+        return (rows, updatedAt, priceMap);
     }
 
     /// <summary>The grid binds here so sorting and the text filter apply over the latest loaded rows.</summary>
@@ -346,6 +361,19 @@ public sealed class ItemsViewModel : ViewModelBase
         }
     }
 
+    // Loads a recipe-tree builder on a background thread, reusing the grid's prices so it only has to pull
+    // recipes/names/currencies (no second price aggregation). Runs once per grid load; trees await the result.
+    private Task<RecipeTreeBuilder> BuildTreeBuilderAsync(Dictionary<int, (int Buy, int Sell)> prices) =>
+        Task.Run(async () =>
+        {
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            var builder = new RecipeTreeBuilder(dbContext, RecipeFinder.Configuration.Default);
+            builder.UseLatestPrices(prices);
+            await builder.EnsureLoadedAsync(CancellationToken.None);
+            return builder;
+        });
+
     private async Task UpdateTreeAsync(ItemRow? item)
     {
         if (item is null || !item.IsCraftable)
@@ -354,12 +382,18 @@ public sealed class ItemsViewModel : ViewModelBase
             return;
         }
 
-        // Build off the UI thread; one item's tree is a handful of memoized queries even for deep chains.
+        Task<RecipeTreeBuilder>? builderTask = _treeBuilderTask;
+        if (builderTask is null)
+        {
+            SelectedTree = Array.Empty<RecipeNode>();
+            return;
+        }
+
+        // Await the background-warmed builder (usually already loaded), then build off the UI thread. Once the
+        // builder is loaded the whole walk is in-memory and memoized, so this is fast.
         RecipeNode root = await Task.Run(async () =>
         {
-            using IServiceScope scope = _scopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-            var builder = new RecipeTreeBuilder(dbContext, RecipeFinder.Configuration.Default);
+            RecipeTreeBuilder builder = await builderTask;
             return await builder.BuildTreeAsync(item.ItemId, CancellationToken.None);
         });
 

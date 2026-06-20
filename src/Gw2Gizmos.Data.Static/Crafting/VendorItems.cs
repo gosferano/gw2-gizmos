@@ -1,33 +1,49 @@
+using System.IO.Compression;
+using System.Text.Json;
+
 namespace Gw2Gizmos.Data.Static.Crafting;
 
 /// <summary>
-/// Hardcoded NPC vendor prices — the GW2 API has no vendor <em>buy</em> price endpoint, so common vendor mats
-/// are curated here. The recipe engine uses these as a price fallback when an item isn't listed on the trading
-/// post, so vendor-bought ingredients aren't valued at 0.
-/// Curate from the wiki — verify each price in-game before trusting it.
+/// The full NPC vendor catalog — the GW2 API has no vendor <em>buy</em>-price endpoint, so it's scraped from
+/// the wiki (see <c>tools/Gw2Gizmos.Wiki.DataScraper</c>) and embedded whole as a gzipped JSON
+/// (<c>Crafting/Data/vendor-items.json.gz</c>, ~750 KB compressed from ~22 MB). Every vendor/currency/price is
+/// kept for display; the recipe engine uses <see cref="CopperPriceFor"/> as a price floor for items the
+/// trading post doesn't list (or where a vendor undercuts it), so they aren't valued at 0.
 /// </summary>
 public static class VendorItems
 {
-    public static readonly IReadOnlyList<VendorItem> All = new VendorItem[]
-    {
-        Coin(itemId: 46747, copper: 1496, quantity: 10, npc: "Master Craftsman"), // Thermocatalytic Reagent
-    };
+    public static readonly IReadOnlyList<VendorItem> All = Load();
 
     /// <summary>Vendor items keyed by item id, for the engine's price-fallback lookup.</summary>
-    public static readonly IReadOnlyDictionary<int, VendorItem> ByItemId =
-        All.ToDictionary(item => item.ItemId);
+    public static readonly IReadOnlyDictionary<int, VendorItem> ByItemId = All
+        .Where(item => item.GameId is not null)
+        .GroupBy(item => item.GameId!.Value)
+        .ToDictionary(group => group.Key, group => group.First());
 
-    /// <summary>The per-unit copper price for an item if a coin-priced vendor sells it; otherwise null.</summary>
+    /// <summary>The cheapest per-unit copper price for an item if any vendor sells it for coin; otherwise null.</summary>
     public static int? CopperPriceFor(int itemId) =>
         ByItemId.TryGetValue(itemId, out VendorItem? item) ? item.CopperPerUnit : null;
 
-    private static VendorItem Coin(int itemId, int copper, int quantity = 1, string? npc = null) =>
-        new()
-        {
-            ItemId = itemId,
-            Currency = VendorCurrency.Coin,
-            Cost = copper,
-            Quantity = quantity,
-            Npc = npc
-        };
+    /// <summary>Whether any vendor sells this item for any currency (coin, karma, dungeon tokens, …). Used to
+    /// tell a coin-less-but-obtainable item (e.g. a dungeon-token legendary gift) from a genuine dead-end. The
+    /// scraped catalog is comprehensive — the scraper seeds every account currency from /v2/currencies before
+    /// the SMW sweep — so a plain catalog lookup suffices.</summary>
+    public static bool IsAcquirable(int itemId) => ByItemId.ContainsKey(itemId);
+
+    private static IReadOnlyList<VendorItem> Load()
+    {
+        // Options are inlined (not a static field): static fields initialize in textual order, and `All` above
+        // runs Load() before a field declared later would be set — a null options arg silently breaks the
+        // case-insensitive "items" match.
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using Stream compressed = EmbeddedData.Open("vendor-items.json.gz");
+        using var json = new GZipStream(compressed, CompressionMode.Decompress);
+        VendorCatalog? catalog = JsonSerializer.Deserialize<VendorCatalog>(json, options);
+        return catalog?.Items ?? [];
+    }
+
+    private sealed record VendorCatalog
+    {
+        public IReadOnlyList<VendorItem> Items { get; init; } = [];
+    }
 }

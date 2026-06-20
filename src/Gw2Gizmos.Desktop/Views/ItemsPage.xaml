@@ -15,6 +15,7 @@
             <conv:BoolToVisibilityConverter x:Key="Bool" />
             <conv:BoolToVisibilityConverter x:Key="InverseBool" Invert="True" />
             <conv:BoolToFontWeightConverter x:Key="Bold" />
+            <conv:VendorOfferCostConverter x:Key="VendorOfferCost" />
 
             <!-- One tab header: a rounded-top "browser tab". Selected = brighter (blends into the card body),
                  unselected = dimmer, with a hover step. -->
@@ -225,10 +226,16 @@
                                        Visibility="{Binding ShowCraftTreePlaceholder, Converter={StaticResource Bool}}" />
                             <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" BorderThickness="0"
                                   Margin="0,8,0,0"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True"
                                   Visibility="{Binding PricesSyncing, Converter={StaticResource InverseBool}}">
                             <TreeView.ItemContainerStyle>
                                 <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                                    <Setter Property="IsExpanded" Value="True" />
+                                    <!-- Only the top couple of levels expand by default; deeper nodes (a legendary's
+                                         promotion chains run to tens of thousands of nodes) render lazily on expand,
+                                         so opening a craft tree doesn't freeze the UI rendering every node at once. -->
+                                    <Setter Property="IsExpanded" Value="{Binding AutoExpand, Mode=OneTime}" />
                                 </Style>
                             </TreeView.ItemContainerStyle>
                             <TreeView.Resources>
@@ -249,18 +256,70 @@
                                             <TextBlock Text="  ·  " Opacity="0.6" />
                                             <TextBlock Text="craft " Opacity="0.6"
                                                        FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
-                                            <!-- Craft cost as coins, or an em-dash when the item has no recipe (a 0 would read as "free"). -->
+                                            <!-- Craft cost as coins, or an em-dash when there's no recipe, or the craft
+                                                 can't be done because a direct ingredient is an unobtainable dead-end
+                                                 (then the node collapses to its buy price). A 0 would read as "free". -->
                                             <c:CoinDisplay Copper="{Binding CraftingCost}" Opacity="0.6"
                                                            FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                           Visibility="{Binding IsCraftable, Converter={StaticResource Bool}}" />
+                                                           Visibility="{Binding ShowCraftCost, Converter={StaticResource Bool}}" />
                                             <TextBlock Text="—" Opacity="0.6"
                                                        FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                       Visibility="{Binding IsCraftable, Converter={StaticResource InverseBool}}" />
+                                                       Visibility="{Binding ShowCraftCost, Converter={StaticResource InverseBool}}" />
                                             <TextBlock Text="  ·  " Opacity="0.6" />
                                             <TextBlock Text="buy " Opacity="0.6"
                                                        FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
+                                            <!-- Coin price (trading post / coin vendor). -->
                                             <c:CoinDisplay Copper="{Binding BuyPrice}" Opacity="0.6"
-                                                           FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
+                                                           FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
+                                                           Visibility="{Binding HasCoinBuyPrice, Converter={StaticResource Bool}}" />
+                                            <!-- Vendor price: the cheapest offer's full cost — every component (amount + the
+                                                 currency's icon) shown together, in place of a coin "0" when the item has no
+                                                 trade offer but a vendor sells it for a currency. Hover lists every offer. -->
+                                            <ItemsControl ItemsSource="{Binding PrimaryVendorPurchase.Cost}" VerticalAlignment="Center"
+                                                          ToolTipService.InitialShowDelay="200"
+                                                          Visibility="{Binding ShowVendorPrice, Converter={StaticResource Bool}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                            <!-- A coin component renders as gold/silver/copper; any other currency as amount + icon. -->
+                                                            <c:CoinDisplay Copper="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center"
+                                                                           Visibility="{Binding IsCoin, Converter={StaticResource Bool}}" />
+                                                            <TextBlock Text="{Binding Amount}" Opacity="0.6" VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsCoin, Converter={StaticResource InverseBool}}" />
+                                                            <c:ItemImage ItemId="{Binding ItemId}" Width="16" Height="16" Margin="2,0,0,0"
+                                                                         VerticalAlignment="Center"
+                                                                         Visibility="{Binding HasItemIcon, Converter={StaticResource Bool}}" />
+                                                            <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="16" Height="16" Margin="2,0,0,0"
+                                                                             VerticalAlignment="Center"
+                                                                             Visibility="{Binding HasCurrencyIcon, Converter={StaticResource Bool}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                <ItemsControl.ToolTip>
+                                                    <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled">
+                                                        <StackPanel MaxWidth="320">
+                                                            <TextBlock Text="Sold by a vendor for" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,4" />
+                                                            <ItemsControl ItemsSource="{Binding VendorPurchases}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <!-- One offer per line; wraps so long multi-currency costs fit. -->
+                                                                        <TextBlock Text="{Binding Converter={StaticResource VendorOfferCost}}"
+                                                                                   TextWrapping="Wrap" Margin="0,1" />
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </ScrollViewer>
+                                                </ItemsControl.ToolTip>
+                                            </ItemsControl>
+                                            <!-- Unpurchasable: no trade offer, no vendor (account-bound). -->
+                                            <TextBlock Text="—" Opacity="0.6"
+                                                       FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
+                                                       Visibility="{Binding ShowBuyDash, Converter={StaticResource Bool}}" />
                                         </StackPanel>
                                     </StackPanel>
                                 </HierarchicalDataTemplate>
