@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Controls;
 using Gw2Gizmos.Desktop.Mvvm;
 
@@ -17,6 +19,7 @@ namespace Gw2Gizmos.Desktop;
 public sealed class SessionsViewModel : ViewModelBase
 {
     private readonly SelectedSessionService _selected;
+    private readonly SessionDeletionTracker _deleted;
     private readonly List<GameSessionRow> _all = new();
     private string _status = "";
     private int _selectedSortIndex;
@@ -24,9 +27,11 @@ public sealed class SessionsViewModel : ViewModelBase
     private DateTime? _fromDate;
     private DateTime? _toDate;
 
-    public SessionsViewModel(AccountReader reader, SelectedAccountService account, SelectedSessionService selected)
+    public SessionsViewModel(
+        AccountReader reader, SelectedAccountService account, SelectedSessionService selected, SessionDeletionTracker deleted)
     {
         _selected = selected;
+        _deleted = deleted;
         HasAccount = !string.IsNullOrEmpty(account.AccountId);
         OpenCommand = new RelayCommand<GameSessionRow>(Open);
         ToggleDirectionCommand = new RelayCommand(() => Descending = !Descending);
@@ -125,7 +130,8 @@ public sealed class SessionsViewModel : ViewModelBase
         {
             List<GameSessionRow> sessions = await Task.Run(() => reader.GetGameSessions(accountId));
             _all.Clear();
-            _all.AddRange(sessions);
+            // Hide any sitting deleted this run; the worker clears it from the DB a few seconds later.
+            _all.AddRange(sessions.Where(s => !_deleted.IsSessionDeleted(s.Id)));
 
             OnPropertyChanged(nameof(HasAnySessions));
             Status = _all.Count == 0
@@ -193,14 +199,28 @@ public sealed class SessionsViewModel : ViewModelBase
 public sealed class SessionViewModel : ViewModelBase
 {
     private readonly SelectedSessionService _selected;
+    private readonly DeleteRequestStore _deletes;
+    private readonly SessionDeletionTracker _deleted;
+    private readonly string? _accountId;
+    private readonly long? _sessionId;
     private string _status = "";
     private SessionValueSummary _value = SessionValueSummary.Empty;
 
-    public SessionViewModel(AccountReader reader, SelectedAccountService account, SelectedSessionService selected)
+    public SessionViewModel(
+        AccountReader reader,
+        SelectedAccountService account,
+        SelectedSessionService selected,
+        DeleteRequestStore deletes,
+        SessionDeletionTracker deleted)
     {
         _selected = selected;
+        _deletes = deletes;
+        _deleted = deleted;
+        _accountId = account.AccountId;
+        _sessionId = selected.GameSessionId;
         Breadcrumbs = SessionBreadcrumbs.Session(selected.GameSessionTitle);
         OpenCommand = new RelayCommand<SessionSegmentRow>(Open);
+        DeleteSessionCommand = new RelayCommand(DeleteSession);
 
         if (account.AccountId is { } accountId && selected.GameSessionId is { } sessionId)
         {
@@ -240,18 +260,36 @@ public sealed class SessionViewModel : ViewModelBase
 
     public RelayCommand<SessionSegmentRow> OpenCommand { get; }
 
+    /// <summary>Deletes this whole sitting (and its segments) via the worker; shown by the page's bottom button.</summary>
+    public RelayCommand DeleteSessionCommand { get; }
+
+    /// <summary>The bottom Delete button shows only once loaded, when the sitting isn't the active (in-progress) one.</summary>
+    public bool CanDeleteSession => _accountId is not null && HasSegments && !Segments.Any(s => s.IsActive);
+
     private async Task LoadAsync(AccountReader reader, string accountId, long sessionId)
     {
         try
         {
             List<SessionSegmentRow> segments = await Task.Run(() => reader.GetSessionSegments(accountId, sessionId));
-            foreach (SessionSegmentRow segment in segments)
+            // Drop any segment deleted this run. If that empties the sitting, its last segment was deleted on the
+            // loot page (the worker also removes the now-empty session) — there's nothing to show, so go back to the
+            // list, marking the session deleted so it's hidden there too until the worker catches up.
+            List<SessionSegmentRow> visible = segments.Where(s => !_deleted.IsSegmentDeleted(s.Id)).ToList();
+            if (visible.Count == 0 && segments.Count > 0)
+            {
+                _deleted.MarkSession(sessionId);
+                App.NavigateTo(typeof(SessionsPage));
+                return;
+            }
+
+            foreach (SessionSegmentRow segment in visible)
             {
                 Segments.Add(segment);
             }
 
             OnPropertyChanged(nameof(HasSegments));
-            Status = segments.Count == 0 ? "No characters recorded for this session." : "";
+            OnPropertyChanged(nameof(CanDeleteSession));
+            Status = Segments.Count == 0 ? "No characters recorded for this session." : "";
 
             Value = await Task.Run(() => reader.GetSessionValue(accountId, sessionId));
 
@@ -279,20 +317,56 @@ public sealed class SessionViewModel : ViewModelBase
             return;
         }
 
-        // Include the start time so two stretches of the same character get distinct breadcrumbs.
-        _selected.SelectSegment(segment.Id, $"{segment.CharacterName} ({segment.StartedAtUtc.LocalDateTime:HH:mm})");
+        // Include the start time so two stretches of the same character get distinct breadcrumbs. Carry whether the
+        // segment is active so the loot page knows whether to offer Delete.
+        _selected.SelectSegment(
+            segment.Id, $"{segment.CharacterName} ({segment.StartedAtUtc.LocalDateTime:HH:mm})", segment.IsActive);
         App.NavigateTo(typeof(SessionLootPage));
+    }
+
+    private void DeleteSession()
+    {
+        // The active sitting is still being written by the tracker; its button is hidden, but guard here too.
+        if (_accountId is not { } accountId || _sessionId is not { } sessionId || !CanDeleteSession)
+        {
+            return;
+        }
+
+        if (!SessionDeletePrompt.ConfirmSession())
+        {
+            return;
+        }
+
+        _deleted.MarkSession(sessionId);
+        _deletes.Enqueue(DeletableData.Session, accountId, sessionId);
+        App.NavigateTo(typeof(SessionsPage));
     }
 }
 
 /// <summary>Backs a segment's loot page: the currencies and items gained/lost while that character was active.</summary>
 public sealed class SessionLootViewModel : ViewModelBase
 {
+    private readonly DeleteRequestStore _deletes;
+    private readonly SessionDeletionTracker _deleted;
+    private readonly string? _accountId;
+    private readonly long? _segmentId;
     private bool _isEmpty;
 
-    public SessionLootViewModel(AccountReader reader, SelectedAccountService account, SelectedSessionService selected)
+    public SessionLootViewModel(
+        AccountReader reader,
+        SelectedAccountService account,
+        SelectedSessionService selected,
+        DeleteRequestStore deletes,
+        SessionDeletionTracker deleted)
     {
+        _deletes = deletes;
+        _deleted = deleted;
+        _accountId = account.AccountId;
+        _segmentId = selected.SegmentId;
         Breadcrumbs = SessionBreadcrumbs.Segment(selected.GameSessionTitle, selected.SegmentTitle);
+        DeleteSegmentCommand = new RelayCommand(DeleteSegment);
+        // The active (in-progress) segment is still being written, so it can't be deleted.
+        CanDelete = account.AccountId is not null && selected.SegmentId is not null && !selected.SegmentIsActive;
 
         if (account.AccountId is { } accountId && selected.SegmentId is { } segmentId)
         {
@@ -306,6 +380,12 @@ public sealed class SessionLootViewModel : ViewModelBase
     public LootItemsSorter ItemsSorter { get; } = new();
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    /// <summary>Deletes this segment via the worker; shown by the page's bottom button when <see cref="CanDelete"/>.</summary>
+    public RelayCommand DeleteSegmentCommand { get; }
+
+    /// <summary>Whether the bottom Delete button shows — false for the active (in-progress) segment.</summary>
+    public bool CanDelete { get; }
 
     public bool HasCurrencies => Currencies.Count > 0;
 
@@ -336,6 +416,42 @@ public sealed class SessionLootViewModel : ViewModelBase
             // Leave empty on a read failure.
         }
     }
+
+    private void DeleteSegment()
+    {
+        if (_accountId is not { } accountId || _segmentId is not { } segmentId || !CanDelete)
+        {
+            return;
+        }
+
+        if (!SessionDeletePrompt.ConfirmSegment())
+        {
+            return;
+        }
+
+        // Back to the session, which re-reads without this segment (and bounces to the list if it was the last one).
+        _deleted.MarkSegment(segmentId);
+        _deletes.Enqueue(DeletableData.SessionSegment, accountId, segmentId);
+        App.NavigateTo(typeof(SessionPage));
+    }
+}
+
+/// <summary>The delete confirmations for a play session and a character segment — both permanent (session history
+/// isn't re-synced), so they warn before the worker clears the rows.</summary>
+internal static class SessionDeletePrompt
+{
+    public static bool ConfirmSession() => Confirm(
+        "Delete this play session?",
+        "This permanently removes the recorded sitting and all its character segments. Session history doesn't re-sync.");
+
+    public static bool ConfirmSegment() => Confirm(
+        "Delete this character segment?",
+        "This permanently removes the recorded stretch. The session totals are unchanged, but the figures on the "
+            + "neighbouring segments may shift to cover the gap. Deleting the last segment removes the session too.");
+
+    private static bool Confirm(string title, string detail) =>
+        MessageBox.Show($"{title}\n\n{detail}", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+        == MessageBoxResult.Yes;
 }
 
 /// <summary>

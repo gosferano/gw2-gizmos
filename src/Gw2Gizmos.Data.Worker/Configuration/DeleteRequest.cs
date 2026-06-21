@@ -16,4 +16,10 @@ public sealed class DeleteRequest
 
     /// <summary>The target account, or null for a global (non-account) category.</summary>
     public string? AccountId { get; set; }
+
+    /// <summary>
+    /// The specific row to delete, for targeted categories that act on one entity rather than a whole table
+    /// (e.g. a single play session or character segment). Null for the bulk categories.
+    /// </summary>
+    public long? TargetId { get; set; }
 }

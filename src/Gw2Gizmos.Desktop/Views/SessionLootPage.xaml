@@ -48,6 +48,12 @@
                 </DockPanel>
                 <ItemsControl ItemsSource="{Binding ItemsSorter.View}" ItemTemplate="{StaticResource SessionItemRowTemplate}" />
             </StackPanel>
+
+            <!-- Delete this character segment. Hidden on the active, still-tracked segment. -->
+            <ui:Button Content="Delete segment" Appearance="Danger" Margin="0,24,0,0" HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Center" Height="{StaticResource FormControlHeight}"
+                       Command="{Binding DeleteSegmentCommand}"
+                       Visibility="{Binding CanDelete, Converter={StaticResource Bool}}" />
         </StackPanel>
     </c:PageShell>
 </Page>

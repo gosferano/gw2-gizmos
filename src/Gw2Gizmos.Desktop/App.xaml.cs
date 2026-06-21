@@ -140,7 +140,9 @@ public partial class App : Application
 
         if (s.SegmentId is { } segmentId)
         {
-            session.SelectSegment(segmentId, s.SegmentTitle);
+            // Restored navigation state doesn't carry the segment's live status; treat it as a normal (deletable)
+            // segment. The active segment is a transient, in-progress thing that isn't deep-linked to in practice.
+            session.SelectSegment(segmentId, s.SegmentTitle, isActive: false);
         }
 
         if (s.Character is { } character)
@@ -475,6 +477,8 @@ public partial class App : Application
         builder.Services.AddSingleton<SyncTriggerStore>();
         // Queues user "delete stored data" requests; shipped to the worker (sole DB writer) over the config pipe.
         builder.Services.AddSingleton<DeleteRequestStore>();
+        // Hides sessions/segments the user deleted this run until the worker processes the delete (avoids a reappear).
+        builder.Services.AddSingleton<SessionDeletionTracker>();
         builder.Services.AddSingleton<FileGw2ApiKeyStore>();
         builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
         // Shared validate-and-store path for the API Keys page and first-run onboarding.
