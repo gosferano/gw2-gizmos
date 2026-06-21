@@ -102,6 +102,12 @@
                     <ItemsControl ItemsSource="{Binding ItemsSorter.View}" ItemTemplate="{StaticResource SessionItemRowTemplate}" />
                 </StackPanel>
             </StackPanel>
+
+            <!-- Delete this whole sitting (and its segments). Hidden on the active, still-tracked session. -->
+            <ui:Button Content="Delete session" Appearance="Danger" Margin="0,24,0,0" HorizontalAlignment="Stretch"
+                       HorizontalContentAlignment="Center" Height="{StaticResource FormControlHeight}"
+                       Command="{Binding DeleteSessionCommand}"
+                       Visibility="{Binding CanDeleteSession, Converter={StaticResource Bool}}" />
         </StackPanel>
     </c:PageShell>
 </Page>

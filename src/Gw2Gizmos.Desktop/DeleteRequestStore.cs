@@ -15,12 +15,15 @@ public sealed class DeleteRequestStore
     private readonly List<DeleteRequest> _requests = new();
     private long _nextId;
 
-    /// <summary>Queues a delete of <paramref name="typeKey"/> for an account (or null for global data).</summary>
-    public void Enqueue(string typeKey, string? accountId)
+    /// <summary>
+    /// Queues a delete of <paramref name="typeKey"/> for an account (or null for global data). Pass
+    /// <paramref name="targetId"/> for targeted categories that act on a single row (a session or segment).
+    /// </summary>
+    public void Enqueue(string typeKey, string? accountId, long? targetId = null)
     {
         lock (_gate)
         {
-            _requests.Add(new DeleteRequest { Id = ++_nextId, TypeKey = typeKey, AccountId = accountId });
+            _requests.Add(new DeleteRequest { Id = ++_nextId, TypeKey = typeKey, AccountId = accountId, TargetId = targetId });
         }
     }
 

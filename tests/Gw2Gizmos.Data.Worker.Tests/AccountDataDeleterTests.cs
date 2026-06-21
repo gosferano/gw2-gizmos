@@ -24,11 +24,11 @@ public sealed class AccountDataDeleterTests : IDisposable
 
     public void Dispose() => _fixture.Dispose();
 
-    private async Task Delete(string typeKey, string? accountId = A)
+    private async Task Delete(string typeKey, string? accountId = A, long? targetId = null)
     {
         await using Gw2GizmosDbContext db = _fixture.NewContext();
         var deleter = new AccountDataDeleter(db, NullLogger<AccountDataDeleter>.Instance);
-        await deleter.DeleteAsync(typeKey, accountId, CancellationToken.None);
+        await deleter.DeleteAsync(typeKey, accountId, targetId, CancellationToken.None);
     }
 
     [Fact]
@@ -105,6 +105,65 @@ public sealed class AccountDataDeleterTests : IDisposable
     }
 
     [Fact]
+    public async Task Session_ById_DeletesThatSessionAndItsSegments_AndIsAccountScoped()
+    {
+        long sessionId = await Query(d => d.GameSessions.Single(g => g.AccountId == A).Id);
+
+        await Delete(DeletableData.Session, targetId: sessionId);
+
+        Assert.Equal(0, await Count(d => d.GameSessions.Count(g => g.Id == sessionId)));
+        Assert.Equal(0, await Count(d => d.CharacterSegments.Count(s => s.GameSessionId == sessionId)));
+        // B's session + segments survive.
+        Assert.Equal(1, await Count(d => d.GameSessions.Count(g => g.AccountId == B)));
+        Assert.True(await Count(d => d.CharacterSegments.Count(s => d.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == B))) > 0);
+    }
+
+    [Fact]
+    public async Task Session_ById_WrongAccount_IsNoOp()
+    {
+        long sessionId = await Query(d => d.GameSessions.Single(g => g.AccountId == A).Id);
+
+        // Same id, but scoped to B → must not touch A's session.
+        await Delete(DeletableData.Session, accountId: B, targetId: sessionId);
+
+        Assert.Equal(1, await Count(d => d.GameSessions.Count(g => g.Id == sessionId)));
+        Assert.Equal(2, await Count(d => d.CharacterSegments.Count(s => s.GameSessionId == sessionId)));
+    }
+
+    [Fact]
+    public async Task SessionSegment_ById_DeletesOnlyThatSegment_AndKeepsSessionWhileOthersRemain()
+    {
+        long sessionId = await Query(d => d.GameSessions.Single(g => g.AccountId == A).Id);
+        long firstSegmentId = await Query(d =>
+            d.CharacterSegments.Where(s => s.GameSessionId == sessionId).OrderBy(s => s.Sequence).First().Id);
+
+        await Delete(DeletableData.SessionSegment, targetId: firstSegmentId);
+
+        Assert.Equal(0, await Count(d => d.CharacterSegments.Count(s => s.Id == firstSegmentId)));
+        // The other segment remains, so the session stays.
+        Assert.Equal(1, await Count(d => d.CharacterSegments.Count(s => s.GameSessionId == sessionId)));
+        Assert.Equal(1, await Count(d => d.GameSessions.Count(g => g.Id == sessionId)));
+    }
+
+    [Fact]
+    public async Task SessionSegment_DeletingLastSegment_AlsoDeletesTheSession()
+    {
+        long sessionId = await Query(d => d.GameSessions.Single(g => g.AccountId == A).Id);
+        List<long> segmentIds = await Query(d =>
+            d.CharacterSegments.Where(s => s.GameSessionId == sessionId).Select(s => s.Id).ToList());
+
+        foreach (long id in segmentIds)
+        {
+            await Delete(DeletableData.SessionSegment, targetId: id);
+        }
+
+        Assert.Equal(0, await Count(d => d.CharacterSegments.Count(s => s.GameSessionId == sessionId)));
+        Assert.Equal(0, await Count(d => d.GameSessions.Count(g => g.Id == sessionId)));
+        // B is untouched throughout.
+        Assert.Equal(1, await Count(d => d.GameSessions.Count(g => g.AccountId == B)));
+    }
+
+    [Fact]
     public async Task AllForAccount_WipesEverythingForAccountIncludingIdentity()
     {
         await Delete(DeletableData.AllForAccount);
@@ -150,6 +209,12 @@ public sealed class AccountDataDeleterTests : IDisposable
     // --- assertion helpers (fresh context each time so deletes are observed) ---
 
     private async Task<int> Count(Func<Gw2GizmosDbContext, int> query)
+    {
+        await using Gw2GizmosDbContext db = _fixture.NewContext();
+        return query(db);
+    }
+
+    private async Task<T> Query<T>(Func<Gw2GizmosDbContext, T> query)
     {
         await using Gw2GizmosDbContext db = _fixture.NewContext();
         return query(db);

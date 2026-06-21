@@ -25,6 +25,11 @@ public static class DeletableData
     public const string Characters = "Characters";
     public const string Sessions = "Sessions";
 
+    // Targeted account-scoped deletes that act on a single row by its id (DeleteRequest.TargetId), raised from the
+    // sessions UI rather than the Settings → Stored data bulk list, so they're deliberately not in AccountTypes.
+    public const string Session = "Session";
+    public const string SessionSegment = "SessionSegment";
+
     /// <summary>Every account-scoped category at once (plus the account identity row).</summary>
     public const string AllForAccount = "AllForAccount";
 

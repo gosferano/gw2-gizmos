@@ -66,7 +66,7 @@ public sealed class DeleteRequestProcessor : BackgroundService
                 {
                     using IServiceScope scope = _scopeFactory.CreateScope();
                     var deleter = scope.ServiceProvider.GetRequiredService<AccountDataDeleter>();
-                    await deleter.DeleteAsync(request.TypeKey, request.AccountId, stoppingToken);
+                    await deleter.DeleteAsync(request.TypeKey, request.AccountId, request.TargetId, stoppingToken);
                 },
                 stoppingToken
             );
