@@ -53,6 +53,8 @@ public partial class MainWindow : Window
         }
 
         _current = page;
+        // Let the page being left stop its live updates.
+        ((RootNavigation.Content as Control)?.DataContext as INavigationAware)?.OnNavigatedFrom();
         RootNavigation.Content = _pages?.Create(page);
 
         // Keep the rail in sync when navigation comes from code. Sub-pages without their own rail item leave the

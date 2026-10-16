@@ -13,11 +13,14 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Backs the Sessions hub: a card per play session of the selected account, each opening that session's character
 /// timeline. The full list is held and a sorted/date-filtered view is shown (sort by date, profit, or profit/hour,
-/// either direction). Transient, so it reloads on navigation. Empty until the (off-by-default) Play
+/// either direction). Refreshes in place as sessions start/end and loot syncs. Empty until the (off-by-default) Play
 /// sessions feature has recorded a session.
 /// </summary>
-public sealed class SessionsViewModel : ViewModelBase
+public sealed class SessionsViewModel : ViewModelBase, INavigationAware
 {
+    private readonly AccountReader _reader;
+    private readonly string? _accountId;
+    private readonly IDisposable _dataChanges;
     private readonly SelectedSessionService _selected;
     private readonly SessionDeletionTracker _deleted;
     private readonly INavigationService _navigation;
@@ -33,8 +36,11 @@ public sealed class SessionsViewModel : ViewModelBase
         SelectedAccountService account,
         SelectedSessionService selected,
         SessionDeletionTracker deleted,
-        INavigationService navigation)
+        INavigationService navigation,
+        DataChangeMonitor dataChanges)
     {
+        _reader = reader;
+        _accountId = account.AccountId;
         _selected = selected;
         _deleted = deleted;
         _navigation = navigation;
@@ -43,9 +49,19 @@ public sealed class SessionsViewModel : ViewModelBase
         ToggleDirectionCommand = new RelayCommand(() => Descending = !Descending);
         ClearFilterCommand = new RelayCommand(ClearFilter);
 
-        if (account.AccountId is { } accountId)
+        _ = LoadAsync();
+        _dataChanges = dataChanges.Subscribe(OnDataChanged);
+    }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
+
+    private void OnDataChanged(DataChanges changes)
+    {
+        // Loot syncs move profit; the clock only matters while a session's running duration is shown.
+        if ((changes & (DataChanges.Sessions | DataChanges.Holdings)) != 0
+            || ((changes & DataChanges.Clock) != 0 && _all.Any(s => s.IsActive)))
         {
-            _ = LoadAsync(reader, accountId);
+            _ = LoadAsync();
         }
     }
 
@@ -130,11 +146,16 @@ public sealed class SessionsViewModel : ViewModelBase
 
     public RelayCommand ClearFilterCommand { get; }
 
-    private async Task LoadAsync(AccountReader reader, string accountId)
+    private async Task LoadAsync()
     {
+        if (_accountId is not { } accountId)
+        {
+            return;
+        }
+
         try
         {
-            List<GameSessionRow> sessions = await Task.Run(() => reader.GetGameSessions(accountId));
+            List<GameSessionRow> sessions = await Task.Run(() => _reader.GetGameSessions(accountId));
             _all.Clear();
             // Hide any sitting deleted this run; the worker clears it from the DB a few seconds later.
             _all.AddRange(sessions.Where(s => !_deleted.IsSessionDeleted(s.Id)));
@@ -202,8 +223,10 @@ public sealed class SessionsViewModel : ViewModelBase
 }
 
 /// <summary>Backs a single session's page: its ordered character segments (the switches within the sitting).</summary>
-public sealed class SessionViewModel : ViewModelBase
+public sealed class SessionViewModel : ViewModelBase, INavigationAware
 {
+    private readonly AccountReader _reader;
+    private readonly IDisposable _dataChanges;
     private readonly SelectedSessionService _selected;
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
@@ -221,8 +244,10 @@ public sealed class SessionViewModel : ViewModelBase
         DeleteRequestStore deletes,
         SessionDeletionTracker deleted,
         INavigationService navigation,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        DataChangeMonitor dataChanges)
     {
+        _reader = reader;
         _selected = selected;
         _deletes = deletes;
         _deleted = deleted;
@@ -234,9 +259,18 @@ public sealed class SessionViewModel : ViewModelBase
         OpenCommand = new RelayCommand<SessionSegmentRow>(Open);
         DeleteSessionCommand = new RelayCommand(() => _ = DeleteSessionAsync());
 
-        if (account.AccountId is { } accountId && selected.GameSessionId is { } sessionId)
+        _ = LoadAsync();
+        _dataChanges = dataChanges.Subscribe(OnDataChanged);
+    }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
+
+    private void OnDataChanged(DataChanges changes)
+    {
+        if ((changes & (DataChanges.Sessions | DataChanges.Holdings)) != 0
+            || ((changes & DataChanges.Clock) != 0 && Segments.Any(s => s.IsActive)))
         {
-            _ = LoadAsync(reader, accountId, sessionId);
+            _ = LoadAsync();
         }
     }
 
@@ -278,11 +312,16 @@ public sealed class SessionViewModel : ViewModelBase
     /// <summary>The bottom Delete button shows only once loaded, when the sitting isn't the active (in-progress) one.</summary>
     public bool CanDeleteSession => _accountId is not null && HasSegments && !Segments.Any(s => s.IsActive);
 
-    private async Task LoadAsync(AccountReader reader, string accountId, long sessionId)
+    private async Task LoadAsync()
     {
+        if (_accountId is not { } accountId || _sessionId is not { } sessionId)
+        {
+            return;
+        }
+
         try
         {
-            List<SessionSegmentRow> segments = await Task.Run(() => reader.GetSessionSegments(accountId, sessionId));
+            List<SessionSegmentRow> segments = await Task.Run(() => _reader.GetSessionSegments(accountId, sessionId));
             // Drop any segment deleted this run. If that empties the sitting, its last segment was deleted on the
             // loot page (the worker also removes the now-empty session) — there's nothing to show, so go back to the
             // list, marking the session deleted so it's hidden there too until the worker catches up.
@@ -294,23 +333,17 @@ public sealed class SessionViewModel : ViewModelBase
                 return;
             }
 
-            foreach (SessionSegmentRow segment in visible)
-            {
-                Segments.Add(segment);
-            }
+            // Read everything first, then swap it in at once, so a live refresh doesn't flash an empty page.
+            (SessionValueSummary value, SessionLoot loot) = await Task.Run(() =>
+                (_reader.GetSessionValue(accountId, sessionId), _reader.GetGameSessionLoot(accountId, sessionId)));
 
+            Segments.ReplaceWith(visible);
             OnPropertyChanged(nameof(HasSegments));
             OnPropertyChanged(nameof(CanDeleteSession));
             Status = Segments.Count == 0 ? "No characters recorded for this session." : "";
 
-            Value = await Task.Run(() => reader.GetSessionValue(accountId, sessionId));
-
-            SessionLoot loot = await Task.Run(() => reader.GetGameSessionLoot(accountId, sessionId));
-            foreach (SessionLootCurrency currency in loot.Currencies)
-            {
-                Currencies.Add(currency);
-            }
-
+            Value = value;
+            Currencies.ReplaceWith(loot.Currencies);
             ItemsSorter.SetItems(loot.Items);
 
             OnPropertyChanged(nameof(HasCurrencies));
@@ -356,8 +389,10 @@ public sealed class SessionViewModel : ViewModelBase
 }
 
 /// <summary>Backs a segment's loot page: the currencies and items gained/lost while that character was active.</summary>
-public sealed class SessionLootViewModel : ViewModelBase
+public sealed class SessionLootViewModel : ViewModelBase, INavigationAware
 {
+    private readonly AccountReader _reader;
+    private readonly IDisposable _dataChanges;
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
     private readonly INavigationService _navigation;
@@ -373,8 +408,10 @@ public sealed class SessionLootViewModel : ViewModelBase
         DeleteRequestStore deletes,
         SessionDeletionTracker deleted,
         INavigationService navigation,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        DataChangeMonitor dataChanges)
     {
+        _reader = reader;
         _deletes = deletes;
         _deleted = deleted;
         _navigation = navigation;
@@ -386,11 +423,18 @@ public sealed class SessionLootViewModel : ViewModelBase
         // The active (in-progress) segment is still being written, so it can't be deleted.
         CanDelete = account.AccountId is not null && selected.SegmentId is not null && !selected.SegmentIsActive;
 
-        if (account.AccountId is { } accountId && selected.SegmentId is { } segmentId)
+        _ = LoadAsync();
+        // The segment's loot grows as syncs land, and its window closes when the character switches or the game ends.
+        _dataChanges = dataChanges.Subscribe(changes =>
         {
-            _ = LoadAsync(reader, accountId, segmentId);
-        }
+            if ((changes & (DataChanges.Sessions | DataChanges.Holdings)) != 0)
+            {
+                _ = LoadAsync();
+            }
+        });
     }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
 
     public ObservableCollection<SessionLootCurrency> Currencies { get; } = new();
 
@@ -414,16 +458,17 @@ public sealed class SessionLootViewModel : ViewModelBase
         private set => SetProperty(ref _isEmpty, value);
     }
 
-    private async Task LoadAsync(AccountReader reader, string accountId, long segmentId)
+    private async Task LoadAsync()
     {
+        if (_accountId is not { } accountId || _segmentId is not { } segmentId)
+        {
+            return;
+        }
+
         try
         {
-            SessionLoot loot = await Task.Run(() => reader.GetSegmentLoot(accountId, segmentId));
-            foreach (SessionLootCurrency currency in loot.Currencies)
-            {
-                Currencies.Add(currency);
-            }
-
+            SessionLoot loot = await Task.Run(() => _reader.GetSegmentLoot(accountId, segmentId));
+            Currencies.ReplaceWith(loot.Currencies);
             ItemsSorter.SetItems(loot.Items);
 
             OnPropertyChanged(nameof(HasCurrencies));

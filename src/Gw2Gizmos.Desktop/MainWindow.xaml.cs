@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
 
@@ -11,6 +12,8 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public partial class MainWindow : FluentWindow
 {
+    private object? _currentPage;
+
     public MainWindow(INavigationViewPageProvider pageProvider, OnboardingStore onboarding)
     {
         InitializeComponent();
@@ -22,7 +25,17 @@ public partial class MainWindow : FluentWindow
         // Back navigation via Alt+Left and the mouse "back" button (no on-screen button). WPF-UI journals every
         // Navigate; App snapshots the selection per page (tracked on Navigated) and restores it on back.
         RootNavigation.AddHandler(NavigationView.NavigatedEvent,
-            new System.Windows.RoutedEventHandler((_, _) => App.OnNavigated()));
+            new System.Windows.RoutedEventHandler((_, e) =>
+            {
+                App.OnNavigated();
+                // Let the page just left stop its live updates (each navigation builds a fresh view-model).
+                object? page = (e as NavigatedEventArgs)?.Page;
+                if (!ReferenceEquals(page, _currentPage))
+                {
+                    ((_currentPage as System.Windows.FrameworkElement)?.DataContext as INavigationAware)?.OnNavigatedFrom();
+                    _currentPage = page;
+                }
+            }));
         PreviewKeyDown += OnPreviewKeyDown;
         PreviewMouseDown += OnPreviewMouseDown;
 

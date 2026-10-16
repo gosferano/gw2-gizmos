@@ -96,6 +96,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddHostedService<WorkerLogTailer>();
 
         // View-models (each head registers the pages/views that render them).
+        // Lets open pages refresh in place when the worker writes what they show.
+        services.AddSingleton<DataChangeMonitor>();
         services.AddTransient<DashboardViewModel>();
         services.AddSingleton<NotificationsViewModel>();
         // Singleton so its one-second countdown clock keeps ticking and the event list is built once.

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Core.Mvvm;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +16,17 @@ using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Desktop.Core;
 
-public sealed class DashboardViewModel : ViewModelBase
+public sealed class DashboardViewModel : ViewModelBase, INavigationAware
 {
+    // The catalog counts scan large tables (price history), so live refreshes of them are spaced out.
+    private static readonly TimeSpan CountsRefreshInterval = TimeSpan.FromSeconds(30);
+
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly AccountReader _reader;
+    private readonly IDisposable _dataChanges;
+    private DateTimeOffset _countsLoadedAt;
+    private bool _loadingCounts;
+    private bool _loadingAccountStats;
     private readonly FileGw2ApiKeyStore _apiKeyStore;
     private readonly FeatureSettingsStore _features;
     private string _apiKeyStatus;
@@ -48,9 +58,12 @@ public sealed class DashboardViewModel : ViewModelBase
         AccountReader reader,
         AppPaths paths,
         UpdateStatus updateStatus,
-        IUiDispatcher dispatcher
+        IUiDispatcher dispatcher,
+        DataChangeMonitor dataChanges
     )
     {
+        _scopeFactory = scopeFactory;
+        _reader = reader;
         _apiKeyStore = apiKeyStore;
         _features = features;
         ApiKeyConfigured = apiKeyStore.HasApiKey;
@@ -77,9 +90,28 @@ public sealed class DashboardViewModel : ViewModelBase
 
         // The stat queries scan large tables (item catalog, full price history) against a DB that's cold on first
         // open — so they run off the UI thread and populate the cards when ready, rather than freezing navigation.
-        _ = LoadCountsAsync(scopeFactory);
-        _ = LoadAccountStatsAsync(reader);
+        _ = LoadCountsAsync();
+        _ = LoadAccountStatsAsync();
         _ = LoadTokenInfoAsync();
+
+        // Refresh in place as the worker syncs, sessions start/end, and relative times ("synced 2 min ago") age.
+        _dataChanges = dataChanges.Subscribe(OnDataChanged);
+    }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
+
+    private void OnDataChanged(DataChanges changes)
+    {
+        if ((changes & (DataChanges.AccountSync | DataChanges.Holdings | DataChanges.Sessions | DataChanges.Clock)) != 0)
+        {
+            _ = LoadAccountStatsAsync();
+        }
+
+        if ((changes & (DataChanges.Catalog | DataChanges.Clock)) != 0
+            && DateTimeOffset.UtcNow - _countsLoadedAt >= CountsRefreshInterval)
+        {
+            _ = LoadCountsAsync();
+        }
     }
 
     private void ApplyUpdateStatus(UpdateStatus updateStatus)
@@ -88,9 +120,24 @@ public sealed class DashboardViewModel : ViewModelBase
         UpdateText = updateStatus.UpdateReady ? $"Update {updateStatus.PendingVersion} ready" : "";
     }
 
-    private async Task LoadCountsAsync(IServiceScopeFactory scopeFactory)
+    private async Task LoadCountsAsync()
     {
-        DashboardCounts counts = await Task.Run(() => ReadCounts(scopeFactory));
+        if (_loadingCounts)
+        {
+            return;
+        }
+
+        _loadingCounts = true;
+        DashboardCounts counts;
+        try
+        {
+            counts = await Task.Run(() => ReadCounts(_scopeFactory));
+        }
+        finally
+        {
+            _loadingCounts = false;
+            _countsLoadedAt = DateTimeOffset.UtcNow;
+        }
 
         // Back on the UI thread (post-await) — assigning raises PropertyChanged so the cards update.
         ItemCount = counts.Items;
@@ -134,17 +181,32 @@ public sealed class DashboardViewModel : ViewModelBase
     private static string FormatUpdated(DateTimeOffset? lastPollUtc) =>
         lastPollUtc is { } poll ? $"Updated {RelativeTime.Format(poll)}" : "No data yet";
 
-    private async Task LoadAccountStatsAsync(AccountReader reader)
+    private async Task LoadAccountStatsAsync()
     {
-        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions) = await Task.Run(() =>
+        if (_loadingAccountStats)
         {
-            AccountInfo? current = reader.GetCurrentAccount();
-            return current is null
-                ? (null, 0, 0L, new DashboardSessionStats(0, TimeSpan.Zero, null, false, null))
-                : (current, reader.GetCharacterCount(current.Id), reader.GetCoinBalance(current.Id),
-                    reader.GetSessionStats(current.Id));
-        });
+            return;
+        }
 
+        _loadingAccountStats = true;
+        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions) result;
+        try
+        {
+            result = await Task.Run(() =>
+            {
+                AccountInfo? current = _reader.GetCurrentAccount();
+                return current is null
+                    ? (null, 0, 0L, new DashboardSessionStats(0, TimeSpan.Zero, null, false, null))
+                    : (current, _reader.GetCharacterCount(current.Id), _reader.GetCoinBalance(current.Id),
+                        _reader.GetSessionStats(current.Id));
+            });
+        }
+        finally
+        {
+            _loadingAccountStats = false;
+        }
+
+        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions) = result;
         if (account is not null)
         {
             AccountName = account.Name;
