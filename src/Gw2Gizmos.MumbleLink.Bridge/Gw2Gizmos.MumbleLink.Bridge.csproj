@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Runs INSIDE the game's Wine/Proton prefix on Linux: mirrors GW2's MumbleLink shared memory (which only exists
+       inside Wine) into a file on the Linux side for the worker to read. A Windows executable, published self-contained
+       as a trimmed single file so it needs nothing installed in the prefix. The Avalonia app starts it next to the game.
+       Built on any OS (no Windows-specific SDK); the Windows-only APIs it calls are fine since it only ever runs on
+       Windows/Wine. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+
+</Project>
