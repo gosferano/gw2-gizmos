@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.StoredDataPage"
+             x:DataType="core:StoredDataViewModel">
+    <UserControl.Resources>
+        <!-- A data type's row count and Delete button, shown on the right of its row. -->
+        <DataTemplate x:Key="DeleteFooter" x:DataType="core:StoredDataItem">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock VerticalAlignment="Center" MinWidth="80" TextAlignment="Right"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding CountDisplay}" />
+                <Button Content="Delete" Classes="danger" VerticalAlignment="Center"
+                        Height="{StaticResource FormControlHeight}" Command="{Binding Delete}" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <TextBlock Margin="0,0,0,12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="Delete locally-stored data. This clears the stored rows; current data re-syncs on the next update (play sessions and price history don't come back)." />
+
+            <!-- Global (non-account) data. -->
+            <ui:FASettingsExpander Header="{Binding PriceHistory.Display}" Margin="0,0,0,8"
+                                   Footer="{Binding PriceHistory}" FooterTemplate="{StaticResource DeleteFooter}" />
+
+            <!-- One expander per account, a row per data type plus "delete all". -->
+            <ItemsControl ItemsSource="{Binding Accounts}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:AccountStoredData">
+                        <ui:FASettingsExpander Header="{Binding AccountName}" Margin="0,0,0,8"
+                                               ItemsSource="{Binding Types}">
+                            <ui:FASettingsExpander.ItemTemplate>
+                                <DataTemplate x:DataType="core:StoredDataItem">
+                                    <ui:FASettingsExpanderItem Content="{Binding Display}" Footer="{Binding}"
+                                                               FooterTemplate="{StaticResource DeleteFooter}" />
+                                </DataTemplate>
+                            </ui:FASettingsExpander.ItemTemplate>
+                            <ui:FASettingsExpander.Footer>
+                                <Button Content="Delete all" Classes="danger" Command="{Binding DeleteAll}"
+                                        Height="{StaticResource FormControlHeight}"
+                                        ToolTip.Tip="Delete all data for this account" />
+                            </ui:FASettingsExpander.Footer>
+                        </ui:FASettingsExpander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

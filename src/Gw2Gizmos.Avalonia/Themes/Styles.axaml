@@ -1,0 +1,32 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- App-wide style classes on top of FluentAvalonia's control themes. -->
+
+    <Styles.Resources>
+        <SolidColorBrush x:Key="DangerButtonBackground" Color="#C42B1C" />
+        <SolidColorBrush x:Key="DangerButtonBackgroundPointerOver" Color="#D13F30" />
+        <SolidColorBrush x:Key="DangerButtonBackgroundPressed" Color="#A82416" />
+        <SolidColorBrush x:Key="DangerButtonForeground" Color="White" />
+    </Styles.Resources>
+
+    <!-- Destructive action button (WPF-UI's Appearance="Danger"), mirroring FluentAvalonia's .accent variant: same
+         template part, red instead of accent. Declared state by state so hover / pressed / disabled still apply. -->
+    <Style Selector="Button.danger /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource DangerButtonForeground}" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackgroundPointerOver}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackgroundPointerOver}" />
+    </Style>
+    <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackgroundPressed}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackgroundPressed}" />
+    </Style>
+    <Style Selector="Button.danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabled}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrushDisabled}" />
+        <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundDisabled}" />
+    </Style>
+</Styles>

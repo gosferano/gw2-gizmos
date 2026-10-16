@@ -20,6 +20,9 @@ public sealed partial class PageFactory
         [AppPage.Onboarding] = typeof(OnboardingPage),
         [AppPage.Dashboard] = typeof(DashboardPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),
+        [AppPage.Settings] = typeof(SettingsPage),
+        [AppPage.AdvancedSettings] = typeof(AdvancedSettingsPage),
+        [AppPage.StoredData] = typeof(StoredDataPage),
     };
 
     private readonly IServiceProvider _services;
@@ -49,8 +52,6 @@ public sealed partial class PageFactory
         [AppPage.CharacterInventory] = AppPage.Characters,
         [AppPage.Session] = AppPage.Sessions,
         [AppPage.SessionLoot] = AppPage.Sessions,
-        [AppPage.AdvancedSettings] = AppPage.Settings,
-        [AppPage.StoredData] = AppPage.Settings,
     };
 
     public Control Create(AppPage page) =>
