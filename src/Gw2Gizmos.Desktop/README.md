@@ -1,5 +1,8 @@
 # Gw2Gizmos (desktop app)
 
+> **Deprecated.** Superseded by the cross-platform Avalonia app, [`Gw2Gizmos.Avalonia`](../Gw2Gizmos.Avalonia), which
+> is what releases ship. Kept building until it's removed.
+
 The Windows companion app — a [WPF](https://learn.microsoft.com/dotnet/desktop/wpf/) +
 [WPF-UI](https://github.com/lepoco/wpfui) tray application (`net10.0-windows`) that presents Guild Wars 2
 data ingested by the background worker. Builds `Gw2Gizmos.exe`.
