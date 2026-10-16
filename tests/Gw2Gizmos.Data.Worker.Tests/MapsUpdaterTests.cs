@@ -47,6 +47,20 @@ public sealed class MapsUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task Trims_names_the_API_pads_with_whitespace()
+    {
+        // As the API returns WvW's Desert Borderlands.
+        _stub.SetJson("/v2/maps", $"[{MapJson(1099, " Desert Borderlands")}]");
+
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            await NewUpdater(db).UpdateMaps(CancellationToken.None);
+        }
+
+        Assert.Equal("Desert Borderlands", (await _fixture.NewContext().Maps.SingleAsync()).Name);
+    }
+
+    [Fact]
     public async Task A_later_sync_updates_existing_maps_and_keeps_ones_no_longer_listed()
     {
         _stub.SetJson("/v2/maps", $"[{MapJson(1422, "Old Name")}, {MapJson(50, "Lion's Arch")}]");
