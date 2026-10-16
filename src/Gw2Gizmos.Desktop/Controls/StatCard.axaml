@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             x:Class="Gw2Gizmos.Desktop.Controls.StatCard"
+             x:DataType="c:StatCard">
+    <c:Card Padding="20" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" VerticalContentAlignment="Top">
+        <StackPanel>
+            <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=c:StatCard}}" Opacity="0.7" />
+            <!-- String value, shown unless a coin amount is bound. -->
+            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType=c:StatCard}}"
+                       FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                       IsVisible="{Binding Coin, RelativeSource={RelativeSource AncestorType=c:StatCard}, Converter={x:Static ObjectConverters.IsNull}}" />
+            <!-- Coin value, shown when Coin is set (replaces the string value). -->
+            <c:CoinDisplay Copper="{Binding Coin, RelativeSource={RelativeSource AncestorType=c:StatCard}}"
+                           Signed="{Binding CoinSigned, RelativeSource={RelativeSource AncestorType=c:StatCard}}"
+                           FontSize="26" FontWeight="Medium" IconSize="20" Margin="0,6,0,0" HorizontalAlignment="Left"
+                           IsVisible="{Binding Coin, RelativeSource={RelativeSource AncestorType=c:StatCard}, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="{Binding Caption, RelativeSource={RelativeSource AncestorType=c:StatCard}}"
+                       Opacity="0.6" FontSize="12" Margin="0,4,0,0"
+                       IsVisible="{Binding Caption, RelativeSource={RelativeSource AncestorType=c:StatCard}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+    </c:Card>
+</UserControl>

@@ -6,7 +6,7 @@ layout, and how releases work. For what the project *is*, see the [README](READM
 ## Prerequisites
 
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download).
-- The **desktop app** ([`Gw2Gizmos.Avalonia`](src/Gw2Gizmos.Avalonia/README.md)) builds and runs on Windows and
+- The **desktop app** ([`Gw2Gizmos.Desktop`](src/Gw2Gizmos.Desktop/README.md)) builds and runs on Windows and
   Linux. The deprecated WPF app (`Gw2Gizmos.Desktop.Legacy`) needs Windows to run (it builds elsewhere with
   `-p:EnableWindowsTargeting=true`), as does the MumbleLink reader's shared-memory path.
 
@@ -14,7 +14,7 @@ layout, and how releases work. For what the project *is*, see the [README](READM
 
 ```bash
 dotnet build Gw2Gizmos.sln                       # build everything
-dotnet run --project src/Gw2Gizmos.Avalonia      # run the desktop app (Windows or Linux)
+dotnet run --project src/Gw2Gizmos.Desktop      # run the desktop app (Windows or Linux)
 dotnet test                                       # run the test suite (tests/)
 ```
 
@@ -35,7 +35,7 @@ src/
   Gw2Gizmos.MumbleLink.Contract/ # internal: MumbleLink snapshot DTOs       → README
   Gw2Gizmos.MumbleLink.Client/   # internal: MumbleLink shared-memory reader → README
   Gw2Gizmos.MumbleLink.Bridge/   # win-x64 exe mirroring MumbleLink out of GW2's Wine/Proton prefix (Linux)
-  Gw2Gizmos.Avalonia/          # ── desktop app, Windows + Linux (builds Gw2Gizmos[.exe]) → README
+  Gw2Gizmos.Desktop/           # ── desktop app, Windows + Linux (builds Gw2Gizmos[.exe]) → README
   Gw2Gizmos.Desktop.Legacy/    # deprecated WPF desktop app (Windows)       → README
   Gw2Gizmos.Desktop.Core/      # internal: UI-agnostic view-models + services for the desktop app
   Gw2Gizmos.Desktop.Platform.{Windows,Linux}/  # internal: per-OS toasts, autostart, key storage, …
@@ -56,7 +56,7 @@ scripts/
 ### Architecture in one paragraph
 
 The **worker** ([`Gw2Gizmos.Data.Worker`](src/Gw2Gizmos.Data.Worker/README.md)) is the **sole writer** of
-the SQLite database; the **desktop app** ([`Gw2Gizmos.Avalonia`](src/Gw2Gizmos.Avalonia/README.md)) opens it
+the SQLite database; the **desktop app** ([`Gw2Gizmos.Desktop`](src/Gw2Gizmos.Desktop/README.md)) opens it
 **read-only** and spawns the worker as a child process, handing it live config (API keys, feature toggles,
 intervals, commands) over a local named pipe. This single-writer split is deliberate — don't write to the DB
 from the desktop. See those two READMEs for the details.
@@ -99,7 +99,7 @@ version is new** — bumping a project's version is what triggers its release.
 
 NuGet publishing uses [Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)
 (OIDC, no API keys). Packages ship with SourceLink and `.snupkg` symbols for step-into debugging. The
-desktop app's version is `<Version>` in `src/Gw2Gizmos.Avalonia/Gw2Gizmos.Avalonia.csproj`; its release is built
+desktop app's version is `<Version>` in `src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj`; its release is built
 with [Velopack](https://github.com/velopack/velopack) — the Windows installer on a Windows runner, the Linux
 AppImage on a Linux runner, both attached to one GitHub release with each platform's update feed — and
 self-updates on the next restart. A hyphenated version (e.g. `0.7.0-beta.1`) is released as a GitHub

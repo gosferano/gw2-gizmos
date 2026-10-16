@@ -3,7 +3,7 @@
 The data-ingestion engine — a library that syncs Guild Wars 2 data into the local SQLite database and is
 the database's **sole writer**. It's hosted by [`Gw2Gizmos.Data.Worker.Cli`](../Gw2Gizmos.Data.Worker.Cli)
 (the `Gw2Gizmos.Data.Worker.Cli.exe` the desktop spawns as a child process), and a lightweight slice of it
-runs in-process in the [desktop app](../Gw2Gizmos.Avalonia/README.md) for trading-post delivery alerts.
+runs in-process in the [desktop app](../Gw2Gizmos.Desktop/README.md) for trading-post delivery alerts.
 
 > Not a NuGet package — an internal library shared by the worker host and the desktop.
 

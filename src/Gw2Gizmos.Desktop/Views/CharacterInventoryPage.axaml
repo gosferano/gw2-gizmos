@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.CharacterInventoryPage"
+             x:DataType="core:CharacterInventoryViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <!-- The character's bag slots, laid out like the bank / shared inventory. -->
+        <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotTemplate}"
+                      MaxWidth="720" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+    </c:PageShell>
+</UserControl>

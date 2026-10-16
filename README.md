@@ -8,7 +8,7 @@ their own right.
 
 | Component | What it is | Distribution | Docs |
 | --- | --- | --- | --- |
-| **Gw2Gizmos** (desktop app) | Windows and Linux tray companion that ingests GW2 data and surfaces a dashboard, account/character/session views, events, prices, and notifications | [GitHub Releases](https://github.com/gosferano/gw2-gizmos/releases) (Windows installer, Linux AppImage) | [README](src/Gw2Gizmos.Avalonia/README.md) |
+| **Gw2Gizmos** (desktop app) | Windows and Linux tray companion that ingests GW2 data and surfaces a dashboard, account/character/session views, events, prices, and notifications | [GitHub Releases](https://github.com/gosferano/gw2-gizmos/releases) (Windows installer, Linux AppImage) | [README](src/Gw2Gizmos.Desktop/README.md) |
 | **Gw2Gizmos.Gw2Api.Client** | Typed HTTP client for the GW2 API v2 (resilience, `IHttpClientFactory`, bulk/pagination) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Client) | [README](src/Gw2Gizmos.Gw2Api.Client/README.md) |
 | **Gw2Gizmos.Gw2Api.Contract** | Request/response DTOs for the GW2 API v2 (a dependency of the client) | [NuGet](https://www.nuget.org/packages/Gw2Gizmos.Gw2Api.Contract) | [README](src/Gw2Gizmos.Gw2Api.Contract/README.md) |
 | **Gw2Gizmos.Data.Worker** | Background data-ingestion engine (the desktop's worker process) | — (internal) | [README](src/Gw2Gizmos.Data.Worker/README.md) |
@@ -43,7 +43,7 @@ ready). API keys are stored encrypted: via DPAPI on Windows, in the desktop keyr
   data lives in `~/.local/share/Gw2Gizmos`. Notifications use `notify-send` and key storage uses `secret-tool`
   (libsecret), both standard on most desktops.
 
-See the [desktop README](src/Gw2Gizmos.Avalonia/README.md) for how it's built.
+See the [desktop README](src/Gw2Gizmos.Desktop/README.md) for how it's built.
 
 ## GW2 API libraries
 

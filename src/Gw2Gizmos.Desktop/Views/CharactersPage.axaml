@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.CharactersPage"
+             x:DataType="core:CharactersViewModel">
+    <c:PageShell Title="Characters">
+        <StackPanel>
+            <!-- No account picked yet -->
+            <c:Card Margin="0,4,0,0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel IsVisible="{Binding HasAccount}">
+                <!-- Account selected but nothing synced yet -->
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           IsVisible="{Binding !HasCharacters}" />
+
+                <!-- One card per character → its page. -->
+                <ItemsControl ItemsSource="{Binding Characters}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <ui:FASettingsExpander Header="{Binding}" Margin="0,0,0,8"
+                                                   IconSource="{c:FluentIconSource Person24}" IsClickEnabled="True"
+                                                   ActionIconSource="ChevronRight"
+                                                   Command="{Binding $parent[UserControl].((core:CharactersViewModel)DataContext).OpenCommand}"
+                                                   CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

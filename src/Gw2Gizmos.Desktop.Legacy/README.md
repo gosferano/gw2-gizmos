@@ -1,6 +1,6 @@
 # Gw2Gizmos (desktop app)
 
-> **Deprecated.** Superseded by the cross-platform Avalonia app, [`Gw2Gizmos.Avalonia`](../Gw2Gizmos.Avalonia), which
+> **Deprecated.** Superseded by the cross-platform Avalonia app, [`Gw2Gizmos.Desktop`](../Gw2Gizmos.Desktop), which
 > is what releases ship. Kept building until it's removed.
 
 The Windows companion app — a [WPF](https://learn.microsoft.com/dotnet/desktop/wpf/) +

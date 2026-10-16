@@ -70,7 +70,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Core", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Core.Tests", "tests\Gw2Gizmos.Desktop.Core.Tests\Gw2Gizmos.Desktop.Core.Tests.csproj", "{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Avalonia", "src\Gw2Gizmos.Avalonia\Gw2Gizmos.Avalonia.csproj", "{2EE9A2B2-E542-4DE2-95C7-B1F83AB2A0E1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop", "src\Gw2Gizmos.Desktop\Gw2Gizmos.Desktop.csproj", "{2EE9A2B2-E542-4DE2-95C7-B1F83AB2A0E1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.MumbleLink.Bridge", "src\Gw2Gizmos.MumbleLink.Bridge\Gw2Gizmos.MumbleLink.Bridge.csproj", "{3AE0EA2B-B9EE-4ADF-96B1-5AFD8EF32A3D}"
 EndProject

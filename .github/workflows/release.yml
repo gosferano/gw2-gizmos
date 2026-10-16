@@ -53,7 +53,7 @@ jobs:
 
           contract_v=$(version src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj)
           client_v=$(version src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj)
-          desktop_v=$(version src/Gw2Gizmos.Avalonia/Gw2Gizmos.Avalonia.csproj)
+          desktop_v=$(version src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj)
 
           contract_new=$(is_new "gw2-api-contract-$contract_v")
           client_new=$(is_new "gw2-api-client-$client_v")
@@ -97,8 +97,8 @@ jobs:
 
       - name: Publish & pack desktop app (Linux)
         run: |
-          dotnet publish src/Gw2Gizmos.Avalonia/Gw2Gizmos.Avalonia.csproj -c Release -r linux-x64 --self-contained -o publish/desktop-linux
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime linux-x64 --packDir publish/desktop-linux --mainExe Gw2Gizmos --icon src/Gw2Gizmos.Avalonia/Assets/gw2gizmos.png --categories Game --outputDir Releases
+          dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r linux-x64 --self-contained -o publish/desktop-linux
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime linux-x64 --packDir publish/desktop-linux --mainExe Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.png --categories Game --outputDir Releases
 
       - uses: actions/upload-artifact@v4
         with:
@@ -173,8 +173,8 @@ jobs:
         if: needs.detect.outputs.desktop_new == 'true'
         shell: bash
         run: |
-          dotnet publish src/Gw2Gizmos.Avalonia/Gw2Gizmos.Avalonia.csproj -c Release -r win-x64 --self-contained -o publish/desktop
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime win-x64 --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Avalonia/Assets/gw2gizmos.ico --outputDir Releases
+          dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime win-x64 --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
 
       # The Linux packages from desktop-linux join the Windows ones; their names don't overlap (the Linux files carry
       # the channel: Gw2Gizmos-<v>-linux-full.nupkg, releases.linux.json, ...).
