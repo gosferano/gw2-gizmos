@@ -62,7 +62,7 @@ public sealed class FluentIconSource : MarkupExtension
 internal static class FluentIconFont
 {
     public static readonly FontFamily Family =
-        new("avares://Gw2Gizmos.Avalonia/Assets/Fonts#FluentSystemIcons-Regular");
+        new("avares://Gw2Gizmos/Assets/Fonts#FluentSystemIcons-Regular");
 
     public static string Glyph(FluentSymbol symbol) => char.ConvertFromUtf32((int)symbol);
 }
