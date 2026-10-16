@@ -18,6 +18,7 @@ public sealed partial class PageFactory
     private static readonly Dictionary<AppPage, Type> Pages = new()
     {
         [AppPage.Onboarding] = typeof(OnboardingPage),
+        [AppPage.Dashboard] = typeof(DashboardPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),
     };
 

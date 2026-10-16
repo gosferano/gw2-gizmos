@@ -1,0 +1,147 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:conv="using:Gw2Gizmos.Avalonia.Converters"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.DashboardPage"
+             x:DataType="core:DashboardViewModel">
+    <UserControl.Resources>
+        <conv:WidthToColumnsConverter x:Key="WidthToColumns" />
+        <conv:BoolToStatusBrushConverter x:Key="StatusBrush" />
+    </UserControl.Resources>
+
+    <c:PageShell Title="Dashboard">
+        <!-- Columns collapse 3 -> 2 -> 1 with width; UniformGrid keeps every cell the same size. The -6 margin cancels
+             the cards' 6px edge insets so the outer edge lines up with the page header. -->
+        <UniformGrid VerticalAlignment="Top" Margin="-6"
+                     Columns="{Binding $self.Bounds.Width, Converter={StaticResource WidthToColumns}}">
+
+            <!-- API key -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <DockPanel>
+                        <Ellipse DockPanel.Dock="Right" Width="9" Height="9" VerticalAlignment="Center"
+                                 Fill="{Binding ApiKeyConfigured, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="API key" Opacity="0.7" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding ApiKeyStatus}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <ItemsControl ItemsSource="{Binding Scopes}" Margin="0,10,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="core:ScopeBadge">
+                                <Border CornerRadius="10" Padding="9,3" Margin="0,0,6,6" BorderThickness="1"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource ControlElevationBorderBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}" FontSize="12" />
+                                        <TextBlock Text="  missing" FontSize="12" Opacity="0.6"
+                                                   IsVisible="{Binding !IsGranted}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:Card>
+
+            <!-- Account -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Account" Opacity="0.7" />
+                    <TextBlock Text="{Binding AccountName}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding CharacterCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Characters" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3,0,0">
+                        <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding CoinBalance}" FontWeight="Medium"
+                                       HorizontalAlignment="Right" />
+                        <TextBlock Text="Coin" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding AccountSynced}" ToolTip.Tip="{Binding AccountSyncedTooltip}"
+                               Opacity="0.6" FontSize="12" Margin="0,12,0,0" />
+                </StackPanel>
+            </c:Card>
+
+            <!-- Play sessions -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Play sessions" Opacity="0.7" />
+                    <TextBlock Text="{Binding SessionCount, StringFormat='{}{0:N0}'}" FontSize="26" FontWeight="Medium"
+                               Margin="0,6,0,0" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding Playtime}" />
+                        <TextBlock Text="Total recorded" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding SessionStatus}" ToolTip.Tip="{Binding SessionStatusTooltip}"
+                               Opacity="0.6" FontSize="12" Margin="0,12,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </c:Card>
+
+            <!-- Worker -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,10">
+                        <Ellipse DockPanel.Dock="Right" Width="9" Height="9" VerticalAlignment="Center"
+                                 Fill="{Binding WorkerOperational, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="Worker" Opacity="0.7" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding ItemCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Items" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding RecipeCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Recipes" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding TradeableItemCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Tradeable items" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding CurrencyCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Currencies" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium"
+                                   Text="{Binding PriceSnapshotCount, StringFormat='{}{0:N0}'}" />
+                        <TextBlock Text="Price points" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding WorkerUpdated}" ToolTip.Tip="{Binding WorkerUpdatedTooltip}"
+                               Opacity="0.6" FontSize="12" Margin="0,10,0,0" />
+                </StackPanel>
+            </c:Card>
+
+            <!-- App -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="App" Opacity="0.7" />
+                    <TextBlock Text="{Binding AppVersion}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding AppEnvironment}" Opacity="0.8" Margin="0,2,0,0" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding DatabaseSize}" />
+                        <TextBlock Text="Database" Opacity="0.8" />
+                    </DockPanel>
+                    <StackPanel Margin="0,12,0,0" IsVisible="{Binding UpdateReady}">
+                        <TextBlock Text="{Binding UpdateText}" FontSize="12" TextWrapping="Wrap" FontWeight="Medium"
+                                   Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                        <Button Content="Restart now" Classes="accent" Margin="0,6,0,0"
+                                Height="{StaticResource FormControlHeight}" Command="{Binding RestartCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </c:Card>
+        </UniformGrid>
+    </c:PageShell>
+</UserControl>
