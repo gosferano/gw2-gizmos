@@ -48,20 +48,43 @@ public class MumbleLinkReaderTests
     }
 
     [Fact]
-    public void TryRead_returns_false_when_there_is_no_mapping()
+    public void TryRead_returns_false_until_the_game_writes()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
 
-        // A unique name that no process has mapped — the game-closed path.
+        // A unique name that no process has mapped — the game-closed path. The reader creates it, all zero.
         string mapName = "Gw2GizmosTest-" + Guid.NewGuid().ToString("N");
 
         using IMumbleLinkReader reader = new MumbleLinkReader(mapName);
 
         Assert.False(reader.TryRead(out MumbleLinkSnapshot? snapshot));
         Assert.Null(snapshot);
+    }
+
+    [Fact]
+    public void Read_creates_the_mapping_for_the_game_to_write_into()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string mapName = "Gw2GizmosTest-" + Guid.NewGuid().ToString("N");
+        using IMumbleLinkReader reader = new MumbleLinkReader(mapName);
+        Assert.Null(reader.Read());
+
+        // The game only opens an existing "MumbleLink"; this one exists because the reader created it.
+        byte[] block = new LinkedMemBuilder().UiVersion(2).UiTick(7).Name("Guild Wars 2").Build();
+        using (MemoryMappedFile game = MemoryMappedFile.OpenExisting(mapName, MemoryMappedFileRights.ReadWrite))
+        using (MemoryMappedViewAccessor writer = game.CreateViewAccessor())
+        {
+            writer.WriteArray(0, block, 0, block.Length);
+        }
+
+        Assert.Equal(7u, reader.Read()?.UiTick);
     }
 
     [Fact]

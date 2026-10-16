@@ -8,9 +8,13 @@ namespace Gw2Gizmos.MumbleLink.Client;
 /// <summary>
 /// The default <see cref="IMumbleLinkReader"/>. Reads the block the GW2 client publishes — on Windows straight from its
 /// named shared memory (<see cref="Create"/>); on Linux, where the game runs under Wine/Proton and that memory lives
-/// inside Wine, from a file a bridge inside the game's prefix keeps in sync (<see cref="CreateForFile"/>). It never
-/// creates the source, keeps the view open across reads, and re-opens only after a failed read, so a game restart is
-/// picked up automatically.
+/// inside Wine, from a file a bridge inside the game's prefix keeps in sync (<see cref="CreateForFile"/>). It keeps the
+/// view open across reads and re-opens only after a failed read, so a game restart is picked up automatically.
+/// <para>
+/// The game doesn't create "MumbleLink" itself: it checks for one every few seconds and writes into it once found
+/// (normally Mumble or an overlay creates it). So on Windows the reader creates the mapping if it's missing — and,
+/// holding it, keeps it alive across game restarts; an all-zero block reads as "not running".
+/// </para>
 /// </summary>
 public sealed class MumbleLinkReader : IMumbleLinkReader
 {
@@ -25,7 +29,7 @@ public sealed class MumbleLinkReader : IMumbleLinkReader
     // Map name is injectable so tests can point at a private mapping instead of the live "MumbleLink".
     [SupportedOSPlatform("windows")]
     internal MumbleLinkReader(string mapName)
-        : this(() => MemoryMappedFile.OpenExisting(mapName, MemoryMappedFileRights.Read)) { }
+        : this(() => MemoryMappedFile.CreateOrOpen(mapName, LinkedMem.Size, MemoryMappedFileAccess.ReadWrite)) { }
 
     private MumbleLinkReader(Func<MemoryMappedFile> open)
     {
@@ -97,9 +101,9 @@ public sealed class MumbleLinkReader : IMumbleLinkReader
             _view = _mappedFile.CreateViewAccessor(0, LinkedMem.Size, MemoryMappedFileAccess.Read);
             return true;
         }
-        // FileNotFoundException: game (or bridge) not running. IOException / UnauthorizedAccessException: the brief race
-        // around game start/stop, or a bridge file still shorter than the block. All are "not available yet", not
-        // caller-facing errors.
+        // FileNotFoundException: the bridge (or its file) isn't there yet. IOException / UnauthorizedAccessException: the
+        // brief race around game start/stop, or a bridge file still shorter than the block. All are "not available yet",
+        // not caller-facing errors.
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException
                                        or UnauthorizedAccessException or ArgumentException)
         {

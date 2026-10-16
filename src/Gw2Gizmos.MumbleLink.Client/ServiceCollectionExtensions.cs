@@ -8,8 +8,8 @@ public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Registers <see cref="IMumbleLinkReader"/> as a singleton — one long-lived reader that keeps the
-    /// shared-memory view open across reads. Inject <see cref="IMumbleLinkReader"/> and call
-    /// <c>TryRead</c> on a poll. Windows-only.
+    /// shared-memory view open across reads (creating the mapping for the game to write into, if it's missing).
+    /// Inject <see cref="IMumbleLinkReader"/> and call <c>TryRead</c> on a poll. Windows-only.
     /// </summary>
     [SupportedOSPlatform("windows")]
     public static IServiceCollection AddMumbleLink(this IServiceCollection services)
