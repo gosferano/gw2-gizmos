@@ -164,6 +164,17 @@ public sealed class AccountDataDeleterTests : IDisposable
     }
 
     [Fact]
+    public async Task TradingPost_DeletesOrdersAndTrades_ForThatAccountOnly()
+    {
+        await Delete(DeletableData.TradingPost);
+
+        Assert.Equal(0, await Count(d => d.TradingPostOrders.Count(o => o.AccountId == A)));
+        Assert.Equal(0, await Count(d => d.TradingPostTransactions.Count(t => t.AccountId == A)));
+        Assert.Equal(1, await Count(d => d.TradingPostOrders.Count(o => o.AccountId == B)));
+        Assert.Equal(1, await Count(d => d.TradingPostTransactions.Count(t => t.AccountId == B)));
+    }
+
+    [Fact]
     public async Task MapSegments_AreDeletedWithEverySessionAndSegmentDelete()
     {
         // One segment: only its own maps go.
@@ -193,6 +204,8 @@ public sealed class AccountDataDeleterTests : IDisposable
         Assert.Equal(0, await Count(d => d.AccountWalletObservations.Count(o => o.AccountId == A)));
         Assert.Equal(0, await Count(d => d.AccountItemObservations.Count(o => o.AccountId == A)));
         Assert.Equal(0, await Count(d => d.AccountContainerSlots.Count(s => s.AccountId == A)));
+        Assert.Equal(0, await Count(d => d.TradingPostOrders.Count(o => o.AccountId == A)));
+        Assert.Equal(0, await Count(d => d.TradingPostTransactions.Count(t => t.AccountId == A)));
         Assert.Equal(0, await Count(d => d.CharacterItemSlots.Count(s => s.AccountId == A)));
         Assert.Equal(0, await Count(d => d.Characters.Count(c => c.AccountId == A)));
         Assert.Equal(0, await Count(d => d.GameSessions.Count(g => g.AccountId == A)));
@@ -302,6 +315,11 @@ public sealed class AccountDataDeleterTests : IDisposable
             db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = 50, StartedAtUtc = t });
             db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = 1422, StartedAtUtc = t });
         }
+
+        // Trading post: an open order and a completed trade (ids unique across accounts).
+        long baseId = accountId == A ? 1000 : 2000;
+        db.TradingPostOrders.Add(new TradingPostOrder { Id = baseId, AccountId = accountId, Side = TradingPostSide.Buy, ItemId = 19721, Price = 100, Quantity = 1, CreatedUtc = t, SyncedAtUtc = t });
+        db.TradingPostTransactions.Add(new TradingPostTransaction { Id = baseId + 1, AccountId = accountId, Side = TradingPostSide.Sell, ItemId = 24, Price = 900, Quantity = 1, CreatedUtc = t, PurchasedUtc = t });
     }
 
     // Map segments belonging to an account's sessions (through their character segments).

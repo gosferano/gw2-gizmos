@@ -1,5 +1,6 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
 // Aliased so the contract's Character doesn't collide with the Character entity (Entities.Accounts).
 using ApiChar = Gw2Gizmos.Gw2Api.Contract.V2.Characters;
+using ApiCommerce = Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
@@ -135,6 +137,7 @@ public class AccountSyncUpdater
         await RunSection(WorkerFeatures.Bank, account, permissions, () => SyncBankAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.SharedInventory, account, permissions, () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharactersAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.TradingPost, account, permissions, () => SyncTradingPostAsync(client, account.Id, now, stoppingToken));
 
         return account.Name;
     }
@@ -279,6 +282,130 @@ public class AccountSyncUpdater
     {
         Api.AccountItem?[]? bank = await client.V2.Account.Bank.GetBlob(stoppingToken);
         return bank is null ? 0 : await SyncContainerAsync(accountId, AccountContainer.Bank, bank, now, stoppingToken);
+    }
+
+    // The API's largest page for the transaction endpoints.
+    private const int TransactionPageSize = 200;
+
+    /// <summary>
+    /// Trading post: replaces the account's open orders (each with its item's current best buy/sell prices, so the
+    /// UI can flag undercut and outbid orders) and adds completed trades not stored yet. History comes newest first,
+    /// so after the first sync (which reads all of the API's 90 days) paging stops at the first trade already
+    /// stored — normally a single page. Returns the open orders plus the new trades.
+    /// </summary>
+    private async Task<int> SyncTradingPostAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        // Open orders, replaced wholesale.
+        List<(string Side, ApiCommerce.CommerceTransaction Order)> open = new();
+        foreach (ApiCommerce.CommerceTransaction order in await ReadPagesAsync(
+                     async page => await client.V2.Commerce.Transactions.Current.Buys.GetPage(page, TransactionPageSize, stoppingToken),
+                     stopAt: null))
+        {
+            open.Add((TradingPostSide.Buy, order));
+        }
+
+        foreach (ApiCommerce.CommerceTransaction order in await ReadPagesAsync(
+                     async page => await client.V2.Commerce.Transactions.Current.Sells.GetPage(page, TransactionPageSize, stoppingToken),
+                     stopAt: null))
+        {
+            open.Add((TradingPostSide.Sell, order));
+        }
+
+        Dictionary<int, ApiCommerce.CommercePrices> prices = new();
+        foreach (int[] chunk in open.Select(o => o.Order.ItemId).Distinct().Chunk(TransactionPageSize))
+        {
+            ApiCommerce.CommercePrices[]? page = await client.V2.Commerce.Prices.GetByIds(chunk, stoppingToken);
+            foreach (ApiCommerce.CommercePrices price in page ?? [])
+            {
+                prices[price.Id] = price;
+            }
+        }
+
+        await _dbContext.TradingPostOrders.Where(o => o.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        foreach ((string side, ApiCommerce.CommerceTransaction order) in open)
+        {
+            ApiCommerce.CommercePrices? price = prices.GetValueOrDefault(order.ItemId);
+            _dbContext.TradingPostOrders.Add(new TradingPostOrder
+            {
+                Id = order.Id,
+                AccountId = accountId,
+                Side = side,
+                ItemId = order.ItemId,
+                Price = order.Price,
+                Quantity = order.Quantity,
+                CreatedUtc = order.Created,
+                // 0 means nobody is buying / nothing is listed.
+                BestBuyPrice = price?.Buys is { Quantity: > 0 } buys ? buys.UnitPrice : null,
+                BestSellPrice = price?.Sells is { Quantity: > 0 } sells ? sells.UnitPrice : null,
+                SyncedAtUtc = now,
+            });
+        }
+
+        // Completed trades: only the ones not stored yet.
+        HashSet<long> known = (await _dbContext.TradingPostTransactions
+                .Where(t => t.AccountId == accountId)
+                .Select(t => t.Id)
+                .ToListAsync(stoppingToken))
+            .ToHashSet();
+        int added = 0;
+        foreach ((string side, Func<int, Task<ApiCommerce.CommerceTransaction[]?>> getPage) in new[]
+                 {
+                     (TradingPostSide.Buy, (Func<int, Task<ApiCommerce.CommerceTransaction[]?>>)(async page =>
+                         await client.V2.Commerce.Transactions.History.Buys.GetPage(page, TransactionPageSize, stoppingToken))),
+                     (TradingPostSide.Sell, async page =>
+                         await client.V2.Commerce.Transactions.History.Sells.GetPage(page, TransactionPageSize, stoppingToken)),
+                 })
+        {
+            foreach (ApiCommerce.CommerceTransaction trade in await ReadPagesAsync(getPage, stopAt: known))
+            {
+                if (trade.Purchased is not { } purchased || !known.Add(trade.Id))
+                {
+                    continue;
+                }
+
+                _dbContext.TradingPostTransactions.Add(new TradingPostTransaction
+                {
+                    Id = trade.Id,
+                    AccountId = accountId,
+                    Side = side,
+                    ItemId = trade.ItemId,
+                    Price = trade.Price,
+                    Quantity = trade.Quantity,
+                    CreatedUtc = trade.Created,
+                    PurchasedUtc = purchased,
+                });
+                added++;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return open.Count + added;
+    }
+
+    /// <summary>
+    /// Reads a paged transaction endpoint from page 0 until a short (or missing) page — or, with
+    /// <paramref name="stopAt"/>, until a page contains an id already known (history is newest first).
+    /// </summary>
+    private static async Task<List<ApiCommerce.CommerceTransaction>> ReadPagesAsync(
+        Func<int, Task<ApiCommerce.CommerceTransaction[]?>> getPage, IReadOnlySet<long>? stopAt)
+    {
+        var all = new List<ApiCommerce.CommerceTransaction>();
+        for (int page = 0; ; page++)
+        {
+            ApiCommerce.CommerceTransaction[]? items = await getPage(page);
+            if (items is null || items.Length == 0)
+            {
+                break;
+            }
+
+            all.AddRange(items);
+            if (items.Length < TransactionPageSize || (stopAt is not null && items.Any(t => stopAt.Contains(t.Id))))
+            {
+                break;
+            }
+        }
+
+        return all;
     }
 
     private async Task<int> SyncSharedInventoryAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
