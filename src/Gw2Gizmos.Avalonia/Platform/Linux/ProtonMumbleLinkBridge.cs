@@ -11,9 +11,13 @@ namespace Gw2Gizmos.Avalonia.Platform.Linux;
 /// <summary>
 /// Makes play-session tracking work for Guild Wars 2 under Wine/Proton. The game's MumbleLink shared memory only exists
 /// inside Wine, so whenever the game is running (and Play sessions is on) this starts the bundled MumbleLink bridge in
-/// the game's own Wine session — same wine binary, same environment, so same prefix and wineserver — and the bridge
+/// the game's own Wine session — same wine build, same Wine settings, so same prefix and wineserver — and the bridge
 /// mirrors the block into <see cref="FilePath"/> for the worker. The bridge exits by itself shortly after the game does;
 /// nothing needs configuring in Steam.
+/// <para>
+/// Steam runs the game in its pressure-vessel container, and the wineserver (inside it) is what opens files, so
+/// <see cref="FilePath"/> must be visible there: the data directory under $HOME is, $XDG_RUNTIME_DIR isn't.
+/// </para>
 /// </summary>
 [SupportedOSPlatform("linux")]
 public sealed class ProtonMumbleLinkBridge : BackgroundService
@@ -22,6 +26,15 @@ public sealed class ProtonMumbleLinkBridge : BackgroundService
     private const string GameProcessName = "Gw2-64.exe";
 
     private const string BridgeFileName = "Gw2Gizmos.MumbleLink.Bridge.exe";
+
+    /// <summary>
+    /// Wine's per-process plumbing in the game's environment (an inherited wineserver fd, preloader state) and
+    /// container-only preloads; copied over, they'd break the bridge's own startup.
+    /// </summary>
+    private static readonly HashSet<string> ProcessOnlyVariables = new(StringComparer.Ordinal)
+    {
+        "WINESERVERSOCKET", "WINELOADERNOEXEC", "WINEPRELOADRESERVE", "WINE_LD_PRELOAD",
+    };
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
@@ -49,19 +62,6 @@ public sealed class ProtonMumbleLinkBridge : BackgroundService
             filePath,
             sp.GetRequiredService<FeatureSettingsStore>(),
             sp.GetRequiredService<ILogger<ProtonMumbleLinkBridge>>()));
-    }
-
-    /// <summary>
-    /// The MumbleLink file for a data folder: in the user's private runtime directory (tmpfs, owner-only) when there is
-    /// one, otherwise under <paramref name="fallbackDirectory"/>. Per data folder, so dev and release builds don't share.
-    /// </summary>
-    public static string DefaultFilePath(string folderName, string fallbackDirectory)
-    {
-        string root = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR") is { Length: > 0 } runtime
-            ? Path.Combine(runtime, folderName)
-            : fallbackDirectory;
-        Directory.CreateDirectory(root, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        return Path.Combine(root, "MumbleLink");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -131,11 +131,15 @@ public sealed class ProtonMumbleLinkBridge : BackgroundService
         startInfo.ArgumentList.Add("--output");
         startInfo.ArgumentList.Add("Z:" + FilePath.Replace('/', '\\'));
 
-        // The game's own environment puts the bridge in the same prefix and wine session (WINEPREFIX, sync mode, …).
-        startInfo.Environment.Clear();
+        // The game's Wine/Proton settings put the bridge in the same prefix and wine session (WINEPREFIX, sync mode,
+        // DLL paths, …). The rest of its environment points into Steam's container, so ours is used for that.
         foreach ((string key, string value) in game.Environment)
         {
-            startInfo.Environment[key] = value;
+            if ((key.StartsWith("WINE", StringComparison.Ordinal) || key.StartsWith("PROTON_", StringComparison.Ordinal))
+                && !ProcessOnlyVariables.Contains(key))
+            {
+                startInfo.Environment[key] = value;
+            }
         }
 
         startInfo.Environment["WINEDEBUG"] = "-all";

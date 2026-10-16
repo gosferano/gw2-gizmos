@@ -65,7 +65,7 @@ internal static class AppHostFactory
         }
 
         // GW2 runs under Wine/Proton here, so its MumbleLink reaches the worker through a bridge-mirrored file.
-        string mumbleLinkFilePath = ProtonMumbleLinkBridge.DefaultFilePath(AppDataDirectory.FolderName, dataDirectory);
+        string mumbleLinkFilePath = Path.Combine(dataDirectory, "MumbleLink");
 
         // Everything shared with the WPF app: stores, the worker-config pipe + launcher, reminders, update checks,
         // the log feed, the view-models, and the in-process delivery poller.

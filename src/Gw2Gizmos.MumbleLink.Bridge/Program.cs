@@ -9,9 +9,13 @@ namespace Gw2Gizmos.MumbleLink.Bridge;
 /// <summary>
 /// Mirrors Guild Wars 2's MumbleLink block into a file, from inside the game's Wine/Proton prefix. On Linux the game's
 /// "MumbleLink" shared memory lives in Wine, where a native reader can't open it; this runs in the same Wine session,
-/// copies the block into <c>--output</c> (a Windows path onto the Linux filesystem, e.g. <c>Z:\run\user\1000\…</c>)
-/// several times a second, and exits shortly after the game does — so the prefix's wineserver can shut down and Steam
-/// sees the game as closed. On exit the file is zeroed, which readers take as "game not running".
+/// copies the block into <c>--output</c> (a Windows path onto the Linux filesystem, e.g. <c>Z:\home\…</c>) several times
+/// a second, and exits shortly after the game does — so the prefix's wineserver can shut down and Steam sees the game
+/// as closed. On exit the file is zeroed, which readers take as "game not running".
+/// <para>
+/// The game doesn't create "MumbleLink" itself: it checks for one every few seconds and writes into it once found
+/// (normally Mumble or an overlay creates it). So the bridge creates it, and holds it for as long as it runs.
+/// </para>
 /// </summary>
 internal static class Program
 {
@@ -48,6 +52,8 @@ internal static class Program
         var started = Stopwatch.StartNew();
         var sinceGameCheck = Stopwatch.StartNew();
         TimeSpan? gameLastSeen = null;
+        string? lastFailure = null;
+        bool loggedFirstWrite = false;
 
         try
         {
@@ -73,16 +79,31 @@ internal static class Program
                 {
                     if (gameView is null)
                     {
-                        gameMap = MemoryMappedFile.OpenExisting(MapName, MemoryMappedFileRights.Read);
+                        gameMap = MemoryMappedFile.CreateOrOpen(MapName, BlockSize, MemoryMappedFileAccess.ReadWrite);
                         gameView = gameMap.CreateViewAccessor(0, BlockSize, MemoryMappedFileAccess.Read);
+                        Console.Error.WriteLine($"Created {MapName}; waiting for the game to write to it.");
+                        lastFailure = null;
                     }
 
                     gameView.ReadArray(0, block, 0, BlockSize);
+                    if (!loggedFirstWrite && BitConverter.ToUInt32(block, 4) != 0)
+                    {
+                        loggedFirstWrite = true;
+                        Console.Error.WriteLine($"{gameProcess} is writing to {MapName}.");
+                    }
+
                     outputView.WriteArray(0, block, 0, BlockSize);
                 }
                 catch (Exception ex) when (ex is FileNotFoundException or IOException or UnauthorizedAccessException)
                 {
-                    // Not created yet (game starting) or gone (game closing): retry on the next tick.
+                    // Retry on the next tick. Each new kind of failure is logged once, so a bridge that never gets the
+                    // block says why.
+                    if (ex.GetType().Name != lastFailure)
+                    {
+                        lastFailure = ex.GetType().Name;
+                        Console.Error.WriteLine($"Can't create {MapName}: {ex.GetType().Name}: {ex.Message}");
+                    }
+
                     gameView?.Dispose();
                     gameMap?.Dispose();
                     gameView = null;
