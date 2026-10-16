@@ -4,7 +4,11 @@ using Gw2Gizmos.Avalonia.Ui;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Desktop.Core;
 using Gw2Gizmos.Desktop.Core.Navigation;
+#if WINDOWS
+using Gw2Gizmos.Desktop.Platform.Windows;
+#else
 using Gw2Gizmos.Desktop.Platform.Linux;
+#endif
 using Gw2Gizmos.Desktop.Core.Ui;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,22 +60,24 @@ internal static class AppHostFactory
         var database = DesktopDatabaseSettings.Resolve(
             builder.Configuration, Path.Combine(dataDirectory, "gw2gizmos.sqlite"));
 
-        // Platform services. Linux only for now; Windows will reuse the WPF app's implementations once they move to
-        // a shared Windows platform library.
+        // Everything shared with the WPF app — stores, the worker-config pipe + launcher, reminders, update checks,
+        // the log feed, the view-models, and the in-process delivery poller — plus this platform's services.
+#if WINDOWS
+        // GW2 runs natively, so the worker reads its MumbleLink shared memory directly.
+        builder.Services.AddGw2GizmosDesktopCore(new AppPaths(dataDirectory), logStore, workerConfigPipeName, database);
+        builder.Services.AddGw2GizmosWindowsPlatform(AppDataDirectory.FolderName);
+#else
         if (!OperatingSystem.IsLinux())
         {
-            throw new PlatformNotSupportedException("The Avalonia app currently supports Linux only.");
+            throw new PlatformNotSupportedException("The Avalonia app supports Linux and Windows.");
         }
 
         // GW2 runs under Wine/Proton here, so its MumbleLink reaches the worker through a bridge-mirrored file.
         string mumbleLinkFilePath = Path.Combine(dataDirectory, "MumbleLink");
-
-        // Everything shared with the WPF app: stores, the worker-config pipe + launcher, reminders, update checks,
-        // the log feed, the view-models, and the in-process delivery poller.
         builder.Services.AddGw2GizmosDesktopCore(
             new AppPaths(dataDirectory), logStore, workerConfigPipeName, database, mumbleLinkFilePath);
-
         builder.Services.AddGw2GizmosLinuxPlatform(AppDataDirectory.FolderName, mumbleLinkFilePath);
+#endif
 
         // The Avalonia implementations of the UI seams the shared view-models are written against.
         builder.Services.AddSingleton<IUiDispatcher>(uiDispatcher);
