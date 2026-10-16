@@ -62,7 +62,7 @@ public static class WorkerFeatures
 
     public static readonly WorkerFeature PlaySessions = new(
         "PlaySessions", "Play sessions",
-        "Tracks play sessions and per-character switches from MumbleLink (Windows only); loot deltas use the "
+        "Tracks play sessions and per-character switches from MumbleLink; loot deltas use the "
             + "account features above.",
         new[] { Perm(TokenPermission.Account) });
 

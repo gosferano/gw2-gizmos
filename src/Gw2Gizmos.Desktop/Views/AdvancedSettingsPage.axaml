@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.AdvancedSettingsPage"
+             x:DataType="core:AdvancedSettingsViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <!-- Caution: changing these isn't recommended. -->
+            <ui:FAInfoBar Severity="Warning" IsOpen="True" IsClosable="False" Margin="0,0,0,16"
+                          Message="Changing these sync intervals from their defaults isn't recommended. Shorter intervals mean more GW2 API calls." />
+
+            <TextBlock Margin="0,0,0,10" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="How often the worker refreshes each kind of data." />
+
+            <ItemsControl ItemsSource="{Binding Syncs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:IntervalRow">
+                        <c:Card Margin="0,0,0,8" Padding="16,12">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="130" VerticalAlignment="Center"
+                                          Margin="12,0,0,0" Height="{StaticResource FormControlHeight}"
+                                          ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="core:IntervalOption">
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Text="{Binding Display}" FontWeight="Medium" FontSize="14"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+                        </c:Card>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

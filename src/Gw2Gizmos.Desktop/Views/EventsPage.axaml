@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.EventsPage"
+             x:DataType="core:EventsViewModel">
+    <UserControl.Styles>
+        <!-- An active event's countdown ("active, ends in …") reads green. -->
+        <Style Selector="TextBlock.countdown">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.countdown.active">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Title="Events" Scrollable="False">
+        <Grid RowDefinitions="Auto,*">
+            <!-- Toolbar: lead-time dropdown, expansion multi-select dropdown, and search. -->
+            <DockPanel Grid.Row="0" Margin="0,0,16,10">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="Remind me" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ComboBox Margin="8,0" MinWidth="56" VerticalAlignment="Center"
+                              Height="{StaticResource FormControlHeight}"
+                              ItemsSource="{Binding LeadTimeOptions}" SelectedItem="{Binding SelectedLeadTimeMinutes}" />
+                    <TextBlock Text="min before" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+
+                <!-- Expansion / Living-World multi-select (none checked = show all). -->
+                <DropDownButton DockPanel.Dock="Left" Content="{Binding ExpansionFilterLabel}" MinWidth="140"
+                                HorizontalContentAlignment="Left" VerticalAlignment="Center" Margin="0,0,12,0"
+                                Height="{StaticResource FormControlHeight}">
+                    <DropDownButton.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft">
+                            <ItemsControl ItemsSource="{Binding ExpansionFilters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="core:ExpansionFilter">
+                                        <CheckBox Content="{Binding Name}" Margin="0,1" IsChecked="{Binding IsSelected}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Flyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+
+                <TextBox PlaceholderText="Search events…" VerticalAlignment="Center" VerticalContentAlignment="Center"
+                         Height="{StaticResource FormControlHeight}" Text="{Binding SearchText}" />
+            </DockPanel>
+
+            <!-- One card per event, in a virtualizing ListBox kept in order by the live-sorted view (favorites, then
+                 active, then soonest). The cards leave a right-hand gutter for the scrollbar; the bare item container
+                 has no selection highlight while the in-card buttons stay interactive. -->
+            <ListBox Grid.Row="1" ItemsSource="{Binding Events}" Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerTheme>
+                    <ControlTheme TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Template">
+                            <ControlTemplate>
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                            </ControlTemplate>
+                        </Setter>
+                    </ControlTheme>
+                </ListBox.ItemContainerTheme>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="core:EventRowViewModel">
+                        <c:Card Margin="0,0,16,8" Padding="14,11" VerticalContentAlignment="Center">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+                                <!-- Kind tag -->
+                                <Border Grid.Column="0" VerticalAlignment="Center" Margin="0,0,14,0"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        CornerRadius="4" Padding="8,3" MinWidth="68">
+                                    <TextBlock Text="{Binding KindLabel}" FontSize="11" TextAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </Border>
+
+                                <!-- Name + map -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding Map}" FontSize="12" Margin="0,1,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+
+                                <!-- Copyable chat link -->
+                                <Button Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0"
+                                        Content="{Binding ChatLink}" FontFamily="{StaticResource MonospaceFontFamily}"
+                                        FontSize="12" Padding="8,3" MinWidth="0" ToolTip.Tip="Copy chat link"
+                                        IsVisible="{Binding HasChatLink}"
+                                        Command="{Binding $parent[UserControl].((core:EventsViewModel)DataContext).CopyChatLinkCommand}"
+                                        CommandParameter="{Binding ChatLink}" />
+
+                                <!-- Countdown -->
+                                <TextBlock Grid.Column="3" Text="{Binding Countdown}" VerticalAlignment="Center"
+                                           HorizontalAlignment="Right" FontSize="14" FontWeight="Medium"
+                                           MinWidth="96" TextAlignment="Right"
+                                           Classes="countdown" Classes.active="{Binding IsActive}" />
+
+                                <!-- Reminder opt-in -->
+                                <ToggleButton Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center" Padding="8"
+                                              IsChecked="{Binding IsSubscribed}" ToolTip.Tip="Remind me before this event">
+                                    <c:FluentIcon Symbol="Alert24" FontSize="18" />
+                                </ToggleButton>
+
+                                <!-- Favorite / pin to top -->
+                                <ToggleButton Grid.Column="5" Margin="6,0,0,0" VerticalAlignment="Center" Padding="8"
+                                              IsChecked="{Binding IsFavorite}" ToolTip.Tip="Pin to top">
+                                    <c:FluentIcon Symbol="Star24" FontSize="18" />
+                                </ToggleButton>
+                            </Grid>
+                        </c:Card>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </c:PageShell>
+</UserControl>

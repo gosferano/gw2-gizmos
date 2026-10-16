@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Linux implementations of the desktop's platform seams (notifications, autostart, secret storage) and the
+       Proton MumbleLink bridge launcher. Plain net10.0: everything here shells out to desktop tools or reads /proc. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+  </ItemGroup>
+
+</Project>

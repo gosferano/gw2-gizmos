@@ -1,131 +1,121 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Gw2Gizmos.Desktop.Navigation;
+using Gw2Gizmos.Desktop.Core;
 
 namespace Gw2Gizmos.Desktop.Controls;
 
 /// <summary>
-/// A small image that shows a GW2 item's icon, resolved and cached by item id through <see cref="App.Icons"/>.
-/// Drop it next to an item name anywhere a row exposes an <c>ItemId</c> — the market grid, the craft tree,
-/// etc. Loads asynchronously and guards against DataGrid/TreeView container recycling.
+/// A small image that shows a GW2 item's icon, resolved and cached by item id through <see cref="AppServices.Icons"/>.
+/// Drop it next to an item name anywhere a row exposes an <c>ItemId</c> — the market grid, the craft tree, etc.
+/// Loads asynchronously and guards against container recycling.
 /// </summary>
 public sealed class ItemImage : Image
 {
-    public static readonly DependencyProperty ItemIdProperty = DependencyProperty.Register(
-        nameof(ItemId),
-        typeof(int),
-        typeof(ItemImage),
-        new PropertyMetadata(0, OnItemIdChanged)
-    );
+    public static readonly StyledProperty<int> ItemIdProperty =
+        AvaloniaProperty.Register<ItemImage, int>(nameof(ItemId));
 
-    /// <summary>Rounds the icon's corners (0 = square). Clips the image to a rounded rectangle.</summary>
-    public static readonly DependencyProperty CornerRadiusProperty = DependencyProperty.Register(
-        nameof(CornerRadius),
-        typeof(double),
-        typeof(ItemImage),
-        new PropertyMetadata(0.0, (d, _) => ((ItemImage)d).UpdateClip())
-    );
+    /// <summary>Rounds the icon's corners (0 = square) by clipping it to a rounded rectangle.</summary>
+    public static readonly StyledProperty<double> CornerRadiusProperty =
+        AvaloniaProperty.Register<ItemImage, double>(nameof(CornerRadius));
 
-    /// <summary>When true, the icon is rendered greyscale (e.g. a material the account doesn't hold). The
-    /// desaturation is computed from the loaded icon in memory — no second image is fetched or stored.</summary>
-    public static readonly DependencyProperty DesaturateProperty = DependencyProperty.Register(
-        nameof(Desaturate),
-        typeof(bool),
-        typeof(ItemImage),
-        new PropertyMetadata(false, (d, _) => ((ItemImage)d).ApplySource())
-    );
+    /// <summary>When true, the icon is rendered greyscale (e.g. a material the account doesn't hold), computed from the
+    /// loaded icon in memory — no second image is fetched or stored.</summary>
+    public static readonly StyledProperty<bool> DesaturateProperty =
+        AvaloniaProperty.Register<ItemImage, bool>(nameof(Desaturate));
 
     // The icon as loaded (full colour); kept so toggling Desaturate re-renders without re-fetching.
-    private ImageSource? _loaded;
+    private Bitmap? _loaded;
 
-    public ItemImage()
-    {
-        // The clip depends on the rendered size, which is only known after layout (and changes as the
-        // Uniform-stretched icon resizes with its column).
-        SizeChanged += (_, _) => UpdateClip();
-    }
+    protected override Type StyleKeyOverride => typeof(Image);
 
     public int ItemId
     {
-        get => (int)GetValue(ItemIdProperty);
+        get => GetValue(ItemIdProperty);
         set => SetValue(ItemIdProperty, value);
     }
 
     public double CornerRadius
     {
-        get => (double)GetValue(CornerRadiusProperty);
+        get => GetValue(CornerRadiusProperty);
         set => SetValue(CornerRadiusProperty, value);
     }
 
     public bool Desaturate
     {
-        get => (bool)GetValue(DesaturateProperty);
+        get => GetValue(DesaturateProperty);
         set => SetValue(DesaturateProperty, value);
     }
 
-    private void UpdateClip()
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
-        if (CornerRadius <= 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        base.OnPropertyChanged(change);
+        if (change.Property == ItemIdProperty)
         {
-            Clip = null;
-            return;
+            _ = LoadAsync(ItemId);
         }
-
-        Clip = new RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight), CornerRadius, CornerRadius);
+        else if (change.Property == DesaturateProperty)
+        {
+            ApplySource();
+        }
+        else if (change.Property == CornerRadiusProperty || change.Property == BoundsProperty)
+        {
+            // The clip depends on the rendered size, which changes as the Uniform-stretched icon resizes.
+            UpdateClip();
+        }
     }
 
-    private static async void OnItemIdChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var image = (ItemImage)d;
-        var itemId = (int)e.NewValue;
-        image._loaded = null;
-        image.Source = null;
+    private void UpdateClip() =>
+        Clip = CornerRadius > 0 && Bounds.Width > 0 && Bounds.Height > 0
+            ? new RectangleGeometry(new Rect(Bounds.Size), CornerRadius, CornerRadius)
+            : null;
 
-        IconProvider? icons = App.Icons;
+    private async Task LoadAsync(int itemId)
+    {
+        _loaded = null;
+        Source = null;
+
+        IconProvider<Bitmap>? icons = AppServices.Icons;
         if (icons is null || itemId <= 0)
         {
             return;
         }
 
-        ImageSource? source = await icons.GetIconAsync(itemId);
+        Bitmap? bitmap = await icons.GetIconAsync(itemId);
 
         // The container may have been recycled to a different item while we awaited; only apply if still ours.
-        if (image.ItemId == itemId)
+        if (ItemId == itemId)
         {
-            image._loaded = source;
-            image.ApplySource();
+            _loaded = bitmap;
+            ApplySource();
         }
     }
 
-    // Shows the loaded icon, desaturated when Desaturate is set. Greyscale is derived from the in-memory
-    // bitmap (RGB → luminance, alpha preserved), so transparent regions stay transparent and no extra image
-    // is fetched or cached.
-    private void ApplySource() =>
-        Source = Desaturate && _loaded is BitmapSource colour ? ToGrayscale(colour) : _loaded;
+    // Shows the loaded icon, desaturated when Desaturate is set.
+    private void ApplySource() => Source = Desaturate && _loaded is not null ? ToGrayscale(_loaded) : _loaded;
 
-    private static BitmapSource ToGrayscale(BitmapSource source)
+    /// <summary>A greyscale copy: Rec. 601 luminance per pixel, alpha preserved (so transparent regions stay so).</summary>
+    private static unsafe Bitmap ToGrayscale(Bitmap source)
     {
-        var bgra = source.Format == PixelFormats.Bgra32
-            ? source
-            : new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        var result = new WriteableBitmap(source.PixelSize, source.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using ILockedFramebuffer buffer = result.Lock();
+        source.CopyPixels(buffer);
 
-        int width = bgra.PixelWidth;
-        int height = bgra.PixelHeight;
-        int stride = width * 4;
-        var pixels = new byte[height * stride];
-        bgra.CopyPixels(pixels, stride, 0);
-
-        for (var i = 0; i < pixels.Length; i += 4)
+        for (int y = 0; y < buffer.Size.Height; y++)
         {
-            // Rec. 601 luminance; leave the alpha byte (i + 3) untouched.
-            byte gray = (byte)((pixels[i] * 114 + pixels[i + 1] * 587 + pixels[i + 2] * 299) / 1000);
-            pixels[i] = pixels[i + 1] = pixels[i + 2] = gray;
+            byte* row = (byte*)buffer.Address + (y * buffer.RowBytes);
+            for (int x = 0; x < buffer.Size.Width; x++)
+            {
+                byte* pixel = row + (x * 4);
+                // BGRA; luminance is linear, so it stays valid on premultiplied channels.
+                byte gray = (byte)(((pixel[0] * 114) + (pixel[1] * 587) + (pixel[2] * 299)) / 1000);
+                pixel[0] = pixel[1] = pixel[2] = gray;
+            }
         }
 
-        var result = BitmapSource.Create(
-            width, height, bgra.DpiX, bgra.DpiY, PixelFormats.Bgra32, null, pixels, stride);
-        result.Freeze();
         return result;
     }
 }

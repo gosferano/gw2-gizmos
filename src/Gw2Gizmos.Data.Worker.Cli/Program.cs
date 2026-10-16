@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
+using Gw2Gizmos.MumbleLink.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -62,6 +63,25 @@ if (!string.IsNullOrWhiteSpace(workerConfigPipeName))
     builder.Services.AddSingleton<IIntervalGate>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
     builder.Services.AddSingleton<ISyncTriggerSource>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
     builder.Services.AddSingleton<IDeleteRequestSource>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
+}
+
+// When Gw2Gizmos spawns this worker it passes its own pid; exit when that process does, so the worker never outlives
+// the app — even after a crash or a hard kill (Windows also binds it to a kill-on-close Job Object; Linux has none).
+if (int.TryParse(builder.Configuration["WorkerConfig:ParentProcessId"], out int parentProcessId))
+{
+    builder.Services.AddHostedService(sp => new ParentProcessWatchdog(
+        parentProcessId,
+        sp.GetRequiredService<IHostApplicationLifetime>(),
+        sp.GetRequiredService<ILogger<ParentProcessWatchdog>>()
+    ));
+}
+
+// On Linux, GW2 runs under Wine/Proton and its MumbleLink shared memory lives inside Wine; Gw2Gizmos runs a bridge in
+// the game's prefix that mirrors it into a file and passes that file here, so play sessions are tracked from it.
+// (On Windows the worker reads the game's shared memory directly.)
+if (builder.Configuration["MumbleLink:FilePath"] is { Length: > 0 } mumbleLinkFilePath)
+{
+    builder.Services.AddMumbleLinkFile(mumbleLinkFilePath);
 }
 
 // SQLite is the chosen database provider; register it before the data services so this layer stays

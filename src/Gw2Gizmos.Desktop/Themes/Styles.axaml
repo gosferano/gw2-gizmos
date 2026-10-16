@@ -1,0 +1,51 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- App-wide style classes on top of FluentAvalonia's control themes. -->
+
+    <Styles.Resources>
+        <SolidColorBrush x:Key="DangerButtonBackground" Color="#C42B1C" />
+        <SolidColorBrush x:Key="DangerButtonBackgroundPointerOver" Color="#D13F30" />
+        <SolidColorBrush x:Key="DangerButtonBackgroundPressed" Color="#A82416" />
+        <SolidColorBrush x:Key="DangerButtonForeground" Color="White" />
+    </Styles.Resources>
+
+    <!-- FluentAvalonia sizes its ComboBox through padding: 1px border + 5 + a 20px text line + 5 + 1px border = its 32px
+         default. Stretched to the app's 38px FormControlHeight, the selection sat high (centring it doesn't help: the
+         selection presenter's margin makes it give the text a 28px slot, drawn from the top). Grow the padding instead,
+         so the text line is centred exactly: 1 + 8 + 20 + 8 + 1 = 38. -->
+    <Style Selector="ComboBox">
+        <Setter Property="Padding" Value="12,8,0,8" />
+    </Style>
+
+    <!-- A list row with a subtle hover highlight, so it's clear which value belongs to which name (wallet, session
+         loot). -->
+    <Style Selector="Border.hover-row">
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.hover-row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+    </Style>
+
+    <!-- Destructive action button (WPF-UI's Appearance="Danger"), mirroring FluentAvalonia's .accent variant: same
+         template part, red instead of accent. Declared state by state so hover / pressed / disabled still apply. -->
+    <Style Selector="Button.danger /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource DangerButtonForeground}" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackgroundPointerOver}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackgroundPointerOver}" />
+    </Style>
+    <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerButtonBackgroundPressed}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerButtonBackgroundPressed}" />
+    </Style>
+    <Style Selector="Button.danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabled}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrushDisabled}" />
+        <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundDisabled}" />
+    </Style>
+</Styles>

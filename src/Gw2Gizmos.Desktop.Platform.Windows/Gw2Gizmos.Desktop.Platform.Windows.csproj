@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Windows implementations of the desktop's platform seams (toasts, Run-key autostart, DPAPI) and the
+       kill-on-close job that ties the worker to the app. No UI framework: shared by the WPF and Avalonia apps. -->
+  <PropertyGroup>
+    <!-- The pinned Windows SDK version brings the built-in WinRT projections (Windows.UI.Notifications for toasts). -->
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <!-- Lets the library (and the apps referencing it) build on Linux/macOS too, e.g. for a cross-build. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+  </ItemGroup>
+
+</Project>

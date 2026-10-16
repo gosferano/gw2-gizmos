@@ -1,0 +1,105 @@
+<Page x:Class="Gw2Gizmos.Desktop.Legacy.SessionsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:c="clr-namespace:Gw2Gizmos.Desktop.Legacy.Controls"
+      TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      ScrollViewer.CanContentScroll="False"
+      Title="Sessions">
+    <c:PageShell Title="Sessions">
+        <StackPanel>
+            <!-- No account picked yet -->
+            <ui:Card Margin="0,4,0,0" Padding="20" Visibility="{Binding HasAccount, Converter={StaticResource InverseBool}}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </ui:Card>
+
+            <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource Bool}}">
+                <!-- Account selected but nothing recorded yet -->
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Visibility="{Binding HasAnySessions, Converter={StaticResource InverseBool}}" />
+
+                <!-- Date-range filter on the left, sort on the right. Control heights come from the global
+                     FormControlHeight styles in App.xaml, so inputs and buttons line up. -->
+                <DockPanel Margin="0,4,0,10" LastChildFill="False"
+                           Visibility="{Binding HasAnySessions, Converter={StaticResource Bool}}">
+                    <!-- Filter -->
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <TextBlock Text="From" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <!-- Short format + en-CA → the short-date pattern is yyyy-MM-dd (ISO), no day name.
+                             Height pinned to the shared FormControlHeight (no global DatePicker style — see App.xaml). -->
+                        <DatePicker SelectedDate="{Binding FromDate}" Width="130" Margin="0,0,10,0"
+                                    Height="{StaticResource FormControlHeight}"
+                                    SelectedDateFormat="Short" Language="en-CA" />
+                        <TextBlock Text="To" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <DatePicker SelectedDate="{Binding ToDate}" Width="130" Margin="0,0,8,0"
+                                    Height="{StaticResource FormControlHeight}"
+                                    SelectedDateFormat="Short" Language="en-CA" />
+                        <ui:Button Command="{Binding ClearFilterCommand}" Content="Clear" Appearance="Transparent"
+                                   Height="{StaticResource FormControlHeight}" />
+                    </StackPanel>
+
+                    <!-- Sort -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <TextBlock Text="Sort" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,8,0" />
+                        <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SelectedSortIndex, Mode=TwoWay}"
+                                  MinWidth="130" Height="{StaticResource FormControlHeight}" Margin="0,0,8,0" />
+                        <ui:Button Command="{Binding ToggleDirectionCommand}" Padding="9,0"
+                                   Height="{StaticResource FormControlHeight}" ToolTip="{Binding DirectionLabel}">
+                            <ui:SymbolIcon FontSize="16">
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="ui:SymbolIcon">
+                                        <!-- Arrow up = descending (the default), down = ascending. -->
+                                        <Setter Property="Symbol" Value="ArrowUp24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Descending}" Value="False">
+                                                <Setter Property="Symbol" Value="ArrowDown24" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Filter excludes every session -->
+                <TextBlock Text="No sessions in the selected date range." TextWrapping="Wrap" Margin="0,4,0,8"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Visibility="{Binding FilteredEmpty, Converter={StaticResource Bool}}" />
+
+                <!-- One card per play session → its character timeline. -->
+                <ItemsControl ItemsSource="{Binding Sessions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:CardAction Margin="0,0,0,8"
+                                           Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                        <ui:SymbolIcon Symbol="History24" FontSize="24" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="14" />
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <!-- Estimated value earned that sitting (coin + instant-sell loot). -->
+                                    <c:CoinDisplay Grid.Column="1" Copper="{Binding TotalValueCopper}" Signed="True"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0" FontWeight="Medium"
+                                                   FontSize="13"
+                                                   Visibility="{Binding HasValue, Converter={StaticResource Bool}}" />
+                                </Grid>
+                            </ui:CardAction>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</Page>

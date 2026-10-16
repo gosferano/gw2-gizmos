@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.SessionsPage"
+             x:DataType="core:SessionsViewModel">
+    <c:PageShell Title="Sessions">
+        <StackPanel>
+            <!-- No account picked yet -->
+            <c:Card Margin="0,4,0,0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel IsVisible="{Binding HasAccount}">
+                <!-- Account selected but nothing recorded yet -->
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           IsVisible="{Binding !HasAnySessions}" />
+
+                <!-- Date-range filter on the left, sort on the right. -->
+                <DockPanel Margin="0,4,0,10" LastChildFill="False" IsVisible="{Binding HasAnySessions}">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <TextBlock Text="From" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <!-- ISO dates (yyyy-MM-dd), as in the WPF app. -->
+                        <CalendarDatePicker SelectedDate="{Binding FromDate}" Width="140" Margin="0,0,10,0"
+                                            Height="{StaticResource FormControlHeight}"
+                                            SelectedDateFormat="Custom" CustomDateFormatString="yyyy-MM-dd" />
+                        <TextBlock Text="To" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
+                        <CalendarDatePicker SelectedDate="{Binding ToDate}" Width="140" Margin="0,0,8,0"
+                                            Height="{StaticResource FormControlHeight}"
+                                            SelectedDateFormat="Custom" CustomDateFormatString="yyyy-MM-dd" />
+                        <Button Command="{Binding ClearFilterCommand}" Content="Clear"
+                                Theme="{StaticResource TransparentButton}" Height="{StaticResource FormControlHeight}" />
+                    </StackPanel>
+
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <TextBlock Text="Sort" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,8,0" />
+                        <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SelectedSortIndex}"
+                                  MinWidth="130" Height="{StaticResource FormControlHeight}" Margin="0,0,8,0" />
+                        <!-- Arrow up = descending (the default), down = ascending. -->
+                        <Button Command="{Binding ToggleDirectionCommand}" Padding="9,0"
+                                Height="{StaticResource FormControlHeight}" ToolTip.Tip="{Binding DirectionLabel}">
+                            <Panel>
+                                <c:FluentIcon Symbol="ArrowUp24" FontSize="16" IsVisible="{Binding Descending}" />
+                                <c:FluentIcon Symbol="ArrowDown24" FontSize="16" IsVisible="{Binding !Descending}" />
+                            </Panel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Filter excludes every session -->
+                <TextBlock Text="No sessions in the selected date range." TextWrapping="Wrap" Margin="0,4,0,8"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           IsVisible="{Binding FilteredEmpty}" />
+
+                <!-- One card per play session → its character timeline; the value earned that sitting on the right. -->
+                <ItemsControl ItemsSource="{Binding Sessions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:GameSessionRow">
+                            <ui:FASettingsExpander Header="{Binding Title}" Description="{Binding Subtitle}"
+                                                   Margin="0,0,0,8" IconSource="{c:FluentIconSource History24}"
+                                                   IsClickEnabled="True" ActionIconSource="ChevronRight"
+                                                   Command="{Binding $parent[UserControl].((core:SessionsViewModel)DataContext).OpenCommand}"
+                                                   CommandParameter="{Binding}">
+                                <ui:FASettingsExpander.Footer>
+                                    <c:CoinDisplay Copper="{Binding TotalValueCopper}" Signed="True" FontWeight="Medium"
+                                                   FontSize="13" IsVisible="{Binding HasValue}" />
+                                </ui:FASettingsExpander.Footer>
+                            </ui:FASettingsExpander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

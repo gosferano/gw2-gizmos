@@ -1,85 +1,101 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- The cross-platform desktop app (Linux and Windows): an Avalonia + FluentAvalonia head over the shared
+       Gw2Gizmos.Desktop.Core. Replaces the deprecated WPF app (Gw2Gizmos.Desktop.Legacy). -->
+
+  <!-- Which platform this build is for: the runtime identifier when one is given (`-r win-x64` / `-r linux-x64`, so
+       either can be cross-built), otherwise the OS building it. A Windows build targets the Windows TFM (its platform
+       library needs the WinRT toast API) and compiles with the WINDOWS symbol. -->
+  <PropertyGroup>
+    <Gw2GizmosWindows Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.StartsWith('win'))</Gw2GizmosWindows>
+    <Gw2GizmosWindows Condition="'$(RuntimeIdentifier)' == ''">$([MSBuild]::IsOSPlatform('Windows'))</Gw2GizmosWindows>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Gw2GizmosWindows)' == 'true'">
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Override the default net10.0: pin the Windows SDK version so the built-in WinRT projections
-         (Windows.UI.Notifications for toasts) are available. -->
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <!-- User-facing brand name; project stays Gw2Gizmos.Desktop. -->
+    <!-- User-facing brand name (Gw2Gizmos.exe / Gw2Gizmos); project stays Gw2Gizmos.Desktop. The same main exe and
+         Velopack pack id as the WPF app it replaces, so existing Windows installs update straight onto it. -->
     <AssemblyName>Gw2Gizmos</AssemblyName>
-    <Version>0.6.0</Version>
-    <!-- Use our explicit Program.Main (so VelopackApp.Run() runs before WPF) instead of the WPF SDK's
-         auto-generated entry point. -->
-    <StartupObject>Gw2Gizmos.Desktop.Program</StartupObject>
-    <!-- LiveCharts pulls in OpenTK / SkiaSharp.Views.WPF, which ship only .NETFramework assets; NuGet's
-         fallback to them is harmless here (the chart works), so silence the cross-framework restore noise. -->
-    <NoWarn>$(NoWarn);NU1701</NoWarn>
-    <!-- Embed the brand icon in the exe so the taskbar button uses it. Because the app sets an explicit
-         AppUserModelID (for toasts), Windows takes the taskbar icon from the exe/shortcut rather than
-         Window.Icon — so the .ico here is what makes the taskbar match the tray + title bar. -->
     <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The desktop release version (the release workflow tags gw2gizmos-desktop-<Version>). -->
+    <Version>0.7.0-beta.1</Version>
+    <!-- ItemImage desaturates icons by walking the bitmap's pixel buffer directly. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <!-- Items and Logs grids; its collection view also backs the shared IItemsView seam. -->
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
+    <PackageReference Include="FluentAvaloniaUI" />
+    <!-- Price-history charts (built on SkiaSharp 3, like Avalonia 12). -->
+    <PackageReference Include="ScottPlot.Avalonia" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
-    <PackageReference Include="WPF-UI" />
-    <PackageReference Include="WPF-UI.Tray" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" />
-    <PackageReference Include="Velopack" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
-    <!-- Composition root picks the concrete DB provider (the only place SQLite is referenced). -->
+    <!-- The UI-agnostic view-models, services and seams this head implements. -->
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+    <!-- Composition root picks the concrete DB provider. -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
-    <!-- Hardcoded reference data (world-boss / meta / instance schedules) behind the Events timer screen. -->
-    <ProjectReference Include="..\Gw2Gizmos.Data.Static\Gw2Gizmos.Data.Static.csproj" />
-    <!-- The crafting engine: its tree serializer + RecipeNode model render the profitable-recipe detail. -->
-    <ProjectReference Include="..\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj" />
-    <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a
-         separate process so its heavy ingestion can't stall the UI thread. -->
+    <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a separate
+         process so its heavy ingestion can't stall the UI thread. -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Assets\gw2gizmos.png" />
-    <Resource Include="Assets\coin_gold.png" />
-    <Resource Include="Assets\coin_silver.png" />
-    <Resource Include="Assets\coin_copper.png" />
+  <!-- The platform services: notifications, launch at login, secret storage, and (Linux) the Proton MumbleLink
+       bridge launcher / (Windows) the worker's kill-on-close job. -->
+  <ItemGroup Condition="'$(Gw2GizmosWindows)' == 'true'">
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Platform.Windows\Gw2Gizmos.Desktop.Platform.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Gw2GizmosWindows)' != 'true'">
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Platform.Linux\Gw2Gizmos.Desktop.Platform.Linux.csproj" />
   </ItemGroup>
 
-  <!-- Dev (F5/run-from-bin): merge the worker CLI's build output into the app's output dir so the app
-       can spawn it as a sibling exe, sharing the runtime + common dependencies (one copy each). Only
-       files the app doesn't already emit are copied, so the app always wins on shared assemblies.
-       Skipped for RID builds — those go through publish (PublishWorkerCli); running here too would let
-       the net10.0\**\* glob recurse into the worker's RID-nested output and re-nest it under win-x64\. -->
+  <!-- Linux: ship the MumbleLink bridge (a win-x64 single-file exe that runs inside the game's Wine prefix) next to
+       the app, in mumblelink-bridge/. Re-published only when its sources change. Its RID is pinned: an app built
+       with -r linux-x64 would otherwise pass that down. On Windows the worker reads the game's shared memory
+       directly. -->
+  <ItemGroup Condition="'$(Gw2GizmosWindows)' != 'true'">
+    <_MumbleLinkBridgeInputs Include="..\Gw2Gizmos.MumbleLink.Bridge\**\*.cs;..\Gw2Gizmos.MumbleLink.Bridge\*.csproj"
+                             Exclude="..\Gw2Gizmos.MumbleLink.Bridge\obj\**;..\Gw2Gizmos.MumbleLink.Bridge\bin\**" />
+  </ItemGroup>
+  <Target Name="PublishMumbleLinkBridge" AfterTargets="Build" Condition="'$(Gw2GizmosWindows)' != 'true'"
+          Inputs="@(_MumbleLinkBridgeInputs)" Outputs="$(OutDir)mumblelink-bridge\Gw2Gizmos.MumbleLink.Bridge.exe">
+    <MSBuild Projects="..\Gw2Gizmos.MumbleLink.Bridge\Gw2Gizmos.MumbleLink.Bridge.csproj" Targets="Restore;Publish"
+             Properties="Configuration=Release;RuntimeIdentifier=win-x64;SelfContained=true;PublishDir=$([System.IO.Path]::GetFullPath('$(OutDir)mumblelink-bridge'))/" />
+  </Target>
+
+  <!-- Dev (run-from-bin): merge the worker CLI's build output into the app's output dir so the app can spawn it as
+       a sibling executable, sharing the runtime + common dependencies. Same rules as the WPF app's CopyWorkerCli:
+       only files the app doesn't already emit are copied (the app wins on shared assemblies), except the worker's
+       own Gw2Gizmos.* assemblies and loader metadata (*.json), which are always refreshed so it never runs stale
+       code; and never the worker's standalone-only appsettings*.json, whose relative connection string would
+       hijack the database path both processes get from launch args. -->
   <Target Name="CopyWorkerCli" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
     <ItemGroup>
-      <!-- Exclude the worker's appsettings*.json: it configures STANDALONE runs only (feature defaults +
-           an optional connection string). Bundling it into the app's output is harmful: both the spawned
-           worker AND the desktop's own host read appsettings from here, so its relative connection string
-           ("Data Source=Data/...") hijacks the absolute DB path they should get from args — sending the
-           worker's writes and the desktop's reads to different files. -->
       <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*"
                        Exclude="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\appsettings*.json" />
       <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
-      <!-- The worker's loader metadata (deps.json / runtimeconfig.json) AND its own Gw2Gizmos.* assemblies
-           must always be refreshed, not just copied when absent: when the worker changes (new code, or a new
-           dependency that alters its deps.json) the files already exist here, so !Exists would skip them —
-           leaving the spawned worker running stale code or unable to bind a new assembly. These are never
-           shared framework assemblies, so refreshing them can't clobber the app's runtime; SkipUnchangedFiles
-           avoids needless writes. -->
       <_WorkerCliRefresh Include="@(_WorkerCliFiles)"
                          Condition="'%(Extension)' == '.json' or $([System.String]::Copy('%(Filename)').StartsWith('Gw2Gizmos.'))" />
-      <!-- Drop any appsettings.json a prior build copied into the app output, so it can't pollute config. -->
       <_StaleWorkerAppsettings Include="$(OutDir)appsettings*.json" />
     </ItemGroup>
     <Delete Files="@(_StaleWorkerAppsettings)" />
@@ -87,29 +103,33 @@
     <Copy SourceFiles="@(_WorkerCliRefresh)" DestinationFiles="@(_WorkerCliRefresh->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Publish: stage the worker CLI's publish (matching the app's self-contained / RID settings), then
-       merge it into the app's publish root, copying only files the app doesn't already emit. The app
-       must win on shared assemblies: its WindowsDesktop runtime is a superset that satisfies the worker
-       (net10.0), whereas the worker's variants (e.g. WindowsBase) could break the WPF app. -->
+  <!-- Publish: stage the worker CLI's publish (matching the app's self-contained / RID settings), then merge it into
+       the app's publish root, copying only files the app doesn't already emit (the app wins on shared assemblies). -->
   <Target Name="PublishWorkerCli" AfterTargets="Publish">
     <PropertyGroup>
       <_AppPublishFull Condition="$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$(PublishDir)</_AppPublishFull>
-      <_AppPublishFull Condition="!$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(PublishDir)'))\</_AppPublishFull>
-      <_WorkerStage>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)WorkerPublish'))\</_WorkerStage>
+      <_AppPublishFull Condition="!$([System.IO.Path]::IsPathRooted('$(PublishDir)'))">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(PublishDir)'))/</_AppPublishFull>
+      <_WorkerStage>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)WorkerPublish'))/</_WorkerStage>
     </PropertyGroup>
-    <MSBuild Projects="$(MSBuildThisFileDirectory)..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj"
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../Gw2Gizmos.Data.Worker.Cli/Gw2Gizmos.Data.Worker.Cli.csproj"
              Targets="Publish"
              Properties="Configuration=$(Configuration);PublishDir=$(_WorkerStage);SelfContained=$(SelfContained);RuntimeIdentifier=$(RuntimeIdentifier)" />
     <ItemGroup>
-      <!-- Same exclusion as CopyWorkerCli: the worker's appsettings*.json is standalone-only, never in the app. -->
-      <_WorkerPublished Include="$(_WorkerStage)**\*" Exclude="$(_WorkerStage)appsettings*.json" />
+      <!-- The worker's appsettings*.json is standalone-only, never part of the app (see CopyWorkerCli). -->
+      <_WorkerPublished Include="$(_WorkerStage)**/*" Exclude="$(_WorkerStage)appsettings*.json" />
       <_WorkerPublishedNew Include="@(_WorkerPublished)" Condition="!Exists('$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Copy SourceFiles="@(_WorkerPublishedNew)" DestinationFiles="@(_WorkerPublishedNew->'$(_AppPublishFull)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <!-- The staging publish is a full (self-contained) copy used only to extract the worker's unique
-         files + its self-contained host/runtimeconfig; drop it so it doesn't leave ~90 MB of duplicated
-         DLLs behind in obj/. -->
+    <!-- The staging publish is a full self-contained copy, only needed for the worker's unique files; drop it. -->
     <RemoveDir Directories="$(_WorkerStage)" />
+  </Target>
+
+  <!-- Publish (Linux): the MumbleLink bridge the build placed in the output directory ships in the package too. -->
+  <Target Name="PublishMumbleLinkBridgeFiles" AfterTargets="Publish" Condition="'$(Gw2GizmosWindows)' != 'true'">
+    <ItemGroup>
+      <_BridgeFiles Include="$(OutDir)mumblelink-bridge/*.exe" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_BridgeFiles)" DestinationFolder="$(PublishDir)mumblelink-bridge" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

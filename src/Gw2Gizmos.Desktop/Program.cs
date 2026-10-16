@@ -1,22 +1,27 @@
-using System;
+using Avalonia;
 using Velopack;
 
 namespace Gw2Gizmos.Desktop;
 
-/// <summary>
-/// Explicit entry point. Velopack must process install/update/uninstall hooks — and exit the process
-/// for those — before WPF spins up, so <see cref="VelopackApp"/> runs here at the very top of Main
-/// rather than in <c>App.OnStartup</c> (which runs after WPF has already initialized).
-/// </summary>
-public static class Program
+internal static class Program
 {
     [STAThread]
-    public static void Main()
+    public static void Main(string[] args)
     {
+        // Velopack must process install/update/uninstall hooks — and exit the process for those — before the UI
+        // starts; it also has to run before any UpdateManager is created (the update check).
         VelopackApp.Build().Run();
 
-        var app = new App();
-        app.InitializeComponent();
-        app.Run();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
+
+    /// <summary>Also used by the XAML previewer, so keep it free of side effects.</summary>
+    public static AppBuilder BuildAvaloniaApp() =>
+        AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            // Draw popups (dropdowns, flyouts, tooltips) inside the window rather than as separate X11 windows: window
+            // managers may treat those as ordinary floating windows and apply rules to them (e.g. a Hyprland "centre
+            // floating windows" rule put every dropdown in the middle of the screen).
+            .With(new X11PlatformOptions { OverlayPopups = true })
+            .LogToTrace();
 }

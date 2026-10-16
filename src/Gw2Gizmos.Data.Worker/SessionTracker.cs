@@ -383,12 +383,13 @@ public sealed class SessionTracker : BackgroundService
     /// Whether the Guild Wars 2 process the block reports (<c>Context.ProcessId</c>) is still running: <c>true</c>
     /// alive, <c>false</c> exited, <c>null</c> when it can't be determined (no context yet, or access denied) — the
     /// caller then falls back to the tick-freeze timeout. The process name is checked to guard against the OS
-    /// reusing the pid for an unrelated process after the game closes.
+    /// reusing the pid for an unrelated process after the game closes. Off Windows the game runs under Wine, whose
+    /// process ids aren't the host's, so it's always undetermined there.
     /// </summary>
     private static bool? IsGameProcessAlive(MumbleLinkSnapshot snapshot)
     {
         uint processId = snapshot.Context?.ProcessId ?? 0;
-        if (processId == 0)
+        if (processId == 0 || !OperatingSystem.IsWindows())
         {
             return null;
         }

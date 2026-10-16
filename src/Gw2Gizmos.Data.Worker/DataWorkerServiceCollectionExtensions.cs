@@ -51,11 +51,16 @@ public static class DataWorkerServiceCollectionExtensions
         // User-initiated "delete stored data" requests from the desktop, run here (the worker is the sole writer).
         services.AddScoped<AccountDataDeleter>();
         services.AddHostedService<DeleteRequestProcessor>();
-        // Play-session tracking reads MumbleLink (Windows named shared memory), so it's Windows-only; the rest of
-        // the worker stays portable. The OS guard also satisfies the reader's [SupportedOSPlatform] surface.
-        if (OperatingSystem.IsWindows())
+        // Play-session tracking reads MumbleLink: on Windows the game's named shared memory (unless the host registered
+        // a reader first); elsewhere only a reader the host supplies — on Linux, a bridge file kept in sync from inside
+        // the game's Wine prefix (AddMumbleLinkFile). With no reader, sessions simply aren't tracked.
+        if (OperatingSystem.IsWindows() && !services.Any(d => d.ServiceType == typeof(IMumbleLinkReader)))
         {
             services.AddMumbleLink();
+        }
+
+        if (services.Any(d => d.ServiceType == typeof(IMumbleLinkReader)))
+        {
             services.AddHostedService<SessionTracker>();
         }
 

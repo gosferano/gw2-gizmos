@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.LogsPage"
+             x:DataType="core:LogsViewModel">
+    <c:PageShell Title="Logs" Scrollable="False">
+        <Grid RowDefinitions="Auto,*">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding LevelFilter}" Width="90"
+                          Height="{StaticResource FormControlHeight}" />
+                <CheckBox Content="Desktop" IsChecked="{Binding ShowDesktop}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                <CheckBox Content="Worker" IsChecked="{Binding ShowWorker}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <TextBox PlaceholderText="filter text" Text="{Binding FilterText}" Width="200"
+                         Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" Margin="12,0,0,0" />
+            </StackPanel>
+
+            <!-- Newest lines on top (the log store prepends). -->
+            <DataGrid Grid.Row="1" Name="LogList" ItemsSource="{Binding Entries}" AutoGenerateColumns="False"
+                      IsReadOnly="True" CanUserResizeColumns="True" SelectionMode="Single"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent" RowHeight="24"
+                      FontFamily="{StaticResource MonospaceFontFamily}" FontSize="12"
+                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time" Width="100" x:DataType="core:LogEntry"
+                                        Binding="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss.fff}'}" />
+                    <DataGridTextColumn Header="Lvl" Width="64" x:DataType="core:LogEntry" Binding="{Binding Level}" />
+                    <DataGridTextColumn Header="Source" Width="92" x:DataType="core:LogEntry" Binding="{Binding Source}" />
+                    <DataGridTextColumn Header="Message" Width="*" x:DataType="core:LogEntry" Binding="{Binding Message}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </c:PageShell>
+</UserControl>
