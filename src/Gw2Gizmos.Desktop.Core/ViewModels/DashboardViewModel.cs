@@ -21,10 +21,26 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
     // The catalog counts scan large tables (price history), so live refreshes of them are spaced out.
     private static readonly TimeSpan CountsRefreshInterval = TimeSpan.FromSeconds(30);
 
+    // How often the live session card looks at the game (a read of the MumbleLink block — cheap).
+    private static readonly TimeSpan LivePollInterval = TimeSpan.FromSeconds(2);
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly AccountReader _reader;
     private readonly WorkerProcessLauncher _worker;
     private readonly IDisposable _dataChanges;
+    private readonly LiveGameMonitor _liveGame;
+    private readonly MapNames _mapNames;
+    private readonly IUiTimer _livePoll;
+    private string? _accountId;
+    private long? _openSessionId;
+    private SessionValueSummary? _openSessionValue;
+    private int _liveMapId;
+    private bool _mapLookupPending;
+    private bool _isLiveVisible;
+    private bool _isLiveActive;
+    private string _liveCharacter = "";
+    private string _liveMap = "";
+    private string _liveDuration = "";
     private DateTimeOffset _countsLoadedAt;
     private bool _loadingCounts;
     private bool _loadingAccountStats;
@@ -61,9 +77,13 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         UpdateStatus updateStatus,
         IUiDispatcher dispatcher,
         DataChangeMonitor dataChanges,
-        WorkerProcessLauncher worker
+        WorkerProcessLauncher worker,
+        LiveGameMonitor liveGame,
+        MapNames mapNames
     )
     {
+        _liveGame = liveGame;
+        _mapNames = mapNames;
         _scopeFactory = scopeFactory;
         _worker = worker;
         _reader = reader;
@@ -100,9 +120,159 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
 
         // Refresh in place as the worker syncs, sessions start/end, and relative times ("synced 2 min ago") age.
         _dataChanges = dataChanges.Subscribe(OnDataChanged);
+
+        // The live session card follows the game directly, so it shows up the moment a character enters the world.
+        _livePoll = dispatcher.CreateTimer(LivePollInterval, PollLiveGame);
+        _livePoll.Start();
     }
 
-    public void OnNavigatedFrom() => _dataChanges.Dispose();
+    public void OnNavigatedFrom()
+    {
+        _dataChanges.Dispose();
+        _livePoll.Stop();
+    }
+
+    // --- Live session card ---
+
+    /// <summary>A character is in the world right now: the card shows.</summary>
+    public bool IsLiveVisible
+    {
+        get => _isLiveVisible;
+        private set => SetProperty(ref _isLiveVisible, value);
+    }
+
+    /// <summary>The worker has opened the session: duration and loot so far are shown.</summary>
+    public bool IsLiveActive
+    {
+        get => _isLiveActive;
+        private set
+        {
+            if (SetProperty(ref _isLiveActive, value))
+            {
+                OnPropertyChanged(nameof(IsLiveStarting));
+            }
+        }
+    }
+
+    /// <summary>In the world but no session recorded yet: the worker's start-of-session account sync is running.</summary>
+    public bool IsLiveStarting => !_isLiveActive;
+
+    /// <summary>What "starting" means right now: the sync in progress, or that Play sessions is off.</summary>
+    public string LiveStartingText => _features.IsEnabled(WorkerFeatures.PlaySessions.Key)
+        ? "Starting session… syncing your account so loot counts from now"
+        : "Play sessions is off. Turn it on in Settings to record this session.";
+
+    public string LiveCharacter
+    {
+        get => _liveCharacter;
+        private set => SetProperty(ref _liveCharacter, value);
+    }
+
+    /// <summary>The current map's name; empty until it's looked up.</summary>
+    public string LiveMap
+    {
+        get => _liveMap;
+        private set => SetProperty(ref _liveMap, value);
+    }
+
+    /// <summary>How long the session has run, e.g. "1h 05m".</summary>
+    public string LiveDuration
+    {
+        get => _liveDuration;
+        private set => SetProperty(ref _liveDuration, value);
+    }
+
+    /// <summary>Coin gained this session, in copper (drawn with coin icons).</summary>
+    public long? LiveCoin => _openSessionValue?.CoinDeltaCopper;
+
+    /// <summary>The instant-sell value of item loot this session, in copper.</summary>
+    public long? LiveLoot => _openSessionValue?.LootValueCopper;
+
+    /// <summary>Total value per hour so far, in copper; null in the first minute.</summary>
+    public long? LiveGoldPerHour => _openSessionValue?.GoldPerHourCopper;
+
+    public bool HasLiveGoldPerHour => LiveGoldPerHour is not null;
+
+    private void PollLiveGame()
+    {
+        LiveGameState game = _liveGame.Read();
+        if (!game.IsRunning || game.Character is null)
+        {
+            // Not running, at character select, or loading: nothing live to show.
+            IsLiveVisible = false;
+            return;
+        }
+
+        LiveCharacter = game.Character;
+        if (game.MapId != _liveMapId)
+        {
+            _liveMapId = game.MapId;
+            LiveMap = "";
+        }
+
+        // Look the name up on a map change, and keep retrying while it's missing (the worker's first maps sync may
+        // not have landed yet).
+        if (LiveMap.Length == 0 && !_mapLookupPending)
+        {
+            _ = LoadMapNameAsync(game.MapId);
+        }
+
+        IsLiveActive = _openSessionValue is not null;
+        if (_openSessionValue is { } value)
+        {
+            LiveDuration = FormatSessionDuration(DateTimeOffset.UtcNow - value.StartedAtUtc);
+            OnPropertyChanged(nameof(LiveGoldPerHour));
+            OnPropertyChanged(nameof(HasLiveGoldPerHour));
+        }
+        else
+        {
+            OnPropertyChanged(nameof(LiveStartingText));
+        }
+
+        IsLiveVisible = true;
+    }
+
+    private async Task LoadMapNameAsync(int mapId)
+    {
+        _mapLookupPending = true;
+        try
+        {
+            string? name = await _mapNames.GetAsync(mapId);
+            if (mapId == _liveMapId)
+            {
+                LiveMap = name ?? "";
+            }
+        }
+        finally
+        {
+            _mapLookupPending = false;
+        }
+    }
+
+    /// <summary>Loads the open session's worth (coin, loot, gold/hour) for the live card; clears it once closed.</summary>
+    private async Task LoadOpenSessionValueAsync(long? sessionId)
+    {
+        _openSessionId = sessionId;
+        SessionValueSummary? value = null;
+        if (sessionId is { } id && _accountId is { } accountId)
+        {
+            value = await Task.Run(() => _reader.GetSessionValue(accountId, id));
+        }
+
+        if (sessionId != _openSessionId)
+        {
+            return; // a newer load has started
+        }
+
+        _openSessionValue = value;
+        OnPropertyChanged(nameof(LiveCoin));
+        OnPropertyChanged(nameof(LiveLoot));
+        OnPropertyChanged(nameof(LiveGoldPerHour));
+        OnPropertyChanged(nameof(HasLiveGoldPerHour));
+    }
+
+    private static string FormatSessionDuration(TimeSpan span) =>
+        span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes:00}m" : $"{Math.Max(0, span.Minutes)}m";
 
     private void OnDataChanged(DataChanges changes)
     {
@@ -232,6 +402,9 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
                 ? $"Playing now · {sessions.Character ?? "?"}"
                 : $"Last played {(sessions.LastPlayedUtc is { } lastPlayed ? RelativeTime.Format(lastPlayed) : "—")} · {sessions.Character ?? "?"}";
         SessionStatusTooltip = !sessions.IsPlaying && sessions.LastPlayedUtc is { } played ? RelativeTime.Exact(played) : null;
+
+        _accountId = account?.Id;
+        await LoadOpenSessionValueAsync(sessions.OpenSessionId);
     }
 
     private static string FormatPlaytime(TimeSpan span)

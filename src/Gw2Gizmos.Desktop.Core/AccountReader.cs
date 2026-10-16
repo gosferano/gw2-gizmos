@@ -520,7 +520,8 @@ public sealed class AccountReader
                     .FirstOrDefault();
 
                 return new DashboardSessionStats(
-                    sessions.Count, total, character, isPlaying, latest.EndedAtUtc ?? latest.StartedAtUtc);
+                    sessions.Count, total, character, isPlaying, latest.EndedAtUtc ?? latest.StartedAtUtc,
+                    isPlaying ? latest.Id : null);
             },
             new DashboardSessionStats(0, TimeSpan.Zero, null, false, null));
 
@@ -582,7 +583,8 @@ public sealed record DashboardSessionStats(
     TimeSpan TotalPlaytime,
     string? Character,
     bool IsPlaying,
-    DateTimeOffset? LastPlayedUtc
+    DateTimeOffset? LastPlayedUtc,
+    long? OpenSessionId = null
 );
 
 /// <summary>One play session for the Sessions hub: when it ran, which characters were played, and the estimated
@@ -726,18 +728,27 @@ public sealed record SessionValueSummary(
 
     public string LootDisplay => SessionFormat.SignedCoin(LootValueCopper);
 
+    /// <summary>Estimated value earned per hour over the sitting, in copper; null for sub-minute sessions.</summary>
+    public long? GoldPerHourCopper
+    {
+        get
+        {
+            double hours = ((EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc).TotalHours;
+            return hours <= 1.0 / 60 ? null : (long)(TotalValueCopper / hours);
+        }
+    }
+
     /// <summary>Estimated value earned per hour over the sitting, e.g. "+12g 30s / h" (— for sub-minute sessions).</summary>
     public string GoldPerHourDisplay
     {
         get
         {
-            double hours = ((EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc).TotalHours;
-            if (hours <= 1.0 / 60)
+            if (GoldPerHourCopper is not { } perHour)
             {
                 return "—";
             }
 
-            return SessionFormat.SignedCoin((long)(TotalValueCopper / hours)) + " / h";
+            return SessionFormat.SignedCoin(perHour) + " / h";
         }
     }
 }

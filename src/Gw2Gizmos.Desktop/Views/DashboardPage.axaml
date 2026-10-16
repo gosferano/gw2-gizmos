@@ -11,6 +11,51 @@
     </UserControl.Resources>
 
     <c:PageShell Title="Dashboard">
+        <StackPanel>
+        <!-- Live session: while a character is in the world. Shows the session's duration and loot so far once the
+             worker has opened it, and "Starting session…" during its start-of-session account sync before that. -->
+        <c:Card Margin="0,0,0,12" Padding="20,16" IsVisible="{Binding IsLiveVisible}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="9" Height="9" VerticalAlignment="Center"
+                                 Fill="{Binding IsLiveActive, Converter={StaticResource StatusBrush}}" />
+                        <TextBlock Text="Now playing" Opacity="0.7" Margin="8,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding LiveCharacter}" FontSize="22" FontWeight="Medium" Margin="0,4,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding LiveMap}" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <!-- Session open: duration and loot so far. -->
+                <Grid Grid.Column="1" IsVisible="{Binding IsLiveActive}" VerticalAlignment="Center"
+                      ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.ColumnSpan="2" Text="{Binding LiveDuration}" FontSize="22" FontWeight="Medium"
+                               HorizontalAlignment="Right" Margin="0,0,0,6" />
+                    <TextBlock Grid.Row="1" Text="Coin" Opacity="0.8" Margin="0,0,16,0" />
+                    <c:CoinDisplay Grid.Row="1" Grid.Column="1" Copper="{Binding LiveCoin}" Signed="True"
+                                   FontWeight="Medium" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="2" Text="Loot" Opacity="0.8" Margin="0,0,16,0" />
+                    <c:CoinDisplay Grid.Row="2" Grid.Column="1" Copper="{Binding LiveLoot}" Signed="True"
+                                   FontWeight="Medium" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="3" Text="Per hour" Opacity="0.8" Margin="0,0,16,0" />
+                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding LiveGoldPerHour}" Signed="True" FontWeight="Medium"
+                                       IsVisible="{Binding HasLiveGoldPerHour}" />
+                        <TextBlock Text=" / h" FontWeight="Medium" IsVisible="{Binding HasLiveGoldPerHour}" />
+                        <TextBlock Text="—" FontWeight="Medium" IsVisible="{Binding !HasLiveGoldPerHour}" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- In the world, session not recorded yet. -->
+                <StackPanel Grid.Column="1" IsVisible="{Binding IsLiveStarting}" VerticalAlignment="Center" Width="260">
+                    <ProgressBar IsIndeterminate="True" />
+                    <TextBlock Text="{Binding LiveStartingText}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Margin="0,8,0,0" />
+                </StackPanel>
+            </Grid>
+        </c:Card>
+
         <!-- Columns collapse 3 -> 2 -> 1 with width; UniformGrid keeps every cell the same size. The -6 margin cancels
              the cards' 6px edge insets so the outer edge lines up with the page header. -->
         <UniformGrid VerticalAlignment="Top" Margin="-6"
@@ -143,5 +188,6 @@
                 </StackPanel>
             </c:Card>
         </UniformGrid>
+        </StackPanel>
     </c:PageShell>
 </UserControl>

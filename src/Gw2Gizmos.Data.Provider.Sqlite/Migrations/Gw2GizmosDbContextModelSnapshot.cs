@@ -900,6 +900,53 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("WeaponStatChoices");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Maps.Map", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ContinentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContinentName")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DefaultFloor")
+                        .HasColumnType("INTEGER");
+
+                    b.PrimitiveCollection<string>("Floors")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MaxLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RegionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RegionName")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Maps");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Materials.MaterialCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -1494,6 +1541,133 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("WeaponDetails");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Maps.Map", b =>
+                {
+                    b.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapRect", "ContinentRect", b1 =>
+                        {
+                            b1.Property<int>("MapId")
+                                .HasColumnType("INTEGER");
+
+                            b1.HasKey("MapId");
+
+                            b1.ToTable("Maps");
+
+                            b1.ToJson("ContinentRect");
+
+                            b1.WithOwner()
+                                .HasForeignKey("MapId");
+
+                            b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Max", b2 =>
+                                {
+                                    b2.Property<int>("MapRectMapId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("X")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("Y")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.HasKey("MapRectMapId");
+
+                                    b2.ToTable("Maps");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("MapRectMapId");
+                                });
+
+                            b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Min", b2 =>
+                                {
+                                    b2.Property<int>("MapRectMapId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("X")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("Y")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.HasKey("MapRectMapId");
+
+                                    b2.ToTable("Maps");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("MapRectMapId");
+                                });
+
+                            b1.Navigation("Max")
+                                .IsRequired();
+
+                            b1.Navigation("Min")
+                                .IsRequired();
+                        });
+
+                    b.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapRect", "MapRect", b1 =>
+                        {
+                            b1.Property<int>("MapId")
+                                .HasColumnType("INTEGER");
+
+                            b1.HasKey("MapId");
+
+                            b1.ToTable("Maps");
+
+                            b1.ToJson("MapRect");
+
+                            b1.WithOwner()
+                                .HasForeignKey("MapId");
+
+                            b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Max", b2 =>
+                                {
+                                    b2.Property<int>("MapRectMapId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("X")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("Y")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.HasKey("MapRectMapId");
+
+                                    b2.ToTable("Maps");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("MapRectMapId");
+                                });
+
+                            b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Min", b2 =>
+                                {
+                                    b2.Property<int>("MapRectMapId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("X")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<int>("Y")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.HasKey("MapRectMapId");
+
+                                    b2.ToTable("Maps");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("MapRectMapId");
+                                });
+
+                            b1.Navigation("Max")
+                                .IsRequired();
+
+                            b1.Navigation("Min")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("ContinentRect")
+                        .IsRequired();
+
+                    b.Navigation("MapRect")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.RecipeDiscipline", b =>
