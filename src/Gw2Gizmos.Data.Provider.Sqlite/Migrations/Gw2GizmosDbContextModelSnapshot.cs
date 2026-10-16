@@ -181,6 +181,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
+                    b.PrimitiveCollection<string>("Specializations")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Title")
                         .HasColumnType("INTEGER");
 
@@ -1455,6 +1459,40 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasIndex("WeaponDetailsId");
 
                     b.ToTable("WeaponInfusionSlots");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.Character", b =>
+                {
+                    b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterCrafting", "Crafting", b1 =>
+                        {
+                            b1.Property<string>("CharacterName")
+                                .HasColumnType("TEXT");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<bool>("Active")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Discipline")
+                                .IsRequired()
+                                .HasColumnType("TEXT");
+
+                            b1.Property<int>("Rating")
+                                .HasColumnType("INTEGER");
+
+                            b1.HasKey("CharacterName", "__synthesizedOrdinal");
+
+                            b1.ToTable("Characters");
+
+                            b1.ToJson("Crafting");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CharacterName");
+                        });
+
+                    b.Navigation("Crafting");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorDetails", b =>

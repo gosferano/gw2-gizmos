@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
@@ -55,4 +56,25 @@ public class Character
     public int EquipmentTabsUnlocked { get; set; }
 
     public int ActiveEquipmentTab { get; set; }
+
+    /// <summary>
+    /// The active build's specialization ids, in trait-line order (stored as a JSON array); the elite one, if any, is
+    /// resolved through the Specializations table. Empty when the key lacks the <c>builds</c> permission.
+    /// </summary>
+    public int[] Specializations { get; set; } = [];
+
+    /// <summary>The character's crafting disciplines (stored as one JSON column).</summary>
+    public List<CharacterCrafting> Crafting { get; set; } = [];
+}
+
+/// <summary>One crafting discipline a character has learned, and its level.</summary>
+public class CharacterCrafting
+{
+    /// <summary>The API's discipline name, e.g. "Weaponsmith".</summary>
+    public string Discipline { get; set; } = "";
+
+    public int Rating { get; set; }
+
+    /// <summary>Whether it's one of the (two) active disciplines.</summary>
+    public bool Active { get; set; }
 }

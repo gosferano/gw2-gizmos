@@ -552,6 +552,17 @@ public class AccountSyncUpdater
         existing.ActiveBuildTab = character.ActiveBuildTab;
         existing.EquipmentTabsUnlocked = character.EquipmentTabsUnlocked;
         existing.ActiveEquipmentTab = character.ActiveEquipmentTab;
+        // build_tabs only come with the key's builds permission; without it the specializations stay empty.
+        ApiChar.CharacterBuildTab? activeBuild =
+            character.BuildTabs.FirstOrDefault(t => t.IsActive)
+            ?? character.BuildTabs.FirstOrDefault(t => t.Tab == character.ActiveBuildTab);
+        existing.Specializations = activeBuild?.Build?.Specializations
+            .Where(s => s?.Id is not null)
+            .Select(s => s.Id!.Value)
+            .ToArray() ?? [];
+        existing.Crafting = character.Crafting
+            .Select(c => new CharacterCrafting { Discipline = c.Discipline.ToString(), Rating = c.Rating, Active = c.Active })
+            .ToList();
         // SaveChanges is deferred to the section's SyncItemObservationsAsync call, committing these upserts with
         // the pending slot inserts and observation rows together.
     }

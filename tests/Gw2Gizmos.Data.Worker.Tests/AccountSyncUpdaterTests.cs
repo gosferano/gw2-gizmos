@@ -101,6 +101,10 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         Assert.Equal("Asura", character.Race);
         Assert.Equal("Female", character.Gender);
         Assert.Equal(80, character.Level);
+        Assert.Equal(new[] { 19, 50, 34 }, character.Specializations); // the active build tab's
+        Assert.Equal(
+            new[] { ("Scribe", 500, true), ("Chef", 400, false) },
+            character.Crafting.Select(c => (c.Discipline, c.Rating, c.Active)));
     }
 
     [Fact]

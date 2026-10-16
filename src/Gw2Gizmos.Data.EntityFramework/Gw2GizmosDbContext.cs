@@ -101,6 +101,9 @@ public class Gw2GizmosDbContext : DbContext
             map.OwnsOne(m => m.MapRect, MapRectAsJson);
             map.OwnsOne(m => m.ContinentRect, MapRectAsJson);
         });
+
+        // A character's few crafting disciplines are one JSON column rather than a table of their own.
+        modelBuilder.Entity<Character>().OwnsMany(c => c.Crafting, crafting => crafting.ToJson());
     }
 
     private static void MapRectAsJson<TOwner>(OwnedNavigationBuilder<TOwner, MapRect> rect)
