@@ -14,9 +14,8 @@ using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Desktop.Core.Navigation;
-using Gw2Gizmos.Desktop.Core.Platform;
 using Gw2Gizmos.Desktop.Core.Ui;
-using Gw2Gizmos.Desktop.Platform;
+using Gw2Gizmos.Desktop.Platform.Windows;
 using Gw2Gizmos.Desktop.Ui;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -160,7 +159,6 @@ public partial class App : Application
     private MainWindow? _window;
     private IHost? _host;
     private WorkerSupervisor? _worker;
-    private readonly ChildProcessJob _workerJob = new();
     private Mutex? _singleInstanceMutex;
     private bool _isExiting;
 
@@ -205,8 +203,6 @@ public partial class App : Application
 
     private async Task StartApplicationAsync(string[] args)
     {
-        ToastService.RegisterAppId();
-
         string dataDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             AppDataFolderName
@@ -406,11 +402,9 @@ public partial class App : Application
         // view-models, and the in-process delivery poller.
         builder.Services.AddGw2GizmosDesktopCore(new AppPaths(dataDir), logStore, workerConfigPipeName, database);
 
-        // The Windows implementations of the platform services: "launch at Windows startup" (HKCU Run; per-build
-        // value name so dev/release don't collide), toasts, and DPAPI for the API keys at rest.
-        builder.Services.AddSingleton<IStartupRegistration>(new StartupRegistration(AppDataFolderName));
-        builder.Services.AddSingleton<IToastService, ToastService>();
-        builder.Services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
+        // The Windows platform services: "launch at Windows startup" (HKCU Run; per-build value name so dev/release
+        // don't collide), toasts, DPAPI for the API keys at rest, and the kill-on-close job the worker runs in.
+        builder.Services.AddGw2GizmosWindowsPlatform(AppDataFolderName);
 
         // The WPF implementations of the UI seams the shared view-models are written against.
         builder.Services.AddSingleton<IUiDispatcher>(uiDispatcher);
@@ -455,11 +449,9 @@ public partial class App : Application
 
     private void StartWorkerProcess()
     {
+        // The platform services bind each worker (the first and any restart) to a kill-on-close job, so it can never
+        // outlive the app, even on a crash.
         _worker = _host!.Services.GetRequiredService<WorkerSupervisor>();
-
-        // Bind each worker (the first and any restart) to a kill-on-close job so it can never outlive the app (even
-        // on a crash).
-        _worker.Started += process => _workerJob.AddProcess(process);
         _worker.Start();
     }
 
@@ -521,9 +513,6 @@ public partial class App : Application
         _trayIcon?.Dispose();
 
         _worker?.Stop();
-
-        // Closing the job is the backstop that guarantees the worker is gone.
-        _workerJob.Dispose();
 
         if (_host is not null)
         {

@@ -1,12 +1,11 @@
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security;
-using System.Windows;
 using Gw2Gizmos.Desktop.Core.Platform;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
-namespace Gw2Gizmos.Desktop;
+namespace Gw2Gizmos.Desktop.Platform.Windows;
 
 /// <summary>
 /// Shows Windows toast notifications using the built-in WinRT API (no third-party toolkit). Toasts are
@@ -14,9 +13,12 @@ namespace Gw2Gizmos.Desktop;
 /// id. The Velopack installer stamps it on the shortcut via <c>vpk pack --aumid Gw2Gizmos</c> (see the
 /// release workflow), matching the id this process registers below.
 /// </summary>
-internal sealed class ToastService : IToastService
+internal sealed class WindowsToastService : IToastService
 {
     private const string Aumid = "Gw2Gizmos";
+
+    private readonly IClipboardService _clipboard;
+    private readonly IUiDispatcher _dispatcher;
 
     // A toast with an Activated handler must stay referenced until it resolves, or the GC can collect the
     // managed wrapper and the click is silently dropped. Hold live ones here; release on click/dismiss/fail.
@@ -25,6 +27,12 @@ internal sealed class ToastService : IToastService
 
     [DllImport("shell32.dll", SetLastError = true)]
     private static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string appId);
+
+    public WindowsToastService(IClipboardService clipboard, IUiDispatcher dispatcher)
+    {
+        _clipboard = clipboard;
+        _dispatcher = dispatcher;
+    }
 
     /// <summary>Associates this process with the app's AUMID so its toasts are attributed correctly.</summary>
     public static void RegisterAppId() => SetCurrentProcessExplicitAppUserModelID(Aumid);
@@ -86,15 +94,14 @@ internal sealed class ToastService : IToastService
         }
     }
 
-    private static void CopyToClipboard(string text)
+    private void CopyToClipboard(string text)
     {
-        // Activated fires on a background thread; clipboard access must run on the STA UI thread.
-        Application? app = Application.Current;
-        app?.Dispatcher.Invoke(() =>
+        // Activated fires on a background thread; clipboard access must run on the UI thread.
+        _dispatcher.Post(async () =>
         {
             try
             {
-                Clipboard.SetText(text);
+                await _clipboard.SetTextAsync(text);
             }
             catch
             {

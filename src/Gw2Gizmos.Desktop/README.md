@@ -28,9 +28,10 @@ A WPF-UI `NavigationView` shell. Pages live in `Views/`, wrapped in the shared `
 (Win11-Settings-style breadcrumb header over centered, width-capped content). The view-models, stores and
 services they bind to live in the UI-agnostic [`Gw2Gizmos.Desktop.Core`](../Gw2Gizmos.Desktop.Core) (MVVM via
 `Mvvm/ViewModelBase` + `RelayCommand`), shared with the upcoming cross-platform Avalonia app. Core reaches the UI
-and the OS only through seams this project implements: `Ui/Wpf*` (dispatcher and timers, collection views,
-dialogs, clipboard, navigation by `AppPage`) and `Platform/` + `ToastService` / `StartupRegistration` (toasts,
-launch at login, DPAPI key encryption).
+and the OS only through seams: `Ui/Wpf*` in this project (dispatcher and timers, collection views, dialogs,
+clipboard, navigation by `AppPage`), and the shared
+[`Gw2Gizmos.Desktop.Platform.Windows`](../Gw2Gizmos.Desktop.Platform.Windows) library (toasts, launch at login,
+DPAPI key encryption, the worker's kill-on-close job).
 
 - **Dashboard** (startup page) — app/worker/account/session stat cards, loaded off the UI thread.
 - **Account** → wallet, material storage, bank, shared inventory, characters → per-character inventory.

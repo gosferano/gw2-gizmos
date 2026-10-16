@@ -2,7 +2,7 @@ using System;
 using Gw2Gizmos.Desktop.Core.Platform;
 using Microsoft.Win32;
 
-namespace Gw2Gizmos.Desktop;
+namespace Gw2Gizmos.Desktop.Platform.Windows;
 
 /// <summary>
 /// Reads and writes the per-user "launch at Windows startup" registration (the <c>HKCU…\Run</c> key). When
@@ -11,13 +11,13 @@ namespace Gw2Gizmos.Desktop;
 /// independently without clobbering each other. Best-effort: a locked-down registry just means the toggle won't
 /// persist, never a crash.
 /// </summary>
-public sealed class StartupRegistration : IStartupRegistration
+internal sealed class RunKeyStartupRegistration : IStartupRegistration
 {
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
     private readonly string _valueName;
 
-    public StartupRegistration(string valueName)
+    public RunKeyStartupRegistration(string valueName)
     {
         _valueName = valueName;
     }

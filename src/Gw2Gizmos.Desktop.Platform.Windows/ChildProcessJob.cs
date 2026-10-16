@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Gw2Gizmos.Desktop;
+namespace Gw2Gizmos.Desktop.Platform.Windows;
 
 /// <summary>
 /// A Windows Job Object configured to kill its assigned processes when the job handle closes — which
