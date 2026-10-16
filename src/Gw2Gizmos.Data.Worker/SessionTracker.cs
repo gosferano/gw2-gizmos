@@ -14,8 +14,9 @@ namespace Gw2Gizmos.Data.Worker;
 /// <see cref="CharacterSegment"/> rows. The game process (<c>Context.ProcessId</c>) being alive drives the
 /// game-session boundaries (launch → close), so a long alt-tab/minimise keeps the session open; the <c>uiTick</c>
 /// freeze is only a fallback for when the process can't be read. The identity's active character drives the
-/// segment boundaries (the switches within a sitting).
-/// At every boundary it runs an account sync first, then stamps the boundary time, so the observation logs carry a
+/// segment boundaries (the switches within a sitting), and the map id splits each segment into
+/// <see cref="MapSegment"/>s (where it was played).
+/// At every session/segment boundary it runs an account sync first, then stamps the boundary time, so the observation logs carry a
 /// fresh data point just before each timestamp — the desktop reconstructs per-segment "hoarded" deltas from those.
 /// Gated on <see cref="WorkerFeatures.PlaySessions"/>; only registered on Windows (the reader uses Windows named
 /// shared memory).
@@ -43,6 +44,9 @@ public sealed class SessionTracker : BackgroundService
     private long? _segmentId;
     private string? _activeCharacter;
     private int _nextSequence;
+    // The open map segment within the current character segment, and its map.
+    private long? _mapSegmentId;
+    private int _currentMapId;
     private uint _lastTick;
     private DateTimeOffset _lastTickChangeUtc;
     // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
@@ -180,7 +184,61 @@ public sealed class SessionTracker : BackgroundService
         {
             // A switch with no observed char-select gap — close the old segment and open the new one in one boundary.
             await SwitchSegmentAsync(character, stoppingToken);
+            return;
         }
+
+        await TrackMapAsync(MapIdOf(snapshot!), now, stoppingToken);
+    }
+
+    /// <summary>
+    /// Records a map change within the current character segment: closes the open map segment and opens one for the new
+    /// map. Unlike session/segment boundaries this needs no account sync — loot isn't split per map — so it's stamped
+    /// with the tick's time. The first map of a new character segment is opened here too.
+    /// </summary>
+    private async Task TrackMapAsync(int mapId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        if (_segmentId is not { } segmentId || mapId <= 0 || (mapId == _currentMapId && _mapSegmentId is not null))
+        {
+            return;
+        }
+
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        if (_mapSegmentId is { } previousId
+            && await db.MapSegments.FirstOrDefaultAsync(m => m.Id == previousId, stoppingToken) is { EndedAtUtc: null } previous)
+        {
+            previous.EndedAtUtc = now;
+        }
+
+        var mapSegment = new MapSegment { CharacterSegmentId = segmentId, MapId = mapId, StartedAtUtc = now };
+        db.MapSegments.Add(mapSegment);
+        await db.SaveChangesAsync(stoppingToken);
+
+        _mapSegmentId = mapSegment.Id;
+        _currentMapId = mapId;
+    }
+
+    /// <summary>The map the snapshot reports (0 when unknown).</summary>
+    private static int MapIdOf(MumbleLinkSnapshot snapshot) =>
+        (int)(snapshot.Context?.MapId ?? 0) is > 0 and var mapId ? mapId : snapshot.Identity?.MapId ?? 0;
+
+    /// <summary>
+    /// Closes the open map segments of the given character segments at <paramref name="boundary"/> (staged on
+    /// <paramref name="db"/>; the caller saves) and forgets the current one, so the next segment starts its own.
+    /// </summary>
+    private async Task CloseMapSegmentsAsync(
+        Gw2GizmosDbContext db, IReadOnlyCollection<long> segmentIds, DateTimeOffset boundary, CancellationToken stoppingToken)
+    {
+        foreach (MapSegment open in await db.MapSegments
+                     .Where(m => segmentIds.Contains(m.CharacterSegmentId) && m.EndedAtUtc == null)
+                     .ToListAsync(stoppingToken))
+        {
+            open.EndedAtUtc = boundary;
+        }
+
+        _mapSegmentId = null;
+        _currentMapId = 0;
     }
 
     private async Task StartGameSessionAsync(string character, CancellationToken stoppingToken)
@@ -261,6 +319,11 @@ public sealed class SessionTracker : BackgroundService
             previous.EndedAtUtc = boundary;
         }
 
+        if (_segmentId is { } previousId)
+        {
+            await CloseMapSegmentsAsync(db, [previousId], boundary, stoppingToken);
+        }
+
         var segment = new CharacterSegment
         {
             GameSessionId = _gameSessionId!.Value,
@@ -294,6 +357,9 @@ public sealed class SessionTracker : BackgroundService
         // drop it and its segments instead of leaving an empty session in the list.
         if (!await HadActivityAsync(db, session.AccountId, session.StartedAtUtc, boundary, stoppingToken))
         {
+            await db.MapSegments
+                .Where(m => db.CharacterSegments.Any(s => s.Id == m.CharacterSegmentId && s.GameSessionId == session.Id))
+                .ExecuteDeleteAsync(stoppingToken);
             await db.CharacterSegments.Where(s => s.GameSessionId == session.Id).ExecuteDeleteAsync(stoppingToken);
             await db.GameSessions.Where(s => s.Id == session.Id).ExecuteDeleteAsync(stoppingToken);
             _logger.LogInformation("Discarded empty play session {Id} for {Account} (no activity recorded).", session.Id, session.AccountId);
@@ -301,13 +367,16 @@ public sealed class SessionTracker : BackgroundService
             return;
         }
 
-        // Close the open segment (if any) and the session at the boundary.
-        foreach (CharacterSegment open in await db.CharacterSegments
-                     .Where(s => s.GameSessionId == session.Id && s.EndedAtUtc == null)
-                     .ToListAsync(stoppingToken))
+        // Close the open segment (if any), its map segment, and the session at the boundary.
+        List<CharacterSegment> openSegments = await db.CharacterSegments
+            .Where(s => s.GameSessionId == session.Id && s.EndedAtUtc == null)
+            .ToListAsync(stoppingToken);
+        foreach (CharacterSegment open in openSegments)
         {
             open.EndedAtUtc = boundary;
         }
+
+        await CloseMapSegmentsAsync(db, openSegments.Select(s => s.Id).ToList(), boundary, stoppingToken);
 
         if (session.EndedAtUtc is null)
         {
@@ -345,8 +414,14 @@ public sealed class SessionTracker : BackgroundService
         if (segment is { EndedAtUtc: null })
         {
             segment.EndedAtUtc = boundary;
-            await db.SaveChangesAsync(stoppingToken);
         }
+
+        if (_segmentId is { } segmentId)
+        {
+            await CloseMapSegmentsAsync(db, [segmentId], boundary, stoppingToken);
+        }
+
+        await db.SaveChangesAsync(stoppingToken);
 
         _segmentId = null;
         _activeCharacter = null;
@@ -479,6 +554,9 @@ public sealed class SessionTracker : BackgroundService
                 _segmentId = openSegment?.Id;
                 _activeCharacter = openSegment?.CharacterName;
                 _nextSequence = segments.Count == 0 ? 0 : segments.Max(s => s.Sequence) + 1;
+                // The map may have changed while the worker was down: close the open map segment now; the next tick
+                // opens one for wherever the character is.
+                await CloseMapSegmentsAsync(db, segments.Select(s => s.Id).ToList(), _timeProvider.GetUtcNow(), stoppingToken);
                 _logger.LogInformation("Resumed open play session {Id} for {Account}.", session.Id, session.AccountId);
                 continue;
             }
@@ -491,6 +569,9 @@ public sealed class SessionTracker : BackgroundService
             // Same rule as a live end: a sitting that captured no change is discarded rather than closed.
             if (!await HadActivityAsync(db, session.AccountId, session.StartedAtUtc, endedAt, stoppingToken))
             {
+                List<long> segmentIds = segments.Select(s => s.Id).ToList();
+                db.MapSegments.RemoveRange(
+                    await db.MapSegments.Where(m => segmentIds.Contains(m.CharacterSegmentId)).ToListAsync(stoppingToken));
                 db.CharacterSegments.RemoveRange(segments);
                 db.GameSessions.Remove(session);
                 _logger.LogInformation("Discarded empty open play session {Id} for {Account} on startup.", session.Id, session.AccountId);
@@ -502,6 +583,7 @@ public sealed class SessionTracker : BackgroundService
                 segment.EndedAtUtc = endedAt;
             }
 
+            await CloseMapSegmentsAsync(db, segments.Select(s => s.Id).ToList(), endedAt, stoppingToken);
             session.EndedAtUtc = endedAt;
         }
 
@@ -532,5 +614,7 @@ public sealed class SessionTracker : BackgroundService
         _segmentId = null;
         _activeCharacter = null;
         _nextSequence = 0;
+        _mapSegmentId = null;
+        _currentMapId = 0;
     }
 }

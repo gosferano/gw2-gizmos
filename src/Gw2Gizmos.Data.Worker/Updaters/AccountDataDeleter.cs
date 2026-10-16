@@ -88,18 +88,22 @@ public class AccountDataDeleter
         return rows;
     }
 
-    // Sessions: the per-character segments (by their session's account) then the sessions themselves.
+    // Sessions: the map segments and per-character segments (by their session's account), then the sessions.
     private async Task<int> DeleteSessionsAsync(string accountId, CancellationToken stoppingToken)
     {
-        int rows = await _dbContext.CharacterSegments
+        int rows = await _dbContext.MapSegments
+            .Where(m => _dbContext.CharacterSegments.Any(s => s.Id == m.CharacterSegmentId
+                && _dbContext.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == accountId)))
+            .ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.CharacterSegments
             .Where(s => _dbContext.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == accountId))
             .ExecuteDeleteAsync(stoppingToken);
         rows += await _dbContext.GameSessions.Where(g => g.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;
     }
 
-    // One play session by id: its segments first, then the session — both gated on the account so a stale or
-    // spoofed id can't touch another account's data.
+    // One play session by id: its map segments and segments first, then the session — all gated on the account so a
+    // stale or spoofed id can't touch another account's data.
     private async Task<int> DeleteOneSessionAsync(string accountId, long? sessionId, CancellationToken stoppingToken)
     {
         if (sessionId is not { } id)
@@ -108,7 +112,11 @@ public class AccountDataDeleter
             return 0;
         }
 
-        int rows = await _dbContext.CharacterSegments
+        int rows = await _dbContext.MapSegments
+            .Where(m => _dbContext.CharacterSegments.Any(s => s.Id == m.CharacterSegmentId && s.GameSessionId == id)
+                && _dbContext.GameSessions.Any(g => g.Id == id && g.AccountId == accountId))
+            .ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.CharacterSegments
             .Where(s => s.GameSessionId == id && _dbContext.GameSessions.Any(g => g.Id == id && g.AccountId == accountId))
             .ExecuteDeleteAsync(stoppingToken);
         rows += await _dbContext.GameSessions.Where(g => g.Id == id && g.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
@@ -134,7 +142,8 @@ public class AccountDataDeleter
             return 0; // unknown segment, or not this account's
         }
 
-        int rows = await _dbContext.CharacterSegments.Where(s => s.Id == id).ExecuteDeleteAsync(stoppingToken);
+        int rows = await _dbContext.MapSegments.Where(m => m.CharacterSegmentId == id).ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.CharacterSegments.Where(s => s.Id == id).ExecuteDeleteAsync(stoppingToken);
         if (!await _dbContext.CharacterSegments.AnyAsync(s => s.GameSessionId == owningSession, stoppingToken))
         {
             rows += await _dbContext.GameSessions.Where(g => g.Id == owningSession).ExecuteDeleteAsync(stoppingToken);

@@ -21,7 +21,7 @@ public enum DataChanges
     /// <summary>Wallet or item holdings changed (new observations) — balances and session loot.</summary>
     Holdings = 2,
 
-    /// <summary>A play session or character segment started, ended, or was deleted.</summary>
+    /// <summary>A play session or character segment started, ended, or was deleted, or the map changed.</summary>
     Sessions = 4,
 
     /// <summary>The public catalog grew: items, recipes, currencies, or a price poll.</summary>
@@ -165,6 +165,7 @@ public sealed class DataChangeMonitor
                 db.GameSessions.Count(s => s.EndedAtUtc != null),
                 db.CharacterSegments.Count(),
                 db.CharacterSegments.Count(s => s.EndedAtUtc != null),
+                db.MapSegments.Count(),
                 db.Items.Count(),
                 db.Recipes.Count(),
                 db.Currencies.Count(),
@@ -185,6 +186,7 @@ public sealed class DataChangeMonitor
         int EndedSessions,
         int Segments,
         int EndedSegments,
+        int MapSegments,
         int Items,
         int Recipes,
         int Currencies,
@@ -203,8 +205,8 @@ public sealed class DataChangeMonitor
                 changes |= DataChanges.Holdings;
             }
 
-            if ((Sessions, EndedSessions, Segments, EndedSegments)
-                != (before.Sessions, before.EndedSessions, before.Segments, before.EndedSegments))
+            if ((Sessions, EndedSessions, Segments, EndedSegments, MapSegments)
+                != (before.Sessions, before.EndedSessions, before.Segments, before.EndedSegments, before.MapSegments))
             {
                 changes |= DataChanges.Sessions;
             }

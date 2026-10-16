@@ -164,6 +164,26 @@ public sealed class AccountDataDeleterTests : IDisposable
     }
 
     [Fact]
+    public async Task MapSegments_AreDeletedWithEverySessionAndSegmentDelete()
+    {
+        // One segment: only its own maps go.
+        long segmentId = await Query(d => d.CharacterSegments.First(s => d.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == A)).Id);
+        await Delete(DeletableData.SessionSegment, targetId: segmentId);
+        Assert.Equal(0, await Count(d => d.MapSegments.Count(m => m.CharacterSegmentId == segmentId)));
+        Assert.Equal(2, await Count(d => MapSegmentsOf(d, A)));
+
+        // One session: the rest of A's.
+        long sessionId = await Query(d => d.GameSessions.Single(g => g.AccountId == A).Id);
+        await Delete(DeletableData.Session, targetId: sessionId);
+        Assert.Equal(4, await Count(d => d.MapSegments.Count())); // only B's four remain
+        Assert.Equal(4, await Count(d => MapSegmentsOf(d, B)));
+
+        // All of an account's sessions.
+        await Delete(DeletableData.Sessions, accountId: B);
+        Assert.Equal(0, await Count(d => d.MapSegments.Count()));
+    }
+
+    [Fact]
     public async Task AllForAccount_WipesEverythingForAccountIncludingIdentity()
     {
         await Delete(DeletableData.AllForAccount);
@@ -269,11 +289,23 @@ public sealed class AccountDataDeleterTests : IDisposable
         db.Characters.Add(new Character { AccountId = accountId, Name = $"{accountId}-Char" });
         db.CharacterItemSlots.Add(new CharacterItemSlot { AccountId = accountId, CharacterName = $"{accountId}-Char", SlotIndex = 0, ItemId = 10, Count = 1 });
 
-        // A play session with two segments.
+        // A play session with two segments, each on two maps.
         var session = new GameSession { AccountId = accountId, StartedAtUtc = t };
         db.GameSessions.Add(session);
         db.SaveChanges(); // assign session.Id
-        db.CharacterSegments.Add(new CharacterSegment { GameSessionId = session.Id, Sequence = 0, CharacterName = $"{accountId}-Char", StartedAtUtc = t });
-        db.CharacterSegments.Add(new CharacterSegment { GameSessionId = session.Id, Sequence = 1, CharacterName = $"{accountId}-Char", StartedAtUtc = t });
+        var first = new CharacterSegment { GameSessionId = session.Id, Sequence = 0, CharacterName = $"{accountId}-Char", StartedAtUtc = t };
+        var second = new CharacterSegment { GameSessionId = session.Id, Sequence = 1, CharacterName = $"{accountId}-Char", StartedAtUtc = t };
+        db.CharacterSegments.AddRange(first, second);
+        db.SaveChanges(); // assign segment ids
+        foreach (CharacterSegment segment in new[] { first, second })
+        {
+            db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = 50, StartedAtUtc = t });
+            db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = 1422, StartedAtUtc = t });
+        }
     }
+
+    // Map segments belonging to an account's sessions (through their character segments).
+    private static int MapSegmentsOf(Gw2GizmosDbContext d, string accountId) =>
+        d.MapSegments.Count(m => d.CharacterSegments.Any(s => s.Id == m.CharacterSegmentId
+            && d.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == accountId)));
 }

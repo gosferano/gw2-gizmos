@@ -279,6 +279,11 @@ public sealed class SessionViewModel : ViewModelBase, INavigationAware
     /// <summary>The whole session's aggregated loot, shown under the character cards.</summary>
     public ObservableCollection<SessionLootCurrency> Currencies { get; } = new();
 
+    /// <summary>Every map the session was played on, with the time on each, most-played first.</summary>
+    public ObservableCollection<MapTimeRow> Maps { get; } = new();
+
+    public bool HasMaps => Maps.Count > 0;
+
     /// <summary>The aggregated item loot, sortable by gold value or quantity (asc/desc).</summary>
     public LootItemsSorter ItemsSorter { get; } = new();
 
@@ -334,8 +339,9 @@ public sealed class SessionViewModel : ViewModelBase, INavigationAware
             }
 
             // Read everything first, then swap it in at once, so a live refresh doesn't flash an empty page.
-            (SessionValueSummary value, SessionLoot loot) = await Task.Run(() =>
-                (_reader.GetSessionValue(accountId, sessionId), _reader.GetGameSessionLoot(accountId, sessionId)));
+            (SessionValueSummary value, SessionLoot loot, List<MapTimeRow> maps) = await Task.Run(() =>
+                (_reader.GetSessionValue(accountId, sessionId), _reader.GetGameSessionLoot(accountId, sessionId),
+                    _reader.GetSessionMaps(accountId, sessionId)));
 
             Segments.ReplaceWith(visible);
             OnPropertyChanged(nameof(HasSegments));
@@ -343,6 +349,8 @@ public sealed class SessionViewModel : ViewModelBase, INavigationAware
             Status = Segments.Count == 0 ? "No characters recorded for this session." : "";
 
             Value = value;
+            Maps.ReplaceWith(maps);
+            OnPropertyChanged(nameof(HasMaps));
             Currencies.ReplaceWith(loot.Currencies);
             ItemsSorter.SetItems(loot.Items);
 
@@ -441,6 +449,11 @@ public sealed class SessionLootViewModel : ViewModelBase, INavigationAware
     /// <summary>The segment's item loot, sortable by gold value or quantity (asc/desc).</summary>
     public LootItemsSorter ItemsSorter { get; } = new();
 
+    /// <summary>Every map the character played on in this segment, with the time on each, most-played first.</summary>
+    public ObservableCollection<MapTimeRow> Maps { get; } = new();
+
+    public bool HasMaps => Maps.Count > 0;
+
     public BreadcrumbEntry[] Breadcrumbs { get; }
 
     /// <summary>Deletes this segment via the worker; shown by the page's bottom button when <see cref="CanDelete"/>.</summary>
@@ -467,7 +480,10 @@ public sealed class SessionLootViewModel : ViewModelBase, INavigationAware
 
         try
         {
-            SessionLoot loot = await Task.Run(() => _reader.GetSegmentLoot(accountId, segmentId));
+            (SessionLoot loot, List<MapTimeRow> maps) = await Task.Run(() =>
+                (_reader.GetSegmentLoot(accountId, segmentId), _reader.GetSegmentMaps(accountId, segmentId)));
+            Maps.ReplaceWith(maps);
+            OnPropertyChanged(nameof(HasMaps));
             Currencies.ReplaceWith(loot.Currencies);
             ItemsSorter.SetItems(loot.Items);
 

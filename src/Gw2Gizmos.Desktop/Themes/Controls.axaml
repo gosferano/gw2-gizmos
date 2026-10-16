@@ -51,6 +51,20 @@
     </DataTemplate>
 
     <!-- A session "hoarded" currency row — wallet-row sized, hover highlight; DeltaDisplay is the signed gain/loss. -->
+    <!-- A map played in a session/segment and the time on it — styled like the currency rows below. -->
+    <DataTemplate x:Key="SessionMapRowTemplate" x:DataType="core:MapTimeRow">
+        <Border Classes="hover-row">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
+                           Text="{Binding TimeDisplay}" />
+                <c:FluentIcon Symbol="Map24" FontSize="20" Width="28" Margin="0,0,10,0" VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </DockPanel>
+        </Border>
+    </DataTemplate>
+
     <DataTemplate x:Key="SessionCurrencyRowTemplate" x:DataType="core:SessionLootCurrency">
         <Border Classes="hover-row">
             <DockPanel>

@@ -50,6 +50,12 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- Where the session was played: every map, most time first, under the character cards. -->
+            <StackPanel Margin="0,18,0,0" IsVisible="{Binding HasMaps}">
+                <TextBlock Text="Maps" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6" />
+                <ItemsControl ItemsSource="{Binding Maps}" ItemTemplate="{StaticResource SessionMapRowTemplate}" />
+            </StackPanel>
+
             <!-- Whole-session aggregated loot, under the character cards. -->
             <StackPanel Margin="0,18,0,0" IsVisible="{Binding HasSegments}">
                 <TextBlock Text="Session total" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6" />

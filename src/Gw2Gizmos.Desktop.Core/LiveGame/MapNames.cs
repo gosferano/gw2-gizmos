@@ -41,7 +41,8 @@ public sealed class MapNames
             {
                 using IServiceScope scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-                return db.Maps.AsNoTracking().Where(m => m.Id == mapId).Select(m => m.Name).FirstOrDefault();
+                var map = db.Maps.AsNoTracking().Where(m => m.Id == mapId).Select(m => new { m.Name, m.Type }).FirstOrDefault();
+                return map is null ? null : MapLabel.For(map.Name, map.Type);
             }
             catch (Exception)
             {
