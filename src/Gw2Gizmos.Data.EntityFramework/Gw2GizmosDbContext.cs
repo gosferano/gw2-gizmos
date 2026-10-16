@@ -2,9 +2,11 @@
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Gw2Gizmos.Data.EntityFramework;
 
@@ -75,4 +77,27 @@ public class Gw2GizmosDbContext : DbContext
     // at read time, not stored.
     public DbSet<GameSession> GameSessions { get; set; }
     public DbSet<CharacterSegment> CharacterSegments { get; set; }
+
+    // Maps (master data): resolves the map id MumbleLink reports.
+    public DbSet<Map> Maps { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // A map's two rectangles are fixed corner pairs, stored as one JSON column each rather than four columns.
+        modelBuilder.Entity<Map>(map =>
+        {
+            map.OwnsOne(m => m.MapRect, MapRectAsJson);
+            map.OwnsOne(m => m.ContinentRect, MapRectAsJson);
+        });
+    }
+
+    private static void MapRectAsJson<TOwner>(OwnedNavigationBuilder<TOwner, MapRect> rect)
+        where TOwner : class
+    {
+        rect.ToJson();
+        rect.OwnsOne(r => r.Min);
+        rect.OwnsOne(r => r.Max);
+    }
 }
