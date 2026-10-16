@@ -32,6 +32,17 @@ public sealed class WorkerProcessLauncherTests : IDisposable
     }
 
     [Fact]
+    public void CreateStartInfo_ForwardsTheMumbleLinkFile_WhenGiven()
+    {
+        var database = new DesktopDatabaseSettings("sqlite", "Data Source=/x.sqlite", "Data Source=/x.sqlite;Mode=ReadOnly");
+        var launcher = new WorkerProcessLauncher(
+            new AppPaths(_dataDirectory), database, "pipe-123", NullLogger<WorkerProcessLauncher>.Instance,
+            mumbleLinkFilePath: "/run/user/1000/Gw2Gizmos/MumbleLink");
+
+        Assert.Contains("--MumbleLink:FilePath=/run/user/1000/Gw2Gizmos/MumbleLink", launcher.CreateStartInfo().ArgumentList);
+    }
+
+    [Fact]
     public void ExecutablePath_IsNextToTheApp_WithThePlatformExtension()
     {
         string expectedName = OperatingSystem.IsWindows()

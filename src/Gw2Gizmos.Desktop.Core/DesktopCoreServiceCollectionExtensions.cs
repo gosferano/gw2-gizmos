@@ -22,12 +22,15 @@ public static class DesktopCoreServiceCollectionExtensions
     /// </summary>
     /// <param name="logStore">The log viewer's buffer, created before the host because the logger writes to it.</param>
     /// <param name="workerConfigPipeName">The pipe the worker process fetches its live config from.</param>
+    /// <param name="mumbleLinkFilePath">Where the head's MumbleLink bridge mirrors the game's shared memory (Linux);
+    /// null when the worker can read the game's shared memory itself (Windows).</param>
     public static IServiceCollection AddGw2GizmosDesktopCore(
         this IServiceCollection services,
         AppPaths paths,
         LogStore logStore,
         string workerConfigPipeName,
-        DesktopDatabaseSettings database
+        DesktopDatabaseSettings database,
+        string? mumbleLinkFilePath = null
     )
     {
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
@@ -70,7 +73,8 @@ public static class DesktopCoreServiceCollectionExtensions
             paths,
             database,
             workerConfigPipeName,
-            sp.GetRequiredService<ILogger<WorkerProcessLauncher>>()
+            sp.GetRequiredService<ILogger<WorkerProcessLauncher>>(),
+            mumbleLinkFilePath
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();

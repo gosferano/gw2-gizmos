@@ -17,18 +17,23 @@ public sealed class WorkerProcessLauncher
     private readonly AppPaths _paths;
     private readonly DesktopDatabaseSettings _database;
     private readonly string _workerConfigPipeName;
+    private readonly string? _mumbleLinkFilePath;
     private readonly ILogger<WorkerProcessLauncher> _logger;
 
+    /// <param name="mumbleLinkFilePath">Where a MumbleLink bridge mirrors the game's shared memory (Linux, game under
+    /// Wine); null to let the worker read the game's shared memory directly (Windows).</param>
     public WorkerProcessLauncher(
         AppPaths paths,
         DesktopDatabaseSettings database,
         string workerConfigPipeName,
-        ILogger<WorkerProcessLauncher> logger
+        ILogger<WorkerProcessLauncher> logger,
+        string? mumbleLinkFilePath = null
     )
     {
         _paths = paths;
         _database = database;
         _workerConfigPipeName = workerConfigPipeName;
+        _mumbleLinkFilePath = mumbleLinkFilePath;
         _logger = logger;
     }
 
@@ -54,6 +59,10 @@ public sealed class WorkerProcessLauncher
         startInfo.ArgumentList.Add($"--Database:Provider={_database.Provider}");
         startInfo.ArgumentList.Add($"--WorkerConfig:PipeName={_workerConfigPipeName}");
         startInfo.ArgumentList.Add($"--WorkerConfig:ParentProcessId={Environment.ProcessId}");
+        if (_mumbleLinkFilePath is not null)
+        {
+            startInfo.ArgumentList.Add($"--MumbleLink:FilePath={_mumbleLinkFilePath}");
+        }
         return startInfo;
     }
 
