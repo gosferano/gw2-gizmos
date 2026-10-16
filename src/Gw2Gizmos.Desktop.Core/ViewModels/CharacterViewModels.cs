@@ -9,11 +9,14 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the Characters hub: a card per character of the selected account (<see cref="SelectedAccountService"/>),
-/// each opening that character's page. Transient, so the list reloads on navigation. The names come from the
+/// each opening that character's page. Refreshes in place after each account sync. The names come from the
 /// synced bag snapshots, so the list is empty until the (off-by-default) Character inventories sync has run.
 /// </summary>
-public sealed class CharactersViewModel : ViewModelBase
+public sealed class CharactersViewModel : ViewModelBase, INavigationAware
 {
+    private readonly AccountReader _reader;
+    private readonly string? _accountId;
+    private readonly IDisposable _dataChanges;
     private readonly SelectedCharacterService _selected;
     private readonly INavigationService _navigation;
     private string _status = "";
@@ -22,18 +25,21 @@ public sealed class CharactersViewModel : ViewModelBase
         AccountReader reader,
         SelectedAccountService account,
         SelectedCharacterService selected,
-        INavigationService navigation)
+        INavigationService navigation,
+        DataChangeMonitor dataChanges)
     {
+        _reader = reader;
+        _accountId = account.AccountId;
         _selected = selected;
         _navigation = navigation;
         HasAccount = !string.IsNullOrEmpty(account.AccountId);
         OpenCommand = new RelayCommand<string>(Open);
 
-        if (account.AccountId is { } accountId)
-        {
-            _ = LoadAsync(reader, accountId);
-        }
+        _ = LoadAsync();
+        _dataChanges = dataChanges.Subscribe(AccountPageRefresh.When(() => _ = LoadAsync()));
     }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
 
     public ObservableCollection<string> Characters { get; } = new();
 
@@ -53,15 +59,17 @@ public sealed class CharactersViewModel : ViewModelBase
     /// <summary>Opens a character's page (the card binds this with the character name as the parameter).</summary>
     public RelayCommand<string> OpenCommand { get; }
 
-    private async Task LoadAsync(AccountReader reader, string accountId)
+    private async Task LoadAsync()
     {
+        if (_accountId is not { } accountId)
+        {
+            return;
+        }
+
         try
         {
-            List<string> names = await Task.Run(() => reader.GetCharacterNames(accountId));
-            foreach (string name in names)
-            {
-                Characters.Add(name);
-            }
+            List<string> names = await Task.Run(() => _reader.GetCharacterNames(accountId));
+            Characters.ReplaceWith(names);
 
             OnPropertyChanged(nameof(HasCharacters));
             Status = names.Count == 0
@@ -101,14 +109,21 @@ public sealed class CharacterViewModel : ViewModelBase
 }
 
 /// <summary>Backs a character's inventory page: its bag layout as a slot grid (mirrors the bank/shared grid).</summary>
-public sealed class CharacterInventoryViewModel : ViewModelBase
+public sealed class CharacterInventoryViewModel : ViewModelBase, INavigationAware
 {
-    public CharacterInventoryViewModel(AccountReader reader, SelectedAccountService account, SelectedCharacterService selected)
+    private readonly IDisposable _dataChanges;
+
+    public CharacterInventoryViewModel(
+        AccountReader reader, SelectedAccountService account, SelectedCharacterService selected, DataChangeMonitor dataChanges)
     {
         string characterName = selected.CharacterName ?? "";
         Breadcrumbs = CharacterBreadcrumbs.Inventory(characterName);
         _ = LoadAsync(reader, account.AccountId, characterName);
+        _dataChanges = dataChanges.Subscribe(
+            AccountPageRefresh.When(() => _ = LoadAsync(reader, account.AccountId, characterName)));
     }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
 
     public ObservableCollection<SlotRow> Slots { get; } = new();
 
@@ -129,10 +144,7 @@ public sealed class CharacterInventoryViewModel : ViewModelBase
                 return id is null ? new List<SlotRow>() : reader.GetCharacterInventory(id, characterName);
             });
 
-            foreach (SlotRow slot in slots)
-            {
-                Slots.Add(slot);
-            }
+            Slots.ReplaceWith(slots);
         }
         catch (Exception)
         {

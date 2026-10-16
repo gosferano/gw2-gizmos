@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Desktop.Core.Mvvm;
+using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop.Core;
 
@@ -9,12 +11,13 @@ namespace Gw2Gizmos.Desktop.Core;
 /// header, over the Wallet / Material storage / Bank / Shared inventory cards. The account is the global
 /// selection (<see cref="SelectedAccountService"/>), picked on the API Keys page; this page just reflects it.
 /// </summary>
-public sealed class AccountViewModel : ViewModelBase
+public sealed class AccountViewModel : ViewModelBase, INavigationAware
 {
+    private readonly IDisposable? _dataChanges;
     private string _summary = "";
     private string? _summaryTooltip;
 
-    public AccountViewModel(SelectedAccountService selected, AccountReader reader)
+    public AccountViewModel(SelectedAccountService selected, AccountReader reader, DataChangeMonitor dataChanges)
     {
         AccountName = selected.AccountName ?? "";
         HasAccount = !string.IsNullOrEmpty(selected.AccountId);
@@ -22,8 +25,18 @@ public sealed class AccountViewModel : ViewModelBase
         if (selected.AccountId is { } accountId)
         {
             _ = LoadSyncTimeAsync(reader, accountId);
+            // Keep "Synced 3m ago" current: re-read after each sync, re-format as it ages.
+            _dataChanges = dataChanges.Subscribe(changes =>
+            {
+                if ((changes & (DataChanges.AccountSync | DataChanges.Clock)) != 0)
+                {
+                    _ = LoadSyncTimeAsync(reader, accountId);
+                }
+            });
         }
     }
+
+    public void OnNavigatedFrom() => _dataChanges?.Dispose();
 
     public string AccountName { get; }
 
