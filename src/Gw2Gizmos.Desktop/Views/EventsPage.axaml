@@ -16,7 +16,7 @@
 
     <c:PageShell Title="Events" Scrollable="False">
         <Grid RowDefinitions="Auto,*">
-            <!-- Toolbar: lead-time dropdown, expansion multi-select dropdown, and search. -->
+            <!-- Toolbar: lead-time dropdown, expansion multi-select dropdown, festival dropdown, and search. -->
             <DockPanel Grid.Row="0" Margin="0,0,16,10">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,12,0">
                     <TextBlock Text="Remind me" VerticalAlignment="Center"
@@ -44,6 +44,17 @@
                         </Flyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>
+
+                <!-- The festival running now (nothing reports it, so the user picks): adds its timed events. -->
+                <ComboBox DockPanel.Dock="Left" MinWidth="200" VerticalAlignment="Center" Margin="0,0,12,0"
+                          Height="{StaticResource FormControlHeight}" ToolTip.Tip="Show the running festival's events"
+                          ItemsSource="{Binding FestivalOptions}" SelectedItem="{Binding SelectedFestival}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="core:FestivalOption">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
                 <TextBox PlaceholderText="Search events…" VerticalAlignment="Center" VerticalContentAlignment="Center"
                          Height="{StaticResource FormControlHeight}" Text="{Binding SearchText}" />

@@ -6,7 +6,8 @@ public enum EventKind
     WorldBoss,
     MetaEvent,
     PublicInstance,
-    Invasion
+    Invasion,
+    Festival
 }
 
 /// <summary>The release an event belongs to (expansion or Living World season), for filtering the UI.</summary>
@@ -43,6 +44,9 @@ public sealed record ScheduledEvent
 
     /// <summary>The release this event belongs to, for the expansion/Living-World filter.</summary>
     public required Expansion Expansion { get; init; }
+
+    /// <summary>The festival a festival event belongs to (it only runs while that festival is on); null otherwise.</summary>
+    public Festival? Festival { get; init; }
 
     /// <summary>GW2 chat link to the event's waypoint/POI (e.g. "[&amp;BNABAAA=]"), copyable in the UI.</summary>
     public string? ChatLink { get; init; }

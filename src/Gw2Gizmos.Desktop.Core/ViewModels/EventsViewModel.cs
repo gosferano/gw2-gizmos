@@ -11,9 +11,10 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the Events timer screen: every world boss, map meta, public instance, and invasion from the static
-/// schedule as live rows. A one-second timer reticks each row's countdown; a live-sorted <see cref="IItemsView"/>
-/// keeps them ordered (favorites pinned, then active, then soonest) and applies the search + expansion filter.
-/// Singleton, so the clock keeps running and the list is built once.
+/// schedule as live rows, plus the events of the festival the user marks as running. A one-second timer reticks each
+/// row's countdown; a live-sorted <see cref="IItemsView"/> keeps them ordered (favorites pinned, then active, then
+/// soonest) and applies the search, expansion and festival filters. Singleton, so the clock keeps running and the
+/// list is built once.
 /// </summary>
 public sealed class EventsViewModel : ViewModelBase
 {
@@ -36,11 +37,12 @@ public sealed class EventsViewModel : ViewModelBase
         _reminderSettings = reminderSettings;
         _clipboard = clipboard;
         CopyChatLinkCommand = new RelayCommand<string>(chatLink => _ = CopyChatLinkAsync(chatLink));
-        _rows = WorldBosses.All
-            .Concat(MetaEvents.All)
-            .Concat(PublicInstances.All)
-            .Concat(Invasions.All)
+        _rows = EventSchedule.All
             .Select(e => new EventRowViewModel(e, subscriptions, favorites))
+            .ToList();
+
+        FestivalOptions = new[] { new FestivalOption(null, "No festival") }
+            .Concat(Enum.GetValues<Festival>().Select(f => new FestivalOption(f, Festivals.DisplayName(f))))
             .ToList();
 
         Refresh();
@@ -74,6 +76,27 @@ public sealed class EventsViewModel : ViewModelBase
 
     /// <summary>The expansion / Living-World filter items; none selected means show all.</summary>
     public IReadOnlyList<ExpansionFilter> ExpansionFilters { get; }
+
+    /// <summary>"No festival" plus each festival with timed events, for the festival dropdown.</summary>
+    public IReadOnlyList<FestivalOption> FestivalOptions { get; }
+
+    /// <summary>
+    /// The festival the user says is running (nothing reports festival dates): its events join the list and their
+    /// reminders fire. Persisted, and read live by the reminder service.
+    /// </summary>
+    public FestivalOption SelectedFestival
+    {
+        get => FestivalOptions.First(option => option.Festival == _reminderSettings.SelectedFestival);
+        set
+        {
+            if (value is not null && value.Festival != _reminderSettings.SelectedFestival)
+            {
+                _reminderSettings.SelectedFestival = value.Festival;
+                OnPropertyChanged();
+                _view.Refresh();
+            }
+        }
+    }
 
     /// <summary>Label for the expansion-filter dropdown, reflecting how many releases are selected.</summary>
     public string ExpansionFilterLabel
@@ -139,15 +162,21 @@ public sealed class EventsViewModel : ViewModelBase
             return false;
         }
 
+        // Festival events: only the selected festival's, whatever the expansion filter (a festival is its own grouping).
+        if (row.Festival is { } festival)
+        {
+            return festival == _reminderSettings.SelectedFestival;
+        }
+
         // No expansion chips selected → show all; otherwise only the selected releases.
         bool anySelected = ExpansionFilters.Any(f => f.IsSelected);
         return !anySelected || ExpansionFilters.Any(f => f.IsSelected && f.Expansion == row.Expansion);
     }
 
-    // Only expansions actually present in the data, in release (enum-declaration) order.
+    // Only expansions actually present in the (non-festival) data, in release (enum-declaration) order.
     private IReadOnlyList<ExpansionFilter> BuildExpansionFilters()
     {
-        HashSet<Expansion> present = _rows.Select(r => r.Expansion).ToHashSet();
+        HashSet<Expansion> present = _rows.Where(r => r.Festival is null).Select(r => r.Expansion).ToHashSet();
         return Enum.GetValues<Expansion>()
             .Where(present.Contains)
             .Select(e => new ExpansionFilter(e, ExpansionDisplayName(e), OnExpansionFilterChanged))
@@ -221,3 +250,6 @@ public sealed class ExpansionFilter : ViewModelBase
         }
     }
 }
+
+/// <summary>One entry in the festival dropdown: a festival, or "No festival" (<see cref="Festival"/> null).</summary>
+public sealed record FestivalOption(Festival? Festival, string Name);
