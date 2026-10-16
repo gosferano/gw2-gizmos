@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.CharacterPage"
+             x:DataType="core:CharacterViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <!-- Per-character sub-sections (currently just the bags). The character name is the breadcrumb, so it
+                 isn't repeated as a header here. -->
+            <ui:FASettingsExpander Header="Inventory" Description="Items in this character's bags" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource Backpack24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Click="OnOpenInventory" />
+        </StackPanel>
+    </c:PageShell>
+</UserControl>
