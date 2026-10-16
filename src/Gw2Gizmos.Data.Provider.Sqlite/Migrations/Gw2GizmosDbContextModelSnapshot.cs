@@ -271,6 +271,31 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("GameSessions");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.MapSegment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CharacterSegmentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("EndedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MapId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("StartedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CharacterSegmentId");
+
+                    b.ToTable("MapSegments");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>
                 {
                     b.Property<long>("Id")

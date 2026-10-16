@@ -73,10 +73,11 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<CharacterItemSlot> CharacterItemSlots { get; set; }
 
     // Play sessions detected from MumbleLink: a GameSession per sitting, with an ordered set of CharacterSegments
-    // (the per-character stretches / switches). "Hoarded" deltas are reconstructed from the observation logs above
-    // at read time, not stored.
+    // (the per-character stretches / switches), each split into MapSegments by map. "Hoarded" deltas are
+    // reconstructed from the observation logs above at read time, not stored.
     public DbSet<GameSession> GameSessions { get; set; }
     public DbSet<CharacterSegment> CharacterSegments { get; set; }
+    public DbSet<MapSegment> MapSegments { get; set; }
 
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
