@@ -24,18 +24,14 @@ namespace Gw2Gizmos.Desktop;
 /// </summary>
 public partial class App : Application
 {
-#if DEBUG
-    private const string SingleInstanceMutexName = @"Local\Gw2Gizmos.Dev.SingleInstance";
-#else
-    private const string SingleInstanceMutexName = @"Local\Gw2Gizmos.SingleInstance";
-#endif
-
     private IClassicDesktopStyleApplicationLifetime? _desktop;
     private IHost? _host;
     private MainWindow? _window;
     private WorkerSupervisor? _worker;
-    private Mutex? _singleInstanceMutex;
     private bool _isExiting;
+
+    /// <summary>This process's claim on being the app's one instance, taken (and released) by <see cref="Program"/>.</summary>
+    internal static SingleInstance? Instance { get; set; }
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -51,14 +47,6 @@ public partial class App : Application
         // Closing the window only hides it to the tray; the app exits from the tray menu.
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         desktop.Exit += OnExit;
-
-        // One instance per user: a second launch would spawn a duplicate worker and double every notification.
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out bool isPrimary);
-        if (!isPrimary)
-        {
-            desktop.Shutdown(0);
-            return;
-        }
 
         RegisterGlobalExceptionHandlers();
         _ = StartApplicationAsync(desktop.Args ?? Array.Empty<string>());
@@ -116,6 +104,9 @@ public partial class App : Application
             {
                 _window.Show();
             }
+
+            // From here on, launching the app again (e.g. from the launcher while it's in the tray) shows this window.
+            Instance?.ListenForShowRequests(() => Dispatcher.UIThread.Post(ShowWindow));
         }
         catch (Exception ex)
         {
@@ -198,9 +189,6 @@ public partial class App : Application
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
-        // Released as the handle closes, freeing the single-instance slot for the next launch.
-        _singleInstanceMutex?.Dispose();
-
         _worker?.Stop();
 
         if (_host is not null)

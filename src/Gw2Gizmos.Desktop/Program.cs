@@ -1,4 +1,5 @@
 using Avalonia;
+using Gw2Gizmos.Desktop.Hosting;
 using Velopack;
 
 namespace Gw2Gizmos.Desktop;
@@ -12,6 +13,21 @@ internal static class Program
         // starts; it also has to run before any UpdateManager is created (the update check).
         VelopackApp.Build().Run();
 
+        // One instance per user (per build), settled before the UI exists — Avalonia can't shut down cleanly before
+        // its main loop runs. A second launch shows the running instance's window (unless it's the login autostart,
+        // --minimized, which has nothing to show) and exits.
+        using SingleInstance? instance = SingleInstance.TryAcquire(AppDataDirectory.FolderName);
+        if (instance is null)
+        {
+            if (!args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
+            {
+                SingleInstance.SignalExisting(AppDataDirectory.FolderName);
+            }
+
+            return;
+        }
+
+        App.Instance = instance;
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
