@@ -41,6 +41,9 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
     private readonly ILogger<ProtonMumbleLinkBridge> _logger;
     private int? _attachedGamePid;
 
+    /// <summary>Whether a bridge of ours should be running for <see cref="_attachedGamePid"/> (false after giving up).</summary>
+    private bool _expectBridge;
+
     public ProtonMumbleLinkBridge(string filePath, FeatureSettingsStore features, ILogger<ProtonMumbleLinkBridge> logger)
     {
         FilePath = filePath;
@@ -83,9 +86,21 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             return;
         }
 
+        // Attached already — as long as our bridge is still there. One that crashed or was killed while the game runs
+        // is replaced, instead of leaving the rest of the session untracked.
         if (_attachedGamePid == game.Pid)
         {
-            return;
+            if (_expectBridge && !IsBridgeRunningFor(BridgeOutputArgument))
+            {
+                _logger.LogWarning(
+                    "This app's MumbleLink bridge for Guild Wars 2 (pid {Pid}) is no longer running; starting a new one.",
+                    game.Pid);
+                _attachedGamePid = null;
+            }
+            else
+            {
+                return;
+            }
         }
 
         // One bridge per game run and build; an app restart mid-game finds the bridge its previous run started. A
@@ -96,6 +111,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             _logger.LogInformation(
                 "Guild Wars 2 (pid {Pid}) already has this app's MumbleLink bridge running; using it.", game.Pid);
             _attachedGamePid = game.Pid;
+            _expectBridge = true;
             return;
         }
 
@@ -103,6 +119,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         {
             _logger.LogWarning("MumbleLink bridge not found at {Path}; play sessions won't be tracked.", BridgePath);
             _attachedGamePid = game.Pid;
+            _expectBridge = false;
             return;
         }
 
@@ -111,14 +128,16 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             _logger.LogWarning(
                 "Couldn't find the wine binary running Guild Wars 2 (pid {Pid}); play sessions won't be tracked.", game.Pid);
             _attachedGamePid = game.Pid;
+            _expectBridge = false;
             return;
         }
 
-        StartBridge(game, wine);
+        _expectBridge = StartBridge(game, wine);
         _attachedGamePid = game.Pid;
     }
 
-    private void StartBridge(GameProcess game, string wine)
+    /// <summary>Starts the bridge in the game's Wine session; false when it couldn't be started.</summary>
+    private bool StartBridge(GameProcess game, string wine)
     {
         var startInfo = new ProcessStartInfo(wine)
         {
@@ -147,7 +166,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         if (process is null)
         {
             _logger.LogWarning("Couldn't start the MumbleLink bridge.");
-            return;
+            return false;
         }
 
         process.OutputDataReceived += (_, e) => LogBridgeLine(e.Data);
@@ -157,6 +176,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         _logger.LogInformation(
             "Started the MumbleLink bridge for Guild Wars 2 (pid {Pid}, prefix {Prefix}).",
             game.Pid, game.Environment.GetValueOrDefault("WINEPREFIX"));
+        return true;
     }
 
     private void LogBridgeLine(string? line)
