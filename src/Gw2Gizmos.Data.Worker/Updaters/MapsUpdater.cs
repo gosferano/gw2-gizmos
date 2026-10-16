@@ -44,16 +44,17 @@ public class MapsUpdater
                 _dbContext.Maps.Add(row);
             }
 
-            row.Name = map.Name;
+            // Some API names carry stray whitespace (e.g. " Desert Borderlands"); they're shown as-is in the UI.
+            row.Name = map.Name.Trim();
             row.MinLevel = map.MinLevel;
             row.MaxLevel = map.MaxLevel;
             row.Type = map.Type.Value;
             row.DefaultFloor = map.DefaultFloor;
             row.Floors = map.Floors;
             row.RegionId = map.RegionId;
-            row.RegionName = map.RegionName;
+            row.RegionName = map.RegionName?.Trim();
             row.ContinentId = map.ContinentId;
-            row.ContinentName = map.ContinentName;
+            row.ContinentName = map.ContinentName?.Trim();
             row.MapRect = ToRect(map.MapRect);
             row.ContinentRect = ToRect(map.ContinentRect);
         }
