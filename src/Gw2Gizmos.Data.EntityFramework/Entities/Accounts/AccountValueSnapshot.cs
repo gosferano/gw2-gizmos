@@ -8,7 +8,7 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 /// The account's estimated value at one point in time, broken down by where it's held (all in copper). The worker
 /// records one point per hour after the account sync; when an account has none yet, it first backfills one point per
 /// day from the holdings logs (<see cref="IsBackfilled"/>). Items are valued at their instant-sell price (see
-/// <c>AccountValuation</c>).
+/// <see cref="AccountValuation"/>).
 /// </summary>
 [Index(nameof(AccountId), nameof(TakenAtUtc))]
 public class AccountValueSnapshot

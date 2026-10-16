@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.EntityFramework;
@@ -65,9 +66,12 @@ public static class AccountHoldingsReconstructor
     /// <summary>
     /// Per-item "instant-sell" unit value in copper: the latest trading-post buy order minus the 15% fee where one
     /// exists, otherwise the item's vendor value — but only when it's sellable ("NoSell" items can't be vendored, so
-    /// they're worth 0). Items with neither resolve to 0. Used to value session loot/profit.
+    /// they're worth 0). Items with neither resolve to 0. Used to value session loot/profit and the account.
+    /// With <paramref name="asOfUtc"/>, the buy order at that time is used where the price history has one, and
+    /// today's otherwise.
     /// </summary>
-    public static Dictionary<int, long> ItemValues(Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds)
+    public static Dictionary<int, long> ItemValues(
+        Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds, DateTimeOffset? asOfUtc = null)
     {
         var values = new Dictionary<int, long>();
         int[] distinct = itemIds.Distinct().ToArray();
@@ -79,13 +83,15 @@ public static class AccountHoldingsReconstructor
         // Batched to stay under SQLite's parameter cap.
         foreach (int[] batch in distinct.Chunk(500))
         {
-            IQueryable<long> latestIds = db.PriceSnapshots
-                .Where(s => batch.Contains(s.ItemId))
-                .GroupBy(s => s.ItemId)
-                .Select(g => g.Max(s => s.Id));
-            Dictionary<int, int> buy = db.PriceSnapshots.AsNoTracking()
-                .Where(s => latestIds.Contains(s.Id) && s.Buy != null && s.Buy > 0)
-                .ToDictionary(s => s.ItemId, s => s.Buy!.Value);
+            Dictionary<int, int> buy = BuyPrices(db, batch, asOfUtc);
+            if (asOfUtc is not null)
+            {
+                int[] unpriced = batch.Where(id => !buy.ContainsKey(id)).ToArray();
+                foreach ((int id, int b) in BuyPrices(db, unpriced, asOfUtc: null))
+                {
+                    buy[id] = b;
+                }
+            }
 
             foreach (var item in db.Items.AsNoTracking()
                          .Where(i => batch.Contains(i.Id))
@@ -107,5 +113,20 @@ public static class AccountHoldingsReconstructor
         }
 
         return values;
+    }
+
+    /// <summary>The latest real buy order per item (at or before <paramref name="asOfUtc"/>, when given).</summary>
+    private static Dictionary<int, int> BuyPrices(Gw2GizmosDbContext db, int[] itemIds, DateTimeOffset? asOfUtc)
+    {
+        IQueryable<PriceSnapshot> snapshots = db.PriceSnapshots.Where(s => itemIds.Contains(s.ItemId));
+        if (asOfUtc is { } asOf)
+        {
+            snapshots = snapshots.Where(s => s.TimestampUtc <= asOf);
+        }
+
+        IQueryable<long> latestIds = snapshots.GroupBy(s => s.ItemId).Select(g => g.Max(s => s.Id));
+        return db.PriceSnapshots.AsNoTracking()
+            .Where(s => latestIds.Contains(s.Id) && s.Buy != null && s.Buy > 0)
+            .ToDictionary(s => s.ItemId, s => s.Buy!.Value);
     }
 }
