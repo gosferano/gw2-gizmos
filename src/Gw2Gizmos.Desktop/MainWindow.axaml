@@ -16,6 +16,7 @@
             <ui:FANavigationViewItem Content="Notifications" IconSource="{c:FluentIconSource Alert24}" Tag="{x:Static nav:AppPage.Notifications}" />
             <ui:FANavigationViewItem Content="Events" IconSource="{c:FluentIconSource Clock24}" Tag="{x:Static nav:AppPage.Events}" />
             <ui:FANavigationViewItem Content="Items" IconSource="{c:FluentIconSource BoxMultiple24}" Tag="{x:Static nav:AppPage.Items}" />
+            <ui:FANavigationViewItem Content="Trading post" IconSource="{c:FluentIconSource BuildingShop24}" Tag="{x:Static nav:AppPage.TradingPost}" />
             <ui:FANavigationViewItem Content="Account" IconSource="{c:FluentIconSource Person24}" Tag="{x:Static nav:AppPage.Account}" />
             <ui:FANavigationViewItem Content="Characters" IconSource="{c:FluentIconSource People24}" Tag="{x:Static nav:AppPage.Characters}" />
             <ui:FANavigationViewItem Content="Sessions" IconSource="{c:FluentIconSource History24}" Tag="{x:Static nav:AppPage.Sessions}" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.Worker.Features;
@@ -615,6 +616,44 @@ public sealed class AccountReader
         }
     }
 
+    /// <summary>The account's open trading-post orders, each with its item's competing prices from the last sync.</summary>
+    public List<TradingPostOrderRow> GetTradingPostOrders(string accountId)
+    {
+        List<TradingPostOrder> orders = SafeRead(
+            db => db.TradingPostOrders.AsNoTracking().Where(o => o.AccountId == accountId).ToList(),
+            new List<TradingPostOrder>());
+        Dictionary<int, string> names = LoadNames(orders.Select(o => o.ItemId), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+
+        return orders
+            .Select(o => new TradingPostOrderRow(
+                o.Id, o.Side == TradingPostSide.Buy, o.ItemId, names.GetValueOrDefault(o.ItemId, $"Item {o.ItemId}"),
+                o.Price, o.Quantity, o.CreatedUtc, o.BestBuyPrice, o.BestSellPrice))
+            // Beaten orders first (the ones needing attention), then newest.
+            .OrderByDescending(o => o.IsBeaten)
+            .ThenByDescending(o => o.CreatedUtc)
+            .ToList();
+    }
+
+    /// <summary>The account's completed trades, newest first.</summary>
+    public List<TradingPostTradeRow> GetTradingPostTrades(string accountId)
+    {
+        List<TradingPostTransaction> trades = SafeRead(
+            db => db.TradingPostTransactions.AsNoTracking()
+                .Where(t => t.AccountId == accountId)
+                .OrderByDescending(t => t.PurchasedUtc)
+                .ToList(),
+            new List<TradingPostTransaction>());
+        Dictionary<int, string> names = LoadNames(trades.Select(t => t.ItemId), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+
+        return trades
+            .Select(t => new TradingPostTradeRow(
+                t.Id, t.Side == TradingPostSide.Sell, t.ItemId, names.GetValueOrDefault(t.ItemId, $"Item {t.ItemId}"),
+                t.Price, t.Quantity, t.PurchasedUtc))
+            .ToList();
+    }
+
     // Resolves id→name in batches of 500 to stay under SQLite's ~999 bound-parameter limit.
     private Dictionary<int, string> LoadNames(
         IEnumerable<int> ids,
@@ -702,6 +741,67 @@ public sealed record GameSessionRow(
         : $"{DurationDisplay} · {MainMap} · {CharactersDisplay}";
 
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+}
+
+/// <summary>
+/// One open trading-post order. A sell listing is <b>undercut</b> when someone lists cheaper; a buy order is
+/// <b>outbid</b> when someone offers more — <see cref="GapCopper"/> is by how much (as of the last sync).
+/// </summary>
+public sealed record TradingPostOrderRow(
+    long Id,
+    bool IsBuy,
+    int ItemId,
+    string Name,
+    int Price,
+    int Quantity,
+    DateTimeOffset CreatedUtc,
+    int? BestBuyPrice,
+    int? BestSellPrice
+)
+{
+    /// <summary>How far the order is behind the best competing price, in copper; null when it's the best.</summary>
+    public long? GapCopper =>
+        IsBuy
+            ? BestBuyPrice > Price ? BestBuyPrice - Price : null
+            : BestSellPrice < Price ? Price - BestSellPrice : null;
+
+    public bool IsBeaten => GapCopper is not null;
+
+    /// <summary>E.g. "Undercut by", "Outbid by", "Lowest listing", "Highest buy order".</summary>
+    public string Standing => (IsBuy, IsBeaten) switch
+    {
+        (true, true) => "Outbid by",
+        (false, true) => "Undercut by",
+        (true, false) => "Highest buy order",
+        (false, false) => "Lowest listing",
+    };
+
+    /// <summary>E.g. "Selling 25 · placed 2026-10-16 14:05" (local time).</summary>
+    public string Details => $"{(IsBuy ? "Buying" : "Selling")} {Quantity:N0} · placed {CreatedUtc.LocalDateTime:yyyy-MM-dd HH:mm}";
+}
+
+/// <summary>A completed trade: something the account bought or sold on the trading post.</summary>
+public sealed record TradingPostTradeRow(
+    long Id,
+    bool IsSell,
+    int ItemId,
+    string Name,
+    int Price,
+    int Quantity,
+    DateTimeOffset PurchasedUtc
+)
+{
+    // The trading post keeps a 10% exchange fee on a sale (the 5% listing fee was paid when listing).
+    private const double SaleNetFactor = 0.90;
+
+    public long TotalCopper => (long)Price * Quantity;
+
+    /// <summary>What the trade did to the wallet: a sale's payout after the exchange fee (+), a purchase's cost (−).</summary>
+    public long WalletCopper => IsSell ? (long)Math.Floor(TotalCopper * SaleNetFactor) : -TotalCopper;
+
+    /// <summary>E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05" (local time).</summary>
+    public string Details =>
+        $"{(IsSell ? "Sold" : "Bought")} {Quantity:N0} × {Coin.Format(Price)} · {PurchasedUtc.LocalDateTime:yyyy-MM-dd HH:mm}";
 }
 
 /// <summary>A map played during a session or segment, and the total time spent on it.</summary>

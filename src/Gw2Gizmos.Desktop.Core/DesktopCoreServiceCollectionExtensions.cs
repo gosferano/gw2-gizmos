@@ -139,6 +139,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // Sessions: the drilled-into session/segment (transient nav context), the hub + per-session/segment VMs.
         services.AddSingleton<SelectedSessionService>();
         services.AddTransient<SessionsViewModel>();
+        services.AddTransient<TradingPostViewModel>();
         services.AddTransient<SessionViewModel>();
         services.AddTransient<SessionLootViewModel>();
 
