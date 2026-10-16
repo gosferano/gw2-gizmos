@@ -5,8 +5,8 @@ using Gw2Gizmos.MumbleLink.Contract;
 namespace Gw2Gizmos.MumbleLink.Client.Tests;
 
 /// <summary>
-/// Exercises the reader against a real named memory-mapped file. The reader uses Windows named shared memory, so
-/// these are skipped on other platforms. A private map name is used so a running game's "MumbleLink" is never touched.
+/// Exercises the reader against real sources: a named memory-mapped file (Windows-only, so skipped elsewhere; a private
+/// map name keeps a running game's "MumbleLink" untouched) and a bridge file (any platform).
 /// </summary>
 public class MumbleLinkReaderTests
 {
@@ -62,5 +62,56 @@ public class MumbleLinkReaderTests
 
         Assert.False(reader.TryRead(out MumbleLinkSnapshot? snapshot));
         Assert.Null(snapshot);
+    }
+
+    [Fact]
+    public void ReadForFile_returns_a_snapshot_and_follows_updates()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "gw2gizmos-mumblelink-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            File.WriteAllBytes(path, new LinkedMemBuilder().UiVersion(2).UiTick(10).Name("Guild Wars 2").Build());
+            using IMumbleLinkReader reader = MumbleLinkReader.CreateForFile(path);
+
+            Assert.Equal(10u, reader.Read()!.UiTick);
+
+            // The bridge rewrites the same file in place; the open mapping sees the new block.
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite))
+            {
+                byte[] next = new LinkedMemBuilder().UiVersion(2).UiTick(11).Name("Guild Wars 2").Build();
+                stream.Write(next, 0, next.Length);
+            }
+
+            MumbleLinkSnapshot? snapshot = reader.Read();
+            Assert.NotNull(snapshot);
+            Assert.Equal(11u, snapshot!.UiTick);
+            Assert.Equal("Guild Wars 2", snapshot.Name);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ReadForFile_returns_null_until_the_bridge_has_written_a_full_block()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "gw2gizmos-mumblelink-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using IMumbleLinkReader reader = MumbleLinkReader.CreateForFile(path);
+            Assert.False(reader.TryRead(out _)); // no file yet
+
+            File.WriteAllBytes(path, new byte[100]);
+            Assert.False(reader.TryRead(out _)); // too short
+
+            File.WriteAllBytes(path, new LinkedMemBuilder().UiTick(5).Name("Guild Wars 2").Build());
+            Assert.True(reader.TryRead(out MumbleLinkSnapshot? snapshot));
+            Assert.Equal(5u, snapshot!.UiTick);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 }
