@@ -19,15 +19,21 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            IsVisible="{Binding !HasCharacters}" />
 
-                <!-- One card per character → its page. -->
+                <!-- One row per character → its page. -->
                 <ItemsControl ItemsSource="{Binding Characters}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <ui:FASettingsExpander Header="{Binding}" Margin="0,0,0,8"
-                                                   IconSource="{c:FluentIconSource Person24}" IsClickEnabled="True"
-                                                   ActionIconSource="ChevronRight"
-                                                   Command="{Binding $parent[UserControl].((core:CharactersViewModel)DataContext).OpenCommand}"
-                                                   CommandParameter="{Binding}" />
+                        <DataTemplate x:DataType="core:CharacterCard">
+                            <Button Margin="0,0,0,8" Padding="12,10" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Command="{Binding $parent[UserControl].((core:CharactersViewModel)DataContext).OpenCommand}"
+                                    CommandParameter="{Binding Name}">
+                                <DockPanel>
+                                    <c:FluentIcon DockPanel.Dock="Right" Symbol="ChevronRight24" FontSize="16"
+                                                  Margin="16,0,0,0" VerticalAlignment="Center"
+                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CharacterRowTemplate}" />
+                                </DockPanel>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

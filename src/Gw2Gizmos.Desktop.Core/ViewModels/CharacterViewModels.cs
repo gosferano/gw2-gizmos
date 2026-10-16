@@ -41,7 +41,7 @@ public sealed class CharactersViewModel : ViewModelBase, INavigationAware
 
     public void OnNavigatedFrom() => _dataChanges.Dispose();
 
-    public ObservableCollection<string> Characters { get; } = new();
+    public ObservableCollection<CharacterCard> Characters { get; } = new();
 
     /// <summary>False when no account is selected; the page shows a "pick an account" note instead.</summary>
     public bool HasAccount { get; }
@@ -68,11 +68,11 @@ public sealed class CharactersViewModel : ViewModelBase, INavigationAware
 
         try
         {
-            List<string> names = await Task.Run(() => _reader.GetCharacterNames(accountId));
-            Characters.ReplaceWith(names);
+            List<CharacterCard> cards = await Task.Run(() => _reader.GetCharacterCards(accountId));
+            Characters.ReplaceWith(cards);
 
             OnPropertyChanged(nameof(HasCharacters));
-            Status = names.Count == 0
+            Status = cards.Count == 0
                 ? "No characters synced yet. Enable “Characters” in Settings (the API key needs the characters and inventories permissions)."
                 : "";
         }
@@ -94,18 +94,50 @@ public sealed class CharactersViewModel : ViewModelBase, INavigationAware
     }
 }
 
-/// <summary>Backs a single character's page — the name header over its (currently one) sub-section card.</summary>
-public sealed class CharacterViewModel : ViewModelBase
+/// <summary>Backs a single character's page — its card over its (currently one) sub-section card.</summary>
+public sealed class CharacterViewModel : ViewModelBase, INavigationAware
 {
-    public CharacterViewModel(SelectedCharacterService selected)
+    private readonly IDisposable _dataChanges;
+    private CharacterCard? _card;
+
+    public CharacterViewModel(
+        AccountReader reader, SelectedAccountService account, SelectedCharacterService selected, DataChangeMonitor dataChanges)
     {
         CharacterName = selected.CharacterName ?? "";
         Breadcrumbs = CharacterBreadcrumbs.Character(CharacterName);
+        _ = LoadAsync(reader, account.AccountId);
+        _dataChanges = dataChanges.Subscribe(AccountPageRefresh.When(() => _ = LoadAsync(reader, account.AccountId)));
     }
+
+    public void OnNavigatedFrom() => _dataChanges.Dispose();
 
     public string CharacterName { get; }
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
+
+    /// <summary>The character's card; null until loaded (or if the character isn't synced).</summary>
+    public CharacterCard? Card
+    {
+        get => _card;
+        private set => SetProperty(ref _card, value);
+    }
+
+    private async Task LoadAsync(AccountReader reader, string? accountId)
+    {
+        if (accountId is null || string.IsNullOrEmpty(CharacterName))
+        {
+            return;
+        }
+
+        try
+        {
+            Card = await Task.Run(() => reader.GetCharacterCard(accountId, CharacterName));
+        }
+        catch (Exception)
+        {
+            // Leave as is on a read failure.
+        }
+    }
 }
 
 /// <summary>Backs a character's inventory page: its bag layout as a slot grid (mirrors the bank/shared grid).</summary>

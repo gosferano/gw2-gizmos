@@ -6,6 +6,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
+using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.Worker.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -160,16 +161,50 @@ public sealed class AccountReader
             .ToList();
     }
 
-    /// <summary>The account's character names from the synced character details, most recently played first.</summary>
-    public List<string> GetCharacterNames(string accountId)
-    {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+    /// <summary>The account's characters as cards (profession, elite specialization, crafting…), most recently played first.</summary>
+    public List<CharacterCard> GetCharacterCards(string accountId) =>
+        SafeRead(db => ReadCharacterCards(db, db.Characters.Where(c => c.AccountId == accountId)), new List<CharacterCard>());
 
-        return db.Characters.AsNoTracking()
-            .Where(c => c.AccountId == accountId)
-            .OrderByDescending(c => c.LastModified)
-            .Select(c => c.Name)
+    /// <summary>One character's card, or null when it isn't synced.</summary>
+    public CharacterCard? GetCharacterCard(string accountId, string characterName) =>
+        SafeRead(
+            db => ReadCharacterCards(db, db.Characters.Where(c => c.AccountId == accountId && c.Name == characterName))
+                .FirstOrDefault(),
+            null);
+
+    private static List<CharacterCard> ReadCharacterCards(Gw2GizmosDbContext db, IQueryable<Character> query)
+    {
+        List<Character> characters = query.AsNoTracking().OrderByDescending(c => c.LastModified).ToList();
+        Dictionary<string, Profession> professions = db.Professions.AsNoTracking().ToDictionary(p => p.Id);
+        // Only the elite ones matter: a character's elite specialization picks its name and profession icon.
+        Dictionary<int, Specialization> elites = db.Specializations.AsNoTracking()
+            .Where(s => s.Elite)
+            .ToDictionary(s => s.Id);
+
+        return characters
+            .Select(c =>
+            {
+                Specialization? elite = c.Specializations
+                    .Select(id => elites.GetValueOrDefault(id))
+                    .FirstOrDefault(s => s is not null);
+                Profession? profession = professions.GetValueOrDefault(c.Profession);
+                return new CharacterCard(
+                    c.Name,
+                    c.Profession,
+                    c.Race,
+                    c.Gender,
+                    c.Level,
+                    c.Age,
+                    c.Created,
+                    c.Deaths,
+                    elite?.ProfessionIconBig ?? profession?.IconBig,
+                    elite?.Name,
+                    (c.Crafting ?? [])
+                        .OrderByDescending(d => d.Active)
+                        .ThenByDescending(d => d.Rating)
+                        .Select(d => new CharacterCraftingLevel(d.Discipline, d.Rating, d.Active))
+                        .ToList());
+            })
             .ToList();
     }
 
@@ -741,6 +776,57 @@ public sealed record GameSessionRow(
         : $"{DurationDisplay} · {MainMap} · {CharactersDisplay}";
 
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+}
+
+/// <summary>A character as shown on its card: who it is, its profession (and elite specialization), and its crafting.</summary>
+public sealed record CharacterCard(
+    string Name,
+    string Profession,
+    string Race,
+    string Gender,
+    int Level,
+    int AgeSeconds,
+    DateTimeOffset Created,
+    int Deaths,
+    string? ProfessionIconUrl,
+    string? EliteSpecialization,
+    IReadOnlyList<CharacterCraftingLevel> Crafting
+)
+{
+    /// <summary>E.g. "Level 80 Firebrand", or "Level 80 Guardian" without an elite specialization.</summary>
+    public string Headline => $"Level {Level} {EliteSpecialization ?? Profession}";
+
+    /// <summary>E.g. "Human · Female · Guardian" (the profession only when the headline shows the elite).</summary>
+    public string Identity =>
+        EliteSpecialization is null ? $"{Race} · {Gender}" : $"{Race} · {Gender} · {Profession}";
+
+    /// <summary>E.g. "Level 80 Firebrand · Human · Female · Guardian".</summary>
+    public string Summary => $"{Headline} · {Identity}";
+
+    /// <summary>E.g. "1,234 h".</summary>
+    public string PlayedText => $"{AgeSeconds / 3600:N0} h";
+
+    public string DeathsText => $"{Deaths:N0}";
+
+    /// <summary>E.g. "2014-05-12" (local date).</summary>
+    public string CreatedDate => $"{Created.LocalDateTime:yyyy-MM-dd}";
+
+    /// <summary>E.g. "1,234 h played · 321 deaths".</summary>
+    public string PlayStats => $"{PlayedText} played · {DeathsText} {(Deaths == 1 ? "death" : "deaths")}";
+
+    /// <summary>E.g. "Created 2014-05-12".</summary>
+    public string CreatedText => $"Created {CreatedDate}";
+
+    public bool HasCrafting => Crafting.Count > 0;
+}
+
+/// <summary>A crafting discipline a character has learned, e.g. Chef 400; the inactive ones are shown dimmed.</summary>
+public sealed record CharacterCraftingLevel(string Discipline, int Rating, bool Active)
+{
+    public string Label => $"{Discipline} {Rating}";
+
+    /// <summary>Inactive disciplines (learned, but not one of the two active) are dimmed.</summary>
+    public double Opacity => Active ? 1.0 : 0.5;
 }
 
 /// <summary>
