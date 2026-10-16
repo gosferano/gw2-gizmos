@@ -32,6 +32,7 @@ public sealed partial class PageFactory
         [AppPage.SessionLoot] = typeof(SessionLootPage),
         [AppPage.Events] = typeof(EventsPage),
         [AppPage.Notifications] = typeof(NotificationsPage),
+        [AppPage.Logs] = typeof(LogsPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),
         [AppPage.Settings] = typeof(SettingsPage),
         [AppPage.AdvancedSettings] = typeof(AdvancedSettingsPage),
