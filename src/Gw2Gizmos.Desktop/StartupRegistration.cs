@@ -1,4 +1,5 @@
 using System;
+using Gw2Gizmos.Desktop.Core.Platform;
 using Microsoft.Win32;
 
 namespace Gw2Gizmos.Desktop;
@@ -10,7 +11,7 @@ namespace Gw2Gizmos.Desktop;
 /// independently without clobbering each other. Best-effort: a locked-down registry just means the toggle won't
 /// persist, never a crash.
 /// </summary>
-public sealed class StartupRegistration
+public sealed class StartupRegistration : IStartupRegistration
 {
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 

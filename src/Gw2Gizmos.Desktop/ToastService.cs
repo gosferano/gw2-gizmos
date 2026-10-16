@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows;
+using Gw2Gizmos.Desktop.Core.Platform;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
@@ -13,7 +14,7 @@ namespace Gw2Gizmos.Desktop;
 /// id. The Velopack installer stamps it on the shortcut via <c>vpk pack --aumid Gw2Gizmos</c> (see the
 /// release workflow), matching the id this process registers below.
 /// </summary>
-internal static class ToastService
+internal sealed class ToastService : IToastService
 {
     private const string Aumid = "Gw2Gizmos";
 
@@ -28,12 +29,10 @@ internal static class ToastService
     /// <summary>Associates this process with the app's AUMID so its toasts are attributed correctly.</summary>
     public static void RegisterAppId() => SetCurrentProcessExplicitAppUserModelID(Aumid);
 
-    public static void Show(string title, string body) => Show(title, body, null, null);
-
     /// <param name="copyText">When set, the toast carries an action button that copies this text to the
     /// clipboard on click (in-process; works while the app is running). Null shows a plain toast.</param>
     /// <param name="copyLabel">Label for that button; defaults to "Copy".</param>
-    public static void Show(string title, string body, string? copyText, string? copyLabel)
+    public void Show(string title, string body, string? copyText = null, string? copyLabel = null)
     {
         bool hasCopy = !string.IsNullOrEmpty(copyText);
         string label = string.IsNullOrEmpty(copyLabel) ? "Copy" : copyLabel!;

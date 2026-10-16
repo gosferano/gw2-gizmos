@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core.Platform;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -17,13 +18,13 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly FeatureSettingsStore _features;
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly SelectedAccountService _selected;
-    private readonly StartupRegistration _startup;
+    private readonly IStartupRegistration _startup;
 
     public SettingsViewModel(
         FeatureSettingsStore features,
         FileGw2ApiKeyStore keyStore,
         SelectedAccountService selected,
-        StartupRegistration startup
+        IStartupRegistration startup
     )
     {
         _features = features;
@@ -41,7 +42,7 @@ public sealed class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<FeatureToggle> Features { get; } = new();
 
-    /// <summary>Whether the app launches (into the tray, spawning the worker) when Windows starts.</summary>
+    /// <summary>Whether the app launches (into the tray, spawning the worker) when the user logs in.</summary>
     public bool LaunchAtStartup
     {
         get => _startup.IsEnabled;

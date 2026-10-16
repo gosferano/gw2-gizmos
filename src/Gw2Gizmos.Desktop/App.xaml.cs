@@ -13,6 +13,8 @@ using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Desktop.Core.Navigation;
+using Gw2Gizmos.Desktop.Core.Platform;
+using Gw2Gizmos.Desktop.Platform;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Ui;
 using Microsoft.Extensions.Configuration;
@@ -474,8 +476,11 @@ public partial class App : Application
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         builder.Services.AddSingleton(new AppPaths(dataDir));
-        // "Launch at Windows startup" registration (HKCU Run); per-build value name so dev/release don't collide.
-        builder.Services.AddSingleton(new StartupRegistration(AppDataFolderName));
+        // The Windows implementations of the platform services: "launch at Windows startup" (HKCU Run; per-build
+        // value name so dev/release don't collide), toasts, and DPAPI for the API keys at rest.
+        builder.Services.AddSingleton<IStartupRegistration>(new StartupRegistration(AppDataFolderName));
+        builder.Services.AddSingleton<IToastService, ToastService>();
+        builder.Services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
         // Shared app-update state — set by the startup update check, read by the dashboard's App card.
         builder.Services.AddSingleton<UpdateStatus>();
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs

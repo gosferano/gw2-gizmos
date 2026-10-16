@@ -5,11 +5,12 @@ using System.Linq;
 using System.Text.Json;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core.Platform;
 
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
-/// API-key store backed by a per-user file, DPAPI-encrypted at rest. Holds one entry per account (see
+/// API-key store backed by a per-user file, encrypted at rest by the platform's <see cref="ISecretProtector"/>. Holds one entry per account (see
 /// <see cref="StoredApiKey"/>) so several accounts can sync; written by the API Keys UI and read by the
 /// in-process delivery poller and the key service (which hands the raw keys to the worker). Cached in memory
 /// and written through on change, so a key added in the UI takes effect immediately without a restart.
@@ -19,12 +20,14 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
     private readonly string _path;
     private readonly object _gate = new();
     private readonly SyncTriggerStore _triggers;
+    private readonly ISecretProtector _protector;
     private List<StoredApiKey>? _cached;
 
-    public FileGw2ApiKeyStore(AppPaths paths, SyncTriggerStore triggers)
+    public FileGw2ApiKeyStore(AppPaths paths, SyncTriggerStore triggers, ISecretProtector protector)
     {
         _path = paths.File("api-keys.dat");
         _triggers = triggers;
+        _protector = protector;
     }
 
     public bool HasApiKey => Snapshot().Count > 0;
@@ -100,7 +103,7 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
                 return new List<StoredApiKey>();
             }
 
-            string? json = ProtectedDataHelper.Unprotect(cipher);
+            string? json = _protector.Unprotect(cipher);
             if (string.IsNullOrWhiteSpace(json))
             {
                 return new List<StoredApiKey>();
@@ -128,6 +131,6 @@ public sealed class FileGw2ApiKeyStore : IGw2ApiKeyProvider
         }
 
         string json = JsonSerializer.Serialize(keys);
-        File.WriteAllText(_path, ProtectedDataHelper.Protect(json));
+        File.WriteAllText(_path, _protector.Protect(json));
     }
 }
