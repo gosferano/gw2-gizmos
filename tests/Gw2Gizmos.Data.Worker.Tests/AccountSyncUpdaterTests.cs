@@ -104,6 +104,65 @@ public sealed class AccountSyncUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task InterruptedCharacterSync_LeavesStoredBagsAsTheyWere()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Characters["Bob Guard"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 800, Count: 1) };
+        state.Apply(_stub);
+        await Sync();
+
+        // Next sync: both characters' bags changed, but the sync is cut off while fetching the second character —
+        // after the first one's new bags were already in hand.
+        state.Characters["Alice Necro"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 900, Count: 9) };
+        state.Characters["Bob Guard"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 901, Count: 9) };
+        state.Apply(_stub);
+        using var cancellation = new CancellationTokenSource();
+        _stub.OnRequest = path =>
+        {
+            if (path == "/v2/characters/Bob Guard")
+            {
+                cancellation.Cancel();
+            }
+        };
+
+        try
+        {
+            await using Gw2GizmosDbContext db = _fixture.NewContext();
+            await NewUpdater(db).SyncAccount(cancellation.Token);
+        }
+        catch (OperationCanceledException) { }
+
+        // Neither character's bags were touched: no half-replaced grids.
+        Assert.Equal(new int?[] { 700, null, 701 }, await SlotItems("Alice Necro"));
+        Assert.Equal(new int?[] { 800 }, await SlotItems("Bob Guard"));
+    }
+
+    [Fact]
+    public async Task CharacterThatFailsToLoad_KeepsItsBagsAndItsItemsAreNotLoggedAsGone()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Characters["Bob Guard"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 800, Count: 1) };
+        state.Apply(_stub);
+        await Sync();
+        int observationsBefore = await ItemObsCount(AccountContainer.CharacterInventory);
+
+        // Bob's request now fails (an unparseable response); Alice syncs as normal.
+        _stub.SetJson("/v2/characters/Bob Guard", "not json");
+        _time.Advance(TimeSpan.FromHours(1));
+        await Sync();
+
+        Assert.Equal(new int?[] { 800 }, await SlotItems("Bob Guard"));
+        // Bob's item still counts toward the account's holdings, so no "gone" row was appended for it.
+        Assert.Equal(observationsBefore, await ItemObsCount(AccountContainer.CharacterInventory));
+    }
+
+    private Task<List<int?>> SlotItems(string characterName) =>
+        Db.CharacterItemSlots.Where(s => s.CharacterName == characterName)
+            .OrderBy(s => s.SlotIndex)
+            .Select(s => s.ItemId)
+            .ToListAsync();
+
+    [Fact]
     public async Task SyncTwiceUnchanged_AppendsNoNewObservations()
     {
         AccountStateBuilder state = SmallAccount();

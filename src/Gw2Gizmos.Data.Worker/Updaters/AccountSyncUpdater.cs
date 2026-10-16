@@ -5,6 +5,7 @@ using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
 // Aliased so the contract's Character doesn't collide with the Character entity (Entities.Accounts).
 using ApiChar = Gw2Gizmos.Gw2Api.Contract.V2.Characters;
@@ -175,6 +176,8 @@ public class AccountSyncUpdater
         }
         catch (Exception ex)
         {
+            // Drop whatever the failed section left pending, so the next section's save doesn't commit half of it.
+            _dbContext.ChangeTracker.Clear();
             _logger.LogWarning(ex, "{Feature} sync failed for {Account} (API error); continuing.", feature.Display, account.Name);
         }
     }
@@ -424,37 +427,50 @@ public class AccountSyncUpdater
             return 0;
         }
 
-        // Account-wide per-item totals, summed across every character's bags, so moving an item between characters
-        // isn't a gain or loss in the observation log.
-        var totals = new Dictionary<int, int>();
+        // Fetch every character before touching the database: the slow part (one request per character) then can't
+        // be cut short halfway through replacing the bags — an interrupted sync (the app quitting, the worker
+        // restarting) leaves the stored bags as they were.
+        var characters = new List<ApiChar.Character>();
+        var unfetched = new List<string>();
         foreach (string characterName in characterNames)
         {
-            if (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
+            stoppingToken.ThrowIfCancellationRequested();
 
             ApiChar.Character? character;
             try
             {
                 character = await client.V2.Characters.GetById(characterName, stoppingToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "Character sync failed for {Character} on {Account}; skipping it.", characterName, accountId);
-                continue;
+                character = null;
             }
 
             if (character is null)
             {
+                unfetched.Add(characterName);
                 continue;
             }
+
+            characters.Add(character);
+        }
+
+        // Then replace the bags and log the holdings in one transaction, so they're all saved or none are.
+        await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(stoppingToken);
+
+        // Account-wide per-item totals, summed across every character's bags, so moving an item between characters
+        // isn't a gain or loss in the observation log.
+        var totals = new Dictionary<int, int>();
+        foreach (ApiChar.Character character in characters)
+        {
+            string characterName = character.Name;
 
             // (a) Upsert the character's details — the source of the character list.
             await UpsertCharacterAsync(accountId, character, stoppingToken);
 
-            // (b) Replace this character's bag slot grid (per-character, so one character's failure leaves the
-            // others' snapshots intact). ExecuteDelete runs now; the re-inserts commit with the observation save.
+            // (b) Replace this character's bag slot grid. ExecuteDelete runs now (inside the transaction); the
+            // re-inserts commit with the observation save.
             await _dbContext
                 .CharacterItemSlots.Where(s => s.AccountId == accountId && s.CharacterName == characterName)
                 .ExecuteDeleteAsync(stoppingToken);
@@ -491,7 +507,24 @@ public class AccountSyncUpdater
             }
         }
 
+        // A character that couldn't be fetched keeps its stored bags; count those too, so its items don't read as
+        // lost now and gained back on the next sync.
+        if (unfetched.Count > 0)
+        {
+            var kept = await _dbContext
+                .CharacterItemSlots.Where(s =>
+                    s.AccountId == accountId && unfetched.Contains(s.CharacterName) && s.ItemId != null)
+                .GroupBy(s => s.ItemId!.Value)
+                .Select(g => new { ItemId = g.Key, Count = g.Sum(s => s.Count) })
+                .ToListAsync(stoppingToken);
+            foreach (var item in kept)
+            {
+                totals[item.ItemId] = totals.GetValueOrDefault(item.ItemId) + item.Count;
+            }
+        }
+
         await SyncItemObservationsAsync(accountId, AccountContainer.CharacterInventory, totals, now, stoppingToken);
+        await transaction.CommitAsync(stoppingToken);
         return characterNames.Length;
     }
 
@@ -531,6 +564,9 @@ public class AccountSyncUpdater
         CancellationToken stoppingToken
     )
     {
+        // The grid replacement and the holdings log are saved together or not at all.
+        await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(stoppingToken);
+
         // (a) Replace the slot grid for an exact current layout. ExecuteDelete runs immediately, so re-inserting
         // the same (AccountId, Store, SlotIndex) keys in the following SaveChanges can't collide.
         await _dbContext
@@ -560,6 +596,7 @@ public class AccountSyncUpdater
             .ToDictionary(g => g.Key, g => g.Sum(s => s!.Count));
 
         await SyncItemObservationsAsync(accountId, store, totals, now, stoppingToken);
+        await transaction.CommitAsync(stoppingToken);
         return totals.Count;
     }
 
