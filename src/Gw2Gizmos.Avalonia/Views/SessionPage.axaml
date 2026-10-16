@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.SessionPage"
+             x:DataType="core:SessionViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,4,0,8"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsVisible="{Binding !HasSegments}" />
+
+            <!-- Estimated worth of the sitting: coin + instant-sell loot value, and the gold-per-hour rate. -->
+            <UniformGrid Columns="3" Margin="-6,0,-6,14" IsVisible="{Binding HasSegments}">
+                <c:StatCard Margin="6" Title="Estimated value" Coin="{Binding Value.TotalValueCopper}" CoinSigned="True"
+                            Caption="instant-sell + coin" />
+                <c:StatCard Margin="6" Title="Gold / hour" Value="{Binding Value.GoldPerHourDisplay}" />
+                <c:StatCard Margin="6" Title="Coin" Coin="{Binding Value.CoinDeltaCopper}" CoinSigned="True" />
+            </UniformGrid>
+
+            <!-- One card per character segment, in order — consecutive cards are the switches within the sitting.
+                 Click a segment to see its full loot. -->
+            <ItemsControl ItemsSource="{Binding Segments}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:SessionSegmentRow">
+                        <ui:FASettingsExpander Header="{Binding CharacterName}" Margin="0,0,0,8"
+                                               IconSource="{c:FluentIconSource Person24}" IsClickEnabled="True"
+                                               ActionIconSource="ChevronRight"
+                                               Command="{Binding $parent[UserControl].((core:SessionViewModel)DataContext).OpenCommand}"
+                                               CommandParameter="{Binding}">
+                            <ui:FASettingsExpander.Description>
+                                <MultiBinding StringFormat="{}{0} · {1}">
+                                    <Binding Path="TimeRange" />
+                                    <Binding Path="DurationDisplay" />
+                                </MultiBinding>
+                            </ui:FASettingsExpander.Description>
+                            <ui:FASettingsExpander.Footer>
+                                <!-- Estimated value (coin + instant-sell loot) is the headline; item counts below. -->
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <c:CoinDisplay Copper="{Binding TotalValueCopper}" Signed="True" FontWeight="Medium"
+                                                   FontSize="13" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasValue}" />
+                                    <TextBlock Text="{Binding ItemsDisplay}" FontSize="12" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               IsVisible="{Binding HasItems}" />
+                                </StackPanel>
+                            </ui:FASettingsExpander.Footer>
+                        </ui:FASettingsExpander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Whole-session aggregated loot, under the character cards. -->
+            <StackPanel Margin="0,18,0,0" IsVisible="{Binding HasSegments}">
+                <TextBlock Text="Session total" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6" />
+
+                <TextBlock Text="No currency or item changes recorded for this session." TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsVisible="{Binding HasNoLoot}" />
+
+                <ItemsControl ItemsSource="{Binding Currencies}" ItemTemplate="{StaticResource SessionCurrencyRowTemplate}"
+                              IsVisible="{Binding HasCurrencies}" Margin="0,0,0,6" />
+
+                <!-- Items, with a gold-value / quantity sorter (asc/desc) -->
+                <StackPanel IsVisible="{Binding ItemsSorter.HasItems}">
+                    <DockPanel Margin="0,2,0,6">
+                        <TextBlock Text="Items" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"
+                                   DockPanel.Dock="Left" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ComboBox ItemsSource="{Binding ItemsSorter.SortOptions}"
+                                      SelectedIndex="{Binding ItemsSorter.SelectedSortIndex}"
+                                      MinWidth="120" Height="{StaticResource FormControlHeight}" Margin="0,0,6,0" />
+                            <Button Command="{Binding ItemsSorter.ToggleDirectionCommand}" Padding="9,0"
+                                    Height="{StaticResource FormControlHeight}"
+                                    ToolTip.Tip="{Binding ItemsSorter.DirectionLabel}">
+                                <Panel>
+                                    <c:FluentIcon Symbol="ArrowUp24" FontSize="16"
+                                                  IsVisible="{Binding ItemsSorter.Descending}" />
+                                    <c:FluentIcon Symbol="ArrowDown24" FontSize="16"
+                                                  IsVisible="{Binding !ItemsSorter.Descending}" />
+                                </Panel>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding ItemsSorter.View}"
+                                  ItemTemplate="{StaticResource SessionItemRowTemplate}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Delete this whole sitting (and its segments). Hidden on the active, still-tracked session. -->
+            <Button Content="Delete session" Classes="danger" Margin="0,24,0,0" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" Height="{StaticResource FormControlHeight}"
+                    Command="{Binding DeleteSessionCommand}" IsVisible="{Binding CanDeleteSession}" />
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

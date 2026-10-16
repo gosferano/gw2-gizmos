@@ -10,7 +10,9 @@ namespace Gw2Gizmos.Avalonia.Controls;
 public enum FluentSymbol
 {
     Alert24 = 0xF115,
+    ArrowDown24 = 0xF149,
     ArrowSync24 = 0xF191,
+    ArrowUp24 = 0xF19C,
     Backpack24 = 0xF8F3,
     BoxMultiple24 = 0xE1C8,
     BuildingBank24 = 0xE20E,

@@ -50,6 +50,40 @@
         </c:SquareCell>
     </DataTemplate>
 
+    <!-- A session "hoarded" currency row — wallet-row sized, hover highlight; DeltaDisplay is the signed gain/loss. -->
+    <DataTemplate x:Key="SessionCurrencyRowTemplate" x:DataType="core:SessionLootCurrency">
+        <Border Classes="hover-row">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
+                           Text="{Binding DeltaDisplay}" />
+                <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
+                                 VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </DockPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- A session "hoarded" item row — matches the currency row; the instant-sell gold value is the headline with
+         the quantity below it. -->
+    <DataTemplate x:Key="SessionItemRowTemplate" x:DataType="core:SessionLootItem">
+        <Border Classes="hover-row">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right"
+                            Margin="10,0,0,0">
+                    <c:CoinDisplay Copper="{Binding ValueCopper}" Signed="True" FontWeight="Medium"
+                                   HorizontalAlignment="Right" IsVisible="{Binding HasValue}" />
+                    <TextBlock Text="{Binding DeltaDisplay}" FontSize="12" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                             CornerRadius="4" Stretch="Uniform" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </DockPanel>
+        </Border>
+    </DataTemplate>
+
     <!-- Fluent card (WPF-UI's Card). -->
     <ControlTheme x:Key="{x:Type c:Card}" TargetType="c:Card">
         <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
