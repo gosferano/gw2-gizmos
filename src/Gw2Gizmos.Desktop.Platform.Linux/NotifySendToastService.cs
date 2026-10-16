@@ -2,7 +2,7 @@ using Gw2Gizmos.Desktop.Core.Platform;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Microsoft.Extensions.Logging;
 
-namespace Gw2Gizmos.Avalonia.Platform.Linux;
+namespace Gw2Gizmos.Desktop.Platform.Linux;
 
 /// <summary>
 /// <see cref="IToastService"/> for Linux desktops via <c>notify-send</c> (libnotify), which talks to whatever
@@ -10,7 +10,7 @@ namespace Gw2Gizmos.Avalonia.Platform.Linux;
 /// action button; <c>--wait</c> keeps notify-send alive until the notification resolves and prints the chosen
 /// action, which is then copied on the UI thread.
 /// </summary>
-public sealed class NotifySendToastService : IToastService
+internal sealed class NotifySendToastService : IToastService
 {
     private const string Command = "notify-send";
     private const string CopyAction = "copy";

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Gw2Gizmos.Avalonia.Platform.Linux;
+namespace Gw2Gizmos.Desktop.Platform.Linux;
 
 /// <summary>Runs a small external tool (notify-send, secret-tool) and captures its output.</summary>
 internal static class CommandRunner

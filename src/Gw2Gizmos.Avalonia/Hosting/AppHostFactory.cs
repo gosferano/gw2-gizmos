@@ -1,11 +1,10 @@
 using System.Diagnostics;
 using Gw2Gizmos.Avalonia.Navigation;
-using Gw2Gizmos.Avalonia.Platform.Linux;
 using Gw2Gizmos.Avalonia.Ui;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Desktop.Core;
 using Gw2Gizmos.Desktop.Core.Navigation;
-using Gw2Gizmos.Desktop.Core.Platform;
+using Gw2Gizmos.Desktop.Platform.Linux;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -72,11 +71,7 @@ internal static class AppHostFactory
         builder.Services.AddGw2GizmosDesktopCore(
             new AppPaths(dataDirectory), logStore, workerConfigPipeName, database, mumbleLinkFilePath);
 
-        builder.Services.AddSingleton<IToastService, NotifySendToastService>();
-        builder.Services.AddSingleton<IStartupRegistration>(new XdgAutostartRegistration(AppDataDirectory.FolderName));
-        builder.Services.AddSingleton<ISecretProtector>(sp => new SecretServiceProtector(
-            AppDataDirectory.FolderName, sp.GetRequiredService<ILogger<SecretServiceProtector>>()));
-        ProtonMumbleLinkBridge.Register(builder.Services, mumbleLinkFilePath);
+        builder.Services.AddGw2GizmosLinuxPlatform(AppDataDirectory.FolderName, mumbleLinkFilePath);
 
         // The Avalonia implementations of the UI seams the shared view-models are written against.
         builder.Services.AddSingleton<IUiDispatcher>(uiDispatcher);

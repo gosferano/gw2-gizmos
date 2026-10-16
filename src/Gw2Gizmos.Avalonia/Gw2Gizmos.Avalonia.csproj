@@ -34,6 +34,8 @@
   <ItemGroup>
     <!-- The UI-agnostic view-models, services and seams this head implements. -->
     <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+    <!-- Notifications, autostart, secret storage and the Proton MumbleLink bridge launcher. -->
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Platform.Linux\Gw2Gizmos.Desktop.Platform.Linux.csproj" />
     <!-- Composition root picks the concrete DB provider. -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
     <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a separate

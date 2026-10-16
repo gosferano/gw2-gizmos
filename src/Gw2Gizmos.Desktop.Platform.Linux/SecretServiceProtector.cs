@@ -1,7 +1,7 @@
 using Gw2Gizmos.Desktop.Core.Platform;
 using Microsoft.Extensions.Logging;
 
-namespace Gw2Gizmos.Avalonia.Platform.Linux;
+namespace Gw2Gizmos.Desktop.Platform.Linux;
 
 /// <summary>
 /// <see cref="ISecretProtector"/> backed by the desktop keyring (the freedesktop Secret Service — GNOME Keyring,
@@ -9,7 +9,7 @@ namespace Gw2Gizmos.Avalonia.Platform.Linux;
 /// session; the key file only holds a marker pointing at it. Without a keyring (no secret-tool, or no Secret Service
 /// running) it falls back to storing the text as-is, relying on the owner-only data directory, and logs that.
 /// </summary>
-public sealed class SecretServiceProtector : ISecretProtector
+internal sealed class SecretServiceProtector : ISecretProtector
 {
     private const string Command = "secret-tool";
     private const string KeyringMarker = "secret-service:v1";

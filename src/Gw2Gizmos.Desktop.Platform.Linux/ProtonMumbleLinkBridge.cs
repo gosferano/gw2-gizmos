@@ -2,11 +2,10 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Core;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Gw2Gizmos.Avalonia.Platform.Linux;
+namespace Gw2Gizmos.Desktop.Platform.Linux;
 
 /// <summary>
 /// Makes play-session tracking work for Guild Wars 2 under Wine/Proton. The game's MumbleLink shared memory only exists
@@ -20,7 +19,7 @@ namespace Gw2Gizmos.Avalonia.Platform.Linux;
 /// </para>
 /// </summary>
 [SupportedOSPlatform("linux")]
-public sealed class ProtonMumbleLinkBridge : BackgroundService
+internal sealed class ProtonMumbleLinkBridge : BackgroundService
 {
     /// <summary>The Windows process name Wine gives the game (and its /proc comm).</summary>
     private const string GameProcessName = "Gw2-64.exe";
@@ -54,15 +53,6 @@ public sealed class ProtonMumbleLinkBridge : BackgroundService
 
     /// <summary>The bundled bridge, published next to the app by the build.</summary>
     public static string BridgePath => Path.Combine(AppContext.BaseDirectory, "mumblelink-bridge", BridgeFileName);
-
-    /// <summary>Runs the bridge launcher for the app's lifetime, mirroring into <paramref name="filePath"/>.</summary>
-    public static void Register(IServiceCollection services, string filePath)
-    {
-        services.AddHostedService(sp => new ProtonMumbleLinkBridge(
-            filePath,
-            sp.GetRequiredService<FeatureSettingsStore>(),
-            sp.GetRequiredService<ILogger<ProtonMumbleLinkBridge>>()));
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

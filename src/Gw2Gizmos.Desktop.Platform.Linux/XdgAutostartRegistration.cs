@@ -1,13 +1,13 @@
 using Gw2Gizmos.Desktop.Core.Platform;
 
-namespace Gw2Gizmos.Avalonia.Platform.Linux;
+namespace Gw2Gizmos.Desktop.Platform.Linux;
 
 /// <summary>
 /// <see cref="IStartupRegistration"/> via an XDG autostart entry (<c>$XDG_CONFIG_HOME/autostart/&lt;name&gt;.desktop</c>),
 /// honoured by every major Linux desktop session. The entry launches the app with <c>--minimized</c> so it starts in
 /// the tray. The file name is per-build (dev vs release) so both can register without clobbering each other.
 /// </summary>
-public sealed class XdgAutostartRegistration : IStartupRegistration
+internal sealed class XdgAutostartRegistration : IStartupRegistration
 {
     private readonly string _entryPath;
 
