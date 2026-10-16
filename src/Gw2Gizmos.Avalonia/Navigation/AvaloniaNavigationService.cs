@@ -11,4 +11,14 @@ public sealed class AvaloniaNavigationService : INavigationService
     public void Attach(MainWindow window) => _window = window;
 
     public void NavigateTo(AppPage page) => _window?.ShowPage(page);
+
+    /// <summary>Keeps <paramref name="section"/>'s rail item highlighted while one of its sub-pages is shown; null
+    /// leaves the rail's own selection.</summary>
+    public void HighlightSection(AppPage? section)
+    {
+        if (section is { } page)
+        {
+            _window?.SelectRailItem(page);
+        }
+    }
 }

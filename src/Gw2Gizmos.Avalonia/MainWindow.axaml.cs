@@ -11,6 +11,7 @@ public partial class MainWindow : Window
 {
     private readonly PageFactory _pages = new();
     private AppPage? _current;
+    private bool _syncingSelection;
 
     /// <summary>Parameterless constructor for the XAML previewer.</summary>
     public MainWindow()
@@ -25,7 +26,21 @@ public partial class MainWindow : Window
         RootNavigation.SelectionChanged += OnSelectionChanged;
 
         // First launch lands on the one-time welcome/onboarding page; afterwards straight to the dashboard.
-        ShowPage(onboarding.IsCompleted ? AppPage.Dashboard : AppPage.Onboarding);
+        ShowPage(StartPageOverride() ?? (onboarding.IsCompleted ? AppPage.Dashboard : AppPage.Onboarding));
+    }
+
+    /// <summary>Debug builds: <c>--start-page=Wallet</c> opens that page directly (handy while porting pages).</summary>
+    private static AppPage? StartPageOverride()
+    {
+#if DEBUG
+        const string prefix = "--start-page=";
+        string? arg = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith(prefix, StringComparison.Ordinal));
+        if (arg is not null && Enum.TryParse(arg[prefix.Length..], ignoreCase: true, out AppPage page))
+        {
+            return page;
+        }
+#endif
+        return null;
     }
 
     /// <summary>Shows <paramref name="page"/> and highlights its rail item (if it has one).</summary>
@@ -39,21 +54,38 @@ public partial class MainWindow : Window
         _current = page;
         RootNavigation.Content = _pages.Create(page);
 
-        // Keep the rail in sync when navigation comes from code (the guard above stops the resulting
-        // SelectionChanged from navigating again). Pages without their own rail item leave the selection as is.
+        // Keep the rail in sync when navigation comes from code. Sub-pages without their own rail item leave the
+        // selection to their PageShell, which highlights their section (root breadcrumb) once loaded.
+        SelectRailItem(page);
+    }
+
+    /// <summary>Selects <paramref name="page"/>'s rail item, if it has one, without navigating again.</summary>
+    public void SelectRailItem(AppPage page)
+    {
         FANavigationViewItem? item = RootNavigation.MenuItems
             .Concat(RootNavigation.FooterMenuItems)
             .OfType<FANavigationViewItem>()
             .FirstOrDefault(candidate => candidate.Tag is AppPage tag && tag == page);
-        if (item is not null)
+        if (item is null || ReferenceEquals(RootNavigation.SelectedItem, item))
+        {
+            return;
+        }
+
+        // Selecting raises SelectionChanged, which would navigate to the section itself; suppress that.
+        _syncingSelection = true;
+        try
         {
             RootNavigation.SelectedItem = item;
+        }
+        finally
+        {
+            _syncingSelection = false;
         }
     }
 
     private void OnSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {
-        if (e.SelectedItem is FANavigationViewItem { Tag: AppPage page })
+        if (!_syncingSelection && e.SelectedItem is FANavigationViewItem { Tag: AppPage page })
         {
             ShowPage(page);
         }
