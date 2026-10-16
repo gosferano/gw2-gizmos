@@ -23,7 +23,7 @@
     <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- The desktop release version (the release workflow tags gw2gizmos-desktop-<Version>). -->
-    <Version>0.6.0</Version>
+    <Version>0.7.0-beta.1</Version>
     <!-- ItemImage desaturates icons by walking the bitmap's pixel buffer directly. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
