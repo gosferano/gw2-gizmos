@@ -9,7 +9,7 @@ namespace Gw2Gizmos.Avalonia;
 /// <summary>The app shell: a Fluent navigation rail whose items open pages created by the <see cref="PageFactory"/>.</summary>
 public partial class MainWindow : Window
 {
-    private readonly PageFactory _pages = new();
+    private readonly PageFactory? _pages;
     private AppPage? _current;
     private bool _syncingSelection;
 
@@ -19,9 +19,10 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    public MainWindow(AvaloniaNavigationService navigation, OnboardingStore onboarding)
+    public MainWindow(AvaloniaNavigationService navigation, PageFactory pages, OnboardingStore onboarding)
         : this()
     {
+        _pages = pages;
         navigation.Attach(this);
         RootNavigation.SelectionChanged += OnSelectionChanged;
 
@@ -52,7 +53,7 @@ public partial class MainWindow : Window
         }
 
         _current = page;
-        RootNavigation.Content = _pages.Create(page);
+        RootNavigation.Content = _pages?.Create(page);
 
         // Keep the rail in sync when navigation comes from code. Sub-pages without their own rail item leave the
         // selection to their PageShell, which highlights their section (root breadcrumb) once loaded.

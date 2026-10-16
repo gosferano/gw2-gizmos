@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.OnboardingPage"
+             x:DataType="core:OnboardingViewModel">
+    <c:PageShell Title="Welcome to Gw2Gizmos" MaxContentWidth="620">
+        <StackPanel>
+            <TextBlock TextWrapping="Wrap" Opacity="0.8" Margin="0,0,0,16"
+                       Text="Gw2Gizmos tracks your Guild Wars 2 account — wallet, materials, bank, characters, prices, and play sessions — in a local database on your PC. To read your account, it needs a GW2 API key. Let's set one up." />
+
+            <!-- Step 1: create the key -->
+            <c:Card Margin="0,0,0,10" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="1 · Create an API key" FontWeight="SemiBold" FontSize="15" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,10"
+                               Text="Open the Guild Wars 2 account site and create a new API key (you'll need to log in)." />
+                    <Button Command="{Binding OpenApiKeyPageCommand}" Height="{StaticResource FormControlHeight}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ui:FASymbolIcon Symbol="Open" FontSize="16" />
+                            <TextBlock Text="Open account.arena.net" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </c:Card>
+
+            <!-- Step 2: the permissions to tick -->
+            <c:Card Margin="0,0,0,10" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="2 · Enable these permissions" FontWeight="SemiBold" FontSize="15" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,10"
+                               Text="When creating the key, tick these boxes. They're everything Gw2Gizmos uses — and nothing more." />
+                    <ItemsControl ItemsSource="{Binding RecommendedPermissions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Margin="0,0,7,6" Padding="9,4" CornerRadius="10"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FASymbolIcon Symbol="Checkmark" FontSize="13" Margin="0,0,5,0"
+                                                         Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="{Binding}" FontSize="12" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </c:Card>
+
+            <!-- Step 3: paste + verify -->
+            <c:Card Margin="0,0,0,10" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="3 · Paste your key" FontWeight="SemiBold" FontSize="15" />
+                    <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,10"
+                               Text="Copy the key from the site and paste it here to connect your account." />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding ApiKeyInput}" PlaceholderText="paste key here"
+                                 FontFamily="{StaticResource MonospaceFontFamily}"
+                                 Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="Connect" Command="{Binding AddCommand}" Classes="accent"
+                                Height="{StaticResource FormControlHeight}" Margin="8,0,0,0" />
+                    </Grid>
+                    <TextBlock Text="{Binding Status}" Opacity="0.85" Margin="0,8,0,0" TextWrapping="Wrap"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                    <!-- Confirmation, shown once a key validates -->
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            IsVisible="{Binding Verified}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:FASymbolIcon Symbol="Accept" FontSize="18"
+                                                 Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <Run Text="Connected" />
+                                    <Run Text="{Binding VerifiedAccount}" FontWeight="SemiBold" />
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,10"
+                                       Text="Your data will start syncing in the background. You can add more accounts or change what's tracked any time in API keys and Settings." />
+                            <Button Content="Continue to dashboard" Command="{Binding ContinueCommand}" Classes="accent"
+                                    HorizontalAlignment="Left" Height="{StaticResource FormControlHeight}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </c:Card>
+
+            <!-- Escape hatch: explore first, set up later -->
+            <Button Content="Skip for now" Command="{Binding SkipCommand}" Theme="{StaticResource TransparentButton}"
+                    HorizontalAlignment="Left" Margin="0,4,0,0" Height="{StaticResource FormControlHeight}" />
+        </StackPanel>
+    </c:PageShell>
+</UserControl>
