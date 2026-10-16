@@ -10,9 +10,9 @@ namespace Gw2Gizmos.Desktop.Core;
 public static class DesktopCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers everything the desktop shares across UI heads: the per-user stores, the worker-config pipe host,
-    /// event reminders, the log viewer's feed, the account/session readers and selection services, every view-model,
-    /// and the in-process trading-post delivery poller.
+    /// Registers everything the desktop shares across UI heads: the per-user stores, the worker-config pipe host and
+    /// worker launcher, event reminders, the log viewer's feed, the account/session readers and selection services,
+    /// every view-model, and the in-process trading-post delivery poller.
     /// <para>
     /// The calling head must also register its implementations of the seams: <c>IUiDispatcher</c>,
     /// <c>IItemsViewFactory</c>, <c>IDialogService</c>, <c>IClipboardService</c>, <c>INavigationService</c>,
@@ -61,6 +61,13 @@ public static class DesktopCoreServiceCollectionExtensions
             sp.GetRequiredService<SyncTriggerStore>(),
             sp.GetRequiredService<DeleteRequestStore>(),
             sp.GetRequiredService<ILogger<WorkerConfigHost>>()
+        ));
+        // Spawns the worker with the same database and this pipe's name; the head starts it once the host is up.
+        services.AddSingleton(sp => new WorkerProcessLauncher(
+            paths,
+            database,
+            workerConfigPipeName,
+            sp.GetRequiredService<ILogger<WorkerProcessLauncher>>()
         ));
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();

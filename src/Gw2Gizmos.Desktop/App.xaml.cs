@@ -221,8 +221,7 @@ public partial class App : Application
         // desktop's secret file.
         string workerConfigPipeName = $"Gw2Gizmos.Config.{Guid.NewGuid():N}";
 
-        (IHost host, DesktopDatabaseSettings database) = BuildHost(dataDir, dbPath, args, workerConfigPipeName);
-        _host = host;
+        _host = BuildHost(dataDir, dbPath, args, workerConfigPipeName);
         // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only, so it
         // does not migrate here. The worker (started just below) creates and brings the schema up to date.
         await _host.StartAsync();
@@ -232,8 +231,8 @@ public partial class App : Application
         _services = _host.Services; // for back-navigation selection snapshots
 
         // The worker shares the same database (same provider + connection string) and fetches its config from
-        // the config service over the pipe whose name we pass here.
-        StartWorkerProcess(dataDir, database, workerConfigPipeName);
+        // the config service over the pipe whose name it's given.
+        StartWorkerProcess();
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
         // it's distinguishable from the installed app when both are running at once.
@@ -435,7 +434,7 @@ public partial class App : Application
         }
     }
 
-    private static (IHost Host, DesktopDatabaseSettings Database) BuildHost(
+    private static IHost BuildHost(
         string dataDir,
         string dbPath,
         string[] args,
@@ -527,40 +526,17 @@ public partial class App : Application
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
         builder.Services.AddGw2GizmosSqlite();
 
-        return (builder.Build(), database);
+        return builder.Build();
     }
 
-    private void StartWorkerProcess(string dataDir, DesktopDatabaseSettings database, string workerConfigPipeName)
+    private void StartWorkerProcess()
     {
-        // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
-        // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
-        string workerExe = Path.Combine(AppContext.BaseDirectory, "Gw2Gizmos.Data.Worker.Cli.exe");
-        if (!File.Exists(workerExe))
-        {
-            Log.Warning("Worker process not found at {Path}; data ingestion will not run.", workerExe);
-            return;
-        }
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = workerExe,
-            WorkingDirectory = dataDir,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        // Forward the same provider + connection string so the worker opens the identical database, plus the
-        // config pipe name so it can fetch keys/features/intervals live (no secret ever touches the command line).
-        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={database.WorkerConnectionString}");
-        startInfo.ArgumentList.Add($"--Database:Provider={database.Provider}");
-        startInfo.ArgumentList.Add($"--WorkerConfig:PipeName={workerConfigPipeName}");
-
-        _workerProcess = Process.Start(startInfo);
+        _workerProcess = _host!.Services.GetRequiredService<WorkerProcessLauncher>().Start();
 
         // Bind the worker to a kill-on-close job so it can never outlive the app (even on a crash).
         if (_workerProcess is not null)
         {
             _workerJob.AddProcess(_workerProcess);
-            Log.Information("Started ingestion worker process (pid {Pid}).", _workerProcess.Id);
         }
     }
 
