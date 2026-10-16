@@ -15,6 +15,8 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
+    <!-- Items and Logs grids; its collection view also backs the shared IItemsView seam. -->
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
     <PackageReference Include="FluentAvaloniaUI" />
   </ItemGroup>
 
