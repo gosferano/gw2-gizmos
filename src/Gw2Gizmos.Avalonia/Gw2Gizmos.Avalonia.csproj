@@ -22,6 +22,8 @@
     <!-- Items and Logs grids; its collection view also backs the shared IItemsView seam. -->
     <PackageReference Include="Avalonia.Controls.DataGrid" />
     <PackageReference Include="FluentAvaloniaUI" />
+    <!-- Price-history charts (built on SkiaSharp 3, like Avalonia 12). -->
+    <PackageReference Include="ScottPlot.Avalonia" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Extensions.Hosting" />

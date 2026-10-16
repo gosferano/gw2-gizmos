@@ -120,10 +120,12 @@
             <c:Card Grid.Row="3" Padding="12,4,12,12" VerticalContentAlignment="Stretch">
                 <TabControl SelectedIndex="0">
                     <TabItem Header="History">
-                        <Grid Name="HistoryHost" Margin="0,8,0,0">
+                        <Grid Margin="0,8,0,0">
                             <TextBlock Text="{Binding HistoryPlaceholder}" Opacity="0.5"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        IsVisible="{Binding !History.HasData}" />
+                            <!-- Detail chart (X range driven by the navigator) over the navigator. -->
+                            <c:PriceHistoryChart DataContext="{Binding History}" IsVisible="{Binding HasData}" />
                         </Grid>
                     </TabItem>
                     <TabItem Header="Craft tree">
