@@ -48,7 +48,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version() { grep -oP '(?<=<Version>)[^<]+' "$1" | head -n1 | tr -d '[:space:]'; }
+          # The <Version> element itself (first thing on its line), never a mention of it in a comment.
+          version() { grep -oP '^\s*<Version>\K[^<]+' "$1" | head -n1 | tr -d '[:space:]'; }
           is_new() { if git rev-parse "$1" >/dev/null 2>&1; then echo false; else echo true; fi; }
 
           contract_v=$(version src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj)
