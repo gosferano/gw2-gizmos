@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The cross-platform desktop app (Linux first, Windows later): an Avalonia + FluentAvalonia head over the
+       shared Gw2Gizmos.Desktop.Core. Runs alongside the WPF app until it reaches parity and replaces it. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="FluentAvaloniaUI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The UI-agnostic view-models, services and seams this head implements. -->
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+  </ItemGroup>
+
+</Project>

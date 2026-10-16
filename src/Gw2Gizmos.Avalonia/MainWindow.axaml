@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        x:Class="Gw2Gizmos.Avalonia.MainWindow"
+        Title="Gw2Gizmos" Width="940" Height="620"
+        Icon="/Assets/gw2gizmos.png"
+        WindowStartupLocation="CenterScreen">
+    <!-- The shell: a left navigation rail mirroring the WPF app's, pages hosted in the content area. -->
+    <ui:FANavigationView x:Name="RootNavigation" PaneDisplayMode="Left" OpenPaneLength="190"
+                       IsBackButtonVisible="False" IsPaneToggleButtonVisible="False" IsSettingsVisible="False">
+        <ui:FANavigationView.MenuItems>
+            <ui:FANavigationViewItem Content="Dashboard" IconSource="Home" />
+            <ui:FANavigationViewItem Content="Notifications" IconSource="Alert" />
+            <ui:FANavigationViewItem Content="Events" IconSource="Clock" />
+            <ui:FANavigationViewItem Content="Items" IconSource="Library" />
+            <ui:FANavigationViewItem Content="Account" IconSource="Contact" />
+            <ui:FANavigationViewItem Content="Characters" IconSource="People" />
+            <ui:FANavigationViewItem Content="Sessions" IconSource="Games" />
+        </ui:FANavigationView.MenuItems>
+        <ui:FANavigationView.FooterMenuItems>
+            <ui:FANavigationViewItem Content="Logs" IconSource="BulletList" />
+            <ui:FANavigationViewItem Content="API keys" IconSource="Permissions" />
+            <ui:FANavigationViewItem Content="Settings" IconSource="Settings" />
+        </ui:FANavigationView.FooterMenuItems>
+
+        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"
+                   Text="Gw2Gizmos for Avalonia — pages are on their way." />
+    </ui:FANavigationView>
+</Window>

@@ -1,0 +1,10 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sty="using:FluentAvalonia.Styling"
+             x:Class="Gw2Gizmos.Avalonia.App"
+             RequestedThemeVariant="Default">
+    <!-- FluentAvalonia's Windows 11 look (follows the OS light/dark preference via the Default theme variant). -->
+    <Application.Styles>
+        <sty:FluentAvaloniaTheme />
+    </Application.Styles>
+</Application>
