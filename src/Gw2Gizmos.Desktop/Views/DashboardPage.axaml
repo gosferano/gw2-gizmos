@@ -115,6 +115,41 @@
                 </StackPanel>
             </c:Card>
 
+            <!-- Account value: the latest total and how it moved over the last day and week (— until the history
+                 reaches that far back). -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Account value" Opacity="0.7" />
+                    <TextBlock Text="Not recorded yet" FontSize="26" FontWeight="Medium" Margin="0,6,0,0"
+                               Opacity="0.6" IsVisible="{Binding !HasAccountValue}" />
+                    <StackPanel IsVisible="{Binding HasAccountValue}">
+                        <c:CoinDisplay Copper="{Binding AccountValue.Total, FallbackValue=0}" FontSize="26"
+                                       FontWeight="Medium" Margin="0,6,0,0" />
+                        <DockPanel Margin="0,12,0,0">
+                            <Panel DockPanel.Dock="Right">
+                                <c:CoinDisplay Copper="{Binding AccountValue.DayChange, FallbackValue=0}" Signed="True"
+                                               FontWeight="Medium" HorizontalAlignment="Right"
+                                               IsVisible="{Binding AccountValue.DayChange, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" />
+                                <TextBlock Text="—" HorizontalAlignment="Right"
+                                           IsVisible="{Binding AccountValue.DayChange, Converter={x:Static ObjectConverters.IsNull}, FallbackValue=True}" />
+                            </Panel>
+                            <TextBlock Text="Last day" Opacity="0.8" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3,0,0">
+                            <Panel DockPanel.Dock="Right">
+                                <c:CoinDisplay Copper="{Binding AccountValue.WeekChange, FallbackValue=0}" Signed="True"
+                                               FontWeight="Medium" HorizontalAlignment="Right"
+                                               IsVisible="{Binding AccountValue.WeekChange, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" />
+                                <TextBlock Text="—" HorizontalAlignment="Right"
+                                           IsVisible="{Binding AccountValue.WeekChange, Converter={x:Static ObjectConverters.IsNull}, FallbackValue=True}" />
+                            </Panel>
+                            <TextBlock Text="Last week" Opacity="0.8" />
+                        </DockPanel>
+                    </StackPanel>
+                    <TextBlock Text="History in Account → Value" Opacity="0.6" FontSize="12" Margin="0,12,0,0" />
+                </StackPanel>
+            </c:Card>
+
             <!-- Play sessions -->
             <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
                 <StackPanel>

@@ -595,6 +595,23 @@ public sealed class AccountReader
                 .ToList(),
             new List<AccountValuePoint>());
 
+    /// <summary>The account's latest value and its change over the last day and week, or null before the first point.</summary>
+    public AccountValueSummary? GetAccountValueSummary(string accountId)
+    {
+        List<AccountValuePoint> points = GetAccountValueHistory(accountId);
+        if (points.Count == 0)
+        {
+            return null;
+        }
+
+        AccountValuePoint latest = points[^1];
+        // Against the latest point at least that long before; null while the history is shorter than that.
+        long? ChangeOver(TimeSpan span) =>
+            points.LastOrDefault(p => p.Time <= latest.Time - span) is { } before ? latest.Total - before.Total : null;
+
+        return new AccountValueSummary(latest.Total, ChangeOver(TimeSpan.FromDays(1)), ChangeOver(TimeSpan.FromDays(7)));
+    }
+
     /// <summary>The number of stored trading-post price points (global, not per-account).</summary>
     public int GetPriceHistoryCount() =>
         SafeRead(db => db.PriceSnapshots.Count(), 0);
@@ -806,6 +823,9 @@ public sealed record AccountValuePoint(
 {
     public long Total => Coin + Materials + Bank + SharedInventory + Characters + TradingPost;
 }
+
+/// <summary>The account's latest value and its change over the last day and week (null when not known yet).</summary>
+public sealed record AccountValueSummary(long Total, long? DayChange, long? WeekChange);
 
 /// <summary>A character as shown on its card: who it is, its profession (and elite specialization), and its crafting.</summary>
 public sealed record CharacterCard(
