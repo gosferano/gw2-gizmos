@@ -19,6 +19,8 @@ public static class WindowsPlatformServiceCollectionExtensions
         services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
         // Velopack's Setup adds the app to Start, and "Apps & features" uninstalls it.
         services.AddSingleton<IAppInstallation, InstallerManagedInstallation>();
+        // FluentAvalonia reads (and follows) the Windows accent colour itself.
+        services.AddSingleton<ISystemAccentColor, ToolkitResolvedAccentColor>();
         services.AddHostedService<WindowsPlatformStartup>();
         return services;
     }

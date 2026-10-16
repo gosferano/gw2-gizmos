@@ -3,9 +3,11 @@
              xmlns:sty="using:FluentAvalonia.Styling"
              x:Class="Gw2Gizmos.Desktop.App"
              RequestedThemeVariant="Default">
-    <!-- FluentAvalonia's Windows 11 look (follows the OS light/dark preference via the Default theme variant). -->
+    <!-- FluentAvalonia's Windows 11 look (follows the OS light/dark preference via the Default theme variant). It reads the
+         OS accent itself on Windows, KDE, LXQt and LXDE (off by default, which left every OS on its SlateBlue fallback);
+         elsewhere the platform's ISystemAccentColor supplies it (see App.FollowSystemAccentColor). -->
     <Application.Styles>
-        <sty:FluentAvaloniaTheme />
+        <sty:FluentAvaloniaTheme PreferUserAccentColor="True" />
         <StyleInclude Source="/Themes/Styles.axaml" />
     </Application.Styles>
 

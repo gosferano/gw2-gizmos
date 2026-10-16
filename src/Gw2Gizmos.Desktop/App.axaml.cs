@@ -2,12 +2,15 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using FluentAvalonia.Styling;
 using Gw2Gizmos.Desktop.Hosting;
 using Gw2Gizmos.Desktop.Navigation;
 using Gw2Gizmos.Desktop.Ui;
 using Gw2Gizmos.Desktop.Core;
+using Gw2Gizmos.Desktop.Core.Platform;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -73,6 +76,7 @@ public partial class App : Application
 
             _host = AppHostFactory.Build(dataDirectory, args, workerConfigPipeName);
             AppServices.Navigation = _host.Services.GetRequiredService<AvaloniaNavigationService>();
+            FollowSystemAccentColor(_host.Services.GetRequiredService<ISystemAccentColor>());
             AppServices.Icons = new IconProvider<Bitmap>(
                 _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
             // The host's console lifetime turns SIGTERM / Ctrl+C (e.g. a session logout) into a host stop; make that
@@ -117,6 +121,23 @@ public partial class App : Application
         {
             HandleFatal(ex, "startup");
         }
+    }
+
+    /// <summary>
+    /// Uses the OS accent the platform reports where FluentAvalonia can't read it itself (e.g. GNOME's accent on
+    /// Hyprland), and keeps it current as it changes; when the platform reports none, FluentAvalonia's own stands.
+    /// </summary>
+    private void FollowSystemAccentColor(ISystemAccentColor accent)
+    {
+        if (Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault() is not { } theme)
+        {
+            return;
+        }
+
+        void Apply() => theme.CustomAccentColor = accent.Current is { } argb ? Color.FromUInt32(argb) : null;
+
+        Apply();
+        accent.Changed += () => Dispatcher.UIThread.Post(Apply);
     }
 
     private void RegisterGlobalExceptionHandlers()

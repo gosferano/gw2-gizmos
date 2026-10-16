@@ -11,8 +11,8 @@ public static class LinuxPlatformServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the Linux platform services: <c>notify-send</c> notifications, an XDG autostart entry, the Secret
-    /// Service keyring for API keys, the launcher entry and in-app uninstall for the AppImage, and the launcher that runs
-    /// the MumbleLink bridge next to GW2 under Wine/Proton.
+    /// Service keyring for API keys, the GNOME accent colour where the UI toolkit doesn't read it, the launcher entry and
+    /// in-app uninstall for the AppImage, and the launcher that runs the MumbleLink bridge next to GW2 under Wine/Proton.
     /// </summary>
     /// <param name="appFolderName">The app's data folder name ("Gw2Gizmos", or "Gw2Gizmos.Dev" for dev builds); names
     /// the autostart entry and the keyring item so dev and release builds don't clash.</param>
@@ -30,6 +30,9 @@ public static class LinuxPlatformServiceCollectionExtensions
             sp.GetRequiredService<ILogger<AppImageInstallation>>()));
         services.AddSingleton<IAppInstallation>(sp => sp.GetRequiredService<AppImageInstallation>());
         services.AddHostedService(sp => sp.GetRequiredService<AppImageInstallation>());
+        services.AddSingleton<GSettingsAccentColor>();
+        services.AddSingleton<ISystemAccentColor>(sp => sp.GetRequiredService<GSettingsAccentColor>());
+        services.AddHostedService(sp => sp.GetRequiredService<GSettingsAccentColor>());
         services.AddSingleton<ISecretProtector>(sp => new SecretServiceProtector(
             appFolderName, sp.GetRequiredService<ILogger<SecretServiceProtector>>()));
         services.AddHostedService(sp => new ProtonMumbleLinkBridge(
