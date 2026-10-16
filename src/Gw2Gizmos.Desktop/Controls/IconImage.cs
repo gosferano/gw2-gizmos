@@ -7,14 +7,14 @@ using Gw2Gizmos.Desktop.Core;
 namespace Gw2Gizmos.Desktop.Controls;
 
 /// <summary>
-/// A small image that shows a GW2 currency's icon, resolved and cached by its URL through
-/// <see cref="AppServices.Icons"/>. Currencies aren't items, so they're keyed by URL rather than item id (the item-id
-/// <see cref="ItemImage"/> can't be used). Loads asynchronously and guards against recycling.
+/// A small image that shows a GW2 icon by its render URL (a currency, a profession, a specialization), resolved and
+/// cached through <see cref="AppServices.Icons"/>. For items, use the item-id <see cref="ItemImage"/>. Loads
+/// asynchronously and guards against recycling.
 /// </summary>
-public sealed class CurrencyImage : Image
+public sealed class IconImage : Image
 {
     public static readonly StyledProperty<string?> IconUrlProperty =
-        AvaloniaProperty.Register<CurrencyImage, string?>(nameof(IconUrl));
+        AvaloniaProperty.Register<IconImage, string?>(nameof(IconUrl));
 
     protected override Type StyleKeyOverride => typeof(Image);
 
@@ -45,7 +45,7 @@ public sealed class CurrencyImage : Image
 
         Bitmap? bitmap = await icons.GetIconByUrlAsync(url);
 
-        // The row may have been recycled to a different currency while awaiting; only apply if still ours.
+        // The row may have been recycled to a different icon while awaiting; only apply if still ours.
         if (IconUrl == url)
         {
             Source = bitmap;

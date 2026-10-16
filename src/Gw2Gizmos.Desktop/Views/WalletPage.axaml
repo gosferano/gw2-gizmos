@@ -13,8 +13,8 @@
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
                                        Text="{Binding Value, StringFormat='{}{0:N0}'}" />
-                            <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
-                                             VerticalAlignment="Center" />
+                            <c:IconImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
+                                         VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </DockPanel>
