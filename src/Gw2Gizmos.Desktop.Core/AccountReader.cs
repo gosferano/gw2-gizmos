@@ -573,11 +573,11 @@ public sealed class AccountReader
                     .Count(o => o.AccountId == accountId && o.Container == AccountContainer.CharacterInventory)
                     + db.CharacterItemSlots.Count(s => s.AccountId == accountId)
                     + db.Characters.Count(c => c.AccountId == accountId),
-                [DeletableData.Sessions] = db.GameSessions.Count(g => g.AccountId == accountId),
-                [DeletableData.TradingPost] = db.TradingPostOrders.Count(o => o.AccountId == accountId)
-                    + db.TradingPostTransactions.Count(t => t.AccountId == accountId)
+                [DeletableData.Sessions] = db.GameSessions.Count(g => g.AccountId == accountId)
                     + db.CharacterSegments.Count(seg =>
                         db.GameSessions.Any(g => g.Id == seg.GameSessionId && g.AccountId == accountId)),
+                [DeletableData.TradingPost] = db.TradingPostOrders.Count(o => o.AccountId == accountId)
+                    + db.TradingPostTransactions.Count(t => t.AccountId == accountId),
             },
             new Dictionary<string, int>());
 
