@@ -8,9 +8,12 @@ name: release
 #                                        platform's update feed (releases.win.json / releases.linux.json)
 # Each component is tagged independently (gw2-api-contract-<v>, gw2-api-client-<v>, gw2gizmos-desktop-<v>).
 #
-# A cheap "detect" job reads the versions (just grep + git, no SDK) and gates the heavy jobs, so a push that bumps
-# nothing never spins up a runner with dotnet/vpk. The Linux package is built on a Linux runner ("desktop-linux")
-# and handed to the Windows "release" job as an artifact, which publishes the single release.
+# Jobs:
+#   detect           -> reads the versions (just grep + git, no SDK) and gates everything else, so a push that
+#                       bumps nothing never spins up a runner with dotnet/vpk
+#   desktop-windows  -> win-x64 publish + Velopack pack, on a Windows runner   } in parallel, each uploading its
+#   desktop-linux    -> linux-x64 publish + Velopack AppImage, on Linux        } packages as an artifact
+#   release          -> NuGet publishing, then the single GitHub release carrying both platforms' packages
 on:
   push:
     branches: [main]
@@ -48,7 +51,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version() { grep -oP '(?<=<Version>)[^<]+' "$1" | head -n1 | tr -d '[:space:]'; }
+          # The <Version> element itself (first thing on its line), never a mention of it in a comment.
+          version() { grep -oP '^\s*<Version>\K[^<]+' "$1" | head -n1 | tr -d '[:space:]'; }
           is_new() { if git rev-parse "$1" >/dev/null 2>&1; then echo false; else echo true; fi; }
 
           contract_v=$(version src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj)
@@ -72,8 +76,43 @@ jobs:
             echo "any=$any"
           } >> "$GITHUB_OUTPUT"
 
-  # The Linux half of a desktop release: a self-contained linux-x64 publish (incl. the worker and the Proton
-  # MumbleLink bridge) -> Velopack AppImage + update feed, handed to the release job as an artifact.
+  # --- Desktop app: one job per platform, each producing its Velopack packages as an artifact. Same pack id and
+  # main exe as the WPF app the desktop app replaces, so existing Windows installs update onto it. ---
+
+  # Self-contained win-x64 publish (incl. the worker) -> Velopack installer, portable zip and update feed.
+  desktop-windows:
+    needs: detect
+    if: needs.detect.outputs.desktop_new == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install vpk (Velopack CLI)
+        shell: bash
+        run: |
+          dotnet tool install -g vpk
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Publish & pack desktop app (Windows)
+        shell: bash
+        run: |
+          dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop-windows
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime win-x64 --packDir publish/desktop-windows --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: Releases/*
+          if-no-files-found: error
+
+  # Self-contained linux-x64 publish (incl. the worker and the Proton MumbleLink bridge) -> Velopack AppImage and
+  # update feed.
   desktop-linux:
     needs: detect
     if: needs.detect.outputs.desktop_new == 'true'
@@ -106,14 +145,16 @@ jobs:
           path: Releases/*
           if-no-files-found: error
 
+  # Publishes whatever is new: the libraries to NuGet, and the desktop release with both platforms' packages.
   release:
-    needs: [detect, desktop-linux]
-    # Also runs when desktop-linux was skipped (a NuGet-only release), but not when it failed: a desktop release
-    # always ships both platforms.
+    needs: [detect, desktop-windows, desktop-linux]
+    # Also runs when the desktop jobs were skipped (a NuGet-only release), but not when either failed: a desktop
+    # release always ships both platforms.
     if: >-
       !cancelled() && needs.detect.outputs.any == 'true' &&
+      (needs.desktop-windows.result == 'success' || needs.desktop-windows.result == 'skipped') &&
       (needs.desktop-linux.result == 'success' || needs.desktop-linux.result == 'skipped')
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write # create tags + GitHub Releases
       id-token: write # OIDC token for NuGet Trusted Publishing
@@ -122,17 +163,11 @@ jobs:
         with:
           fetch-depth: 0 # full history so existing tags can be detected
 
+      # Only packing the libraries needs the SDK; the desktop release just uploads the platform jobs' packages.
       - uses: actions/setup-dotnet@v4
+        if: needs.detect.outputs.contract_new == 'true' || needs.detect.outputs.client_new == 'true'
         with:
           dotnet-version: "10.0.x"
-
-      # Only the desktop release needs Velopack — skip it for a NuGet-only run.
-      - name: Install vpk (Velopack CLI)
-        if: needs.detect.outputs.desktop_new == 'true'
-        shell: bash
-        run: |
-          dotnet tool install -g vpk
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       # Mint a short-lived NuGet API key via OIDC (only when a library is being published).
       - name: NuGet login (Trusted Publishing)
@@ -148,7 +183,6 @@ jobs:
       # gated on branch pushes, not tags).
       - name: Pack, push & tag Contract
         if: needs.detect.outputs.contract_new == 'true'
-        shell: bash
         run: |
           dotnet pack src/Gw2Gizmos.Gw2Api.Contract/Gw2Gizmos.Gw2Api.Contract.csproj -c Release -o dist/contract
           dotnet nuget push dist/contract/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
@@ -159,7 +193,6 @@ jobs:
       # --- Client ---
       - name: Pack, push & tag Client
         if: needs.detect.outputs.client_new == 'true'
-        shell: bash
         run: |
           dotnet pack src/Gw2Gizmos.Gw2Api.Client/Gw2Gizmos.Gw2Api.Client.csproj -c Release -o dist/client
           dotnet nuget push dist/client/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
@@ -167,22 +200,15 @@ jobs:
           git tag "$tag"
           git push origin "$tag"
 
-      # --- Desktop app: self-contained publish (incl. the worker) -> Velopack installer + update feed ---
-      # Same pack id and main exe as the WPF app it replaces, so existing installs update onto it.
-      - name: Publish & pack desktop app (Windows)
-        if: needs.detect.outputs.desktop_new == 'true'
-        shell: bash
-        run: |
-          dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r win-x64 --self-contained -o publish/desktop
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime win-x64 --packDir publish/desktop --mainExe Gw2Gizmos.exe --aumid Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.ico --outputDir Releases
-
-      # The Linux packages from desktop-linux join the Windows ones; their names don't overlap (the Linux files carry
-      # the channel: Gw2Gizmos-<v>-linux-full.nupkg, releases.linux.json, ...).
-      - name: Download Linux packages
+      # --- Desktop app ---
+      # Both platforms' packages into one folder; their names don't overlap (the Linux files carry the channel:
+      # Gw2Gizmos-<v>-linux-full.nupkg, releases.linux.json, ...).
+      - name: Download desktop packages
         if: needs.detect.outputs.desktop_new == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: desktop-linux
+          pattern: desktop-*
+          merge-multiple: true
           path: Releases
 
       # Scope the notes' baseline to the desktop tag series; otherwise GitHub's auto previous-tag
@@ -193,7 +219,6 @@ jobs:
       - name: Previous desktop tag
         id: prev_desktop
         if: needs.detect.outputs.desktop_new == 'true'
-        shell: bash
         env:
           DESKTOP_V: ${{ needs.detect.outputs.desktop_v }}
         run: |
