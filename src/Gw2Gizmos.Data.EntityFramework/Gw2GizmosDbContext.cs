@@ -4,6 +4,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
+using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -85,6 +86,10 @@ public class Gw2GizmosDbContext : DbContext
 
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
+
+    // Professions and their specializations (master data): names and icons for the character cards.
+    public DbSet<Profession> Professions { get; set; }
+    public DbSet<Specialization> Specializations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
