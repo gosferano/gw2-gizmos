@@ -21,11 +21,28 @@ public class IdentityParserTests
         Assert.Equal(55, identity.Spec.Value);
         Assert.Equal(Race.Norn, identity.Race);
         Assert.Equal(15, identity.MapId);
-        Assert.Equal(1001, identity.WorldId);
+        Assert.Equal(1001u, identity.WorldId);
         Assert.Equal(0, identity.TeamColorId);
         Assert.False(identity.Commander);
         Assert.Equal(1.222f, identity.Fov, 0.0001f);
         Assert.Equal(UiSize.Normal, identity.UiSize);
+    }
+
+    [Fact]
+    public void Parse_reads_a_world_vs_world_identity()
+    {
+        // As the game writes it on a WvW borderland: the team id in world_id has the top bit set (> int.MaxValue).
+        const string json =
+            """
+            {"name":"Party Plants","profession":1,"spec":27,"race":4,"map_id":1099,"world_id":2147483651,"team_color_id":376,"commander":false,"map":1099,"fov":1.222,"uisz":1}
+            """;
+
+        MumbleIdentity? identity = IdentityParser.Parse(json);
+
+        Assert.NotNull(identity);
+        Assert.Equal("Party Plants", identity!.Name);
+        Assert.Equal(1099, identity.MapId);
+        Assert.Equal(2147483651u, identity.WorldId);
     }
 
     [Fact]
