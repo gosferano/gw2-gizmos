@@ -83,9 +83,18 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             return;
         }
 
-        // One bridge per game run; an app restart mid-game finds the bridge its previous run started.
-        if (_attachedGamePid == game.Pid || IsBridgeRunning())
+        if (_attachedGamePid == game.Pid)
         {
+            return;
+        }
+
+        // One bridge per game run and build; an app restart mid-game finds the bridge its previous run started. A
+        // bridge another build started (dev beside release) mirrors into that build's file, not ours, so it doesn't
+        // count — each build runs its own, all sharing the game's one MumbleLink mapping.
+        if (IsBridgeRunningFor(BridgeOutputArgument))
+        {
+            _logger.LogInformation(
+                "Guild Wars 2 (pid {Pid}) already has this app's MumbleLink bridge running; using it.", game.Pid);
             _attachedGamePid = game.Pid;
             return;
         }
@@ -119,7 +128,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         };
         startInfo.ArgumentList.Add(BridgePath);
         startInfo.ArgumentList.Add("--output");
-        startInfo.ArgumentList.Add("Z:" + FilePath.Replace('/', '\\'));
+        startInfo.ArgumentList.Add(BridgeOutputArgument);
 
         // The game's Wine/Proton settings put the bridge in the same prefix and wine session (WINEPREFIX, sync mode,
         // DLL paths, …). The rest of its environment points into Steam's container, so ours is used for that.
@@ -222,14 +231,27 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private static bool IsBridgeRunning()
+    /// <summary>The bridge's <c>--output</c>: <see cref="FilePath"/> as a Windows path through Wine's Z: drive.</summary>
+    private string BridgeOutputArgument => "Z:" + FilePath.Replace('/', '\\');
+
+    /// <summary>
+    /// Whether a bridge writing to <paramref name="output"/> is running. Wine keeps a Windows program's arguments in
+    /// its <c>/proc/&lt;pid&gt;/cmdline</c>, so the bridge is matched by its exe name and its <c>--output</c>.
+    /// </summary>
+    private static bool IsBridgeRunningFor(string output)
     {
         foreach (string dir in Directory.EnumerateDirectories("/proc"))
         {
             try
             {
-                if (int.TryParse(Path.GetFileName(dir), out _)
-                    && File.ReadAllText(Path.Combine(dir, "cmdline")).Contains(BridgeFileName, StringComparison.Ordinal))
+                if (!int.TryParse(Path.GetFileName(dir), out _))
+                {
+                    continue;
+                }
+
+                string cmdline = File.ReadAllText(Path.Combine(dir, "cmdline"));
+                if (cmdline.Contains(BridgeFileName, StringComparison.Ordinal)
+                    && cmdline.Contains(output, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
