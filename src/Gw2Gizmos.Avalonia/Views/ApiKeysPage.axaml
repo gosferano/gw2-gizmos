@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
              xmlns:core="using:Gw2Gizmos.Desktop.Core"
              x:Class="Gw2Gizmos.Avalonia.Views.ApiKeysPage"
@@ -20,10 +19,10 @@
             <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
         </Style>
         <!-- The active account's check is accent-coloured; the others are faint. -->
-        <Style Selector="ui|FASymbolIcon.select">
+        <Style Selector="c|FluentIcon.select">
             <Setter Property="Opacity" Value="0.35" />
         </Style>
-        <Style Selector="ui|FASymbolIcon.select.selected">
+        <Style Selector="c|FluentIcon.select.selected">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
         </Style>
@@ -77,13 +76,13 @@
                                 <Button Grid.Column="1" VerticalAlignment="Center" Padding="8" Margin="10,0,0,0"
                                         Command="{Binding $parent[UserControl].((core:ApiKeysViewModel)DataContext).SelectAccountCommand}"
                                         CommandParameter="{Binding}" ToolTip.Tip="Use this account">
-                                    <ui:FASymbolIcon Symbol="Accept" FontSize="18" Classes="select"
+                                    <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="18" Classes="select"
                                                      Classes.selected="{Binding IsSelected}" />
                                 </Button>
                                 <Button Grid.Column="2" VerticalAlignment="Center" Padding="8" Margin="6,0,0,0"
                                         Command="{Binding $parent[UserControl].((core:ApiKeysViewModel)DataContext).DeleteCommand}"
                                         CommandParameter="{Binding AccountId}" ToolTip.Tip="Remove this key">
-                                    <ui:FASymbolIcon Symbol="Delete" FontSize="18" />
+                                    <c:FluentIcon Symbol="Delete24" FontSize="18" />
                                 </Button>
                             </Grid>
                         </c:Card>

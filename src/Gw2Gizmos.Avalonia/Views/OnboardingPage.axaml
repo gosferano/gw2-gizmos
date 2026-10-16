@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
              xmlns:core="using:Gw2Gizmos.Desktop.Core"
              x:Class="Gw2Gizmos.Avalonia.Views.OnboardingPage"
@@ -18,7 +17,7 @@
                                Text="Open the Guild Wars 2 account site and create a new API key (you'll need to log in)." />
                     <Button Command="{Binding OpenApiKeyPageCommand}" Height="{StaticResource FormControlHeight}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <ui:FASymbolIcon Symbol="Open" FontSize="16" />
+                            <c:FluentIcon Symbol="Open24" FontSize="16" />
                             <TextBlock Text="Open account.arena.net" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -42,7 +41,7 @@
                                 <Border Margin="0,0,7,6" Padding="9,4" CornerRadius="10"
                                         Background="{DynamicResource ControlFillColorSecondaryBrush}">
                                     <StackPanel Orientation="Horizontal">
-                                        <ui:FASymbolIcon Symbol="Checkmark" FontSize="13" Margin="0,0,5,0"
+                                        <c:FluentIcon Symbol="Checkmark24" FontSize="13" Margin="0,0,5,0"
                                                          Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                                         <TextBlock Text="{Binding}" FontSize="12" VerticalAlignment="Center" />
                                     </StackPanel>
@@ -75,7 +74,7 @@
                             IsVisible="{Binding Verified}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <ui:FASymbolIcon Symbol="Accept" FontSize="18"
+                                <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="18"
                                                  Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                                 <TextBlock Margin="8,0,0,0" VerticalAlignment="Center">
                                     <Run Text="Connected" />

@@ -52,12 +52,12 @@
 
             <!-- Advanced: per-sync intervals, behind a chevron card (with a "not recommended" warning inside). -->
             <ui:FASettingsExpander Header="Advanced" Description="Sync intervals" Margin="0,14,0,0"
-                                   IconSource="Settings" IsClickEnabled="True" ActionIconSource="ChevronRight"
+                                   IconSource="{c:FluentIconSource Options24}" IsClickEnabled="True" ActionIconSource="ChevronRight"
                                    Click="OnOpenAdvanced" />
 
             <!-- Stored data: delete locally-stored data per type, per account (sub-page). -->
             <ui:FASettingsExpander Header="Stored data" Description="Delete locally-stored data per type, per account"
-                                   Margin="0,8,0,0" IconSource="Delete" IsClickEnabled="True"
+                                   Margin="0,8,0,0" IconSource="{c:FluentIconSource Delete24}" IsClickEnabled="True"
                                    ActionIconSource="ChevronRight" Click="OnOpenStoredData" />
         </StackPanel>
     </c:PageShell>

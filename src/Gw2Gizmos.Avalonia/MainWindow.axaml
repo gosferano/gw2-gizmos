@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:nav="using:Gw2Gizmos.Desktop.Core.Navigation"
+        xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
         x:Class="Gw2Gizmos.Avalonia.MainWindow"
         Title="Gw2Gizmos" Width="940" Height="620"
         Icon="/Assets/gw2gizmos.png"
@@ -11,18 +12,18 @@
     <ui:FANavigationView x:Name="RootNavigation" PaneDisplayMode="Left" OpenPaneLength="190"
                          IsBackButtonVisible="False" IsPaneToggleButtonVisible="False" IsSettingsVisible="False">
         <ui:FANavigationView.MenuItems>
-            <ui:FANavigationViewItem Content="Dashboard" IconSource="Home" Tag="{x:Static nav:AppPage.Dashboard}" />
-            <ui:FANavigationViewItem Content="Notifications" IconSource="Alert" Tag="{x:Static nav:AppPage.Notifications}" />
-            <ui:FANavigationViewItem Content="Events" IconSource="Clock" Tag="{x:Static nav:AppPage.Events}" />
-            <ui:FANavigationViewItem Content="Items" IconSource="Library" Tag="{x:Static nav:AppPage.Items}" />
-            <ui:FANavigationViewItem Content="Account" IconSource="Contact" Tag="{x:Static nav:AppPage.Account}" />
-            <ui:FANavigationViewItem Content="Characters" IconSource="People" Tag="{x:Static nav:AppPage.Characters}" />
-            <ui:FANavigationViewItem Content="Sessions" IconSource="Games" Tag="{x:Static nav:AppPage.Sessions}" />
+            <ui:FANavigationViewItem Content="Dashboard" IconSource="{c:FluentIconSource Home24}" Tag="{x:Static nav:AppPage.Dashboard}" />
+            <ui:FANavigationViewItem Content="Notifications" IconSource="{c:FluentIconSource Alert24}" Tag="{x:Static nav:AppPage.Notifications}" />
+            <ui:FANavigationViewItem Content="Events" IconSource="{c:FluentIconSource Clock24}" Tag="{x:Static nav:AppPage.Events}" />
+            <ui:FANavigationViewItem Content="Items" IconSource="{c:FluentIconSource BoxMultiple24}" Tag="{x:Static nav:AppPage.Items}" />
+            <ui:FANavigationViewItem Content="Account" IconSource="{c:FluentIconSource Person24}" Tag="{x:Static nav:AppPage.Account}" />
+            <ui:FANavigationViewItem Content="Characters" IconSource="{c:FluentIconSource People24}" Tag="{x:Static nav:AppPage.Characters}" />
+            <ui:FANavigationViewItem Content="Sessions" IconSource="{c:FluentIconSource History24}" Tag="{x:Static nav:AppPage.Sessions}" />
         </ui:FANavigationView.MenuItems>
         <ui:FANavigationView.FooterMenuItems>
-            <ui:FANavigationViewItem Content="Logs" IconSource="BulletList" Tag="{x:Static nav:AppPage.Logs}" />
-            <ui:FANavigationViewItem Content="API keys" IconSource="Permissions" Tag="{x:Static nav:AppPage.ApiKeys}" />
-            <ui:FANavigationViewItem Content="Settings" IconSource="Settings" Tag="{x:Static nav:AppPage.Settings}" />
+            <ui:FANavigationViewItem Content="Logs" IconSource="{c:FluentIconSource DocumentBulletList24}" Tag="{x:Static nav:AppPage.Logs}" />
+            <ui:FANavigationViewItem Content="API keys" IconSource="{c:FluentIconSource Key24}" Tag="{x:Static nav:AppPage.ApiKeys}" />
+            <ui:FANavigationViewItem Content="Settings" IconSource="{c:FluentIconSource Settings24}" Tag="{x:Static nav:AppPage.Settings}" />
         </ui:FANavigationView.FooterMenuItems>
     </ui:FANavigationView>
 </Window>
