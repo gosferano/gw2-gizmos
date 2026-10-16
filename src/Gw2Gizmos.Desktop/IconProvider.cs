@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Gw2Gizmos.Data.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,35 +14,37 @@ namespace Gw2Gizmos.Desktop;
 /// Resolves and caches GW2 item icons for the UI. Given an item id it looks up the icon URL from the items
 /// table, then returns the decoded image from a two-level cache: an in-memory map per item (which also
 /// dedupes concurrent requests) over a persistent on-disk cache. Icons are immutable per URL, so once
-/// downloaded they never need refetching. Returned images are frozen, so the same instance is safely
-/// shared by every grid row and tree node bound to that item.
+/// downloaded they never need refetching. Decoding is the UI head's job (<typeparamref name="TImage"/> is its
+/// image type); the decoder should return an immutable image, since the same instance is shared by every grid
+/// row and tree node bound to that item.
 /// </summary>
-public sealed class IconProvider
+public sealed class IconProvider<TImage>
+    where TImage : class
 {
-    /// <summary>Decode at the icons' native 64px so larger grid cells (10-per-row) stay crisp.</summary>
-    private const int DecodePixelWidth = 64;
-
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly Func<byte[], TImage> _decode;
     private readonly HttpClient _httpClient = new();
     private readonly string _cacheDirectory;
-    private readonly ConcurrentDictionary<int, Task<ImageSource?>> _byItemId = new();
-    private readonly ConcurrentDictionary<string, Task<ImageSource?>> _byUrl = new();
+    private readonly ConcurrentDictionary<int, Task<TImage?>> _byItemId = new();
+    private readonly ConcurrentDictionary<string, Task<TImage?>> _byUrl = new();
 
-    public IconProvider(IServiceScopeFactory scopeFactory, string dataDirectory)
+    /// <param name="decode">Turns a downloaded icon file (PNG bytes) into the UI's image type.</param>
+    public IconProvider(IServiceScopeFactory scopeFactory, string dataDirectory, Func<byte[], TImage> decode)
     {
         _scopeFactory = scopeFactory;
+        _decode = decode;
         _cacheDirectory = Path.Combine(dataDirectory, "IconCache");
         Directory.CreateDirectory(_cacheDirectory);
     }
 
     /// <summary>The item's icon, or null when it has none or can't be fetched. Memoized per item id.</summary>
-    public Task<ImageSource?> GetIconAsync(int itemId) =>
+    public Task<TImage?> GetIconAsync(int itemId) =>
         _byItemId.GetOrAdd(itemId, id => LoadCachingAsync(_byItemId, id, LoadAsync));
 
     /// <summary>An icon by its direct URL (e.g. a currency's icon, which isn't keyed by item id). Memoized.</summary>
-    public Task<ImageSource?> GetIconByUrlAsync(string url) =>
+    public Task<TImage?> GetIconByUrlAsync(string url) =>
         string.IsNullOrEmpty(url)
-            ? Task.FromResult<ImageSource?>(null)
+            ? Task.FromResult<TImage?>(null)
             : _byUrl.GetOrAdd(url, key => LoadCachingAsync(_byUrl, key, LoadFromUrlAsync));
 
     /// <summary>
@@ -53,14 +53,14 @@ public sealed class IconProvider
     /// so a transient miss — offline, or an icon URL the worker hadn't synced yet — is retried the next time the
     /// icon is bound rather than cached as "no icon" for the session.
     /// </summary>
-    private static async Task<ImageSource?> LoadCachingAsync<TKey>(
-        ConcurrentDictionary<TKey, Task<ImageSource?>> cache,
+    private static async Task<TImage?> LoadCachingAsync<TKey>(
+        ConcurrentDictionary<TKey, Task<TImage?>> cache,
         TKey key,
-        Func<TKey, Task<ImageSource?>> load
+        Func<TKey, Task<TImage?>> load
     )
         where TKey : notnull
     {
-        ImageSource? image = await load(key).ConfigureAwait(false);
+        TImage? image = await load(key).ConfigureAwait(false);
         if (image is null)
         {
             cache.TryRemove(key, out _);
@@ -69,7 +69,7 @@ public sealed class IconProvider
         return image;
     }
 
-    private async Task<ImageSource?> LoadAsync(int itemId)
+    private async Task<TImage?> LoadAsync(int itemId)
     {
         // Never throw: a failed DB read (e.g. the worker mid-write) would fault the caller's async-void handler.
         // Returning null instead drops the cache entry above, so it retries.
@@ -84,7 +84,7 @@ public sealed class IconProvider
         }
     }
 
-    private async Task<ImageSource?> LoadFromUrlAsync(string url)
+    private async Task<TImage?> LoadFromUrlAsync(string url)
     {
         try
         {
@@ -100,7 +100,7 @@ public sealed class IconProvider
                 await File.WriteAllBytesAsync(file, bytes);
             }
 
-            return Decode(bytes);
+            return _decode(bytes);
         }
         catch
         {
@@ -124,17 +124,5 @@ public sealed class IconProvider
         // GW2 icon URLs end in /{signature}/{fileId}.png; the file name is a stable id shared across items.
         string name = url[(url.LastIndexOf('/') + 1)..];
         return string.IsNullOrEmpty(name) ? Uri.EscapeDataString(url) : name;
-    }
-
-    private static ImageSource Decode(byte[] bytes)
-    {
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.DecodePixelWidth = DecodePixelWidth;
-        bitmap.StreamSource = new MemoryStream(bytes);
-        bitmap.EndInit();
-        bitmap.Freeze();
-        return bitmap;
     }
 }

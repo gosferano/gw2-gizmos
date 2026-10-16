@@ -82,7 +82,7 @@ public sealed class ItemImage : Image
         image._loaded = null;
         image.Source = null;
 
-        IconProvider? icons = App.Icons;
+        IconProvider<ImageSource>? icons = App.Icons;
         if (icons is null || itemId <= 0)
         {
             return;

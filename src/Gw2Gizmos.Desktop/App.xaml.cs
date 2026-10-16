@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Gw2Gizmos.Data.Provider.Sqlite;
 using Gw2Gizmos.Data.Worker;
@@ -39,7 +40,7 @@ namespace Gw2Gizmos.Desktop;
 public partial class App : Application
 {
     /// <summary>Item-icon cache, exposed statically so the lightweight <c>ItemImage</c> control can reach it.</summary>
-    public static IconProvider? Icons { get; private set; }
+    public static IconProvider<ImageSource>? Icons { get; private set; }
 
     /// <summary>The shell's navigation view, set by <c>MainWindow</c>; lets cards/breadcrumbs navigate.</summary>
     internal static Wpf.Ui.Controls.NavigationView? MainNavigation { get; set; }
@@ -226,7 +227,8 @@ public partial class App : Application
         // does not migrate here. The worker (started just below) creates and brings the schema up to date.
         await _host.StartAsync();
 
-        Icons = new IconProvider(_host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir);
+        Icons = new IconProvider<ImageSource>(
+            _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDir, WpfIconDecoder.Decode);
         _services = _host.Services; // for back-navigation selection snapshots
 
         // The worker shares the same database (same provider + connection string) and fetches its config from

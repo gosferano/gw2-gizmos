@@ -30,7 +30,7 @@ public sealed class CurrencyImage : Image
         var url = (string?)e.NewValue;
         image.Source = null;
 
-        IconProvider? icons = App.Icons;
+        IconProvider<ImageSource>? icons = App.Icons;
         if (icons is null || string.IsNullOrEmpty(url))
         {
             return;
