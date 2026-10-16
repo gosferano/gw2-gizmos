@@ -52,6 +52,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The shared view-models, stores and services the pages and shell are built on. -->
+    <Using Include="Gw2Gizmos.Desktop.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\gw2gizmos.png" />
     <Resource Include="Assets\coin_gold.png" />
     <Resource Include="Assets\coin_silver.png" />

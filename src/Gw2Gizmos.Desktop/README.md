@@ -24,9 +24,13 @@ Single instance per user (a mutex); closing the window hides to the tray.
 
 ## UI
 
-A WPF-UI `NavigationView` shell. Pages live in `Views/`, view-models in `ViewModels/` (MVVM via
-`Mvvm/ViewModelBase` + `RelayCommand`), wrapped in the shared `Controls/PageShell` (Win11-Settings-style
-breadcrumb header over centered, width-capped content):
+A WPF-UI `NavigationView` shell. Pages live in `Views/`, wrapped in the shared `Controls/PageShell`
+(Win11-Settings-style breadcrumb header over centered, width-capped content). The view-models, stores and
+services they bind to live in the UI-agnostic [`Gw2Gizmos.Desktop.Core`](../Gw2Gizmos.Desktop.Core) (MVVM via
+`Mvvm/ViewModelBase` + `RelayCommand`), shared with the upcoming cross-platform Avalonia app. Core reaches the UI
+and the OS only through seams this project implements: `Ui/Wpf*` (dispatcher and timers, collection views,
+dialogs, clipboard, navigation by `AppPage`) and `Platform/` + `ToastService` / `StartupRegistration` (toasts,
+launch at login, DPAPI key encryption).
 
 - **Dashboard** (startup page) — app/worker/account/session stat cards, loaded off the UI thread.
 - **Account** → wallet, material storage, bank, shared inventory, characters → per-character inventory.

@@ -1,7 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- UI-framework-agnostic heart of the desktop app: the seams each UI head implements (Ui/, and later the
-       view-models and services built on them). Plain net10.0 — no WPF, no Windows APIs — so the WPF app today and
-       the cross-platform Avalonia app share it. -->
+  <!-- UI-framework-agnostic heart of the desktop app: view-models, the per-user stores, the worker-config pipe,
+       logging, and the seams (Ui/, Navigation/, Platform/) each UI head implements. Plain net10.0 — no WPF, no
+       Windows APIs — so the WPF app today and the cross-platform Avalonia app share it. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Serilog" />
+    <!-- The price-history chart series/axes are built here; each head references its own LiveCharts view package. -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView" />
+    <!-- UpdateStatus holds the staged Velopack update the dashboard applies. -->
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The engine's delivery poller, feature/sync definitions and key-provider contract the stores implement. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
+    <!-- Hardcoded reference data (world-boss / meta / instance schedules) behind the Events view-model. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Static\Gw2Gizmos.Data.Static.csproj" />
+    <!-- The crafting engine: its tree builder + RecipeNode model back the Items craft-tree detail. -->
+    <ProjectReference Include="..\Gw2Gizmos.RecipeFinder\Gw2Gizmos.RecipeFinder.csproj" />
+  </ItemGroup>
 
 </Project>

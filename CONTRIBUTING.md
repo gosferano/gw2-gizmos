@@ -34,6 +34,7 @@ src/
   Gw2Gizmos.MumbleLink.Contract/ # internal: MumbleLink snapshot DTOs       → README
   Gw2Gizmos.MumbleLink.Client/   # internal: MumbleLink shared-memory reader → README
   Gw2Gizmos.Desktop/           # ── desktop app (builds Gw2Gizmos.exe)      → README
+  Gw2Gizmos.Desktop.Core/      # internal: UI-agnostic view-models + services for the desktop app
   Gw2Gizmos.Data.Worker/       # internal: data-ingestion engine (library)  → README
   Gw2Gizmos.Data.Worker.Cli/   # worker host (the exe the desktop spawns)
   Gw2Gizmos.Data.EntityFramework/  # EF Core model (DbContext + entities)
