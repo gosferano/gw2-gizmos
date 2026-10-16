@@ -137,7 +137,7 @@ jobs:
       - name: Publish & pack desktop app (Linux)
         run: |
           dotnet publish src/Gw2Gizmos.Desktop/Gw2Gizmos.Desktop.csproj -c Release -r linux-x64 --self-contained -o publish/desktop-linux
-          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime linux-x64 --packDir publish/desktop-linux --mainExe Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos.png --categories Game --outputDir Releases
+          vpk pack --packId Gw2Gizmos --packTitle "Gw2Gizmos" --packVersion "${{ needs.detect.outputs.desktop_v }}" --runtime linux-x64 --packDir publish/desktop-linux --mainExe Gw2Gizmos --icon src/Gw2Gizmos.Desktop/Assets/gw2gizmos-256.png --categories Game --outputDir Releases
 
       - uses: actions/upload-artifact@v4
         with:

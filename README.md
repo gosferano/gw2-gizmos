@@ -39,9 +39,10 @@ ready). API keys are stored encrypted: via DPAPI on Windows, in the desktop keyr
 
 - **Windows:** download `Gw2Gizmos-win-Setup.exe` and run it. The app installs per-user under
   `%LocalAppData%\Gw2Gizmos`, with its database and encrypted key in `%APPDATA%\Gw2Gizmos`.
-- **Linux:** download `Gw2Gizmos.AppImage`, make it executable (`chmod +x Gw2Gizmos.AppImage`) and run it. Its
-  data lives in `~/.local/share/Gw2Gizmos`. Notifications use `notify-send` and key storage uses `secret-tool`
-  (libsecret), both standard on most desktops.
+- **Linux:** download `Gw2Gizmos.AppImage`, move it somewhere permanent (e.g. `~/Applications`), make it executable
+  (`chmod +x Gw2Gizmos.AppImage`) and run it. On first launch it adds itself to your app launcher; uninstall it from
+  **Settings → Uninstall** (optionally deleting your data too). Its data lives in `~/.local/share/Gw2Gizmos`.
+  Notifications use `notify-send` and key storage uses `secret-tool` (libsecret), both standard on most desktops.
 
 See the [desktop README](src/Gw2Gizmos.Desktop/README.md) for how it's built.
 

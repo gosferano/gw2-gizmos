@@ -17,6 +17,8 @@ public static class WindowsPlatformServiceCollectionExtensions
         services.AddSingleton<IToastService, WindowsToastService>();
         services.AddSingleton<IStartupRegistration>(new RunKeyStartupRegistration(appFolderName));
         services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
+        // Velopack's Setup adds the app to Start, and "Apps & features" uninstalls it.
+        services.AddSingleton<IAppInstallation, InstallerManagedInstallation>();
         services.AddHostedService<WindowsPlatformStartup>();
         return services;
     }

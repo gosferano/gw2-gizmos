@@ -13,10 +13,7 @@ internal sealed class XdgAutostartRegistration : IStartupRegistration
 
     public XdgAutostartRegistration(string entryName)
     {
-        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } xdg
-            ? xdg
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        _entryPath = Path.Combine(configHome, "autostart", $"{entryName}.desktop");
+        _entryPath = Path.Combine(DesktopEntry.ConfigHome, "autostart", $"{entryName}.desktop");
     }
 
     public bool IsEnabled => File.Exists(_entryPath);
@@ -31,10 +28,7 @@ internal sealed class XdgAutostartRegistration : IStartupRegistration
                 return;
             }
 
-            // An AppImage runs from a temporary mount; $APPIMAGE is the stable path of the image file itself.
-            string? executable = Environment.GetEnvironmentVariable("APPIMAGE") is { Length: > 0 } appImage
-                ? appImage
-                : Environment.ProcessPath;
+            string? executable = DesktopEntry.LaunchPath;
             if (string.IsNullOrEmpty(executable))
             {
                 return;
@@ -47,7 +41,7 @@ internal sealed class XdgAutostartRegistration : IStartupRegistration
                     + "Type=Application\n"
                     + "Name=Gw2Gizmos\n"
                     + "Comment=Guild Wars 2 companion\n"
-                    + $"Exec={QuoteExec(executable)} --minimized\n"
+                    + $"Exec={DesktopEntry.QuoteExec(executable)} --minimized\n"
                     + "Terminal=false\n"
                     + "X-GNOME-Autostart-enabled=true\n");
         }
@@ -55,22 +49,5 @@ internal sealed class XdgAutostartRegistration : IStartupRegistration
         {
             // Best effort — an unwritable config dir just means the toggle won't persist.
         }
-    }
-
-    /// <summary>Quotes an Exec argument per the Desktop Entry spec (escape \, ", `, $ inside double quotes).</summary>
-    private static string QuoteExec(string value)
-    {
-        var escaped = new System.Text.StringBuilder(value.Length + 2).Append('"');
-        foreach (char c in value)
-        {
-            if (c is '\\' or '"' or '`' or '$')
-            {
-                escaped.Append('\\');
-            }
-
-            escaped.Append(c);
-        }
-
-        return escaped.Append('"').ToString();
     }
 }

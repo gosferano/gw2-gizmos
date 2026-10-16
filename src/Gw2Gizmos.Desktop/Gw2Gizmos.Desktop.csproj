@@ -30,7 +30,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\gw2gizmos-256.png" />
+  </ItemGroup>
+
+  <!-- Linux: the launcher icon (256 px, from the .ico) ships next to the app as gw2gizmos.png; the AppImage installs
+       it into the user's icon theme when it adds itself to the launcher. -->
+  <ItemGroup Condition="'$(Gw2GizmosWindows)' != 'true'">
+    <None Include="Assets\gw2gizmos-256.png" Link="gw2gizmos.png"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
