@@ -23,6 +23,8 @@ public partial class AccountPage : UserControl
         _navigation = navigation;
     }
 
+    private void OnOpenValue(object? sender, RoutedEventArgs e) => _navigation?.NavigateTo(AppPage.AccountValue);
+
     private void OnOpenWallet(object? sender, RoutedEventArgs e) => _navigation?.NavigateTo(AppPage.Wallet);
 
     private void OnOpenMaterials(object? sender, RoutedEventArgs e) => _navigation?.NavigateTo(AppPage.MaterialStorage);

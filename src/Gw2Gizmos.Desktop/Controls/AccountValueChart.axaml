@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sp="using:ScottPlot.Avalonia"
+             x:Class="Gw2Gizmos.Desktop.Controls.AccountValueChart">
+    <!-- DataContext: the AccountValueViewModel. The hover readout floats over the chart. -->
+    <Panel>
+        <sp:AvaPlot Name="Plot" />
+        <Canvas IsHitTestVisible="False">
+            <Border Name="Readout" IsVisible="False" Padding="8,4" CornerRadius="4" Canvas.Top="4"
+                    Background="{DynamicResource SolidBackgroundFillColorTertiaryBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <TextBlock Name="ReadoutText" FontSize="12" />
+            </Border>
+        </Canvas>
+    </Panel>
+</UserControl>

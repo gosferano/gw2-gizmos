@@ -21,6 +21,7 @@ public enum FluentSymbol
     CheckmarkCircle24 = 0xF299,
     ChevronRight24 = 0xF2B1,
     Clock24 = 0xF2DE,
+    DataTrending24 = 0xE45E,
     Delete24 = 0xF34D,
     DocumentBulletList24 = 0xF403,
     History24 = 0xF47F,

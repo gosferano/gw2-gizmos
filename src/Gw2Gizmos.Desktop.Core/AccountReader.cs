@@ -582,6 +582,19 @@ public sealed class AccountReader
             },
             new Dictionary<string, int>());
 
+    /// <summary>The account's recorded value over time, oldest first.</summary>
+    public List<AccountValuePoint> GetAccountValueHistory(string accountId) =>
+        SafeRead(
+            db => db.AccountValueSnapshots.AsNoTracking()
+                .Where(s => s.AccountId == accountId)
+                .AsEnumerable()
+                .OrderBy(s => s.TakenAtUtc)
+                .Select(s => new AccountValuePoint(
+                    s.TakenAtUtc, s.CoinCopper, s.MaterialsCopper, s.BankCopper, s.SharedInventoryCopper,
+                    s.CharactersCopper, s.TradingPostCopper, s.IsBackfilled))
+                .ToList(),
+            new List<AccountValuePoint>());
+
     /// <summary>The number of stored trading-post price points (global, not per-account).</summary>
     public int GetPriceHistoryCount() =>
         SafeRead(db => db.PriceSnapshots.Count(), 0);
@@ -777,6 +790,21 @@ public sealed record GameSessionRow(
         : $"{DurationDisplay} · {MainMap} · {CharactersDisplay}";
 
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+}
+
+/// <summary>The account's estimated value at one point in time, by where it's held (copper).</summary>
+public sealed record AccountValuePoint(
+    DateTimeOffset Time,
+    long Coin,
+    long Materials,
+    long Bank,
+    long SharedInventory,
+    long Characters,
+    long TradingPost,
+    bool IsBackfilled
+)
+{
+    public long Total => Coin + Materials + Bank + SharedInventory + Characters + TradingPost;
 }
 
 /// <summary>A character as shown on its card: who it is, its profession (and elite specialization), and its crafting.</summary>

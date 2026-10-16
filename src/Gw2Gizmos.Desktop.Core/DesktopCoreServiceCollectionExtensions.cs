@@ -130,6 +130,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // Carries the drilled-into account across parameterless page navigation.
         services.AddSingleton<SelectedAccountService>();
         services.AddTransient<AccountViewModel>();
+        services.AddTransient<AccountValueViewModel>();
         services.AddTransient<WalletViewModel>();
         services.AddTransient<MaterialStorageViewModel>();
         services.AddTransient<BankViewModel>();
