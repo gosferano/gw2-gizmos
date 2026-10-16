@@ -578,6 +578,7 @@ public sealed class AccountReader
                         db.GameSessions.Any(g => g.Id == seg.GameSessionId && g.AccountId == accountId)),
                 [DeletableData.TradingPost] = db.TradingPostOrders.Count(o => o.AccountId == accountId)
                     + db.TradingPostTransactions.Count(t => t.AccountId == accountId),
+                [DeletableData.ValueHistory] = db.AccountValueSnapshots.Count(s => s.AccountId == accountId),
             },
             new Dictionary<string, int>());
 

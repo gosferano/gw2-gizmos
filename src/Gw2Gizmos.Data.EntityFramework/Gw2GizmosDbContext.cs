@@ -73,6 +73,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<AccountContainerSlot> AccountContainerSlots { get; set; }
     public DbSet<CharacterItemSlot> CharacterItemSlots { get; set; }
 
+    // The account's estimated value over time (hourly, plus daily points backfilled from the logs above).
+    public DbSet<AccountValueSnapshot> AccountValueSnapshots { get; set; }
+
     // Play sessions detected from MumbleLink: a GameSession per sitting, with an ordered set of CharacterSegments
     // (the per-character stretches / switches), each split into MapSegments by map. "Hoarded" deltas are
     // reconstructed from the observation logs above at read time, not stored.

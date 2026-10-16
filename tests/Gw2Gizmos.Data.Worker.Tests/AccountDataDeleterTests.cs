@@ -175,6 +175,15 @@ public sealed class AccountDataDeleterTests : IDisposable
     }
 
     [Fact]
+    public async Task ValueHistory_DeletesSnapshots_ForThatAccountOnly()
+    {
+        await Delete(DeletableData.ValueHistory);
+
+        Assert.Equal(0, await Count(d => d.AccountValueSnapshots.Count(s => s.AccountId == A)));
+        Assert.Equal(1, await Count(d => d.AccountValueSnapshots.Count(s => s.AccountId == B)));
+    }
+
+    [Fact]
     public async Task MapSegments_AreDeletedWithEverySessionAndSegmentDelete()
     {
         // One segment: only its own maps go.
@@ -209,6 +218,7 @@ public sealed class AccountDataDeleterTests : IDisposable
         Assert.Equal(0, await Count(d => d.CharacterItemSlots.Count(s => s.AccountId == A)));
         Assert.Equal(0, await Count(d => d.Characters.Count(c => c.AccountId == A)));
         Assert.Equal(0, await Count(d => d.GameSessions.Count(g => g.AccountId == A)));
+        Assert.Equal(0, await Count(d => d.AccountValueSnapshots.Count(s => s.AccountId == A)));
 
         // Account B is fully intact, and global price history is not account-scoped so it survives.
         Assert.Equal(1, await Count(d => d.Accounts.Count(a => a.AccountId == B)));
@@ -320,6 +330,7 @@ public sealed class AccountDataDeleterTests : IDisposable
         long baseId = accountId == A ? 1000 : 2000;
         db.TradingPostOrders.Add(new TradingPostOrder { Id = baseId, AccountId = accountId, Side = TradingPostSide.Buy, ItemId = 19721, Price = 100, Quantity = 1, CreatedUtc = t, SyncedAtUtc = t });
         db.TradingPostTransactions.Add(new TradingPostTransaction { Id = baseId + 1, AccountId = accountId, Side = TradingPostSide.Sell, ItemId = 24, Price = 900, Quantity = 1, CreatedUtc = t, PurchasedUtc = t });
+        db.AccountValueSnapshots.Add(new AccountValueSnapshot { AccountId = accountId, TakenAtUtc = t, CoinCopper = 100 });
     }
 
     // Map segments belonging to an account's sessions (through their character segments).
