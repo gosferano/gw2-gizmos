@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -31,7 +30,7 @@ public partial class App : Application
     private IClassicDesktopStyleApplicationLifetime? _desktop;
     private IHost? _host;
     private MainWindow? _window;
-    private Process? _workerProcess;
+    private WorkerSupervisor? _worker;
     private Mutex? _singleInstanceMutex;
     private bool _isExiting;
 
@@ -83,8 +82,10 @@ public partial class App : Application
             // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only.
             await _host.StartAsync();
 
-            // The worker shares the same database and fetches its config over the pipe whose name it's given.
-            _workerProcess = _host.Services.GetRequiredService<WorkerProcessLauncher>().Start();
+            // The worker shares the same database and fetches its config over the pipe whose name it's given. The
+            // supervisor restarts it if it dies.
+            _worker = _host.Services.GetRequiredService<WorkerSupervisor>();
+            _worker.Start();
 
             // A dev build (run from bin) isn't Velopack-installed; suffix its title so it's distinguishable.
             bool isInstalled = _host.Services.GetRequiredService<AppUpdateService>().IsInstalled;
@@ -179,17 +180,7 @@ public partial class App : Application
         // Released as the handle closes, freeing the single-instance slot for the next launch.
         _singleInstanceMutex?.Dispose();
 
-        try
-        {
-            if (_workerProcess is { HasExited: false })
-            {
-                _workerProcess.Kill(entireProcessTree: true);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to stop the worker process.");
-        }
+        _worker?.Stop();
 
         if (_host is not null)
         {

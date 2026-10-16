@@ -159,7 +159,7 @@ public partial class App : Application
     private NotifyIcon? _trayIcon;
     private MainWindow? _window;
     private IHost? _host;
-    private Process? _workerProcess;
+    private WorkerSupervisor? _worker;
     private readonly ChildProcessJob _workerJob = new();
     private Mutex? _singleInstanceMutex;
     private bool _isExiting;
@@ -455,13 +455,12 @@ public partial class App : Application
 
     private void StartWorkerProcess()
     {
-        _workerProcess = _host!.Services.GetRequiredService<WorkerProcessLauncher>().Start();
+        _worker = _host!.Services.GetRequiredService<WorkerSupervisor>();
 
-        // Bind the worker to a kill-on-close job so it can never outlive the app (even on a crash).
-        if (_workerProcess is not null)
-        {
-            _workerJob.AddProcess(_workerProcess);
-        }
+        // Bind each worker (the first and any restart) to a kill-on-close job so it can never outlive the app (even
+        // on a crash).
+        _worker.Started += process => _workerJob.AddProcess(process);
+        _worker.Start();
     }
 
     private void SetupTrayIcon(string tooltipText)
@@ -521,17 +520,7 @@ public partial class App : Application
         _singleInstanceMutex?.Dispose();
         _trayIcon?.Dispose();
 
-        try
-        {
-            if (_workerProcess is { HasExited: false })
-            {
-                _workerProcess.Kill(entireProcessTree: true);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to stop the worker process.");
-        }
+        _worker?.Stop();
 
         // Closing the job is the backstop that guarantees the worker is gone.
         _workerJob.Dispose();

@@ -76,6 +76,8 @@ public static class DesktopCoreServiceCollectionExtensions
             sp.GetRequiredService<ILogger<WorkerProcessLauncher>>(),
             mumbleLinkFilePath
         ));
+        // Starts the worker and restarts it if it dies; each UI head calls Start at startup and Stop at exit.
+        services.AddSingleton<WorkerSupervisor>();
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
 
