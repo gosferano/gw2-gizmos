@@ -221,7 +221,7 @@ public partial class App : Application
         // desktop's secret file.
         string workerConfigPipeName = $"Gw2Gizmos.Config.{Guid.NewGuid():N}";
 
-        (IHost host, string connectionString, string dbProvider) = BuildHost(dataDir, dbPath, args, workerConfigPipeName);
+        (IHost host, DesktopDatabaseSettings database) = BuildHost(dataDir, dbPath, args, workerConfigPipeName);
         _host = host;
         // The worker owns the database and is its sole migrator/writer; the desktop opens it read-only, so it
         // does not migrate here. The worker (started just below) creates and brings the schema up to date.
@@ -233,7 +233,7 @@ public partial class App : Application
 
         // The worker shares the same database (same provider + connection string) and fetches its config from
         // the config service over the pipe whose name we pass here.
-        StartWorkerProcess(dataDir, connectionString, dbProvider, workerConfigPipeName);
+        StartWorkerProcess(dataDir, database, workerConfigPipeName);
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
         // it's distinguishable from the installed app when both are running at once.
@@ -435,7 +435,7 @@ public partial class App : Application
         }
     }
 
-    private static (IHost Host, string ConnectionString, string Provider) BuildHost(
+    private static (IHost Host, DesktopDatabaseSettings Database) BuildHost(
         string dataDir,
         string dbPath,
         string[] args,
@@ -602,41 +602,17 @@ public partial class App : Application
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
         builder.Services.AddGw2GizmosSqlite();
 
-        // Provider + connection string come from launch config (--Database:Provider / env). SQLite needs no
-        // connection string — default to the per-user data file; any server provider must supply one.
-        string? configuredProvider = builder.Configuration["Database:Provider"];
-        string provider = string.IsNullOrWhiteSpace(configuredProvider)
-            ? ActiveDbProvider.DefaultProviderKey
-            : configuredProvider;
-
-        bool isDefaultSqlite =
-            string.Equals(provider, ActiveDbProvider.DefaultProviderKey, StringComparison.OrdinalIgnoreCase);
-
-        string? configuredConnectionString = builder.Configuration.GetConnectionString("Gw2GizmosDb");
-
-        // The worker is the sole writer, so it gets a read-write connection string (the one we also forward
-        // to the worker process).
-        string connectionString = !string.IsNullOrEmpty(configuredConnectionString)
-            ? configuredConnectionString
-            : isDefaultSqlite
-                ? $"Data Source={dbPath}"
-                : throw new InvalidOperationException(
-                    $"Database:Provider='{provider}' requires a connection string (ConnectionStrings:Gw2GizmosDb=...).");
-
-        // The desktop never writes the database — it opens it read-only. For the default per-user SQLite file
-        // we append Mode=ReadOnly (we construct that string ourselves, so no flag collision); a custom or
-        // server connection string is used as supplied (read-only is enforced by its own credentials).
-        string desktopConnectionString = isDefaultSqlite && string.IsNullOrEmpty(configuredConnectionString)
-            ? $"{connectionString};Mode=ReadOnly"
-            : connectionString;
+        // Provider + connection strings come from launch config (--Database:Provider / env): read-write for the
+        // worker (forwarded to its process), read-only for the desktop.
+        var database = DesktopDatabaseSettings.Resolve(builder.Configuration, dbPath);
 
         // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
-        builder.Services.AddGw2GizmosDeliveryNotifications(desktopConnectionString);
+        builder.Services.AddGw2GizmosDeliveryNotifications(database.DesktopConnectionString);
 
-        return (builder.Build(), connectionString, provider);
+        return (builder.Build(), database);
     }
 
-    private void StartWorkerProcess(string dataDir, string connectionString, string provider, string workerConfigPipeName)
+    private void StartWorkerProcess(string dataDir, DesktopDatabaseSettings database, string workerConfigPipeName)
     {
         // The worker ships as a sibling exe in the app's own directory, sharing the runtime + common
         // dependencies (one copy each) — see the CopyWorkerCli/PublishWorkerCli targets in the csproj.
@@ -656,8 +632,8 @@ public partial class App : Application
         };
         // Forward the same provider + connection string so the worker opens the identical database, plus the
         // config pipe name so it can fetch keys/features/intervals live (no secret ever touches the command line).
-        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={connectionString}");
-        startInfo.ArgumentList.Add($"--Database:Provider={provider}");
+        startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={database.WorkerConnectionString}");
+        startInfo.ArgumentList.Add($"--Database:Provider={database.Provider}");
         startInfo.ArgumentList.Add($"--WorkerConfig:PipeName={workerConfigPipeName}");
 
         _workerProcess = Process.Start(startInfo);

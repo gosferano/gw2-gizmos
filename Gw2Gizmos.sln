@@ -68,6 +68,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Wiki.DataScraper"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Core", "src\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj", "{B753F9DD-25E0-4B67-9942-298512796D19}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Core.Tests", "tests\Gw2Gizmos.Desktop.Core.Tests\Gw2Gizmos.Desktop.Core.Tests.csproj", "{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -342,6 +344,18 @@ Global
 		{B753F9DD-25E0-4B67-9942-298512796D19}.Release|x64.Build.0 = Release|Any CPU
 		{B753F9DD-25E0-4B67-9942-298512796D19}.Release|x86.ActiveCfg = Release|Any CPU
 		{B753F9DD-25E0-4B67-9942-298512796D19}.Release|x86.Build.0 = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|x64.Build.0 = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Debug|x86.Build.0 = Debug|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|x64.ActiveCfg = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|x64.Build.0 = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|x86.ActiveCfg = Release|Any CPU
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -369,5 +383,6 @@ Global
 		{6E3FFC08-8185-4223-B866-612851BFE442} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{F015C6C4-D85A-4A68-B817-90CE064C4290} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{B753F9DD-25E0-4B67-9942-298512796D19} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
+		{CAB9B265-DD11-45F4-B873-B0BEB5B634A0} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
