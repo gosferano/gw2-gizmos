@@ -70,7 +70,7 @@ public sealed class OnboardingViewModel : ViewModelBase
         private set => SetProperty(ref _verifiedAccount, value);
     }
 
-    public ICommand AddCommand { get; }
+    public RelayCommand AddCommand { get; }
 
     public ICommand OpenApiKeyPageCommand { get; }
 
@@ -81,6 +81,7 @@ public sealed class OnboardingViewModel : ViewModelBase
     private async Task AddAsync()
     {
         _busy = true;
+        AddCommand.RaiseCanExecuteChanged();
         Status = "Validating…";
         try
         {
@@ -107,6 +108,7 @@ public sealed class OnboardingViewModel : ViewModelBase
         finally
         {
             _busy = false;
+            AddCommand.RaiseCanExecuteChanged();
         }
     }
 

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Threading;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
@@ -237,7 +236,7 @@ public sealed class ItemsViewModel : ViewModelBase
             if (SetProperty(ref _isRefreshing, value))
             {
                 // Re-evaluate RefreshCommand.CanExecute now that the in-flight state changed.
-                CommandManager.InvalidateRequerySuggested();
+                RefreshCommand.RaiseCanExecuteChanged();
             }
         }
     }

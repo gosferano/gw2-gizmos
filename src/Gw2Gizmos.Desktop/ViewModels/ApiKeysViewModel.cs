@@ -57,7 +57,7 @@ public sealed class ApiKeysViewModel : ViewModelBase
         private set => SetProperty(ref _status, value);
     }
 
-    public ICommand AddCommand { get; }
+    public RelayCommand AddCommand { get; }
 
     public ICommand DeleteCommand { get; }
 
@@ -124,6 +124,7 @@ public sealed class ApiKeysViewModel : ViewModelBase
     private async Task AddAsync()
     {
         _busy = true;
+        AddCommand.RaiseCanExecuteChanged();
         Status = "Validating…";
         try
         {
@@ -147,6 +148,7 @@ public sealed class ApiKeysViewModel : ViewModelBase
         finally
         {
             _busy = false;
+            AddCommand.RaiseCanExecuteChanged();
         }
     }
 
