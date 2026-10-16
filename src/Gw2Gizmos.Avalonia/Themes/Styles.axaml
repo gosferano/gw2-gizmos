@@ -9,6 +9,14 @@
         <SolidColorBrush x:Key="DangerButtonForeground" Color="White" />
     </Styles.Resources>
 
+    <!-- FluentAvalonia sizes its ComboBox through padding: 1px border + 5 + a 20px text line + 5 + 1px border = its 32px
+         default. Stretched to the app's 38px FormControlHeight, the selection sat high (centring it doesn't help: the
+         selection presenter's margin makes it give the text a 28px slot, drawn from the top). Grow the padding instead,
+         so the text line is centred exactly: 1 + 8 + 20 + 8 + 1 = 38. -->
+    <Style Selector="ComboBox">
+        <Setter Property="Padding" Value="12,8,0,8" />
+    </Style>
+
     <!-- A list row with a subtle hover highlight, so it's clear which value belongs to which name (wallet, session
          loot). -->
     <Style Selector="Border.hover-row">
