@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         ShowPage(StartPageOverride() ?? (onboarding.IsCompleted ? AppPage.Dashboard : AppPage.Onboarding));
     }
 
-    /// <summary>Debug builds: <c>--start-page=Wallet</c> opens that page directly (handy while porting pages).</summary>
+    /// <summary>Debug builds: <c>--start-page=Wallet</c> opens that page directly (handy while working on a page).</summary>
     private static AppPage? StartPageOverride()
     {
 #if DEBUG

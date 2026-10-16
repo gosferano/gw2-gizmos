@@ -81,7 +81,7 @@ internal static class AppHostFactory
         builder.Services.AddSingleton<AvaloniaNavigationService>();
         builder.Services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
-        // UI shell: the window and the ported pages (resolved by the page factory as you navigate).
+        // UI shell: the window and the pages (resolved by the page factory as you navigate).
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<PageFactory>();
         PageFactory.RegisterPages(builder.Services);
