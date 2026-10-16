@@ -6,10 +6,7 @@ namespace Gw2Gizmos.Data.Static.Tests;
 public class ScheduleDataTests
 {
     public static IEnumerable<object[]> AllEvents =>
-        WorldBosses.All
-            .Concat(MetaEvents.All)
-            .Concat(PublicInstances.All)
-            .Concat(Invasions.All)
+        EventSchedule.All
             .Select(e => new object[] { e });
 
     [Fact]
@@ -34,14 +31,18 @@ public class ScheduleDataTests
     [Fact]
     public void EventIds_AreUniqueAcrossEveryCategory()
     {
-        string[] ids = WorldBosses.All
-            .Concat(MetaEvents.All)
-            .Concat(PublicInstances.All)
-            .Concat(Invasions.All)
+        string[] ids = EventSchedule.All
             .Select(e => e.Id)
             .ToArray();
 
         Assert.Equal(ids.Length, ids.Distinct().Count());
+    }
+
+    [Fact]
+    public void FestivalEvents_AreExactlyThoseWithAFestival()
+    {
+        Assert.All(EventSchedule.All, e => Assert.Equal(e.Kind == EventKind.Festival, e.Festival is not null));
+        Assert.All(Enum.GetValues<Festival>(), f => Assert.Contains(Festivals.All, e => e.Festival == f));
     }
 
     [Theory]

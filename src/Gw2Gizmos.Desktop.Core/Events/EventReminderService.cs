@@ -12,8 +12,9 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Fires a reminder (toast + in-app feed, via the composite <see cref="INotifier"/>) shortly before each
-/// event the user has subscribed to on the Events screen. Runs in the desktop process because that owns
-/// Windows toasts. Each occurrence is notified at most once, tracked by its start time.
+/// event the user has subscribed to on the Events screen — festival events only while their festival is the one the
+/// user marked as running. Runs in the desktop process because that owns the OS notifications. Each occurrence is
+/// notified at most once, tracked by its start time.
 /// </summary>
 public sealed class EventReminderService : BackgroundService
 {
@@ -36,11 +37,7 @@ public sealed class EventReminderService : BackgroundService
         _settings = settings;
         _notifier = notifier;
         _logger = logger;
-        _events = WorldBosses.All
-            .Concat(MetaEvents.All)
-            .Concat(PublicInstances.All)
-            .Concat(Invasions.All)
-            .ToDictionary(e => e.Id);
+        _events = EventSchedule.All.ToDictionary(e => e.Id);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,12 +64,19 @@ public sealed class EventReminderService : BackgroundService
 
     private void CheckOnce(DateTimeOffset now)
     {
-        // Read the lead time each pass so changes from the Events screen apply without a restart.
+        // Read the settings each pass so changes from the Events screen apply without a restart.
         TimeSpan leadTime = TimeSpan.FromMinutes(_settings.LeadTimeMinutes);
+        Festival? festival = _settings.SelectedFestival;
 
         foreach (string id in _subscriptions.SubscribedIds)
         {
             if (!_events.TryGetValue(id, out ScheduledEvent? scheduledEvent))
+            {
+                continue;
+            }
+
+            // A festival event's bell stays set across festivals, but only rings while its festival is running.
+            if (scheduledEvent.Festival is { } eventFestival && eventFestival != festival)
             {
                 continue;
             }

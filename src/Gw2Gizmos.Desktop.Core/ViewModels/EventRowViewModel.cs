@@ -40,6 +40,9 @@ public sealed class EventRowViewModel : ViewModelBase
     /// <summary>The release this event belongs to — used by the expansion filter.</summary>
     public Expansion Expansion => _event.Expansion;
 
+    /// <summary>The festival this event belongs to; null for regular events.</summary>
+    public Festival? Festival => _event.Festival;
+
     /// <summary>Short tag shown on the row (Boss / Meta / Instance / Invasion).</summary>
     public string KindLabel => _event.Kind switch
     {
@@ -47,6 +50,7 @@ public sealed class EventRowViewModel : ViewModelBase
         EventKind.MetaEvent => "Meta",
         EventKind.PublicInstance => "Instance",
         EventKind.Invasion => "Invasion",
+        EventKind.Festival => "Festival",
         _ => string.Empty,
     };
 
