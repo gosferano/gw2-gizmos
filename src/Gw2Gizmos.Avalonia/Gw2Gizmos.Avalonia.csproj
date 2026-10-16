@@ -6,6 +6,8 @@
     <OutputType>WinExe</OutputType>
     <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Tracks the WPF app's version until this head gets its own packaging/release line. -->
+    <Version>0.6.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,11 +20,45 @@
     <!-- Items and Logs grids; its collection view also backs the shared IItemsView seam. -->
     <PackageReference Include="Avalonia.Controls.DataGrid" />
     <PackageReference Include="FluentAvaloniaUI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- The UI-agnostic view-models, services and seams this head implements. -->
     <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+    <!-- Composition root picks the concrete DB provider. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
+    <!-- Build the worker CLI alongside, but don't reference its assembly — the app launches it as a separate
+         process so its heavy ingestion can't stall the UI thread. -->
+    <ProjectReference Include="..\Gw2Gizmos.Data.Worker.Cli\Gw2Gizmos.Data.Worker.Cli.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
+
+  <!-- Dev (run-from-bin): merge the worker CLI's build output into the app's output dir so the app can spawn it as
+       a sibling executable, sharing the runtime + common dependencies. Same rules as the WPF app's CopyWorkerCli:
+       only files the app doesn't already emit are copied (the app wins on shared assemblies), except the worker's
+       own Gw2Gizmos.* assemblies and loader metadata (*.json), which are always refreshed so it never runs stale
+       code; and never the worker's standalone-only appsettings*.json, whose relative connection string would
+       hijack the database path both processes get from launch args. Packaging (publish) comes with the release
+       work for this head. -->
+  <Target Name="CopyWorkerCli" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == ''">
+    <ItemGroup>
+      <_WorkerCliFiles Include="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\**\*"
+                       Exclude="..\Gw2Gizmos.Data.Worker.Cli\bin\$(Configuration)\net10.0\appsettings*.json" />
+      <_WorkerCliNew Include="@(_WorkerCliFiles)" Condition="!Exists('$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+      <_WorkerCliRefresh Include="@(_WorkerCliFiles)"
+                         Condition="'%(Extension)' == '.json' or $([System.String]::Copy('%(Filename)').StartsWith('Gw2Gizmos.'))" />
+      <_StaleWorkerAppsettings Include="$(OutDir)appsettings*.json" />
+    </ItemGroup>
+    <Delete Files="@(_StaleWorkerAppsettings)" />
+    <Copy SourceFiles="@(_WorkerCliNew)" DestinationFiles="@(_WorkerCliNew->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WorkerCliRefresh)" DestinationFiles="@(_WorkerCliRefresh->'$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

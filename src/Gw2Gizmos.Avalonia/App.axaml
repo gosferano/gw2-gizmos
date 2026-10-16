@@ -7,4 +7,18 @@
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
     </Application.Styles>
+
+    <!-- Tray icon: the app lives here while its window is hidden (closing the window hides it). -->
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/gw2gizmos.png" ToolTipText="Gw2Gizmos" Clicked="OnTrayClicked">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Show Gw2Gizmos" Click="OnTrayShowClicked" />
+                        <NativeMenuItem Header="Exit" Click="OnTrayExitClicked" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
 </Application>
