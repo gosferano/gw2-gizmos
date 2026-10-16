@@ -28,6 +28,7 @@ public sealed class PageFactory
         [AppPage.SessionLoot] = typeof(SessionLootPage),
         [AppPage.Events] = typeof(EventsPage),
         [AppPage.Items] = typeof(ItemsPage),
+        [AppPage.AccountValue] = typeof(AccountValuePage),
         [AppPage.TradingPost] = typeof(TradingPostPage),
         [AppPage.Notifications] = typeof(NotificationsPage),
         [AppPage.Logs] = typeof(LogsPage),

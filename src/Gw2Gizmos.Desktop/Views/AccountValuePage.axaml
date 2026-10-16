@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             xmlns:conv="using:Gw2Gizmos.Desktop.Converters"
+             x:Class="Gw2Gizmos.Desktop.Views.AccountValuePage"
+             x:DataType="core:AccountValueViewModel">
+    <UserControl.Resources>
+        <conv:ArgbBrushConverter x:Key="ArgbBrush" />
+    </UserControl.Resources>
+
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" IsVisible="{Binding NoData}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="No value recorded yet. It's recorded after each account sync, and earlier days are filled in from what's already been synced." />
+
+            <StackPanel IsVisible="{Binding HasData}">
+                <!-- The current total and its change over the range, with the range presets on the right. -->
+                <DockPanel Margin="0,0,0,8">
+                    <ComboBox DockPanel.Dock="Right" VerticalAlignment="Center" MinWidth="110"
+                              ItemsSource="{Binding RangeOptions}" SelectedItem="{Binding SelectedRange}"
+                              Height="{StaticResource FormControlHeight}" />
+                    <StackPanel>
+                        <c:CoinDisplay Copper="{Binding CurrentTotal}" FontSize="22" FontWeight="SemiBold" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:CoinDisplay Copper="{Binding RangeChange}" Signed="True" />
+                            <TextBlock Text="{Binding RangeChangeText}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+
+                <c:Card Padding="8" Height="320">
+                    <c:AccountValueChart />
+                </c:Card>
+
+                <!-- The latest point by where it's held (the chart's line colours), with each one's change. -->
+                <ItemsControl ItemsSource="{Binding Breakdown}" Margin="0,8,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:AccountValueCategoryRow">
+                            <Border Classes="hover-row">
+                                <DockPanel>
+                                    <!-- Fixed width, right-aligned inside, so the changes line up as a column. -->
+                                    <Panel DockPanel.Dock="Right" Width="130" Margin="12,0,0,0">
+                                        <c:CoinDisplay Copper="{Binding Change}" Signed="True"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Panel>
+                                    <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Value}" FontWeight="Medium"
+                                                   VerticalAlignment="Center" />
+                                    <Ellipse Width="10" Height="10" Margin="2,0,10,0" VerticalAlignment="Center"
+                                             Fill="{Binding Color, Converter={StaticResource ArgbBrush}}" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12" IsVisible="{Binding ShowPriceNote}"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Text="Price history is off, so items are valued at their vendor price. Turn on “Price history” in Settings to value them at trading-post prices." />
+                <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="Items are valued at what they'd sell for instantly: the highest buy order minus the 15% trading-post fee, or the vendor price for items that can't be traded (0 if they can't be sold at all). Equipment and currencies other than coin aren't counted. Days before the app started recording are filled in from the synced holdings, at that day's prices where price history has them." />
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

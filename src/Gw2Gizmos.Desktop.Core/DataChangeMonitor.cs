@@ -29,6 +29,9 @@ public enum DataChanges
 
     /// <summary>A minute passed — refresh relative times ("5 min ago") and running durations.</summary>
     Clock = 16,
+
+    /// <summary>The account's value was recorded (a new point, or this hour's updated).</summary>
+    AccountValue = 32,
 }
 
 /// <summary>
@@ -157,6 +160,11 @@ public sealed class DataChangeMonitor
             // A handful of accounts at most; the max is taken here so it doesn't depend on the provider's date support.
             DateTimeOffset lastSync = db.Accounts.AsNoTracking().Select(a => a.LastSyncedUtc).AsEnumerable()
                 .DefaultIfEmpty().Max();
+            // The newest point is re-stamped when a sync in the same hour updates it, so its time changes too.
+            var lastValue = db.AccountValueSnapshots.AsNoTracking()
+                .OrderByDescending(s => s.Id)
+                .Select(s => new { s.Id, s.TakenAtUtc })
+                .FirstOrDefault();
             return new DataStamp(
                 lastSync,
                 db.AccountWalletObservations.Max(o => (long?)o.Id) ?? 0,
@@ -169,7 +177,8 @@ public sealed class DataChangeMonitor
                 db.Items.Count(),
                 db.Recipes.Count(),
                 db.Currencies.Count(),
-                db.PriceSnapshots.Max(p => (long?)p.Id) ?? 0);
+                db.PriceSnapshots.Max(p => (long?)p.Id) ?? 0,
+                (lastValue?.Id ?? 0, lastValue?.TakenAtUtc ?? default));
         }
         catch (Exception)
         {
@@ -190,7 +199,8 @@ public sealed class DataChangeMonitor
         int Items,
         int Recipes,
         int Currencies,
-        long LastPriceSnapshot)
+        long LastPriceSnapshot,
+        (long Id, DateTimeOffset TakenAtUtc) LastValuePoint)
     {
         public DataChanges Compare(DataStamp before)
         {
@@ -215,6 +225,11 @@ public sealed class DataChangeMonitor
                 != (before.Items, before.Recipes, before.Currencies, before.LastPriceSnapshot))
             {
                 changes |= DataChanges.Catalog;
+            }
+
+            if (LastValuePoint != before.LastValuePoint)
+            {
+                changes |= DataChanges.AccountValue;
             }
 
             return changes;

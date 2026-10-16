@@ -279,7 +279,8 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         // Cheap, so checked on every notification (at least once a minute): goes grey soon after the worker dies.
         WorkerOperational = _worker.IsRunning;
 
-        if ((changes & (DataChanges.AccountSync | DataChanges.Holdings | DataChanges.Sessions | DataChanges.Clock)) != 0)
+        if ((changes & (DataChanges.AccountSync | DataChanges.Holdings | DataChanges.Sessions | DataChanges.Clock
+                | DataChanges.AccountValue)) != 0)
         {
             _ = LoadAccountStatsAsync();
         }
@@ -366,16 +367,16 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         }
 
         _loadingAccountStats = true;
-        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions) result;
+        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions, AccountValueSummary? value) result;
         try
         {
             result = await Task.Run(() =>
             {
                 AccountInfo? current = _reader.GetCurrentAccount();
                 return current is null
-                    ? (null, 0, 0L, new DashboardSessionStats(0, TimeSpan.Zero, null, false, null))
+                    ? (null, 0, 0L, new DashboardSessionStats(0, TimeSpan.Zero, null, false, null), null)
                     : (current, _reader.GetCharacterCount(current.Id), _reader.GetCoinBalance(current.Id),
-                        _reader.GetSessionStats(current.Id));
+                        _reader.GetSessionStats(current.Id), _reader.GetAccountValueSummary(current.Id));
             });
         }
         finally
@@ -383,7 +384,8 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
             _loadingAccountStats = false;
         }
 
-        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions) = result;
+        (AccountInfo? account, int characters, long coin, DashboardSessionStats sessions, AccountValueSummary? value) = result;
+        AccountValue = value;
         if (account is not null)
         {
             AccountName = account.Name;
@@ -572,11 +574,29 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
     }
 
     /// <summary>The account's coin balance in copper (formatted as g/s/c in the view).</summary>
+    private AccountValueSummary? _accountValue;
+
     public long CoinBalance
     {
         get => _coinBalance;
         private set => SetProperty(ref _coinBalance, value);
     }
+
+    // --- Account value ---
+    /// <summary>The account's latest value and its change over the last day and week; null before the first point.</summary>
+    public AccountValueSummary? AccountValue
+    {
+        get => _accountValue;
+        private set
+        {
+            if (SetProperty(ref _accountValue, value))
+            {
+                OnPropertyChanged(nameof(HasAccountValue));
+            }
+        }
+    }
+
+    public bool HasAccountValue => _accountValue is not null;
 
     // --- Play sessions ---
     public bool HasSessions

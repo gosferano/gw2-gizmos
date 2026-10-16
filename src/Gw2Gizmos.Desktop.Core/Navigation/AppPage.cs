@@ -9,6 +9,7 @@ public enum AppPage
     Onboarding,
     Dashboard,
     Account,
+    AccountValue,
     Wallet,
     MaterialStorage,
     Bank,

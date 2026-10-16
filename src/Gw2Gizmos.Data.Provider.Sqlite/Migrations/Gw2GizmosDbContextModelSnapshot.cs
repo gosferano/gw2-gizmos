@@ -97,6 +97,48 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountItemObservations");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountValueSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("BankCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CharactersCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CoinCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsBackfilled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("MaterialsCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SharedInventoryCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("TakenAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("TradingPostCopper")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "TakenAtUtc");
+
+                    b.ToTable("AccountValueSnapshots");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountWalletObservation", b =>
                 {
                     b.Property<long>("Id")

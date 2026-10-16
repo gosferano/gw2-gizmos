@@ -56,6 +56,7 @@ public class AccountDataDeleter
             DeletableData.Characters => await DeleteCharactersAsync(accountId, stoppingToken),
             DeletableData.Sessions => await DeleteSessionsAsync(accountId, stoppingToken),
             DeletableData.TradingPost => await DeleteTradingPostAsync(accountId, stoppingToken),
+            DeletableData.ValueHistory => await DeleteValueHistoryAsync(accountId, stoppingToken),
             DeletableData.Session => await DeleteOneSessionAsync(accountId, targetId, stoppingToken),
             DeletableData.SessionSegment => await DeleteOneSegmentAsync(accountId, targetId, stoppingToken),
             DeletableData.AllForAccount => await DeleteAllForAccountAsync(accountId, stoppingToken),
@@ -162,6 +163,10 @@ public class AccountDataDeleter
         return rows;
     }
 
+    // Rebuilt from the holdings logs on the next sync (the daily backfill), as far as those logs reach.
+    private async Task<int> DeleteValueHistoryAsync(string accountId, CancellationToken stoppingToken) =>
+        await _dbContext.AccountValueSnapshots.Where(s => s.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {
         int rows = await DeleteWalletAsync(accountId, stoppingToken);
@@ -171,6 +176,7 @@ public class AccountDataDeleter
         rows += await DeleteCharactersAsync(accountId, stoppingToken);
         rows += await DeleteSessionsAsync(accountId, stoppingToken);
         rows += await DeleteTradingPostAsync(accountId, stoppingToken);
+        rows += await DeleteValueHistoryAsync(accountId, stoppingToken);
         // The account identity row itself; re-created on the next sync.
         rows += await _dbContext.Accounts.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;

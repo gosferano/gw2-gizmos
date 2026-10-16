@@ -20,6 +20,9 @@
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
                 <!-- Per-section sub-pages for the selected account. -->
+                <ui:FASettingsExpander Header="Value" Description="What the account is worth, over time"
+                                       Margin="0,0,0,8" IconSource="{c:FluentIconSource DataTrending24}"
+                                       IsClickEnabled="True" ActionIconSource="ChevronRight" Click="OnOpenValue" />
                 <ui:FASettingsExpander Header="Wallet" Description="Currencies and coin" Margin="0,0,0,8"
                                        IconSource="{c:FluentIconSource Wallet24}" IsClickEnabled="True"
                                        ActionIconSource="ChevronRight" Click="OnOpenWallet" />

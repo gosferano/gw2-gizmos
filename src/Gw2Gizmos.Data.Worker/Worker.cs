@@ -278,8 +278,16 @@ public class Worker : BackgroundService
                 async scope =>
                 {
                     var accountSyncUpdater = scope.ServiceProvider.GetRequiredService<AccountSyncUpdater>();
-                    // Gated so the session tracker's boundary syncs and this loop never write the account tables at once.
-                    await _accountSyncGate.RunExclusivelyAsync(() => accountSyncUpdater.SyncAccount(stoppingToken), stoppingToken);
+                    var accountValueUpdater = scope.ServiceProvider.GetRequiredService<AccountValueUpdater>();
+                    // Gated so the session tracker's boundary syncs and this loop never write the account tables at
+                    // once. The account's value is recorded from what the sync just stored.
+                    await _accountSyncGate.RunExclusivelyAsync(
+                        async () =>
+                        {
+                            await accountSyncUpdater.SyncAccount(stoppingToken);
+                            await accountValueUpdater.RecordAsync(stoppingToken);
+                        },
+                        stoppingToken);
                 },
                 stoppingToken
             );

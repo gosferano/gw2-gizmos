@@ -578,8 +578,39 @@ public sealed class AccountReader
                         db.GameSessions.Any(g => g.Id == seg.GameSessionId && g.AccountId == accountId)),
                 [DeletableData.TradingPost] = db.TradingPostOrders.Count(o => o.AccountId == accountId)
                     + db.TradingPostTransactions.Count(t => t.AccountId == accountId),
+                [DeletableData.ValueHistory] = db.AccountValueSnapshots.Count(s => s.AccountId == accountId),
             },
             new Dictionary<string, int>());
+
+    /// <summary>The account's recorded value over time, oldest first.</summary>
+    public List<AccountValuePoint> GetAccountValueHistory(string accountId) =>
+        SafeRead(
+            db => db.AccountValueSnapshots.AsNoTracking()
+                .Where(s => s.AccountId == accountId)
+                .AsEnumerable()
+                .OrderBy(s => s.TakenAtUtc)
+                .Select(s => new AccountValuePoint(
+                    s.TakenAtUtc, s.CoinCopper, s.MaterialsCopper, s.BankCopper, s.SharedInventoryCopper,
+                    s.CharactersCopper, s.TradingPostCopper, s.IsBackfilled))
+                .ToList(),
+            new List<AccountValuePoint>());
+
+    /// <summary>The account's latest value and its change over the last day and week, or null before the first point.</summary>
+    public AccountValueSummary? GetAccountValueSummary(string accountId)
+    {
+        List<AccountValuePoint> points = GetAccountValueHistory(accountId);
+        if (points.Count == 0)
+        {
+            return null;
+        }
+
+        AccountValuePoint latest = points[^1];
+        // Against the latest point at least that long before; null while the history is shorter than that.
+        long? ChangeOver(TimeSpan span) =>
+            points.LastOrDefault(p => p.Time <= latest.Time - span) is { } before ? latest.Total - before.Total : null;
+
+        return new AccountValueSummary(latest.Total, ChangeOver(TimeSpan.FromDays(1)), ChangeOver(TimeSpan.FromDays(7)));
+    }
 
     /// <summary>The number of stored trading-post price points (global, not per-account).</summary>
     public int GetPriceHistoryCount() =>
@@ -777,6 +808,24 @@ public sealed record GameSessionRow(
 
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
 }
+
+/// <summary>The account's estimated value at one point in time, by where it's held (copper).</summary>
+public sealed record AccountValuePoint(
+    DateTimeOffset Time,
+    long Coin,
+    long Materials,
+    long Bank,
+    long SharedInventory,
+    long Characters,
+    long TradingPost,
+    bool IsBackfilled
+)
+{
+    public long Total => Coin + Materials + Bank + SharedInventory + Characters + TradingPost;
+}
+
+/// <summary>The account's latest value and its change over the last day and week (null when not known yet).</summary>
+public sealed record AccountValueSummary(long Total, long? DayChange, long? WeekChange);
 
 /// <summary>A character as shown on its card: who it is, its profession (and elite specialization), and its crafting.</summary>
 public sealed record CharacterCard(
