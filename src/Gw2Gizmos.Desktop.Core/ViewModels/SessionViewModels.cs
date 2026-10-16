@@ -13,7 +13,7 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Backs the Sessions hub: a card per play session of the selected account, each opening that session's character
 /// timeline. The full list is held and a sorted/date-filtered view is shown (sort by date, profit, or profit/hour,
-/// either direction). Transient, so it reloads on navigation. Empty until the (off-by-default, Windows-only) Play
+/// either direction). Transient, so it reloads on navigation. Empty until the (off-by-default) Play
 /// sessions feature has recorded a session.
 /// </summary>
 public sealed class SessionsViewModel : ViewModelBase
@@ -141,7 +141,7 @@ public sealed class SessionsViewModel : ViewModelBase
 
             OnPropertyChanged(nameof(HasAnySessions));
             Status = _all.Count == 0
-                ? "No play sessions recorded yet. Enable “Play sessions” in Settings (Windows only) and launch Guild Wars 2."
+                ? "No play sessions recorded yet. Enable “Play sessions” in Settings and launch Guild Wars 2."
                 : "";
             ApplyView();
         }

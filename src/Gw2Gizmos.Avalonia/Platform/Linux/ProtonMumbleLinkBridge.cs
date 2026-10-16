@@ -1,0 +1,268 @@
+using System.Diagnostics;
+using System.Runtime.Versioning;
+using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace Gw2Gizmos.Avalonia.Platform.Linux;
+
+/// <summary>
+/// Makes play-session tracking work for Guild Wars 2 under Wine/Proton. The game's MumbleLink shared memory only exists
+/// inside Wine, so whenever the game is running (and Play sessions is on) this starts the bundled MumbleLink bridge in
+/// the game's own Wine session — same wine binary, same environment, so same prefix and wineserver — and the bridge
+/// mirrors the block into <see cref="FilePath"/> for the worker. The bridge exits by itself shortly after the game does;
+/// nothing needs configuring in Steam.
+/// </summary>
+[SupportedOSPlatform("linux")]
+public sealed class ProtonMumbleLinkBridge : BackgroundService
+{
+    /// <summary>The Windows process name Wine gives the game (and its /proc comm).</summary>
+    private const string GameProcessName = "Gw2-64.exe";
+
+    private const string BridgeFileName = "Gw2Gizmos.MumbleLink.Bridge.exe";
+
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+
+    private readonly FeatureSettingsStore _features;
+    private readonly ILogger<ProtonMumbleLinkBridge> _logger;
+    private int? _attachedGamePid;
+
+    public ProtonMumbleLinkBridge(string filePath, FeatureSettingsStore features, ILogger<ProtonMumbleLinkBridge> logger)
+    {
+        FilePath = filePath;
+        _features = features;
+        _logger = logger;
+    }
+
+    /// <summary>Where the bridge mirrors the block (and the worker reads it).</summary>
+    public string FilePath { get; }
+
+    /// <summary>The bundled bridge, published next to the app by the build.</summary>
+    public static string BridgePath => Path.Combine(AppContext.BaseDirectory, "mumblelink-bridge", BridgeFileName);
+
+    /// <summary>Runs the bridge launcher for the app's lifetime, mirroring into <paramref name="filePath"/>.</summary>
+    public static void Register(IServiceCollection services, string filePath)
+    {
+        services.AddHostedService(sp => new ProtonMumbleLinkBridge(
+            filePath,
+            sp.GetRequiredService<FeatureSettingsStore>(),
+            sp.GetRequiredService<ILogger<ProtonMumbleLinkBridge>>()));
+    }
+
+    /// <summary>
+    /// The MumbleLink file for a data folder: in the user's private runtime directory (tmpfs, owner-only) when there is
+    /// one, otherwise under <paramref name="fallbackDirectory"/>. Per data folder, so dev and release builds don't share.
+    /// </summary>
+    public static string DefaultFilePath(string folderName, string fallbackDirectory)
+    {
+        string root = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR") is { Length: > 0 } runtime
+            ? Path.Combine(runtime, folderName)
+            : fallbackDirectory;
+        Directory.CreateDirectory(root, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return Path.Combine(root, "MumbleLink");
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(PollInterval);
+        do
+        {
+            try
+            {
+                Poll();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MumbleLink bridge check failed.");
+            }
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    private void Poll()
+    {
+        if (!_features.IsEnabled(WorkerFeatures.PlaySessions.Key))
+        {
+            return;
+        }
+
+        if (FindGame() is not { } game)
+        {
+            _attachedGamePid = null;
+            return;
+        }
+
+        // One bridge per game run; an app restart mid-game finds the bridge its previous run started.
+        if (_attachedGamePid == game.Pid || IsBridgeRunning())
+        {
+            _attachedGamePid = game.Pid;
+            return;
+        }
+
+        if (!File.Exists(BridgePath))
+        {
+            _logger.LogWarning("MumbleLink bridge not found at {Path}; play sessions won't be tracked.", BridgePath);
+            _attachedGamePid = game.Pid;
+            return;
+        }
+
+        if (FindWine(game) is not { } wine)
+        {
+            _logger.LogWarning(
+                "Couldn't find the wine binary running Guild Wars 2 (pid {Pid}); play sessions won't be tracked.", game.Pid);
+            _attachedGamePid = game.Pid;
+            return;
+        }
+
+        StartBridge(game, wine);
+        _attachedGamePid = game.Pid;
+    }
+
+    private void StartBridge(GameProcess game, string wine)
+    {
+        var startInfo = new ProcessStartInfo(wine)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add(BridgePath);
+        startInfo.ArgumentList.Add("--output");
+        startInfo.ArgumentList.Add("Z:" + FilePath.Replace('/', '\\'));
+
+        // The game's own environment puts the bridge in the same prefix and wine session (WINEPREFIX, sync mode, …).
+        startInfo.Environment.Clear();
+        foreach ((string key, string value) in game.Environment)
+        {
+            startInfo.Environment[key] = value;
+        }
+
+        startInfo.Environment["WINEDEBUG"] = "-all";
+
+        Process? process = Process.Start(startInfo);
+        if (process is null)
+        {
+            _logger.LogWarning("Couldn't start the MumbleLink bridge.");
+            return;
+        }
+
+        process.OutputDataReceived += (_, e) => LogBridgeLine(e.Data);
+        process.ErrorDataReceived += (_, e) => LogBridgeLine(e.Data);
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        _logger.LogInformation(
+            "Started the MumbleLink bridge for Guild Wars 2 (pid {Pid}, prefix {Prefix}).",
+            game.Pid, game.Environment.GetValueOrDefault("WINEPREFIX"));
+    }
+
+    private void LogBridgeLine(string? line)
+    {
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            _logger.LogInformation("MumbleLink bridge: {Line}", line);
+        }
+    }
+
+    /// <summary>The running game: a Wine process named <see cref="GameProcessName"/> with a WINEPREFIX.</summary>
+    private static GameProcess? FindGame()
+    {
+        foreach (string dir in Directory.EnumerateDirectories("/proc"))
+        {
+            if (!int.TryParse(Path.GetFileName(dir), out int pid))
+            {
+                continue;
+            }
+
+            try
+            {
+                string comm = File.ReadAllText(Path.Combine(dir, "comm")).Trim();
+                if (!string.Equals(comm, GameProcessName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                Dictionary<string, string> environment = ReadEnvironment(Path.Combine(dir, "environ"));
+                if (environment.ContainsKey("WINEPREFIX"))
+                {
+                    return new GameProcess(pid, environment, new FileInfo(Path.Combine(dir, "exe")).LinkTarget);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Exited mid-scan, or not ours to read.
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The wine binary of the game's Wine build (a different build couldn't join its wineserver): next to the game
+    /// process's own executable (Proton: files/bin/wine), else in a Proton "files/bin", else WINELOADER.
+    /// </summary>
+    private static string? FindWine(GameProcess game)
+    {
+        var candidates = new List<string>();
+        if (game.Executable is { } exe)
+        {
+            string? dir = Path.GetDirectoryName(exe);
+            if (dir is not null)
+            {
+                candidates.Add(Path.Combine(dir, "wine"));
+                candidates.Add(Path.Combine(dir, "wine64"));
+            }
+
+            int files = exe.IndexOf("/files/", StringComparison.Ordinal);
+            if (files >= 0)
+            {
+                candidates.Add(exe[..files] + "/files/bin/wine");
+            }
+        }
+
+        if (game.Environment.GetValueOrDefault("WINELOADER") is { Length: > 0 } loader)
+        {
+            candidates.Add(loader);
+        }
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private static bool IsBridgeRunning()
+    {
+        foreach (string dir in Directory.EnumerateDirectories("/proc"))
+        {
+            try
+            {
+                if (int.TryParse(Path.GetFileName(dir), out _)
+                    && File.ReadAllText(Path.Combine(dir, "cmdline")).Contains(BridgeFileName, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Exited mid-scan.
+            }
+        }
+
+        return false;
+    }
+
+    private static Dictionary<string, string> ReadEnvironment(string path)
+    {
+        var environment = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string entry in File.ReadAllText(path).Split('\0', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int separator = entry.IndexOf('=');
+            if (separator > 0)
+            {
+                environment[entry[..separator]] = entry[(separator + 1)..];
+            }
+        }
+
+        return environment;
+    }
+
+    private sealed record GameProcess(int Pid, Dictionary<string, string> Environment, string? Executable);
+}

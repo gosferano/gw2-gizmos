@@ -44,6 +44,18 @@
     </ProjectReference>
   </ItemGroup>
 
+  <!-- Ship the MumbleLink bridge (a win-x64 single-file exe that runs inside the game's Wine prefix) next to the app,
+       in mumblelink-bridge/. Re-published only when its sources change. -->
+  <ItemGroup>
+    <_MumbleLinkBridgeInputs Include="..\Gw2Gizmos.MumbleLink.Bridge\**\*.cs;..\Gw2Gizmos.MumbleLink.Bridge\*.csproj"
+                             Exclude="..\Gw2Gizmos.MumbleLink.Bridge\obj\**;..\Gw2Gizmos.MumbleLink.Bridge\bin\**" />
+  </ItemGroup>
+  <Target Name="PublishMumbleLinkBridge" AfterTargets="Build"
+          Inputs="@(_MumbleLinkBridgeInputs)" Outputs="$(OutDir)mumblelink-bridge\Gw2Gizmos.MumbleLink.Bridge.exe">
+    <MSBuild Projects="..\Gw2Gizmos.MumbleLink.Bridge\Gw2Gizmos.MumbleLink.Bridge.csproj" Targets="Restore;Publish"
+             Properties="Configuration=Release;PublishDir=$([System.IO.Path]::GetFullPath('$(OutDir)mumblelink-bridge'))/" />
+  </Target>
+
   <!-- Dev (run-from-bin): merge the worker CLI's build output into the app's output dir so the app can spawn it as
        a sibling executable, sharing the runtime + common dependencies. Same rules as the WPF app's CopyWorkerCli:
        only files the app doesn't already emit are copied (the app wins on shared assemblies), except the worker's
