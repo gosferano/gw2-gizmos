@@ -24,8 +24,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
-using Velopack;
-using Velopack.Sources;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Tray.Controls;
@@ -235,9 +233,10 @@ public partial class App : Application
         StartWorkerProcess();
 
         // A dev build (run from bin) isn't Velopack-installed; suffix its window title + tray tooltip so
-        // it's distinguishable from the installed app when both are running at once.
-        UpdateManager updateManager = CreateUpdateManager();
-        string appTitle = TryIsInstalled(updateManager) ? "Gw2Gizmos" : "Gw2Gizmos (development)";
+        // it's distinguishable from the installed app when both are running at once. (The update check itself
+        // runs as a hosted service, started with the host above.)
+        bool isInstalled = _host.Services.GetRequiredService<AppUpdateService>().IsInstalled;
+        string appTitle = isInstalled ? "Gw2Gizmos" : "Gw2Gizmos (development)";
 
         _window = _host.Services.GetRequiredService<MainWindow>();
         _window.Title = appTitle;
@@ -274,10 +273,6 @@ public partial class App : Application
         Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
         SetupTrayIcon(appTitle);
-
-        // Check at startup and then on an interval, so a release published while the app is running surfaces
-        // in-app (the dashboard reacts to UpdateStatus) without needing a restart. No-op when run from bin.
-        _ = RunPeriodicUpdateChecksAsync(updateManager, _host.Services.GetRequiredService<UpdateStatus>());
     }
 
     private void RegisterGlobalExceptionHandlers()
@@ -360,77 +355,6 @@ public partial class App : Application
         if (e.Category == Microsoft.Win32.UserPreferenceCategory.General)
         {
             Dispatcher.Invoke(ApplyWindowsTheme);
-        }
-    }
-
-    private static UpdateManager CreateUpdateManager() =>
-        // Read the feed as a plain release *asset* via GitHub's stable /releases/latest/download URL (a CDN
-        // redirect), NOT GithubSource — whose REST release enumeration is throttled to 60 req/hr per IP and
-        // 403s ("rate limit exceeded") behind shared/CGNAT addresses, which is what broke the update check.
-        // CI always packs full-only, so the feed at "latest" only references that release's own assets.
-        new(new SimpleWebSource("https://github.com/gosferano/gw2-gizmos/releases/latest/download"));
-
-    /// <summary>True for a Velopack-installed build, false for a dev/bin run; never throws.</summary>
-    private static bool TryIsInstalled(UpdateManager updateManager)
-    {
-        try
-        {
-            return updateManager.IsInstalled;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>How often to re-check for updates while the app is running.</summary>
-    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromMinutes(30);
-
-    /// <summary>Checks for updates immediately, then every <see cref="UpdateCheckInterval"/>, so a release
-    /// published mid-session is detected without a restart. Stops once one is staged — a pending update
-    /// doesn't change until the next launch applies it.</summary>
-    private static async Task RunPeriodicUpdateChecksAsync(UpdateManager updateManager, UpdateStatus updateStatus)
-    {
-        using var timer = new PeriodicTimer(UpdateCheckInterval);
-        do
-        {
-            await CheckForUpdatesAsync(updateManager, updateStatus);
-            if (updateStatus.UpdateReady)
-            {
-                return;
-            }
-        } while (await timer.WaitForNextTickAsync());
-    }
-
-    private static async Task CheckForUpdatesAsync(UpdateManager updateManager, UpdateStatus updateStatus)
-    {
-        try
-        {
-            if (!updateManager.IsInstalled)
-            {
-                Log.Information("Update check skipped: not a Velopack install (dev/bin run).");
-                return;
-            }
-
-            Log.Information("Checking for updates (current version {Version})…", updateManager.CurrentVersion);
-            UpdateInfo? update = await updateManager.CheckForUpdatesAsync();
-            if (update is null)
-            {
-                Log.Information("Update check: no newer release available.");
-                return;
-            }
-
-            Log.Information("Update {Version} found; downloading…", update.TargetFullRelease.Version);
-            // Download now; Velopack applies it on the next restart so the session isn't interrupted.
-            await updateManager.DownloadUpdatesAsync(update);
-            // Surface it in the UI (the dashboard's App card) — the staged update applies on next restart,
-            // or immediately via the card's "Restart now" button.
-            updateStatus.SetPending(updateManager, update);
-            Log.Information("Update {Version} downloaded and staged.", update.TargetFullRelease.Version);
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Update check failed.");
         }
     }
 

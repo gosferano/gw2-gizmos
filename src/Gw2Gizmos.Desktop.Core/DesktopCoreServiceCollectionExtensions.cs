@@ -10,8 +10,8 @@ namespace Gw2Gizmos.Desktop.Core;
 public static class DesktopCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers everything the desktop shares across UI heads: the per-user stores, the worker-config pipe host and
-    /// worker launcher, event reminders, the log viewer's feed, the account/session readers and selection services,
+    /// Registers everything the desktop shares across UI heads: the per-user stores, the update check, the
+    /// worker-config pipe host and worker launcher, event reminders, the log viewer's feed, the account/session readers and selection services,
     /// every view-model, and the in-process trading-post delivery poller.
     /// <para>
     /// The calling head must also register its implementations of the seams: <c>IUiDispatcher</c>,
@@ -33,8 +33,11 @@ public static class DesktopCoreServiceCollectionExtensions
         // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
         // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
         services.AddSingleton(paths);
-        // Shared app-update state — set by the startup update check, read by the dashboard's App card.
+        // Self-update: the periodic Velopack check (also asked whether this is an installed build) records a staged
+        // update in UpdateStatus, which the dashboard's App card reads.
         services.AddSingleton<UpdateStatus>();
+        services.AddSingleton<AppUpdateService>();
+        services.AddHostedService(sp => sp.GetRequiredService<AppUpdateService>());
         // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
         // that data immediately. Registered first — the key/feature stores bump it.
         services.AddSingleton<SyncTriggerStore>();
