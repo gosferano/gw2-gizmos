@@ -23,7 +23,7 @@
                 <DockPanel Margin="0,4,0,10" LastChildFill="False" IsVisible="{Binding HasAnySessions}">
                     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                         <TextBlock Text="From" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0" />
-                        <!-- ISO dates (yyyy-MM-dd), as in the WPF app. -->
+                        <!-- ISO dates (yyyy-MM-dd). -->
                         <CalendarDatePicker SelectedDate="{Binding FromDate}" Width="140" Margin="0,0,10,0"
                                             Height="{StaticResource FormControlHeight}"
                                             SelectedDateFormat="Custom" CustomDateFormatString="yyyy-MM-dd" />

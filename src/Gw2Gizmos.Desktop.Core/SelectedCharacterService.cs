@@ -3,7 +3,7 @@ using Gw2Gizmos.Desktop.Core.Navigation;
 namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
-/// Carries the drilled-into character across the parameterless WPF-UI navigation (the Characters hub → a
+/// Carries the drilled-into character across the parameterless page navigation (the Characters hub → a
 /// character page → its inventory), the way <see cref="SelectedAccountService"/> carries the account. It's
 /// transient navigation context for the current account, so it isn't persisted.
 /// </summary>

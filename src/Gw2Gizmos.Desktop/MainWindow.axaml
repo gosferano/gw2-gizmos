@@ -7,7 +7,7 @@
         Title="Gw2Gizmos" Width="940" Height="620"
         Icon="/Assets/gw2gizmos.png"
         WindowStartupLocation="CenterScreen">
-    <!-- The shell: a left navigation rail mirroring the WPF app's; each item's Tag is the AppPage it opens, and the
+    <!-- The shell: a left navigation rail; each item's Tag is the AppPage it opens, and the
          page view is hosted as the NavigationView's content. -->
     <ui:FANavigationView x:Name="RootNavigation" PaneDisplayMode="Left" OpenPaneLength="190"
                          IsBackButtonVisible="False" IsPaneToggleButtonVisible="False" IsSettingsVisible="False">

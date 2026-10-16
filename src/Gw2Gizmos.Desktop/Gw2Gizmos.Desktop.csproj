@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The cross-platform desktop app (Linux and Windows): an Avalonia + FluentAvalonia head over the shared
-       Gw2Gizmos.Desktop.Core. Replaces the deprecated WPF app (Gw2Gizmos.Desktop.Legacy). -->
+       Gw2Gizmos.Desktop.Core. -->
 
   <!-- Which platform this build is for: the runtime identifier when one is given (`-r win-x64` / `-r linux-x64`, so
        either can be cross-built), otherwise the OS building it. A Windows build targets the Windows TFM (its platform
@@ -18,7 +18,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <!-- User-facing brand name (Gw2Gizmos.exe / Gw2Gizmos); project stays Gw2Gizmos.Desktop. The same main exe and
-         Velopack pack id as the WPF app it replaces, so existing Windows installs update straight onto it. -->
+         Velopack pack id as the original WPF app (up to 0.6.0), so its installs updated straight onto this one. -->
     <AssemblyName>Gw2Gizmos</AssemblyName>
     <ApplicationIcon>Assets\gw2gizmos.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -92,8 +92,7 @@
   </Target>
 
   <!-- Dev (run-from-bin): merge the worker CLI's build output into the app's output dir so the app can spawn it as
-       a sibling executable, sharing the runtime + common dependencies. Same rules as the WPF app's CopyWorkerCli:
-       only files the app doesn't already emit are copied (the app wins on shared assemblies), except the worker's
+       a sibling executable, sharing the runtime + common dependencies. Only files the app doesn't already emit are copied (the app wins on shared assemblies), except the worker's
        own Gw2Gizmos.* assemblies and loader metadata (*.json), which are always refreshed so it never runs stale
        code; and never the worker's standalone-only appsettings*.json, whose relative connection string would
        hijack the database path both processes get from launch args. -->

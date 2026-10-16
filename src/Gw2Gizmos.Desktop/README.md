@@ -3,7 +3,8 @@
 The cross-platform companion app: an [Avalonia](https://avaloniaui.net/) +
 [FluentAvalonia](https://github.com/amwx/FluentAvalonia) tray application for **Windows and Linux** that presents
 Guild Wars 2 data ingested by the background worker. Builds `Gw2Gizmos.exe` (Windows) / `Gw2Gizmos` (Linux). It
-replaces the WPF app ([`Gw2Gizmos.Desktop.Legacy`](../Gw2Gizmos.Desktop.Legacy)), which is deprecated.
+replaced the original Windows-only WPF app (up to 0.6.0), keeping its install identity so those installs updated onto
+it.
 
 > For end-user install and feature overview, see the [root README](../../README.md). This document is for
 > developers working on the app.
@@ -26,7 +27,7 @@ Single instance per user (a mutex); closing the window hides to the tray.
 ## Layout
 
 - The view-models, stores and services live in the UI-agnostic
-  [`Gw2Gizmos.Desktop.Core`](../Gw2Gizmos.Desktop.Core), shared with the WPF app. This project implements its UI
+  [`Gw2Gizmos.Desktop.Core`](../Gw2Gizmos.Desktop.Core). This project implements its UI
   seams (`Ui/`: dispatcher and timers, collection views, dialogs, clipboard; `Navigation/`) and holds the shell
   (`MainWindow`, tray), the pages (`Views/`), and shared controls (`Controls/`, incl. the bundled Fluent System
   Icons font and the ScottPlot price chart).
@@ -51,7 +52,7 @@ the game does. Nothing needs configuring in Steam.
 
 ## Per-user state
 
-`%APPDATA%\Gw2Gizmos` on Windows (shared with the WPF app), `$XDG_DATA_HOME/Gw2Gizmos` (usually
+`%APPDATA%\Gw2Gizmos` on Windows (the same folder the WPF app used), `$XDG_DATA_HOME/Gw2Gizmos` (usually
 `~/.local/share`, owner-only) on Linux: the database, settings JSON, the encrypted key file, logs and the icon cache.
 **Debug builds** use `Gw2Gizmos.Dev` (and their own single-instance mutex), so a dev build runs alongside an
 installed release.

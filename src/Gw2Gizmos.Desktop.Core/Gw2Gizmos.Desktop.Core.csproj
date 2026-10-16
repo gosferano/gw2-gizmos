@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- UI-framework-agnostic heart of the desktop app: view-models, the per-user stores, the worker-config pipe,
-       logging, and the seams (Ui/, Navigation/, Platform/) each UI head implements. Plain net10.0 — no WPF, no
-       Windows APIs — so the WPF app today and the cross-platform Avalonia app share it. -->
+       logging, and the seams (Ui/, Navigation/, Platform/) the UI head implements. Plain net10.0 — no UI framework,
+       no OS APIs — so it runs unchanged on every platform the app does. -->
 
   <ItemGroup>
     <InternalsVisibleTo Include="Gw2Gizmos.Desktop.Core.Tests" />

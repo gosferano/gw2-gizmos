@@ -36,7 +36,7 @@ internal static class AppHostFactory
         var uiDispatcher = new AvaloniaUiDispatcher();
         var logStore = new LogStore(uiDispatcher);
 
-        // Same Serilog setup as the WPF app — notably Microsoft -> Warning.
+        // Framework noise kept down: Microsoft/System -> Warning, except the host lifetime messages.
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -60,7 +60,7 @@ internal static class AppHostFactory
         var database = DesktopDatabaseSettings.Resolve(
             builder.Configuration, Path.Combine(dataDirectory, "gw2gizmos.sqlite"));
 
-        // Everything shared with the WPF app — stores, the worker-config pipe + launcher, reminders, update checks,
+        // The shared desktop services — stores, the worker-config pipe + launcher, reminders, update checks,
         // the log feed, the view-models, and the in-process delivery poller — plus this platform's services.
 #if WINDOWS
         // GW2 runs natively, so the worker reads its MumbleLink shared memory directly.
