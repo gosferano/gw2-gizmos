@@ -41,6 +41,9 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
     private readonly ILogger<ProtonMumbleLinkBridge> _logger;
     private int? _attachedGamePid;
 
+    /// <summary>Whether a bridge of ours should be running for <see cref="_attachedGamePid"/> (false after giving up).</summary>
+    private bool _expectBridge;
+
     public ProtonMumbleLinkBridge(string filePath, FeatureSettingsStore features, ILogger<ProtonMumbleLinkBridge> logger)
     {
         FilePath = filePath;
@@ -83,10 +86,32 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             return;
         }
 
-        // One bridge per game run; an app restart mid-game finds the bridge its previous run started.
-        if (_attachedGamePid == game.Pid || IsBridgeRunning())
+        // Attached already — as long as our bridge is still there. One that crashed or was killed while the game runs
+        // is replaced, instead of leaving the rest of the session untracked.
+        if (_attachedGamePid == game.Pid)
         {
+            if (_expectBridge && !IsBridgeRunningFor(BridgeOutputArgument))
+            {
+                _logger.LogWarning(
+                    "This app's MumbleLink bridge for Guild Wars 2 (pid {Pid}) is no longer running; starting a new one.",
+                    game.Pid);
+                _attachedGamePid = null;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        // One bridge per game run and build; an app restart mid-game finds the bridge its previous run started. A
+        // bridge another build started (dev beside release) mirrors into that build's file, not ours, so it doesn't
+        // count — each build runs its own, all sharing the game's one MumbleLink mapping.
+        if (IsBridgeRunningFor(BridgeOutputArgument))
+        {
+            _logger.LogInformation(
+                "Guild Wars 2 (pid {Pid}) already has this app's MumbleLink bridge running; using it.", game.Pid);
             _attachedGamePid = game.Pid;
+            _expectBridge = true;
             return;
         }
 
@@ -94,6 +119,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         {
             _logger.LogWarning("MumbleLink bridge not found at {Path}; play sessions won't be tracked.", BridgePath);
             _attachedGamePid = game.Pid;
+            _expectBridge = false;
             return;
         }
 
@@ -102,14 +128,16 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
             _logger.LogWarning(
                 "Couldn't find the wine binary running Guild Wars 2 (pid {Pid}); play sessions won't be tracked.", game.Pid);
             _attachedGamePid = game.Pid;
+            _expectBridge = false;
             return;
         }
 
-        StartBridge(game, wine);
+        _expectBridge = StartBridge(game, wine);
         _attachedGamePid = game.Pid;
     }
 
-    private void StartBridge(GameProcess game, string wine)
+    /// <summary>Starts the bridge in the game's Wine session; false when it couldn't be started.</summary>
+    private bool StartBridge(GameProcess game, string wine)
     {
         var startInfo = new ProcessStartInfo(wine)
         {
@@ -119,7 +147,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         };
         startInfo.ArgumentList.Add(BridgePath);
         startInfo.ArgumentList.Add("--output");
-        startInfo.ArgumentList.Add("Z:" + FilePath.Replace('/', '\\'));
+        startInfo.ArgumentList.Add(BridgeOutputArgument);
 
         // The game's Wine/Proton settings put the bridge in the same prefix and wine session (WINEPREFIX, sync mode,
         // DLL paths, …). The rest of its environment points into Steam's container, so ours is used for that.
@@ -138,7 +166,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         if (process is null)
         {
             _logger.LogWarning("Couldn't start the MumbleLink bridge.");
-            return;
+            return false;
         }
 
         process.OutputDataReceived += (_, e) => LogBridgeLine(e.Data);
@@ -148,6 +176,7 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         _logger.LogInformation(
             "Started the MumbleLink bridge for Guild Wars 2 (pid {Pid}, prefix {Prefix}).",
             game.Pid, game.Environment.GetValueOrDefault("WINEPREFIX"));
+        return true;
     }
 
     private void LogBridgeLine(string? line)
@@ -222,14 +251,27 @@ internal sealed class ProtonMumbleLinkBridge : BackgroundService
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private static bool IsBridgeRunning()
+    /// <summary>The bridge's <c>--output</c>: <see cref="FilePath"/> as a Windows path through Wine's Z: drive.</summary>
+    private string BridgeOutputArgument => "Z:" + FilePath.Replace('/', '\\');
+
+    /// <summary>
+    /// Whether a bridge writing to <paramref name="output"/> is running. Wine keeps a Windows program's arguments in
+    /// its <c>/proc/&lt;pid&gt;/cmdline</c>, so the bridge is matched by its exe name and its <c>--output</c>.
+    /// </summary>
+    private static bool IsBridgeRunningFor(string output)
     {
         foreach (string dir in Directory.EnumerateDirectories("/proc"))
         {
             try
             {
-                if (int.TryParse(Path.GetFileName(dir), out _)
-                    && File.ReadAllText(Path.Combine(dir, "cmdline")).Contains(BridgeFileName, StringComparison.Ordinal))
+                if (!int.TryParse(Path.GetFileName(dir), out _))
+                {
+                    continue;
+                }
+
+                string cmdline = File.ReadAllText(Path.Combine(dir, "cmdline"));
+                if (cmdline.Contains(BridgeFileName, StringComparison.Ordinal)
+                    && cmdline.Contains(output, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
