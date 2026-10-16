@@ -2,6 +2,7 @@ using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
+using Gw2Gizmos.MumbleLink.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -78,6 +79,13 @@ public static class DesktopCoreServiceCollectionExtensions
         ));
         // Starts the worker and restarts it if it dies; each UI head calls Start at startup and Stop at exit.
         services.AddSingleton<WorkerSupervisor>();
+        // What the game is doing right now, read straight from MumbleLink (the bridge's file on Linux, the game's
+        // shared memory on Windows) for the Dashboard's live session card; plus map names for it.
+        services.AddSingleton(_ => new LiveGameMonitor(
+            mumbleLinkFilePath is not null ? MumbleLinkReader.CreateForFile(mumbleLinkFilePath)
+            : OperatingSystem.IsWindows() ? MumbleLinkReader.Create()
+            : null));
+        services.AddSingleton<MapNames>();
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
 
