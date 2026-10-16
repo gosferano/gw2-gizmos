@@ -3,13 +3,15 @@ namespace Gw2Gizmos.Data.Static.Events;
 /// <summary>
 /// Hardcoded map-meta schedule (UTC), computed from the GW2 wiki event-timer data. Each entry points at the
 /// map's notable boss/peak phase (Octovine, Chak Gerent, Soo-Won, …), carries its waypoint chat link, and
-/// mostly runs on a clean 2-hour cycle (a couple are hourly). Times were derived deterministically from the
-/// wiki's phase data and cross-checked against the world-boss anchor.
+/// mostly runs on a clean 2-hour cycle (a couple are hourly, one every 3 hours). Times were derived deterministically
+/// from the wiki's phase data (Widget:Event timer/data.json, last refreshed against v5.4, 2026-09) and cross-checked
+/// against the world-boss anchor.
 /// </summary>
 public static class MetaEvents
 {
     private static readonly TimeSpan Hour = TimeSpan.FromHours(1);
     private static readonly TimeSpan TwoHours = TimeSpan.FromHours(2);
+    private static readonly TimeSpan ThreeHours = TimeSpan.FromHours(3);
     private static readonly TimeSpan FourHours = TimeSpan.FromHours(4);
     private static readonly TimeSpan SixHours = TimeSpan.FromHours(6);
 
@@ -64,7 +66,8 @@ public static class MetaEvents
         // Visions of Eternity
         Meta("hammerhart-rumble", "Hammerhart Rumble", "Shipwreck Strand", "[&BJEPAAA=]", Schedule.Every(TwoHours, T("00:40")), 20, Expansion.VisionsOfEternity),
         Meta("starlit-weald", "Secrets of the Weald", "Starlit Weald", "[&BJ4PAAA=]", Schedule.Every(TwoHours, T("01:40")), 35, Expansion.VisionsOfEternity),
-        Meta("shackles-of-the-ancients", "Shackles of the Ancients", "Eternity's Garden", "[&BPwPAAA=]", Schedule.Every(TwoHours, T("01:10")), 25, Expansion.VisionsOfEternity),
+        Meta("shackles-of-the-ancients", "Shackles of the Ancients", "Eternity's Garden", "[&BPwPAAA=]", Schedule.Every(TwoHours, T("01:15")), 25, Expansion.VisionsOfEternity),
+        Meta("depths-of-cruelty", "Depths of Cruelty", "Leyspring Hollows", "[&BDYQAAA=]", Schedule.Every(ThreeHours, T("02:00")), 30, Expansion.VisionsOfEternity),
     };
 
     private static TimeSpan T(string time) => TimeSpan.Parse(time);
