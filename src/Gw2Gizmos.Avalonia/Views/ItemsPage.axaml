@@ -1,0 +1,230 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:conv="using:Gw2Gizmos.Avalonia.Converters"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             xmlns:model="using:Gw2Gizmos.RecipeFinder.Model"
+             x:Class="Gw2Gizmos.Avalonia.Views.ItemsPage"
+             x:DataType="core:ItemsViewModel">
+    <UserControl.Resources>
+        <conv:BoolToFontWeightConverter x:Key="Bold" />
+        <conv:VendorOfferCostConverter x:Key="VendorOfferCost" />
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <!-- Only the top couple of levels expand by default; deeper nodes (a legendary's promotion chains run to tens of
+             thousands of nodes) render lazily on expand, so opening a craft tree doesn't render every node at once. -->
+        <Style Selector="TreeViewItem" x:DataType="model:RecipeNode">
+            <Setter Property="IsExpanded" Value="{Binding AutoExpand, Mode=OneTime}" />
+        </Style>
+        <!-- Compact tab headers (FluentAvalonia's default reads as a page heading). -->
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinHeight" Value="36" />
+        </Style>
+        <!-- The craft-vs-buy figures read secondary. -->
+        <Style Selector="StackPanel.economics TextBlock, StackPanel.economics c|CoinDisplay">
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Title="Items" Scrollable="False">
+        <Grid RowDefinitions="Auto,3*,Auto,2*">
+            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                <!-- Sync notice spans the full width, above the search row. -->
+                <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Opacity="0.7" ToolTip.Tip="{Binding PricesUpdatedTooltip}">
+                    <Run Text="Every tradeable or craftable item; market prices and craft cost where applicable." />
+                    <Run Text="{Binding PricesStatus}" />
+                </TextBlock>
+                <!-- Full-width search box with a refresh button to its right. -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0" PlaceholderText="search items" Text="{Binding FilterText}"
+                             Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" />
+                    <Button Grid.Column="1" Margin="8,0,0,0" Height="{StaticResource FormControlHeight}"
+                            Command="{Binding RefreshCommand}" ToolTip.Tip="Reload prices for the current list">
+                        <c:FluentIcon Symbol="ArrowSync24" FontSize="16" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <c:Card Grid.Row="1" Padding="0" VerticalContentAlignment="Stretch">
+                <DataGrid ItemsSource="{Binding View}" SelectedItem="{Binding SelectedItem}" AutoGenerateColumns="False"
+                          IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True" SelectionMode="Single"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent"
+                          FontSize="13" RowHeight="30"
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Item" Width="230" SortMemberPath="Name">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                                        <c:ItemImage ItemId="{Binding ItemId}" Width="20" Height="20"
+                                                     VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Buy" Width="105" SortMemberPath="Buy">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <c:CoinDisplay Copper="{Binding Buy}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Demand" Width="100" x:DataType="core:ItemRow"
+                                            Binding="{Binding Demand, StringFormat='{}{0:N0}', TargetNullValue=''}" />
+                        <DataGridTemplateColumn Header="Sell" Width="105" SortMemberPath="Sell">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <c:CoinDisplay Copper="{Binding Sell}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Supply" Width="95" x:DataType="core:ItemRow"
+                                            Binding="{Binding Supply, StringFormat='{}{0:N0}', TargetNullValue=''}" />
+                        <DataGridTemplateColumn Header="Craft cost" Width="125" SortMemberPath="CraftingCost">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <c:CoinDisplay Copper="{Binding CraftingCost}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <!-- Profit/margin selling instantly into buy orders, and listing at the sell price; both net the
+                             15% trading-post fee. -->
+                        <DataGridTemplateColumn Header="Buy profit" Width="125" SortMemberPath="BuyProfit">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <c:CoinDisplay Copper="{Binding BuyProfit}" Signed="True" VerticalAlignment="Center"
+                                                   Margin="8,0,0,0" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Buy margin" Width="120" x:DataType="core:ItemRow"
+                                            Binding="{Binding BuyMargin, StringFormat='{}{0:F0}%', TargetNullValue=''}" />
+                        <DataGridTemplateColumn Header="Sell profit" Width="125" SortMemberPath="SellProfit">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="core:ItemRow">
+                                    <c:CoinDisplay Copper="{Binding SellProfit}" Signed="True" VerticalAlignment="Center"
+                                                   Margin="8,0,0,0" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Sell margin" Width="120" x:DataType="core:ItemRow"
+                                            Binding="{Binding SellMargin, StringFormat='{}{0:F0}%', TargetNullValue=''}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </c:Card>
+
+            <GridSplitter Grid.Row="2" Height="8" ResizeDirection="Rows" Background="Transparent" />
+
+            <c:Card Grid.Row="3" Padding="12,4,12,12" VerticalContentAlignment="Stretch">
+                <TabControl SelectedIndex="0">
+                    <TabItem Header="History">
+                        <Grid Name="HistoryHost" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding HistoryPlaceholder}" Opacity="0.5"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding !History.HasData}" />
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Craft tree">
+                        <Grid>
+                            <!-- Before the first price poll every cost reads 0, so show a note instead of a misleading
+                                 tree of zeros until prices have synced. -->
+                            <TextBlock Text="Prices are still syncing — craft costs will appear shortly." Opacity="0.5"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding PricesSyncing}" />
+                            <!-- Empty state: nothing selected, or the selected item has no recipe. -->
+                            <TextBlock Text="{Binding CraftTreePlaceholder}" Opacity="0.5"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowCraftTreePlaceholder}" />
+                            <TreeView ItemsSource="{Binding SelectedTree}" Background="Transparent" Margin="0,8,0,0"
+                                      IsVisible="{Binding !PricesSyncing}">
+                                <TreeView.ItemTemplate>
+                                    <TreeDataTemplate x:DataType="model:RecipeNode" ItemsSource="{Binding Ingredients}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <c:ItemImage ItemId="{Binding ItemId}" Width="18" Height="18"
+                                                         VerticalAlignment="Center" Margin="0,0,5,0" />
+                                            <TextBlock FontWeight="Medium" VerticalAlignment="Center">
+                                                <Run Text="{Binding Count}" /><Run Text="x " /><Run Text="{Binding ItemName}" />
+                                            </TextBlock>
+                                            <!-- Craft-vs-buy economics: meaningful only with price history on; hidden (so
+                                                 the tree reads as a plain ingredient breakdown) when it's off. -->
+                                            <StackPanel Orientation="Horizontal" Classes="economics" VerticalAlignment="Center"
+                                                        IsVisible="{Binding $parent[UserControl].((core:ItemsViewModel)DataContext).PricesEnabled}">
+                                                <TextBlock Text="  ·  " />
+                                                <TextBlock Text="craft " FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
+                                                <!-- Craft cost as coins, or an em-dash when there's no recipe or a direct
+                                                     ingredient is an unobtainable dead-end (a 0 would read as "free"). -->
+                                                <c:CoinDisplay Copper="{Binding CraftingCost}"
+                                                               FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                               IsVisible="{Binding ShowCraftCost}" />
+                                                <TextBlock Text="—" FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                           IsVisible="{Binding !ShowCraftCost}" />
+                                                <TextBlock Text="  ·  " />
+                                                <TextBlock Text="buy " FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
+                                                <!-- Coin price (trading post / coin vendor). -->
+                                                <c:CoinDisplay Copper="{Binding BuyPrice}"
+                                                               FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
+                                                               IsVisible="{Binding HasCoinBuyPrice}" />
+                                                <!-- Vendor price: the cheapest offer's full cost (amount + currency icon per
+                                                     component), in place of a coin "0" when a vendor sells it for a
+                                                     currency. Hover lists every offer. -->
+                                                <ItemsControl ItemsSource="{Binding PrimaryVendorPurchase.Cost}"
+                                                              VerticalAlignment="Center" ToolTip.ShowDelay="200"
+                                                              IsVisible="{Binding ShowVendorPrice}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="model:VendorCost">
+                                                            <StackPanel Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                                <!-- Coin renders as gold/silver/copper; any other currency as amount + icon. -->
+                                                                <c:CoinDisplay Copper="{Binding Amount}" Opacity="0.6"
+                                                                               VerticalAlignment="Center" IsVisible="{Binding IsCoin}" />
+                                                                <TextBlock Text="{Binding Amount}" Opacity="0.6"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding !IsCoin}" />
+                                                                <c:ItemImage ItemId="{Binding ItemId, TargetNullValue=0}" Width="16" Height="16"
+                                                                             Margin="2,0,0,0" VerticalAlignment="Center"
+                                                                             IsVisible="{Binding HasItemIcon}" />
+                                                                <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="16" Height="16"
+                                                                                 Margin="2,0,0,0" VerticalAlignment="Center"
+                                                                                 IsVisible="{Binding HasCurrencyIcon}" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                    <ToolTip.Tip>
+                                                        <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto"
+                                                                      HorizontalScrollBarVisibility="Disabled">
+                                                            <StackPanel MaxWidth="320">
+                                                                <TextBlock Text="Sold by a vendor for" FontWeight="SemiBold"
+                                                                           Opacity="0.7" Margin="0,0,0,4" />
+                                                                <ItemsControl ItemsSource="{Binding VendorPurchases}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate x:DataType="model:VendorOffer">
+                                                                            <!-- One offer per line; wraps so long multi-currency costs fit. -->
+                                                                            <TextBlock Text="{Binding Converter={StaticResource VendorOfferCost}}"
+                                                                                       TextWrapping="Wrap" Margin="0,1" />
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </ScrollViewer>
+                                                    </ToolTip.Tip>
+                                                </ItemsControl>
+                                                <!-- Unpurchasable: no trade offer, no vendor (account-bound). -->
+                                                <TextBlock Text="—" FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}"
+                                                           IsVisible="{Binding ShowBuyDash}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </TreeDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </c:Card>
+        </Grid>
+    </c:PageShell>
+</UserControl>
