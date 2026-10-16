@@ -3,7 +3,7 @@
 The cross-platform companion app: an [Avalonia](https://avaloniaui.net/) +
 [FluentAvalonia](https://github.com/amwx/FluentAvalonia) tray application for **Windows and Linux** that presents
 Guild Wars 2 data ingested by the background worker. Builds `Gw2Gizmos.exe` (Windows) / `Gw2Gizmos` (Linux). It
-replaces the WPF app ([`Gw2Gizmos.Desktop`](../Gw2Gizmos.Desktop)), which is deprecated.
+replaces the WPF app ([`Gw2Gizmos.Desktop.Legacy`](../Gw2Gizmos.Desktop.Legacy)), which is deprecated.
 
 > For end-user install and feature overview, see the [root README](../../README.md). This document is for
 > developers working on the app.

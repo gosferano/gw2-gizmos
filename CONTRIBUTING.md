@@ -7,7 +7,7 @@ layout, and how releases work. For what the project *is*, see the [README](READM
 
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download).
 - The **desktop app** ([`Gw2Gizmos.Avalonia`](src/Gw2Gizmos.Avalonia/README.md)) builds and runs on Windows and
-  Linux. The deprecated WPF app (`Gw2Gizmos.Desktop`) needs Windows to run (it builds elsewhere with
+  Linux. The deprecated WPF app (`Gw2Gizmos.Desktop.Legacy`) needs Windows to run (it builds elsewhere with
   `-p:EnableWindowsTargeting=true`), as does the MumbleLink reader's shared-memory path.
 
 ## Building & running
@@ -36,7 +36,7 @@ src/
   Gw2Gizmos.MumbleLink.Client/   # internal: MumbleLink shared-memory reader → README
   Gw2Gizmos.MumbleLink.Bridge/   # win-x64 exe mirroring MumbleLink out of GW2's Wine/Proton prefix (Linux)
   Gw2Gizmos.Avalonia/          # ── desktop app, Windows + Linux (builds Gw2Gizmos[.exe]) → README
-  Gw2Gizmos.Desktop/           # deprecated WPF desktop app (Windows)       → README
+  Gw2Gizmos.Desktop.Legacy/    # deprecated WPF desktop app (Windows)       → README
   Gw2Gizmos.Desktop.Core/      # internal: UI-agnostic view-models + services for the desktop app
   Gw2Gizmos.Desktop.Platform.{Windows,Linux}/  # internal: per-OS toasts, autostart, key storage, …
   Gw2Gizmos.Data.Worker/       # internal: data-ingestion engine (library)  → README
