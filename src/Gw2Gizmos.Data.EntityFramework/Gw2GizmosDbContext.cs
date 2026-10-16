@@ -4,6 +4,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
+using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -86,6 +87,10 @@ public class Gw2GizmosDbContext : DbContext
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
 
+    // Professions and their specializations (master data): names and icons for the character cards.
+    public DbSet<Profession> Professions { get; set; }
+    public DbSet<Specialization> Specializations { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -96,6 +101,9 @@ public class Gw2GizmosDbContext : DbContext
             map.OwnsOne(m => m.MapRect, MapRectAsJson);
             map.OwnsOne(m => m.ContinentRect, MapRectAsJson);
         });
+
+        // A character's few crafting disciplines are one JSON column rather than a table of their own.
+        modelBuilder.Entity<Character>().OwnsMany(c => c.Crafting, crafting => crafting.ToJson());
     }
 
     private static void MapRectAsJson<TOwner>(OwnedNavigationBuilder<TOwner, MapRect> rect)

@@ -2,13 +2,111 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="using:FluentAvalonia.UI.Controls"
                     xmlns:c="using:Gw2Gizmos.Desktop.Controls"
-                    xmlns:core="using:Gw2Gizmos.Desktop.Core">
+                    xmlns:core="using:Gw2Gizmos.Desktop.Core"
+                    xmlns:conv="using:Gw2Gizmos.Desktop.Converters">
 
     <!-- Shared height for form controls (inputs + buttons) so they line up on a row. -->
     <x:Double x:Key="FormControlHeight">38</x:Double>
 
     <!-- Monospace for API keys: the first installed of these (Windows, then common Linux/macOS fonts). -->
     <FontFamily x:Key="MonospaceFontFamily">Cascadia Mono, Consolas, JetBrains Mono, DejaVu Sans Mono, Liberation Mono, Menlo, monospace</FontFamily>
+
+    <conv:ProfessionBrushConverter x:Key="ProfessionBrush" />
+
+    <!-- A character row on the Characters page: a stripe in the profession's colour and the profession (or elite
+         specialization) icon on the left, who the character is, how much it's been played, and its crafting
+         disciplines (inactive ones dimmed). -->
+    <DataTemplate x:Key="CharacterRowTemplate" x:DataType="core:CharacterCard">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+            <Border Grid.Column="0" Width="4" CornerRadius="2" Margin="0,0,12,0"
+                    Background="{Binding Profession, Converter={StaticResource ProfessionBrush}}" />
+            <c:IconImage Grid.Column="1" IconUrl="{Binding ProfessionIconUrl}" Width="36" Height="36"
+                         VerticalAlignment="Center" Margin="0,0,12,0" />
+            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Summary}" FontSize="12" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" Width="190" VerticalAlignment="Center" Margin="16,0,0,0">
+                <TextBlock Text="{Binding PlayStats}" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="{Binding CreatedText}" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <!-- Fixed width, kept even when empty, so the crafting and stats line up from row to row. -->
+            <ItemsControl ItemsSource="{Binding Crafting}" Grid.Column="3" Width="230" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:CharacterCraftingLevel">
+                            <Border CornerRadius="4" Padding="6,1" Margin="0,2,4,2" Opacity="{Binding Opacity}"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <TextBlock Text="{Binding Label}" FontSize="12" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+        </Grid>
+    </DataTemplate>
+
+    <!-- The character page's header: the same identity on the left, then the stats spread across as label/value
+         columns, so it stays about two lines tall. -->
+    <DataTemplate x:Key="CharacterHeaderTemplate" x:DataType="core:CharacterCard">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
+            <Grid.Styles>
+                <Style Selector="TextBlock.label">
+                    <Setter Property="FontSize" Value="12" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                </Style>
+                <Style Selector="StackPanel.stat">
+                    <Setter Property="Margin" Value="24,0,0,0" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                </Style>
+            </Grid.Styles>
+            <Border Grid.Column="0" Width="4" CornerRadius="2" Margin="0,0,12,0"
+                    Background="{Binding Profession, Converter={StaticResource ProfessionBrush}}" />
+            <c:IconImage Grid.Column="1" IconUrl="{Binding ProfessionIconUrl}" Width="48" Height="48"
+                         VerticalAlignment="Center" Margin="0,0,12,0" />
+            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Summary}" FontSize="12" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Classes="stat" IsVisible="{Binding HasCrafting}">
+                <TextBlock Classes="label" Text="Crafting" />
+                <ItemsControl ItemsSource="{Binding Crafting}" IsVisible="{Binding HasCrafting}" MaxWidth="240">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:CharacterCraftingLevel">
+                            <Border CornerRadius="4" Padding="6,1" Margin="0,2,4,2" Opacity="{Binding Opacity}"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <TextBlock Text="{Binding Label}" FontSize="12" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+            <StackPanel Grid.Column="4" Classes="stat">
+                <TextBlock Classes="label" Text="Played" />
+                <TextBlock Text="{Binding PlayedText}" />
+            </StackPanel>
+            <StackPanel Grid.Column="5" Classes="stat">
+                <TextBlock Classes="label" Text="Deaths" />
+                <TextBlock Text="{Binding DeathsText}" />
+            </StackPanel>
+            <StackPanel Grid.Column="6" Classes="stat">
+                <TextBlock Classes="label" Text="Created" />
+                <TextBlock Text="{Binding CreatedDate}" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
 
     <!-- A bank/shared-inventory slot, or a placeholder when empty. The cell is square (SquareCell) inside a 10-column
          UniformGrid → exactly 10 per row with equal spacing on both axes. -->
@@ -70,8 +168,8 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
                            Text="{Binding DeltaDisplay}" />
-                <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
-                                 VerticalAlignment="Center" />
+                <c:IconImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
+                             VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </DockPanel>

@@ -41,6 +41,7 @@ public class Worker : BackgroundService
         using var currenciesTimer = new PeriodicTimer(WorkerSyncs.Currencies.Default);
         using var materialCategoriesTimer = new PeriodicTimer(WorkerSyncs.MaterialCategories.Default);
         using var mapsTimer = new PeriodicTimer(WorkerSyncs.Maps.Default);
+        using var professionsTimer = new PeriodicTimer(WorkerSyncs.Professions.Default);
         using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
         using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
         // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
@@ -57,6 +58,7 @@ public class Worker : BackgroundService
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunMapsUpdater(mapsTimer, stoppingToken),
+            RunProfessionsUpdater(professionsTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
@@ -115,6 +117,23 @@ public class Worker : BackgroundService
                 {
                     var updater = scope.ServiceProvider.GetRequiredService<MapsUpdater>();
                     await updater.UpdateMaps(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    private async Task RunProfessionsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Professions.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Professions.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<ProfessionsUpdater>();
+                    await updater.UpdateProfessions(stoppingToken);
                 },
                 stoppingToken
             );

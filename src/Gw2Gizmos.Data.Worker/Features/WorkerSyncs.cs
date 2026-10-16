@@ -26,10 +26,11 @@ public static class WorkerSyncs
     public static readonly WorkerSync Currencies = new("CurrenciesSync", "Currencies", TimeSpan.FromDays(1));
     public static readonly WorkerSync MaterialCategories = new("MaterialCategoriesSync", "Material categories", TimeSpan.FromDays(1));
     public static readonly WorkerSync Maps = new("MapsSync", "Maps", TimeSpan.FromDays(1));
+    public static readonly WorkerSync Professions = new("ProfessionsSync", "Professions", TimeSpan.FromDays(1));
 
     /// <summary>All tunable syncs, in display order.</summary>
     public static IReadOnlyList<WorkerSync> All { get; } =
-        new[] { Items, Recipes, Prices, Account, Currencies, MaterialCategories, Maps };
+        new[] { Items, Recipes, Prices, Account, Currencies, MaterialCategories, Maps, Professions };
 
     /// <summary>The shipped default cadence for a sync, or an hour for an unknown key.</summary>
     public static TimeSpan DefaultInterval(string key) =>

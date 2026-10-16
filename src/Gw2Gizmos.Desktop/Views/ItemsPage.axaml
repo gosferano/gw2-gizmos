@@ -190,9 +190,9 @@
                                                                 <c:ItemImage ItemId="{Binding ItemId, TargetNullValue=0}" Width="16" Height="16"
                                                                              Margin="2,0,0,0" VerticalAlignment="Center"
                                                                              IsVisible="{Binding HasItemIcon}" />
-                                                                <c:CurrencyImage IconUrl="{Binding IconUrl}" Width="16" Height="16"
-                                                                                 Margin="2,0,0,0" VerticalAlignment="Center"
-                                                                                 IsVisible="{Binding HasCurrencyIcon}" />
+                                                                <c:IconImage IconUrl="{Binding IconUrl}" Width="16" Height="16"
+                                                                             Margin="2,0,0,0" VerticalAlignment="Center"
+                                                                             IsVisible="{Binding HasCurrencyIcon}" />
                                                             </StackPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>

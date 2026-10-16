@@ -11,6 +11,6 @@ public static class AppServices
 {
     public static AvaloniaNavigationService? Navigation { get; internal set; }
 
-    /// <summary>The item/currency icon cache behind <c>ItemImage</c> and <c>CurrencyImage</c>.</summary>
+    /// <summary>The item/currency icon cache behind <c>ItemImage</c> and <c>IconImage</c>.</summary>
     public static IconProvider<Bitmap>? Icons { get; internal set; }
 }

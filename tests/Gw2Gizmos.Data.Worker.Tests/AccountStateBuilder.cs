@@ -128,6 +128,16 @@ internal sealed class AccountStateBuilder
               "active_build_tab": 1,
               "equipment_tabs_unlocked": 1,
               "active_equipment_tab": 1,
+              "crafting": [
+                { "discipline": "Scribe", "rating": 500, "active": true },
+                { "discipline": "Chef", "rating": 400, "active": false }
+              ],
+              "build_tabs": [
+                { "tab": 1, "is_active": false, "build": { "name": "", "profession": "Necromancer",
+                  "specializations": [{ "id": 50, "traits": [] }, { "id": 53, "traits": [] }, { "id": 39, "traits": [] }] } },
+                { "tab": 2, "is_active": true, "build": { "name": "", "profession": "Necromancer",
+                  "specializations": [{ "id": 19, "traits": [] }, { "id": 50, "traits": [] }, { "id": 34, "traits": [] }] } }
+              ],
               "bags": [
                 { "id": 0, "size": {{bagSlots.Count}}, "inventory": {{SlotArrayJson(bagSlots)}} }
               ]

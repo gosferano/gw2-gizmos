@@ -7,8 +7,10 @@
              x:DataType="core:CharacterViewModel">
     <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
         <StackPanel>
-            <!-- Per-character sub-sections (currently just the bags). The character name is the breadcrumb, so it
-                 isn't repeated as a header here. -->
+            <!-- The character's card, then its sub-sections (currently just the bags). -->
+            <c:Card Padding="12" Margin="0,0,0,8" IsVisible="{Binding Card, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ContentControl Content="{Binding Card}" ContentTemplate="{StaticResource CharacterHeaderTemplate}" />
+            </c:Card>
             <ui:FASettingsExpander Header="Inventory" Description="Items in this character's bags" Margin="0,0,0,8"
                                    IconSource="{c:FluentIconSource Backpack24}" IsClickEnabled="True"
                                    ActionIconSource="ChevronRight" Click="OnOpenInventory" />

@@ -18,6 +18,6 @@ public sealed record VendorCost(
     /// <summary>The currency is a tradeable item (not coin) — render its icon with the item-id <c>ItemImage</c>.</summary>
     public bool HasItemIcon => !IsCoin && ItemId is > 0;
 
-    /// <summary>The currency is an account currency (not coin) with a resolved icon — render with <c>CurrencyImage</c>.</summary>
+    /// <summary>The currency is an account currency (not coin) with a resolved icon — render with <c>IconImage</c>.</summary>
     public bool HasCurrencyIcon => !IsCoin && !HasItemIcon && !string.IsNullOrEmpty(IconUrl);
 }
