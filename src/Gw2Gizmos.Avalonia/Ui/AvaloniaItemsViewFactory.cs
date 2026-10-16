@@ -30,6 +30,10 @@ public sealed class AvaloniaItemsViewFactory : IItemsViewFactory
         public AvaloniaItemsView(DataGridCollectionView view)
         {
             View = view;
+            // The view starts "current" on its first row, and a bound DataGrid selects its current row — so a grid would
+            // open with row 0 highlighted (and the Items page would load that row's details unasked). Start with none,
+            // as WPF's views do for a DataGrid.
+            View.MoveCurrentToPosition(-1);
         }
 
         protected DataGridCollectionView View { get; }
