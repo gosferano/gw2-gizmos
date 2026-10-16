@@ -186,31 +186,33 @@
             <TabControl Grid.Row="3" VerticalAlignment="Stretch"
                         Style="{StaticResource CardTabControl}" ItemContainerStyle="{StaticResource CardTabItem}">
                     <TabItem Header="History">
-                        <Grid Margin="0,8,0,0">
+                        <!-- DataContext: the LiveCharts adapter over ItemsViewModel.History (set in code-behind). -->
+                        <Grid x:Name="HistoryChart" Margin="0,8,0,0">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="70" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="{Binding HistoryPlaceholder}"
+                            <TextBlock Grid.Row="0" Grid.RowSpan="2"
+                                       Text="{Binding DataContext.HistoryPlaceholder, RelativeSource={RelativeSource AncestorType=Page}}"
                                        Opacity="0.5" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                       Visibility="{Binding History.HasData, Converter={StaticResource InverseBool}}" />
+                                       Visibility="{Binding HasData, Converter={StaticResource InverseBool}}" />
 
                             <!-- Detail chart: buy/sell lines + volume columns; X range driven by the navigator. -->
-                            <lvc:CartesianChart Grid.Row="0" Series="{Binding History.Series}"
-                                                XAxes="{Binding History.TimeAxes}" YAxes="{Binding History.ValueAxes}"
+                            <lvc:CartesianChart Grid.Row="0" Series="{Binding Series}"
+                                                XAxes="{Binding TimeAxes}" YAxes="{Binding ValueAxes}"
                                                 TooltipPosition="Top" ZoomMode="None"
                                                 FindingStrategy="CompareOnlyXTakeClosest"
-                                                Visibility="{Binding History.HasData, Converter={StaticResource Bool}}" />
+                                                Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
 
                             <!-- Navigator: full history with a draggable window that sets the detail range. -->
-                            <lvc:CartesianChart Grid.Row="1" Series="{Binding History.NavigatorSeries}"
-                                                XAxes="{Binding History.NavigatorTimeAxes}" YAxes="{Binding History.NavigatorValueAxes}"
-                                                Sections="{Binding History.Sections}" TooltipPosition="Hidden"
-                                                PointerPressedCommand="{Binding History.PointerDownCommand}"
-                                                PointerMoveCommand="{Binding History.PointerMoveCommand}"
-                                                PointerReleasedCommand="{Binding History.PointerUpCommand}"
-                                                Visibility="{Binding History.HasData, Converter={StaticResource Bool}}" />
+                            <lvc:CartesianChart Grid.Row="1" Series="{Binding NavigatorSeries}"
+                                                XAxes="{Binding NavigatorTimeAxes}" YAxes="{Binding NavigatorValueAxes}"
+                                                Sections="{Binding Sections}" TooltipPosition="Hidden"
+                                                PointerPressedCommand="{Binding PointerDownCommand}"
+                                                PointerMoveCommand="{Binding PointerMoveCommand}"
+                                                PointerReleasedCommand="{Binding PointerUpCommand}"
+                                                Visibility="{Binding HasData, Converter={StaticResource Bool}}" />
                         </Grid>
                     </TabItem>
                     <TabItem Header="Craft tree">

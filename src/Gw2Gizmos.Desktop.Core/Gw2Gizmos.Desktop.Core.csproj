@@ -7,8 +7,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Serilog" />
-    <!-- The price-history chart series/axes are built here; each head references its own LiveCharts view package. -->
-    <PackageReference Include="LiveChartsCore.SkiaSharpView" />
     <!-- UpdateStatus holds the staged Velopack update the dashboard applies. -->
     <PackageReference Include="Velopack" />
   </ItemGroup>
