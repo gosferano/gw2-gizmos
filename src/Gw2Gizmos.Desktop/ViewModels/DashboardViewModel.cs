@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.Gw2Api.Client;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,8 @@ public sealed class DashboardViewModel : ViewModelBase
         FeatureSettingsStore features,
         AccountReader reader,
         AppPaths paths,
-        UpdateStatus updateStatus
+        UpdateStatus updateStatus,
+        IUiDispatcher dispatcher
     )
     {
         _apiKeyStore = apiKeyStore;
@@ -58,8 +60,7 @@ public sealed class DashboardViewModel : ViewModelBase
         ApplyUpdateStatus(updateStatus);
         // The startup update check runs in the background and completes after this VM is built and shown, so
         // reflect its result reactively rather than only snapshotting it here (off the UI thread → marshal).
-        updateStatus.Changed += () =>
-            System.Windows.Application.Current?.Dispatcher.Invoke(() => ApplyUpdateStatus(updateStatus));
+        updateStatus.Changed += () => dispatcher.Invoke(() => ApplyUpdateStatus(updateStatus));
 
         System.Reflection.Assembly assembly = typeof(DashboardViewModel).Assembly;
         string informational = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()

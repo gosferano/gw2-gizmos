@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Windows;
+using Gw2Gizmos.Desktop.Core.Ui;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -14,18 +14,24 @@ public sealed class LogStore
 {
     private const int Capacity = 1000;
 
+    private readonly IUiDispatcher _dispatcher;
+
+    public LogStore(IUiDispatcher dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
+
     public ObservableCollection<LogEntry> Entries { get; } = new();
 
     public void Add(LogEntry entry)
     {
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
+        if (_dispatcher.CheckAccess())
         {
             AddCore(entry);
         }
         else
         {
-            dispatcher.BeginInvoke(new Action(() => AddCore(entry)));
+            _dispatcher.Post(() => AddCore(entry));
         }
     }
 
@@ -38,14 +44,13 @@ public sealed class LogStore
             return;
         }
 
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
+        if (_dispatcher.CheckAccess())
         {
             AddRangeCore(entries);
         }
         else
         {
-            dispatcher.BeginInvoke(new Action(() => AddRangeCore(entries)));
+            _dispatcher.Post(() => AddRangeCore(entries));
         }
     }
 

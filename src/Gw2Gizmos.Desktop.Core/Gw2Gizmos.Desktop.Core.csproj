@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- UI-framework-agnostic heart of the desktop app: the seams each UI head implements (Ui/, and later the
+       view-models and services built on them). Plain net10.0 — no WPF, no Windows APIs — so the WPF app today and
+       the cross-platform Avalonia app share it. -->
+
+</Project>

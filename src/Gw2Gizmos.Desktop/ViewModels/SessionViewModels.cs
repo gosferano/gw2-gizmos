@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -201,6 +201,7 @@ public sealed class SessionViewModel : ViewModelBase
     private readonly SelectedSessionService _selected;
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
+    private readonly IDialogService _dialogs;
     private readonly string? _accountId;
     private readonly long? _sessionId;
     private string _status = "";
@@ -211,16 +212,18 @@ public sealed class SessionViewModel : ViewModelBase
         SelectedAccountService account,
         SelectedSessionService selected,
         DeleteRequestStore deletes,
-        SessionDeletionTracker deleted)
+        SessionDeletionTracker deleted,
+        IDialogService dialogs)
     {
         _selected = selected;
         _deletes = deletes;
         _deleted = deleted;
+        _dialogs = dialogs;
         _accountId = account.AccountId;
         _sessionId = selected.GameSessionId;
         Breadcrumbs = SessionBreadcrumbs.Session(selected.GameSessionTitle);
         OpenCommand = new RelayCommand<SessionSegmentRow>(Open);
-        DeleteSessionCommand = new RelayCommand(DeleteSession);
+        DeleteSessionCommand = new RelayCommand(() => _ = DeleteSessionAsync());
 
         if (account.AccountId is { } accountId && selected.GameSessionId is { } sessionId)
         {
@@ -324,7 +327,7 @@ public sealed class SessionViewModel : ViewModelBase
         App.NavigateTo(typeof(SessionLootPage));
     }
 
-    private void DeleteSession()
+    private async Task DeleteSessionAsync()
     {
         // The active sitting is still being written by the tracker; its button is hidden, but guard here too.
         if (_accountId is not { } accountId || _sessionId is not { } sessionId || !CanDeleteSession)
@@ -332,7 +335,7 @@ public sealed class SessionViewModel : ViewModelBase
             return;
         }
 
-        if (!SessionDeletePrompt.ConfirmSession())
+        if (!await SessionDeletePrompt.ConfirmSessionAsync(_dialogs))
         {
             return;
         }
@@ -348,6 +351,7 @@ public sealed class SessionLootViewModel : ViewModelBase
 {
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
+    private readonly IDialogService _dialogs;
     private readonly string? _accountId;
     private readonly long? _segmentId;
     private bool _isEmpty;
@@ -357,14 +361,16 @@ public sealed class SessionLootViewModel : ViewModelBase
         SelectedAccountService account,
         SelectedSessionService selected,
         DeleteRequestStore deletes,
-        SessionDeletionTracker deleted)
+        SessionDeletionTracker deleted,
+        IDialogService dialogs)
     {
         _deletes = deletes;
         _deleted = deleted;
+        _dialogs = dialogs;
         _accountId = account.AccountId;
         _segmentId = selected.SegmentId;
         Breadcrumbs = SessionBreadcrumbs.Segment(selected.GameSessionTitle, selected.SegmentTitle);
-        DeleteSegmentCommand = new RelayCommand(DeleteSegment);
+        DeleteSegmentCommand = new RelayCommand(() => _ = DeleteSegmentAsync());
         // The active (in-progress) segment is still being written, so it can't be deleted.
         CanDelete = account.AccountId is not null && selected.SegmentId is not null && !selected.SegmentIsActive;
 
@@ -417,14 +423,14 @@ public sealed class SessionLootViewModel : ViewModelBase
         }
     }
 
-    private void DeleteSegment()
+    private async Task DeleteSegmentAsync()
     {
         if (_accountId is not { } accountId || _segmentId is not { } segmentId || !CanDelete)
         {
             return;
         }
 
-        if (!SessionDeletePrompt.ConfirmSegment())
+        if (!await SessionDeletePrompt.ConfirmSegmentAsync(_dialogs))
         {
             return;
         }
@@ -440,18 +446,19 @@ public sealed class SessionLootViewModel : ViewModelBase
 /// isn't re-synced), so they warn before the worker clears the rows.</summary>
 internal static class SessionDeletePrompt
 {
-    public static bool ConfirmSession() => Confirm(
+    public static Task<bool> ConfirmSessionAsync(IDialogService dialogs) => ConfirmAsync(
+        dialogs,
         "Delete this play session?",
         "This permanently removes the recorded sitting and all its character segments. Session history doesn't re-sync.");
 
-    public static bool ConfirmSegment() => Confirm(
+    public static Task<bool> ConfirmSegmentAsync(IDialogService dialogs) => ConfirmAsync(
+        dialogs,
         "Delete this character segment?",
         "This permanently removes the recorded stretch. The session totals are unchanged, but the figures on the "
             + "neighbouring segments may shift to cover the gap. Deleting the last segment removes the session too.");
 
-    private static bool Confirm(string title, string detail) =>
-        MessageBox.Show($"{title}\n\n{detail}", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning)
-        == MessageBoxResult.Yes;
+    private static Task<bool> ConfirmAsync(IDialogService dialogs, string title, string detail) =>
+        dialogs.ConfirmAsync("Delete", $"{title}\n\n{detail}");
 }
 
 /// <summary>

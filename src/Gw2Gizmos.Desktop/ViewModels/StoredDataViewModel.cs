@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -23,14 +23,16 @@ public sealed class StoredDataViewModel : ViewModelBase
 
     private readonly AccountReader _reader;
     private readonly DeleteRequestStore _deletes;
+    private readonly IDialogService _dialogs;
     private bool _hasAccounts;
 
-    public StoredDataViewModel(AccountReader reader, DeleteRequestStore deletes)
+    public StoredDataViewModel(AccountReader reader, DeleteRequestStore deletes, IDialogService dialogs)
     {
         _reader = reader;
         _deletes = deletes;
+        _dialogs = dialogs;
         var priceHistory = new StoredDataItem(DeletableData.PriceHistory, "Price history");
-        priceHistory.Delete = new RelayCommand(() => DeleteGlobal(priceHistory, "price history (all accounts)"));
+        priceHistory.Delete = new RelayCommand(() => _ = DeleteGlobalAsync(priceHistory, "price history (all accounts)"));
         PriceHistory = priceHistory;
 
         _ = LoadAsync();
@@ -68,11 +70,11 @@ public sealed class StoredDataViewModel : ViewModelBase
                 foreach (DeletableDataType type in DeletableData.AccountTypes)
                 {
                     var item = new StoredDataItem(type.Key, type.Display) { Count = counts.GetValueOrDefault(type.Key) };
-                    item.Delete = new RelayCommand(() => DeleteAccountType(account, item));
+                    item.Delete = new RelayCommand(() => _ = DeleteAccountTypeAsync(account, item));
                     group.Types.Add(item);
                 }
 
-                group.DeleteAll = new RelayCommand(() => DeleteAll(group));
+                group.DeleteAll = new RelayCommand(() => _ = DeleteAllAsync(group));
                 Accounts.Add(group);
             }
 
@@ -84,9 +86,9 @@ public sealed class StoredDataViewModel : ViewModelBase
         }
     }
 
-    private void DeleteGlobal(StoredDataItem item, string what)
+    private async Task DeleteGlobalAsync(StoredDataItem item, string what)
     {
-        if (!Confirm(what))
+        if (!await ConfirmAsync(what))
         {
             return;
         }
@@ -96,9 +98,9 @@ public sealed class StoredDataViewModel : ViewModelBase
         _ = RefreshPriceHistoryAsync();
     }
 
-    private void DeleteAccountType(AccountInfo account, StoredDataItem item)
+    private async Task DeleteAccountTypeAsync(AccountInfo account, StoredDataItem item)
     {
-        if (!Confirm($"{item.Display} for {account.Name}"))
+        if (!await ConfirmAsync($"{item.Display} for {account.Name}"))
         {
             return;
         }
@@ -108,9 +110,9 @@ public sealed class StoredDataViewModel : ViewModelBase
         _ = RefreshAccountAsync(account.Id);
     }
 
-    private void DeleteAll(AccountStoredData group)
+    private async Task DeleteAllAsync(AccountStoredData group)
     {
-        if (!Confirm($"ALL data for {group.AccountName}"))
+        if (!await ConfirmAsync($"ALL data for {group.AccountName}"))
         {
             return;
         }
@@ -148,14 +150,12 @@ public sealed class StoredDataViewModel : ViewModelBase
         }
     }
 
-    private static bool Confirm(string what) =>
-        MessageBox.Show(
-            $"Delete {what}?\n\nThis clears the stored rows now. Current data re-syncs on the next update "
-                + "(play sessions and price history don't come back).",
+    private Task<bool> ConfirmAsync(string what) =>
+        _dialogs.ConfirmAsync(
             "Delete stored data",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning
-        ) == MessageBoxResult.Yes;
+            $"Delete {what}?\n\nThis clears the stored rows now. Current data re-syncs on the next update "
+                + "(play sessions and price history don't come back)."
+        );
 }
 
 /// <summary>One deletable data category: its label, current row count, and delete command.</summary>

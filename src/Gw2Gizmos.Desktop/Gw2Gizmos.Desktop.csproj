@@ -34,6 +34,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The UI-agnostic view-models, services and seams this WPF head implements. -->
+    <ProjectReference Include="..\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
     <ProjectReference Include="..\Gw2Gizmos.Data.Worker\Gw2Gizmos.Data.Worker.csproj" />
     <!-- Composition root picks the concrete DB provider (the only place SQLite is referenced). -->
     <ProjectReference Include="..\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />

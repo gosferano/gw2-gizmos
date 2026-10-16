@@ -1,25 +1,24 @@
 using System;
-using System.ComponentModel;
-using System.Windows.Data;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
 
 public sealed class LogsViewModel : ViewModelBase
 {
-    private readonly ICollectionView _view;
+    private readonly IItemsView _view;
     private string _filterText = "";
     private string _levelFilter = "All";
     private bool _showDesktop = true;
     private bool _showWorker = true;
 
-    public LogsViewModel(LogStore store)
+    public LogsViewModel(LogStore store, IItemsViewFactory views)
     {
-        _view = CollectionViewSource.GetDefaultView(store.Entries);
+        _view = views.Create(store.Entries);
         _view.Filter = Matches;
     }
 
-    public ICollectionView Entries => _view;
+    public IItemsView Entries => _view;
 
     public string[] Levels { get; } = ["All", "WRN+", "ERR"];
 

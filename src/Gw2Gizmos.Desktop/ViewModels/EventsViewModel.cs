@@ -1,37 +1,41 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Windows;
-using System.Windows.Data;
+using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Windows.Threading;
 using Gw2Gizmos.Data.Static.Events;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
 
 /// <summary>
 /// Backs the Events timer screen: every world boss, map meta, public instance, and invasion from the static
-/// schedule as live rows. A one-second timer reticks each row's countdown; a <see cref="ListCollectionView"/>
-/// with live sorting keeps them ordered (favorites pinned, then active, then soonest) and applies the search +
-/// expansion filter. Singleton, so the clock keeps running and the list is built once.
+/// schedule as live rows. A one-second timer reticks each row's countdown; a live-sorted <see cref="IItemsView"/>
+/// keeps them ordered (favorites pinned, then active, then soonest) and applies the search + expansion filter.
+/// Singleton, so the clock keeps running and the list is built once.
 /// </summary>
 public sealed class EventsViewModel : ViewModelBase
 {
     private readonly List<EventRowViewModel> _rows;
-    private readonly ListCollectionView _view;
+    private readonly IItemsView _view;
     private readonly ReminderSettingsStore _reminderSettings;
-    private readonly DispatcherTimer _timer;
+    private readonly IClipboardService _clipboard;
+    private readonly IUiTimer _timer;
     private string _searchText = string.Empty;
 
     public EventsViewModel(
         EventSubscriptionStore subscriptions,
         EventFavoritesStore favorites,
-        ReminderSettingsStore reminderSettings
+        ReminderSettingsStore reminderSettings,
+        IItemsViewFactory views,
+        IUiDispatcher dispatcher,
+        IClipboardService clipboard
     )
     {
         _reminderSettings = reminderSettings;
+        _clipboard = clipboard;
+        CopyChatLinkCommand = new RelayCommand<string>(chatLink => _ = CopyChatLinkAsync(chatLink));
         _rows = WorldBosses.All
             .Concat(MetaEvents.All)
             .Concat(PublicInstances.All)
@@ -47,21 +51,23 @@ public sealed class EventsViewModel : ViewModelBase
 
         // Favorites pinned, then active events, then soonest-first. Live sorting reorders a row as its
         // IsFavorite/IsActive/SortKey change (the per-second tick) without a full reset or flicker.
-        _view = new ListCollectionView(_rows) { IsLiveSorting = true, Filter = FilterRow };
-        _view.LiveSortingProperties.Add(nameof(EventRowViewModel.IsFavorite));
-        _view.LiveSortingProperties.Add(nameof(EventRowViewModel.IsActive));
-        _view.LiveSortingProperties.Add(nameof(EventRowViewModel.SortKey));
-        _view.SortDescriptions.Add(new SortDescription(nameof(EventRowViewModel.IsFavorite), ListSortDirection.Descending));
-        _view.SortDescriptions.Add(new SortDescription(nameof(EventRowViewModel.IsActive), ListSortDirection.Descending));
-        _view.SortDescriptions.Add(new SortDescription(nameof(EventRowViewModel.SortKey), ListSortDirection.Ascending));
+        _view = views.CreateLiveSorted(
+            _rows,
+            new[]
+            {
+                new ItemsViewSort(nameof(EventRowViewModel.IsFavorite), Descending: true),
+                new ItemsViewSort(nameof(EventRowViewModel.IsActive), Descending: true),
+                new ItemsViewSort(nameof(EventRowViewModel.SortKey)),
+            }
+        );
+        _view.Filter = FilterRow;
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) => Refresh();
+        _timer = dispatcher.CreateTimer(TimeSpan.FromSeconds(1), Refresh);
         _timer.Start();
     }
 
     /// <summary>Live, sorted + filtered view of every scheduled event (bound to the page).</summary>
-    public ICollectionView Events => _view;
+    public IItemsView Events => _view;
 
     /// <summary>Lead-time choices (minutes) for the "remind me before" dropdown.</summary>
     public IReadOnlyList<int> LeadTimeOptions { get; } = new[] { 5, 10, 15 };
@@ -80,7 +86,7 @@ public sealed class EventsViewModel : ViewModelBase
     }
 
     /// <summary>Copies an event's chat link to the clipboard so it can be pasted into the GW2 chat.</summary>
-    public ICommand CopyChatLinkCommand { get; } = new RelayCommand<string>(CopyChatLink);
+    public ICommand CopyChatLinkCommand { get; }
 
     /// <summary>Minutes before an event a reminder fires; persisted and read live by the reminder service.</summary>
     public int SelectedLeadTimeMinutes
@@ -169,7 +175,7 @@ public sealed class EventsViewModel : ViewModelBase
         _ => expansion.ToString(),
     };
 
-    private static void CopyChatLink(string? chatLink)
+    private async Task CopyChatLinkAsync(string? chatLink)
     {
         if (string.IsNullOrEmpty(chatLink))
         {
@@ -178,7 +184,7 @@ public sealed class EventsViewModel : ViewModelBase
 
         try
         {
-            Clipboard.SetText(chatLink);
+            await _clipboard.SetTextAsync(chatLink);
         }
         catch
         {

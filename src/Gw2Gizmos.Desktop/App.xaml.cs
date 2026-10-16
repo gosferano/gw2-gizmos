@@ -12,6 +12,8 @@ using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
+using Gw2Gizmos.Desktop.Core.Ui;
+using Gw2Gizmos.Desktop.Ui;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -442,8 +444,10 @@ public partial class App : Application
         const string logOutputTemplate =
             "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}";
 
-        // Shared, UI-bindable buffer feeding the in-app log viewer (this process's events).
-        var logStore = new LogStore();
+        // Shared, UI-bindable buffer feeding the in-app log viewer (this process's events). It exists before the
+        // host (Serilog needs it), so it gets the dispatcher directly; the same instance is registered below.
+        var uiDispatcher = new WpfUiDispatcher();
+        var logStore = new LogStore(uiDispatcher);
 
         // Serilog, configured as the worker had it — notably Microsoft -> Warning.
         Log.Logger = new LoggerConfiguration()
@@ -517,6 +521,12 @@ public partial class App : Application
         // In-app log viewer: this process's events (the sink above) + the worker's (tailed file).
         builder.Services.AddSingleton(logStore);
         builder.Services.AddHostedService<WorkerLogTailer>();
+
+        // The WPF implementations of the UI seams the shared view-models are written against.
+        builder.Services.AddSingleton<IUiDispatcher>(uiDispatcher);
+        builder.Services.AddSingleton<IItemsViewFactory, WpfItemsViewFactory>();
+        builder.Services.AddSingleton<IDialogService, WpfDialogService>();
+        builder.Services.AddSingleton<IClipboardService, WpfClipboardService>();
 
         // UI shell: the navigation page provider, the window, pages, and their view-models.
         builder.Services.AddSingleton<INavigationViewPageProvider, PageProvider>();

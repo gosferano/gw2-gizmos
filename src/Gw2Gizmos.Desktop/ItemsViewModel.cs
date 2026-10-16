@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Data;
-using System.Windows.Threading;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
@@ -32,34 +30,36 @@ public sealed class ItemsViewModel : ViewModelBase
     private const double TradingPostNetFactor = 0.85;
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IItemsViewFactory _views;
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
     private bool _isRefreshing;
     private ObservableCollection<ItemRow> _items = new();
-    private ICollectionView _view;
-    private readonly DispatcherTimer _filterDebounce;
+    private IItemsView _view;
+    private readonly IUiTimer _filterDebounce;
 
     // The recipe-tree builder, warmed in the background as part of the grid load (reusing the grid's prices, so
     // no second price aggregation) and reused across selections — memoized, all in-memory. Held as a task so a
     // selection that lands before warm-up finishes just awaits it. Re-created on each grid refresh.
     private Task<RecipeTreeBuilder>? _treeBuilderTask;
 
-    public ItemsViewModel(IServiceScopeFactory scopeFactory, FeatureSettingsStore features)
+    public ItemsViewModel(
+        IServiceScopeFactory scopeFactory,
+        FeatureSettingsStore features,
+        IItemsViewFactory views,
+        IUiDispatcher dispatcher
+    )
     {
         _scopeFactory = scopeFactory;
+        _views = views;
         // Read once — the VM is transient, so this reflects the toggle's state at navigation time.
         PricesEnabled = features.IsEnabled(WorkerFeatures.PricesSync.Key);
-        _view = CollectionViewSource.GetDefaultView(_items);
+        _view = views.Create(_items);
         _view.Filter = MatchesFilter;
         // Re-filtering the (large) grid on every keystroke blocks the UI thread, so each typed character lags.
         // Debounce instead: keystrokes restart the timer and the filter applies once typing pauses.
-        _filterDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _filterDebounce.Tick += (_, _) =>
-        {
-            _filterDebounce.Stop();
-            View.Refresh();
-        };
+        _filterDebounce = dispatcher.CreateTimer(TimeSpan.FromMilliseconds(200), ApplyFilter);
         // Re-reads the grid from the worker-owned DB (picking up newer prices). The text filter is a view filter
         // keyed off _filterText, untouched by a reload, so the current search stays applied to the fresh rows.
         RefreshCommand = new RelayCommand(() => _ = LoadAsync(), () => !IsRefreshing);
@@ -86,7 +86,7 @@ public sealed class ItemsViewModel : ViewModelBase
             // Build the collection in one shot (the ObservableCollection constructor copies without per-item
             // events) and swap in a fresh view, rather than raising thousands of CollectionChanged events.
             _items = new ObservableCollection<ItemRow>(rows);
-            ICollectionView view = CollectionViewSource.GetDefaultView(_items);
+            IItemsView view = _views.Create(_items);
             view.Filter = MatchesFilter;
             View = view;
 
@@ -218,7 +218,7 @@ public sealed class ItemsViewModel : ViewModelBase
     }
 
     /// <summary>The grid binds here so sorting and the text filter apply over the latest loaded rows.</summary>
-    public ICollectionView View
+    public IItemsView View
     {
         get => _view;
         private set => SetProperty(ref _view, value);
@@ -323,6 +323,13 @@ public sealed class ItemsViewModel : ViewModelBase
 
     /// <summary>The selected item's trading-post price/volume history charts.</summary>
     public PriceHistoryViewModel History { get; } = new();
+
+    /// <summary>Debounce tick: typing has paused, so apply the filter once.</summary>
+    private void ApplyFilter()
+    {
+        _filterDebounce.Stop();
+        View.Refresh();
+    }
 
     private bool MatchesFilter(object obj) =>
         string.IsNullOrWhiteSpace(_filterText)
