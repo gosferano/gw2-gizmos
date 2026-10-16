@@ -79,6 +79,10 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<CharacterSegment> CharacterSegments { get; set; }
     public DbSet<MapSegment> MapSegments { get; set; }
 
+    // The account's trading post: its open orders (replaced each sync) and its completed trades (kept for good).
+    public DbSet<TradingPostOrder> TradingPostOrders { get; set; }
+    public DbSet<TradingPostTransaction> TradingPostTransactions { get; set; }
+
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
 

@@ -101,6 +101,9 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<ReminderSettingsStore>();
         services.AddHostedService<EventReminderService>();
 
+        // Notifies when one of the selected account's trading-post orders gets undercut or outbid.
+        services.AddHostedService<TradingPostAlertService>();
+
         // In-app log viewer: this process's events (the head's logger writes to logStore) + the worker's (tailed file).
         services.AddSingleton(logStore);
         services.AddHostedService<WorkerLogTailer>();
@@ -139,6 +142,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // Sessions: the drilled-into session/segment (transient nav context), the hub + per-session/segment VMs.
         services.AddSingleton<SelectedSessionService>();
         services.AddTransient<SessionsViewModel>();
+        services.AddTransient<TradingPostViewModel>();
         services.AddTransient<SessionViewModel>();
         services.AddTransient<SessionLootViewModel>();
 

@@ -21,6 +21,7 @@ public enum AppPage
     SessionLoot,
     Events,
     Items,
+    TradingPost,
     Notifications,
     Logs,
     ApiKeys,

@@ -6,12 +6,14 @@ namespace Gw2Gizmos.Desktop.Core;
 /// The notification categories the app produces, with display text for the Notifications settings page.
 /// Each <see cref="NotificationCategoryInfo.Key"/> must match the category string a producer passes to
 /// <c>INotifier.Notify</c> (the event reminder service uses <see cref="Events"/>, the delivery poller uses
-/// <see cref="Delivery"/>). A category not listed here is treated as enabled.
+/// <see cref="Delivery"/>, the trading-post alerts use <see cref="TradingPost"/>). A category not listed here is
+/// treated as enabled.
 /// </summary>
 public static class NotificationCategories
 {
     public const string Events = "Events";
     public const string Delivery = "Delivery";
+    public const string TradingPost = "TradingPost";
 
     public static IReadOnlyList<NotificationCategoryInfo> All { get; } = new[]
     {
@@ -20,6 +22,11 @@ public static class NotificationCategories
             Delivery,
             "Trading-post delivery",
             "Toasts when coins or items arrive in your delivery box."
+        ),
+        new NotificationCategoryInfo(
+            TradingPost,
+            "Undercut and outbid orders",
+            "Toasts when someone lists below one of your sell orders or bids above one of your buy orders."
         ),
     };
 }

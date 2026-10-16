@@ -1,5 +1,6 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -243,4 +244,91 @@ public sealed class AccountSyncUpdaterTests : IDisposable
             .OrderByDescending(o => o.Id)
             .Select(o => o.Count)
             .FirstAsync();
+
+    // --- trading post ---
+
+    private static string Trade(long id, int itemId, int price, int quantity, bool completed) =>
+        completed
+            ? $$"""{"id":{{id}},"item_id":{{itemId}},"price":{{price}},"quantity":{{quantity}},"created":"2026-10-01T10:00:00Z","purchased":"2026-10-01T11:00:00Z"}"""
+            : $$"""{"id":{{id}},"item_id":{{itemId}},"price":{{price}},"quantity":{{quantity}},"created":"2026-10-01T10:00:00Z"}""";
+
+    private void StubTradingPost(string buys, string sells, string historyBuys, string historySells)
+    {
+        _stub.SetJson("/v2/commerce/transactions/current/buys", buys);
+        _stub.SetJson("/v2/commerce/transactions/current/sells", sells);
+        _stub.SetJson("/v2/commerce/transactions/history/buys", historyBuys);
+        _stub.SetJson("/v2/commerce/transactions/history/sells", historySells);
+        // Item 19721: best buy 120, best sell 150. Item 24: nobody buying, best sell 900.
+        _stub.SetJson(
+            "/v2/commerce/prices",
+            """[{"id":19721,"whitelisted":false,"buys":{"quantity":10,"unit_price":120},"sells":{"quantity":5,"unit_price":150}},"""
+                + """{"id":24,"whitelisted":false,"buys":{"quantity":0,"unit_price":0},"sells":{"quantity":3,"unit_price":900}}]""");
+    }
+
+    [Fact]
+    public async Task TradingPost_StoresOpenOrdersWithCompetingPrices_AndCompletedTrades()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("tradingpost");
+        state.Apply(_stub);
+        StubTradingPost(
+            buys: $"[{Trade(1, 19721, 110, 50, completed: false)}]",
+            sells: $"[{Trade(2, 24, 1000, 2, completed: false)}]",
+            historyBuys: $"[{Trade(10, 19721, 100, 25, completed: true)}]",
+            historySells: $"[{Trade(11, 24, 950, 1, completed: true)}]");
+
+        await Sync();
+
+        TradingPostOrder buy = await Db.TradingPostOrders.SingleAsync(o => o.Id == 1);
+        Assert.Equal((TradingPostSide.Buy, 110, 50, 120, 150), (buy.Side, buy.Price, buy.Quantity, buy.BestBuyPrice, buy.BestSellPrice));
+        TradingPostOrder sell = await Db.TradingPostOrders.SingleAsync(o => o.Id == 2);
+        Assert.Equal((TradingPostSide.Sell, 1000, (int?)null, 900), (sell.Side, sell.Price, sell.BestBuyPrice, sell.BestSellPrice));
+
+        List<TradingPostTransaction> trades = await Db.TradingPostTransactions.OrderBy(t => t.Id).ToListAsync();
+        Assert.Equal([(10L, TradingPostSide.Buy), (11L, TradingPostSide.Sell)], trades.Select(t => (t.Id, t.Side)));
+        Assert.Equal(new DateTimeOffset(2026, 10, 1, 11, 0, 0, TimeSpan.Zero), trades[0].PurchasedUtc);
+        Assert.All(trades, t => Assert.Equal(state.Id, t.AccountId));
+    }
+
+    [Fact]
+    public async Task TradingPost_LaterSync_ReplacesOrders_AndAddsOnlyNewTrades()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("tradingpost");
+        state.Apply(_stub);
+        StubTradingPost(
+            buys: $"[{Trade(1, 19721, 110, 50, completed: false)}]",
+            sells: "[]",
+            historyBuys: $"[{Trade(10, 19721, 100, 25, completed: true)}]",
+            historySells: "[]");
+        await Sync();
+
+        // The buy order filled; a new trade appears above the known one (history is newest first).
+        StubTradingPost(
+            buys: "[]",
+            sells: $"[{Trade(3, 24, 1000, 1, completed: false)}]",
+            historyBuys: $"[{Trade(12, 19721, 110, 50, completed: true)}, {Trade(10, 19721, 100, 25, completed: true)}]",
+            historySells: "[]");
+        await Sync();
+
+        Assert.Equal([3L], await Db.TradingPostOrders.Select(o => o.Id).ToListAsync());
+        Assert.Equal([10L, 12L], await Db.TradingPostTransactions.OrderBy(t => t.Id).Select(t => t.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task TradingPost_WithoutThePermission_IsSkipped()
+    {
+        AccountStateBuilder state = SmallAccount(); // no "tradingpost" permission
+        state.Apply(_stub);
+        StubTradingPost(
+            buys: $"[{Trade(1, 19721, 110, 50, completed: false)}]",
+            sells: "[]",
+            historyBuys: $"[{Trade(10, 19721, 100, 25, completed: true)}]",
+            historySells: "[]");
+
+        await Sync();
+
+        Assert.Equal(0, await Db.TradingPostOrders.CountAsync());
+        Assert.Equal(0, await Db.TradingPostTransactions.CountAsync());
+    }
 }

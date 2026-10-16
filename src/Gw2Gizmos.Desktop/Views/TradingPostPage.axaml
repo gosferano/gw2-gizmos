@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.TradingPostPage"
+             x:DataType="core:TradingPostViewModel">
+    <UserControl.Styles>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinHeight" Value="36" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Title="Trading post">
+        <StackPanel>
+            <!-- No account picked yet -->
+            <c:Card Margin="0,4,0,0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <TabControl SelectedIndex="0" IsVisible="{Binding HasAccount}">
+                <TabItem Header="Orders">
+                    <StackPanel Margin="0,8,0,0">
+                        <TextBlock Text="No open buy or sell orders." Margin="0,4,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   IsVisible="{Binding NoOrders}" />
+                        <TextBlock Text="{Binding OrdersSummary}" Margin="0,0,0,8" Opacity="0.7"
+                                   IsVisible="{Binding HasOrders}" />
+
+                        <!-- One row per open order; the ones beaten by a better price come first, flagged. -->
+                        <ItemsControl ItemsSource="{Binding Orders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="core:TradingPostOrderRow">
+                                    <Border Classes="hover-row">
+                                        <DockPanel>
+                                            <!-- Standing: the gap to the best competing price, or that it's the best. -->
+                                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center"
+                                                        HorizontalAlignment="Right" Margin="12,0,0,0">
+                                                <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
+                                                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                                           IsVisible="{Binding IsBeaten}" />
+                                                <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           IsVisible="{Binding !IsBeaten}" />
+                                                <c:CoinDisplay Copper="{Binding GapCopper}" HorizontalAlignment="Right"
+                                                               IsVisible="{Binding IsBeaten}" />
+                                            </StackPanel>
+                                            <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Price}" FontWeight="Medium"
+                                                           VerticalAlignment="Center" Margin="12,0,0,0" />
+                                            <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                                         VerticalAlignment="Center" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Details}" FontSize="12"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </TabItem>
+
+                <TabItem Header="History">
+                    <StackPanel Margin="0,8,0,0">
+                        <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                            <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding TradeFilterOptions}"
+                                      SelectedIndex="{Binding SelectedTradeFilterIndex}" MinWidth="110"
+                                      Height="{StaticResource FormControlHeight}" />
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding TradesSummary}" Opacity="0.7"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock Text="No completed trades yet." Margin="0,4,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   IsVisible="{Binding NoTrades}" />
+
+                        <!-- One row per trade, newest first: what it did to the wallet on the right. -->
+                        <ItemsControl ItemsSource="{Binding Trades}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="core:TradingPostTradeRow">
+                                    <Border Classes="hover-row">
+                                        <DockPanel>
+                                            <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding WalletCopper}" Signed="True"
+                                                           FontWeight="Medium" VerticalAlignment="Center" Margin="12,0,0,0" />
+                                            <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                                         VerticalAlignment="Center" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Details}" FontSize="12"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="Show more" Command="{Binding ShowMoreTradesCommand}" Margin="0,8,0,0"
+                                HorizontalAlignment="Center" IsVisible="{Binding HasMoreTrades}" />
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

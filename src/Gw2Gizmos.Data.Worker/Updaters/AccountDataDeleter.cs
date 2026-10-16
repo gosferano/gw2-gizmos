@@ -55,6 +55,7 @@ public class AccountDataDeleter
             DeletableData.SharedInventory => await DeleteSlotStoreAsync(accountId, AccountContainer.SharedInventory, stoppingToken),
             DeletableData.Characters => await DeleteCharactersAsync(accountId, stoppingToken),
             DeletableData.Sessions => await DeleteSessionsAsync(accountId, stoppingToken),
+            DeletableData.TradingPost => await DeleteTradingPostAsync(accountId, stoppingToken),
             DeletableData.Session => await DeleteOneSessionAsync(accountId, targetId, stoppingToken),
             DeletableData.SessionSegment => await DeleteOneSegmentAsync(accountId, targetId, stoppingToken),
             DeletableData.AllForAccount => await DeleteAllForAccountAsync(accountId, stoppingToken),
@@ -152,6 +153,15 @@ public class AccountDataDeleter
         return rows;
     }
 
+    // Trading post: the open orders (re-synced next pass) and the completed-trade log (only the API's last 90 days
+    // come back).
+    private async Task<int> DeleteTradingPostAsync(string accountId, CancellationToken stoppingToken)
+    {
+        int rows = await _dbContext.TradingPostOrders.Where(o => o.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.TradingPostTransactions.Where(t => t.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        return rows;
+    }
+
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {
         int rows = await DeleteWalletAsync(accountId, stoppingToken);
@@ -160,6 +170,7 @@ public class AccountDataDeleter
         rows += await DeleteSlotStoreAsync(accountId, AccountContainer.SharedInventory, stoppingToken);
         rows += await DeleteCharactersAsync(accountId, stoppingToken);
         rows += await DeleteSessionsAsync(accountId, stoppingToken);
+        rows += await DeleteTradingPostAsync(accountId, stoppingToken);
         // The account identity row itself; re-created on the next sync.
         rows += await _dbContext.Accounts.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;
