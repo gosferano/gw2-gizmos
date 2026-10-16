@@ -179,26 +179,132 @@ public sealed class SessionTrackerTests : IDisposable
         Assert.NotNull(session.EndedAtUtc);
     }
 
+    // --- maps ---
+
+    [Fact]
+    public async Task MapChanges_SplitTheCharacterSegmentByMap()
+    {
+        await Live("Alice", mapId: 50); // opens the session and segment
+        await Live("Alice", mapId: 50); // first map
+        await Live("Alice", mapId: 1422); // travelled
+        await Live("Alice", mapId: 1422); // same map: nothing new
+
+        long segmentId = (await Db.CharacterSegments.SingleAsync()).Id;
+        List<MapSegment> maps = await MapSegments();
+        Assert.Equal([50, 1422], maps.Select(m => m.MapId));
+        Assert.All(maps, m => Assert.Equal(segmentId, m.CharacterSegmentId));
+        Assert.Equal(maps[1].StartedAtUtc, maps[0].EndedAtUtc); // left one as entering the next
+        Assert.Null(maps[1].EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task UnknownMap_IsNotRecorded()
+    {
+        await Live("Alice", mapId: 0);
+        await Live("Alice", mapId: 0);
+
+        Assert.Empty(await MapSegments());
+    }
+
+    [Fact]
+    public async Task SwitchCharacter_ClosesTheMapSegment_AndTheNextCharacterGetsItsOwn()
+    {
+        await Live("Alice", mapId: 50);
+        await Live("Alice", mapId: 50);
+        await Live("Bob", mapId: 50); // switch: Alice's map closes with her segment
+        await Live("Bob", mapId: 50); // Bob's first map
+
+        List<CharacterSegment> segments = await OrderedSegments();
+        List<MapSegment> maps = await MapSegments();
+        Assert.Equal(2, maps.Count);
+        Assert.Equal(segments[0].Id, maps[0].CharacterSegmentId);
+        Assert.Equal(segments[0].EndedAtUtc, maps[0].EndedAtUtc);
+        Assert.Equal(segments[1].Id, maps[1].CharacterSegmentId);
+        Assert.Null(maps[1].EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task GameClose_ClosesTheOpenMapSegment()
+    {
+        await Live("Alice", mapId: 50);
+        await Live("Alice", mapId: 50);
+        _time.Advance(TimeSpan.FromMinutes(10));
+        SeedObservation(_time.Now);
+
+        _time.Advance(TimeSpan.FromMinutes(20));
+        _reader.Snapshot = null;
+        await _tracker.TickAsync(CancellationToken.None);
+
+        MapSegment map = Assert.Single(await MapSegments());
+        Assert.Equal((await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc, map.EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task DiscardingAnEmptySession_DeletesItsMapSegments()
+    {
+        await Live("Alice", mapId: 50);
+        await Live("Alice", mapId: 50); // no observations recorded during the sitting
+
+        _time.Advance(TimeSpan.FromMinutes(30));
+        _reader.Snapshot = null;
+        await _tracker.TickAsync(CancellationToken.None);
+
+        Assert.Equal(0, await Db.GameSessions.CountAsync());
+        Assert.Empty(await MapSegments());
+    }
+
+    [Fact]
+    public async Task OnStartup_ASessionLeftOpen_HasItsMapSegmentClosedToo()
+    {
+        // A previous run left a session open on a map, then the worker stopped (the game isn't running now).
+        long segmentId;
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            var session = new GameSession { AccountId = AccountId, StartedAtUtc = _time.Now };
+            db.GameSessions.Add(session);
+            db.SaveChanges();
+            var segment = new CharacterSegment { GameSessionId = session.Id, CharacterName = "Alice", StartedAtUtc = _time.Now };
+            db.CharacterSegments.Add(segment);
+            db.SaveChanges();
+            segmentId = segment.Id;
+            db.MapSegments.Add(new MapSegment { CharacterSegmentId = segmentId, MapId = 50, StartedAtUtc = _time.Now });
+            db.SaveChanges();
+        }
+
+        _time.Advance(TimeSpan.FromMinutes(10));
+        SeedObservation(_time.Now);
+        _reader.Snapshot = null;
+        await _tracker.ResumeOrCloseOpenSessionsAsync(CancellationToken.None);
+
+        MapSegment map = Assert.Single(await MapSegments());
+        Assert.NotNull(map.EndedAtUtc);
+        Assert.Equal((await Db.CharacterSegments.AsNoTracking().SingleAsync()).EndedAtUtc, map.EndedAtUtc);
+    }
+
     // --- driving helpers ---
 
     /// <summary>Advances the clock and feeds one "game live" tick with a fresh UiTick (so it's never seen as frozen)
     /// and the given active character (null = character-select screen), then runs a single TickAsync.</summary>
-    private async Task Live(string? character)
+    private async Task Live(string? character, int mapId = 0)
     {
         _time.Advance(TimeSpan.FromSeconds(5));
         _tick++;
-        _reader.Snapshot = Snapshot(_tick, character);
+        _reader.Snapshot = Snapshot(_tick, character, mapId);
         await _tracker.TickAsync(CancellationToken.None);
     }
 
-    /// <summary>A live snapshot: advancing UiTick, optional identity, ProcessId 0 (unknown → freeze-timeout fallback).</summary>
-    private static MumbleLinkSnapshot Snapshot(uint uiTick, string? character) =>
+    /// <summary>A live snapshot: advancing UiTick, optional identity, the map (0 = unknown), ProcessId 0 (unknown →
+    /// freeze-timeout fallback).</summary>
+    private static MumbleLinkSnapshot Snapshot(uint uiTick, string? character, int mapId = 0) =>
         new()
         {
             UiTick = uiTick,
-            Identity = character is null ? null : new MumbleIdentity { Name = character },
-            Context = new MumbleContextInfo { ProcessId = 0 },
+            Identity = character is null ? null : new MumbleIdentity { Name = character, MapId = mapId },
+            Context = new MumbleContextInfo { ProcessId = 0, MapId = (uint)mapId },
         };
+
+    private async Task<List<MapSegment>> MapSegments() =>
+        (await Db.MapSegments.AsNoTracking().ToListAsync()).OrderBy(m => m.Id).ToList();
 
     private Gw2GizmosDbContext Db => _fixture.Db;
 
