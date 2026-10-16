@@ -59,6 +59,23 @@
             <ui:FASettingsExpander Header="Stored data" Description="Delete locally-stored data per type, per account"
                                    Margin="0,8,0,0" IconSource="{c:FluentIconSource Delete24}" IsClickEnabled="True"
                                    ActionIconSource="ChevronRight" Click="OnOpenStoredData" />
+
+            <!-- Uninstall: only where the app manages its own installation (the Linux AppImage). -->
+            <c:Card Margin="0,14,0,0" Padding="16,12" IsVisible="{Binding CanUninstall}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"
+                            Content="Uninstall" Classes="danger" Command="{Binding UninstallCommand}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Uninstall" FontWeight="Medium" FontSize="14"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <TextBlock TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="Remove Gw2Gizmos from this computer: its launcher entry, launch at login, and the AppImage itself." />
+                        <CheckBox Margin="0,6,0,0" IsChecked="{Binding DeleteDataOnUninstall}"
+                                  Content="Also delete my data (database, settings, logs and stored API keys)" />
+                    </StackPanel>
+                </DockPanel>
+            </c:Card>
         </StackPanel>
     </c:PageShell>
 </UserControl>

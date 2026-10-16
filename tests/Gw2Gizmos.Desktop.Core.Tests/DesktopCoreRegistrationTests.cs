@@ -5,6 +5,7 @@ using Gw2Gizmos.Desktop.Core.Platform;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Gw2Gizmos.Desktop.Core.Tests;
 
@@ -41,6 +42,9 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
         services.AddSingleton<IToastService, StubToastService>();
         services.AddSingleton<IStartupRegistration, StubStartupRegistration>();
         services.AddSingleton<ISecretProtector, StubSecretProtector>();
+        services.AddSingleton<IAppInstallation, InstallerManagedInstallation>();
+        // Provided by the head's generic host.
+        services.AddSingleton<IHostApplicationLifetime, StubHostApplicationLifetime>();
         services.AddGw2GizmosSqlite();
 
         using ServiceProvider provider = services.BuildServiceProvider(
@@ -133,5 +137,18 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
         public string Protect(string plaintext) => plaintext;
 
         public string? Unprotect(string protectedText) => protectedText;
+    }
+
+    private sealed class StubHostApplicationLifetime : IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+
+        public CancellationToken ApplicationStopping => CancellationToken.None;
+
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+
+        public void StopApplication()
+        {
+        }
     }
 }

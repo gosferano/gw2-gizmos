@@ -22,6 +22,7 @@ internal static class Program
             // Draw popups (dropdowns, flyouts, tooltips) inside the window rather than as separate X11 windows: window
             // managers may treat those as ordinary floating windows and apply rules to them (e.g. a Hyprland "centre
             // floating windows" rule put every dropdown in the middle of the screen).
-            .With(new X11PlatformOptions { OverlayPopups = true })
+            // WmClass matches the launcher entry's StartupWMClass, so launchers and docks group the window with it.
+            .With(new X11PlatformOptions { OverlayPopups = true, WmClass = "Gw2Gizmos" })
             .LogToTrace();
 }

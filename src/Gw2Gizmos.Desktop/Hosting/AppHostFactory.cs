@@ -76,7 +76,7 @@ internal static class AppHostFactory
         string mumbleLinkFilePath = Path.Combine(dataDirectory, "MumbleLink");
         builder.Services.AddGw2GizmosDesktopCore(
             new AppPaths(dataDirectory), logStore, workerConfigPipeName, database, mumbleLinkFilePath);
-        builder.Services.AddGw2GizmosLinuxPlatform(AppDataDirectory.FolderName, mumbleLinkFilePath);
+        builder.Services.AddGw2GizmosLinuxPlatform(AppDataDirectory.FolderName, dataDirectory, mumbleLinkFilePath);
 #endif
 
         // The Avalonia implementations of the UI seams the shared view-models are written against.

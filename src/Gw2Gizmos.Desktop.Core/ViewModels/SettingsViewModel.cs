@@ -2,16 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Core.Mvvm;
 using Gw2Gizmos.Desktop.Core.Platform;
+using Gw2Gizmos.Desktop.Core.Ui;
+using Microsoft.Extensions.Hosting;
 
 namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the Settings page: a toggle per <see cref="WorkerFeatures"/> entry. Flipping one persists to the
 /// <see cref="FeatureSettingsStore"/> (which the worker picks up over the key pipe) and, when the current
-/// account's key lacks a required permission, shows an inline hint mirroring the API Keys page's red chips.
+/// account's key lacks a required permission, shows an inline hint mirroring the API Keys page's red chips. Where the
+/// app manages its own installation (a Linux AppImage) it also offers Uninstall.
 /// </summary>
 public sealed class SettingsViewModel : ViewModelBase
 {
@@ -19,18 +23,29 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly FileGw2ApiKeyStore _keyStore;
     private readonly SelectedAccountService _selected;
     private readonly IStartupRegistration _startup;
+    private readonly IAppInstallation _installation;
+    private readonly IDialogService _dialogs;
+    private readonly IHostApplicationLifetime _lifetime;
+    private bool _deleteDataOnUninstall;
 
     public SettingsViewModel(
         FeatureSettingsStore features,
         FileGw2ApiKeyStore keyStore,
         SelectedAccountService selected,
-        IStartupRegistration startup
+        IStartupRegistration startup,
+        IAppInstallation installation,
+        IDialogService dialogs,
+        IHostApplicationLifetime lifetime
     )
     {
         _features = features;
         _keyStore = keyStore;
         _selected = selected;
         _startup = startup;
+        _installation = installation;
+        _dialogs = dialogs;
+        _lifetime = lifetime;
+        UninstallCommand = new RelayCommand(() => _ = UninstallAsync());
 
         foreach (WorkerFeature feature in WorkerFeatures.All)
         {
@@ -54,6 +69,36 @@ public sealed class SettingsViewModel : ViewModelBase
                 OnPropertyChanged();
             }
         }
+    }
+
+    /// <summary>Whether the page offers Uninstall (only where the app manages its own installation).</summary>
+    public bool CanUninstall => _installation.CanUninstall;
+
+    /// <summary>Uninstall also deletes the database, settings, logs and stored API keys.</summary>
+    public bool DeleteDataOnUninstall
+    {
+        get => _deleteDataOnUninstall;
+        set => SetProperty(ref _deleteDataOnUninstall, value);
+    }
+
+    public RelayCommand UninstallCommand { get; }
+
+    private async Task UninstallAsync()
+    {
+        string data = DeleteDataOnUninstall
+            ? "Your data (database, settings, logs) and stored API keys are deleted too."
+            : "Your data and API keys are kept, so reinstalling picks up where you left off.";
+        if (!await _dialogs.ConfirmAsync(
+                "Uninstall Gw2Gizmos",
+                $"Remove Gw2Gizmos from this computer? It closes, and its launcher entry, launch at login and the app "
+                    + $"itself are removed.\n\n{data}"))
+        {
+            return;
+        }
+
+        _installation.Uninstall(DeleteDataOnUninstall);
+        // The heads shut the whole app (window, tray, worker) down when the host stops.
+        _lifetime.StopApplication();
     }
 
     private void OnToggled(FeatureToggle toggle)

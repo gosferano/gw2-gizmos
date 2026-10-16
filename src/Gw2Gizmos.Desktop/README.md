@@ -34,7 +34,8 @@ Single instance per user (a mutex); closing the window hides to the tray.
   - [`Gw2Gizmos.Desktop.Platform.Windows`](../Gw2Gizmos.Desktop.Platform.Windows) — WinRT toasts, HKCU Run
     autostart, DPAPI, the worker's kill-on-close job.
   - [`Gw2Gizmos.Desktop.Platform.Linux`](../Gw2Gizmos.Desktop.Platform.Linux) — `notify-send`, XDG autostart, the
-    Secret Service keyring (`secret-tool`), and the Proton MumbleLink bridge launcher.
+    Secret Service keyring (`secret-tool`), the Proton MumbleLink bridge launcher, and the AppImage's own
+    installation: on every start it (re)writes its launcher entry and icon, and Settings → Uninstall removes it.
 
 The target platform is the runtime identifier when one is given (`-r win-x64` / `-r linux-x64`, so either can be
 cross-built), otherwise the OS building it. A Windows build targets `net10.0-windows10.0.17763.0` and compiles with
