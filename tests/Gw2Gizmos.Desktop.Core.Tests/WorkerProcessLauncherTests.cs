@@ -9,7 +9,7 @@ public sealed class WorkerProcessLauncherTests : IDisposable
     private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), $"gw2gizmos-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public void CreateStartInfo_ForwardsDatabaseAndPipe_AndRunsInDataDirectory()
+    public void CreateStartInfo_ForwardsDatabasePipeAndParent_AndRunsInDataDirectory()
     {
         var database = new DesktopDatabaseSettings("sqlite", "Data Source=/x.sqlite", "Data Source=/x.sqlite;Mode=ReadOnly");
         var launcher = new WorkerProcessLauncher(
@@ -26,6 +26,7 @@ public sealed class WorkerProcessLauncherTests : IDisposable
                 "--ConnectionStrings:Gw2GizmosDb=Data Source=/x.sqlite",
                 "--Database:Provider=sqlite",
                 "--WorkerConfig:PipeName=pipe-123",
+                $"--WorkerConfig:ParentProcessId={Environment.ProcessId}",
             },
             startInfo.ArgumentList);
     }

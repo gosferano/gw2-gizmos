@@ -6,7 +6,8 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Starts the heavy ingestion engine as a separate worker process (so it can't stall the UI). The worker ships as a
 /// sibling executable in the app's own directory, sharing the runtime + common dependencies (see the CopyWorkerCli /
-/// PublishWorkerCli targets in the UI head's csproj). Tying the worker's lifetime to the app is the head's job.
+/// PublishWorkerCli targets in the UI head's csproj). The worker watches this process and exits with it; a head may
+/// bind it more tightly (the WPF app's kill-on-close Job Object).
 /// </summary>
 public sealed class WorkerProcessLauncher
 {
@@ -36,8 +37,9 @@ public sealed class WorkerProcessLauncher
         Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? $"{ExecutableName}.exe" : ExecutableName);
 
     /// <summary>
-    /// The worker's launch: the same provider + connection string so it opens the identical database, plus the
-    /// config pipe name so it can fetch keys/features/intervals live (no secret ever touches the command line).
+    /// The worker's launch: the same provider + connection string so it opens the identical database, the config
+    /// pipe name so it can fetch keys/features/intervals live (no secret ever touches the command line), and this
+    /// process's id so the worker exits when the app does, even after a crash.
     /// </summary>
     public ProcessStartInfo CreateStartInfo()
     {
@@ -51,6 +53,7 @@ public sealed class WorkerProcessLauncher
         startInfo.ArgumentList.Add($"--ConnectionStrings:Gw2GizmosDb={_database.WorkerConnectionString}");
         startInfo.ArgumentList.Add($"--Database:Provider={_database.Provider}");
         startInfo.ArgumentList.Add($"--WorkerConfig:PipeName={_workerConfigPipeName}");
+        startInfo.ArgumentList.Add($"--WorkerConfig:ParentProcessId={Environment.ProcessId}");
         return startInfo;
     }
 

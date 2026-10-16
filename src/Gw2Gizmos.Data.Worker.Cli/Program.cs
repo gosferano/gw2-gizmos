@@ -64,6 +64,17 @@ if (!string.IsNullOrWhiteSpace(workerConfigPipeName))
     builder.Services.AddSingleton<IDeleteRequestSource>(sp => sp.GetRequiredService<IpcWorkerConfigProvider>());
 }
 
+// When Gw2Gizmos spawns this worker it passes its own pid; exit when that process does, so the worker never outlives
+// the app — even after a crash or a hard kill (Windows also binds it to a kill-on-close Job Object; Linux has none).
+if (int.TryParse(builder.Configuration["WorkerConfig:ParentProcessId"], out int parentProcessId))
+{
+    builder.Services.AddHostedService(sp => new ParentProcessWatchdog(
+        parentProcessId,
+        sp.GetRequiredService<IHostApplicationLifetime>(),
+        sp.GetRequiredService<ILogger<ParentProcessWatchdog>>()
+    ));
+}
+
 // SQLite is the chosen database provider; register it before the data services so this layer stays
 // provider-agnostic. Swapping providers means registering a different one here.
 builder.Services.AddGw2GizmosSqlite();
