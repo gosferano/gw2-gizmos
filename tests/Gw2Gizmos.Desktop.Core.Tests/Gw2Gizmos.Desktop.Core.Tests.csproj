@@ -3,6 +3,8 @@
   <!-- Test SDK + xunit packages and the Xunit using come from tests/Directory.Build.props. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\Gw2Gizmos.Desktop.Core\Gw2Gizmos.Desktop.Core.csproj" />
+    <!-- The container test registers the real provider, as a composition root would. -->
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
   </ItemGroup>
 
 </Project>

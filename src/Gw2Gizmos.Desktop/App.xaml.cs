@@ -15,8 +15,8 @@ using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Platform;
-using Gw2Gizmos.Desktop.Platform;
 using Gw2Gizmos.Desktop.Core.Ui;
+using Gw2Gizmos.Desktop.Platform;
 using Gw2Gizmos.Desktop.Ui;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -475,61 +475,19 @@ public partial class App : Application
         builder.Logging.ClearProviders();
         builder.Logging.AddSerilog();
 
-        // The desktop owns its own state as per-user files (the worker owns the ingestion DB and the desktop
-        // opens it read-only). These are registered before the engine so its TryAdd defaults are skipped.
-        builder.Services.AddSingleton(new AppPaths(dataDir));
+        // Provider + connection strings come from launch config (--Database:Provider / env): read-write for the
+        // worker (forwarded to its process), read-only for the desktop.
+        var database = DesktopDatabaseSettings.Resolve(builder.Configuration, dbPath);
+
+        // Everything shared with other UI heads: stores, the worker-config pipe, reminders, the log feed, the
+        // view-models, and the in-process delivery poller.
+        builder.Services.AddGw2GizmosDesktopCore(new AppPaths(dataDir), logStore, workerConfigPipeName, database);
+
         // The Windows implementations of the platform services: "launch at Windows startup" (HKCU Run; per-build
         // value name so dev/release don't collide), toasts, and DPAPI for the API keys at rest.
         builder.Services.AddSingleton<IStartupRegistration>(new StartupRegistration(AppDataFolderName));
         builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<ISecretProtector, DpapiSecretProtector>();
-        // Shared app-update state — set by the startup update check, read by the dashboard's App card.
-        builder.Services.AddSingleton<UpdateStatus>();
-        // Per-sync trigger generations: bumped when the user enables a feature or adds a key, so the worker syncs
-        // that data immediately. Registered first — the key/feature stores bump it.
-        builder.Services.AddSingleton<SyncTriggerStore>();
-        // Queues user "delete stored data" requests; shipped to the worker (sole DB writer) over the config pipe.
-        builder.Services.AddSingleton<DeleteRequestStore>();
-        // Hides sessions/segments the user deleted this run until the worker processes the delete (avoids a reappear).
-        builder.Services.AddSingleton<SessionDeletionTracker>();
-        builder.Services.AddSingleton<FileGw2ApiKeyStore>();
-        builder.Services.AddSingleton<IGw2ApiKeyProvider>(sp => sp.GetRequiredService<FileGw2ApiKeyStore>());
-        // Shared validate-and-store path for the API Keys page and first-run onboarding.
-        builder.Services.AddSingleton<ApiKeyRegistrar>();
-        builder.Services.AddSingleton<OnboardingStore>();
-        // Worker config the desktop owns (source of truth, persisted here) and pushes to the worker over the
-        // config pipe: feature on/off toggles, per-sync intervals, and the trigger generations.
-        builder.Services.AddSingleton<FeatureSettingsStore>();
-        builder.Services.AddSingleton<IntervalSettingsStore>();
-        // Serve keys + features + intervals to the cross-platform worker over a local pipe (it never reads our
-        // secret file).
-        builder.Services.AddHostedService(sp => new WorkerConfigHost(
-            workerConfigPipeName,
-            sp.GetRequiredService<FileGw2ApiKeyStore>(),
-            sp.GetRequiredService<FeatureSettingsStore>(),
-            sp.GetRequiredService<IntervalSettingsStore>(),
-            sp.GetRequiredService<SyncTriggerStore>(),
-            sp.GetRequiredService<DeleteRequestStore>(),
-            sp.GetRequiredService<ILogger<WorkerConfigHost>>()
-        ));
-        // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
-        builder.Services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();
-
-        // Notifications surface only as Windows toasts (no in-app feed). A per-category global toggle on the
-        // Notifications page can silence a category; the dispatcher checks it before firing.
-        builder.Services.AddSingleton<NotificationSettingsStore>();
-        builder.Services.AddSingleton<INotifier, NotificationDispatcher>();
-
-        // Event reminders + Events-screen state: the per-event opt-in store, the favorites (pin-to-top) store,
-        // the configurable lead-time setting, and the scheduler that toasts a subscribed event before it begins.
-        builder.Services.AddSingleton<EventSubscriptionStore>();
-        builder.Services.AddSingleton<EventFavoritesStore>();
-        builder.Services.AddSingleton<ReminderSettingsStore>();
-        builder.Services.AddHostedService<EventReminderService>();
-
-        // In-app log viewer: this process's events (the sink above) + the worker's (tailed file).
-        builder.Services.AddSingleton(logStore);
-        builder.Services.AddHostedService<WorkerLogTailer>();
 
         // The WPF implementations of the UI seams the shared view-models are written against.
         builder.Services.AddSingleton<IUiDispatcher>(uiDispatcher);
@@ -538,42 +496,9 @@ public partial class App : Application
         builder.Services.AddSingleton<IClipboardService, WpfClipboardService>();
         builder.Services.AddSingleton<INavigationService, WpfNavigationService>();
 
-        // UI shell: the navigation page provider, the window, pages, and their view-models.
+        // UI shell: the navigation page provider, the window, and the pages.
         builder.Services.AddSingleton<INavigationViewPageProvider, PageProvider>();
         builder.Services.AddSingleton<MainWindow>();
-        builder.Services.AddTransient<DashboardViewModel>();
-        builder.Services.AddSingleton<NotificationsViewModel>();
-        // Singleton so its one-second countdown clock keeps ticking and the event list is built once.
-        builder.Services.AddSingleton<EventsViewModel>();
-        builder.Services.AddSingleton<LogsViewModel>();
-        // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
-        builder.Services.AddTransient<ApiKeysViewModel>();
-        // Transient so the page reflects the current toggle/permission state on every navigation.
-        builder.Services.AddTransient<SettingsViewModel>();
-        builder.Services.AddTransient<StoredDataViewModel>();
-        builder.Services.AddTransient<StoredDataPage>();
-        builder.Services.AddTransient<AdvancedSettingsViewModel>();
-        // Transient so the grid re-reads the worker's latest item/market data on every navigation.
-        builder.Services.AddTransient<ItemsViewModel>();
-        // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
-        builder.Services.AddSingleton<AccountReader>();
-        // Carries the drilled-into account across the parameterless WPF-UI navigation.
-        builder.Services.AddSingleton<SelectedAccountService>();
-        builder.Services.AddTransient<AccountViewModel>();
-        builder.Services.AddTransient<WalletViewModel>();
-        builder.Services.AddTransient<MaterialStorageViewModel>();
-        builder.Services.AddTransient<BankViewModel>();
-        builder.Services.AddTransient<SharedInventoryViewModel>();
-        // Characters: the drilled-into character (transient nav context), the hub + per-character VMs.
-        builder.Services.AddSingleton<SelectedCharacterService>();
-        builder.Services.AddTransient<CharactersViewModel>();
-        builder.Services.AddTransient<CharacterViewModel>();
-        builder.Services.AddTransient<CharacterInventoryViewModel>();
-        // Sessions: the drilled-into session/segment (transient nav context), the hub + per-session/segment VMs.
-        builder.Services.AddSingleton<SelectedSessionService>();
-        builder.Services.AddTransient<SessionsViewModel>();
-        builder.Services.AddTransient<SessionViewModel>();
-        builder.Services.AddTransient<SessionLootViewModel>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<NotificationsPage>();
         // Cached: the singleton VM owns the live clock, so the page is a thin re-attached view.
@@ -593,21 +518,14 @@ public partial class App : Application
         // Cached so its heavy live list is built once, not rebuilt on every navigation.
         builder.Services.AddSingleton<LogsPage>();
         builder.Services.AddTransient<ApiKeysPage>();
-        builder.Services.AddTransient<OnboardingViewModel>();
         builder.Services.AddTransient<OnboardingPage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<AdvancedSettingsPage>();
+        builder.Services.AddTransient<StoredDataPage>();
 
         // Make the available DB providers selectable; the active one is chosen at launch via Database:Provider
         // (default sqlite). Adding another = reference its project + one more AddGw2GizmosXxx() here.
         builder.Services.AddGw2GizmosSqlite();
-
-        // Provider + connection strings come from launch config (--Database:Provider / env): read-write for the
-        // worker (forwarded to its process), read-only for the desktop.
-        var database = DesktopDatabaseSettings.Resolve(builder.Configuration, dbPath);
-
-        // Only the lightweight delivery poller runs in the UI process; ingestion is the worker's job.
-        builder.Services.AddGw2GizmosDeliveryNotifications(database.DesktopConnectionString);
 
         return (builder.Build(), database);
     }
