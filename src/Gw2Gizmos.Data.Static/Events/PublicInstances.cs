@@ -2,9 +2,9 @@ namespace Gw2Gizmos.Data.Static.Events;
 
 /// <summary>
 /// Hardcoded schedule (UTC) for the public-instance events: the Eye of the North rotation (Twisted
-/// Marionette, Battle for Lion's Arch, Dragonstorm, Tower of Nightmares — every 2 hours) and the two
-/// Convergences (Mount Balrior and Outer Nayos — every 3 hours). Times computed from the GW2 wiki
-/// event-timer data; each carries its instance entry's chat link.
+/// Marionette, Battle for Lion's Arch, Dragonstorm, Tower of Nightmares — every 2 hours) and the three
+/// Convergences (Mount Balrior, Nexus of Eternity and Outer Nayos — every 3 hours). Times computed from the GW2
+/// wiki event-timer data (v5.4, 2026-09); each carries its instance entry's chat link.
 /// </summary>
 public static class PublicInstances
 {
@@ -22,6 +22,7 @@ public static class PublicInstances
         Instance("tower-of-nightmares", "Tower of Nightmares", "Eye of the North", EyeOfTheNorth, Schedule.Every(TwoHours, T("01:30")), 15, Expansion.IcebroodSaga),
 
         Instance("convergence-mount-balrior", "Convergence: Mount Balrior", "Mount Balrior", "[&BK4OAAA=]", Schedule.Every(ThreeHours, T("00:00")), 15, Expansion.JanthirWilds),
+        Instance("convergence-nexus-of-eternity", "Convergence: Nexus of Eternity", "Nexus of Eternity", "[&BDYQAAA=]", Schedule.Every(ThreeHours, T("01:00")), 15, Expansion.VisionsOfEternity),
         Instance("convergence-outer-nayos", "Convergence: Outer Nayos", "Outer Nayos", "[&BB8OAAA=]", Schedule.Every(ThreeHours, T("01:30")), 15, Expansion.SecretsOfTheObscure),
     };
 
