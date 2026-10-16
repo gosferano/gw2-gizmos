@@ -22,12 +22,16 @@ internal sealed class RoutingHttpStub : HttpMessageHandler
     /// <summary>Maps an absolute path (e.g. <c>/v2/account/bank</c>) to the JSON its endpoint should return.</summary>
     public void SetJson(string path, string json) => _byPath[path] = json;
 
+    /// <summary>Called with each requested path before it's answered — e.g. to cancel a sync partway through.</summary>
+    public Action<string>? OnRequest { get; set; }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         // AbsolutePath keeps %-encoding (e.g. a character name's space stays "%20"); decode so the route key
         // matches the human-readable path the test registered.
         string path = Uri.UnescapeDataString(request.RequestUri!.AbsolutePath);
         RequestedPaths.Add(path);
+        OnRequest?.Invoke(path);
         string body = _byPath.TryGetValue(path, out string? json) ? json : "[]";
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
