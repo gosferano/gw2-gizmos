@@ -24,6 +24,7 @@ public enum FluentSymbol
     History24 = 0xF47F,
     Home24 = 0xF481,
     Key24 = 0xF4B7,
+    Map24 = 0xF52E,
     Open24 = 0xF583,
     Options24 = 0xF588,
     People24 = 0xF5A9,

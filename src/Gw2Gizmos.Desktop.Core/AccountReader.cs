@@ -239,11 +239,19 @@ public sealed class AccountReader
         var segments = db.CharacterSegments.AsNoTracking()
             .Where(s => sessionIds.Contains(s.GameSessionId))
             .OrderBy(s => s.Sequence)
-            .Select(s => new { s.GameSessionId, s.CharacterName })
+            .Select(s => new { s.Id, s.GameSessionId, s.CharacterName })
             .ToList();
         Dictionary<long, List<string>> charactersBySession = segments
             .GroupBy(s => s.GameSessionId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.CharacterName).Distinct().ToList());
+
+        // Each sitting's main map: the one it spent the most time on.
+        Dictionary<long, long> sessionBySegment = segments.ToDictionary(s => s.Id, s => s.GameSessionId);
+        Dictionary<long, string> mainMapBySession = MapTimes(db, sessionBySegment.Keys.ToList())
+            .GroupBy(t => sessionBySegment[t.SegmentId])
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(t => t.MapId).OrderByDescending(m => m.Sum(t => t.Time.Ticks)).First().First().Name);
 
         // Reconstruct each sitting's item + coin delta over its window, then value them all with one shared
         // price/vendor lookup so the list badge matches the session-detail summary.
@@ -265,7 +273,8 @@ public sealed class AccountReader
                     s.StartedAtUtc,
                     s.EndedAtUtc,
                     charactersBySession.TryGetValue(s.Id, out List<string>? chars) ? string.Join(", ", chars) : "—",
-                    total);
+                    total,
+                    mainMapBySession.GetValueOrDefault(s.Id));
             })
             .ToList();
     }
@@ -325,6 +334,69 @@ public sealed class AccountReader
 
         return rows;
     }
+
+    /// <summary>The maps a whole session was played on, with the time on each, most-played first.</summary>
+    public List<MapTimeRow> GetSessionMaps(string accountId, long gameSessionId) =>
+        SafeRead(
+            db =>
+            {
+                List<long> segmentIds = db.CharacterSegments.AsNoTracking()
+                    .Where(s => s.GameSessionId == gameSessionId
+                        && db.GameSessions.Any(g => g.Id == gameSessionId && g.AccountId == accountId))
+                    .Select(s => s.Id)
+                    .ToList();
+                return TotalByMap(MapTimes(db, segmentIds));
+            },
+            new List<MapTimeRow>());
+
+    /// <summary>The maps one character segment was played on, with the time on each, most-played first.</summary>
+    public List<MapTimeRow> GetSegmentMaps(string accountId, long segmentId) =>
+        SafeRead(
+            db =>
+            {
+                bool owned = db.CharacterSegments.AsNoTracking().Any(s => s.Id == segmentId
+                    && db.GameSessions.Any(g => g.Id == s.GameSessionId && g.AccountId == accountId));
+                return owned ? TotalByMap(MapTimes(db, [segmentId])) : new List<MapTimeRow>();
+            },
+            new List<MapTimeRow>());
+
+    /// <summary>Time on each map per character segment (open stretches measured to now), with map names.</summary>
+    private static List<(long SegmentId, int MapId, string Name, TimeSpan Time)> MapTimes(
+        Gw2GizmosDbContext db, IReadOnlyCollection<long> segmentIds)
+    {
+        if (segmentIds.Count == 0)
+        {
+            return [];
+        }
+
+        var stretches = db.MapSegments.AsNoTracking()
+            .Where(m => segmentIds.Contains(m.CharacterSegmentId))
+            .Select(m => new { m.CharacterSegmentId, m.MapId, m.StartedAtUtc, m.EndedAtUtc })
+            .ToList();
+        List<int> mapIds = stretches.Select(m => m.MapId).Distinct().ToList();
+        Dictionary<int, string> names = db.Maps.AsNoTracking()
+            .Where(m => mapIds.Contains(m.Id))
+            .Select(m => new { m.Id, m.Name, m.Type })
+            .ToDictionary(m => m.Id, m => MapLabel.For(m.Name, m.Type));
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        return stretches
+            .Select(m => (
+                m.CharacterSegmentId,
+                m.MapId,
+                // Until the worker's first maps sync, an id is all there is.
+                names.GetValueOrDefault(m.MapId) ?? $"Map {m.MapId}",
+                (m.EndedAtUtc ?? now) - m.StartedAtUtc))
+            .ToList();
+    }
+
+    /// <summary>Total time per map (by id, so same-named maps stay separate), most-played first.</summary>
+    private static List<MapTimeRow> TotalByMap(IEnumerable<(long SegmentId, int MapId, string Name, TimeSpan Time)> times) =>
+        times
+            .GroupBy(t => t.MapId)
+            .Select(g => new MapTimeRow(g.First().Name, TimeSpan.FromTicks(g.Sum(t => Math.Max(0, t.Time.Ticks)))))
+            .OrderByDescending(m => m.Time)
+            .ToList();
 
     /// <summary>One segment's full "hoarded" delta — currencies and items gained/lost over its time window.</summary>
     public SessionLoot GetSegmentLoot(string accountId, long segmentId) =>
@@ -594,7 +666,8 @@ public sealed record GameSessionRow(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset? EndedAtUtc,
     string CharactersDisplay,
-    long TotalValueCopper
+    long TotalValueCopper,
+    string? MainMap = null
 )
 {
     public bool IsActive => EndedAtUtc is null;
@@ -620,9 +693,20 @@ public sealed record GameSessionRow(
     /// <summary>Card title, e.g. "Mon 16 Jun, 19:04".</summary>
     public string Title => StartedAtUtc.LocalDateTime.ToString("ddd d MMM, HH:mm");
 
-    public string Subtitle => $"{DurationDisplay} · {CharactersDisplay}";
+    /// <summary>E.g. "1h 45m · Dragon's End · Thena": the main map (most playtime) only, so a quick trip to a lounge
+    /// doesn't clutter the list.</summary>
+    public string Subtitle => MainMap is null
+        ? $"{DurationDisplay} · {CharactersDisplay}"
+        : $"{DurationDisplay} · {MainMap} · {CharactersDisplay}";
 
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+}
+
+/// <summary>A map played during a session or segment, and the total time spent on it.</summary>
+public sealed record MapTimeRow(string Name, TimeSpan Time)
+{
+    /// <summary>E.g. "1h 5m".</summary>
+    public string TimeDisplay => SessionFormat.Span(Time);
 }
 
 /// <summary>One character segment within a session, with its reconstructed coin/item delta.</summary>
@@ -756,9 +840,12 @@ public sealed record SessionValueSummary(
 /// <summary>Shared formatting for the session views (durations and signed coin amounts).</summary>
 internal static class SessionFormat
 {
-    public static string Duration(DateTimeOffset start, DateTimeOffset? end)
+    public static string Duration(DateTimeOffset start, DateTimeOffset? end) =>
+        Span((end ?? DateTimeOffset.UtcNow) - start);
+
+    /// <summary>A length of play time, e.g. "1h 5m", "25m", "40s".</summary>
+    public static string Span(TimeSpan span)
     {
-        TimeSpan span = (end ?? DateTimeOffset.UtcNow) - start;
         if (span < TimeSpan.Zero)
         {
             span = TimeSpan.Zero;
