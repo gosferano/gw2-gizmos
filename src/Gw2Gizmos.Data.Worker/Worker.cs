@@ -40,6 +40,7 @@ public class Worker : BackgroundService
         // retention are fixed internal cadences.
         using var currenciesTimer = new PeriodicTimer(WorkerSyncs.Currencies.Default);
         using var materialCategoriesTimer = new PeriodicTimer(WorkerSyncs.MaterialCategories.Default);
+        using var mapsTimer = new PeriodicTimer(WorkerSyncs.Maps.Default);
         using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
         using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
         // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
@@ -55,6 +56,7 @@ public class Worker : BackgroundService
         {
             RunCurrenciesUpdater(currenciesTimer, stoppingToken),
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
+            RunMapsUpdater(mapsTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
@@ -96,6 +98,23 @@ public class Worker : BackgroundService
                 {
                     var updater = scope.ServiceProvider.GetRequiredService<MaterialCategoriesUpdater>();
                     await updater.UpdateMaterialCategories(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    private async Task RunMapsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Maps.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Maps.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<MapsUpdater>();
+                    await updater.UpdateMaps(stoppingToken);
                 },
                 stoppingToken
             );
