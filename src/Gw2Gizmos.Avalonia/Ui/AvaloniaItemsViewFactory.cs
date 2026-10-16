@@ -12,7 +12,9 @@ namespace Gw2Gizmos.Avalonia.Ui;
 /// Backs <see cref="IItemsView"/> with the DataGrid package's <see cref="DataGridCollectionView"/>. That class is
 /// sealed, so the view-model gets a thin wrapper instead; the wrapper implements
 /// <see cref="IDataGridCollectionViewFactory"/>, which makes a bound <c>DataGrid</c> adopt the inner view directly
-/// (native column-header sorting, incremental updates), while other items controls simply enumerate it.
+/// (native column-header sorting, incremental updates). Other items controls (a ListBox) see it as a read-only
+/// <see cref="IList"/> raising the inner view's change notifications — Avalonia only accepts a change-notifying items
+/// source that is also an <see cref="IList"/>.
 /// </summary>
 public sealed class AvaloniaItemsViewFactory : IItemsViewFactory
 {
@@ -21,7 +23,7 @@ public sealed class AvaloniaItemsViewFactory : IItemsViewFactory
     public IItemsView CreateLiveSorted(IList source, IReadOnlyList<ItemsViewSort> sorts) =>
         new LiveSortedItemsView(source, sorts);
 
-    private class AvaloniaItemsView : IItemsView, IDataGridCollectionViewFactory, INotifyCollectionChanged
+    private class AvaloniaItemsView : IItemsView, IList, IDataGridCollectionViewFactory, INotifyCollectionChanged
     {
         private Predicate<object>? _filter;
 
@@ -53,6 +55,45 @@ public sealed class AvaloniaItemsViewFactory : IItemsViewFactory
         public IEnumerator GetEnumerator() => ((IEnumerable)View).GetEnumerator();
 
         public IDataGridCollectionView CreateView() => View;
+
+        // Read-only IList over the view's current (filtered, sorted) rows.
+        public int Count => View.Count;
+
+        public bool IsReadOnly => true;
+
+        public bool IsFixedSize => false;
+
+        public bool IsSynchronized => false;
+
+        public object SyncRoot => this;
+
+        public object? this[int index]
+        {
+            get => View[index];
+            set => throw new NotSupportedException();
+        }
+
+        public bool Contains(object? value) => View.Contains(value);
+
+        public int IndexOf(object? value) => View.IndexOf(value);
+
+        public void CopyTo(Array array, int index)
+        {
+            foreach (object? item in this)
+            {
+                array.SetValue(item, index++);
+            }
+        }
+
+        public int Add(object? value) => throw new NotSupportedException();
+
+        public void Insert(int index, object? value) => throw new NotSupportedException();
+
+        public void Remove(object? value) => throw new NotSupportedException();
+
+        public void RemoveAt(int index) => throw new NotSupportedException();
+
+        public void Clear() => throw new NotSupportedException();
     }
 
     /// <summary>
