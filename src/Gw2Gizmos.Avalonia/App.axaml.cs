@@ -3,9 +3,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Gw2Gizmos.Avalonia.Hosting;
 using Gw2Gizmos.Avalonia.Navigation;
+using Gw2Gizmos.Avalonia.Ui;
 using Gw2Gizmos.Desktop.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -72,6 +74,8 @@ public partial class App : Application
 
             _host = AppHostFactory.Build(dataDirectory, args, workerConfigPipeName);
             AppServices.Navigation = _host.Services.GetRequiredService<AvaloniaNavigationService>();
+            AppServices.Icons = new IconProvider<Bitmap>(
+                _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
             // The host's console lifetime turns SIGTERM / Ctrl+C (e.g. a session logout) into a host stop; make that
             // shut down the whole app — window, tray and worker — not just the background services.
             _host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(

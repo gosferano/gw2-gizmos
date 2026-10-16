@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             x:Class="Gw2Gizmos.Avalonia.Controls.CoinDisplay"
+             x:DataType="c:CoinDisplay">
+    <!-- Renders a copper amount as gold/silver/copper numbers each followed by their coin icon; leading-zero
+         denominations are dropped (copper always shown), matching the text Coin formatter. Numbers inherit the
+         ambient font/colour; icons scale with IconSize. -->
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Name="Sign" VerticalAlignment="Center" />
+        <TextBlock Name="GoldNum" VerticalAlignment="Center" />
+        <Image Name="GoldIcon" Source="/Assets/coin_gold.png" Margin="1,0,5,0" VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}" />
+        <TextBlock Name="SilverNum" VerticalAlignment="Center" />
+        <Image Name="SilverIcon" Source="/Assets/coin_silver.png" Margin="1,0,5,0" VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}" />
+        <TextBlock Name="CopperNum" VerticalAlignment="Center" />
+        <Image Name="CopperIcon" Source="/Assets/coin_copper.png" Margin="1,0,0,0" VerticalAlignment="Center"
+               Width="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}"
+               Height="{Binding IconSize, RelativeSource={RelativeSource AncestorType=c:CoinDisplay}}" />
+    </StackPanel>
+</UserControl>

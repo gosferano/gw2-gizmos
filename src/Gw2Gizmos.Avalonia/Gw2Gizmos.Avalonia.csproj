@@ -8,6 +8,8 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Tracks the WPF app's version until this head gets its own packaging/release line. -->
     <Version>0.6.0</Version>
+    <!-- ItemImage desaturates icons by walking the bitmap's pixel buffer directly. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
