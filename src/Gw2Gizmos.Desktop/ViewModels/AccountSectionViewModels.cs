@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;

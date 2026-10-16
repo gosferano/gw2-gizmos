@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.Worker.Features;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
@@ -20,6 +20,7 @@ public sealed class SessionsViewModel : ViewModelBase
 {
     private readonly SelectedSessionService _selected;
     private readonly SessionDeletionTracker _deleted;
+    private readonly INavigationService _navigation;
     private readonly List<GameSessionRow> _all = new();
     private string _status = "";
     private int _selectedSortIndex;
@@ -28,10 +29,15 @@ public sealed class SessionsViewModel : ViewModelBase
     private DateTime? _toDate;
 
     public SessionsViewModel(
-        AccountReader reader, SelectedAccountService account, SelectedSessionService selected, SessionDeletionTracker deleted)
+        AccountReader reader,
+        SelectedAccountService account,
+        SelectedSessionService selected,
+        SessionDeletionTracker deleted,
+        INavigationService navigation)
     {
         _selected = selected;
         _deleted = deleted;
+        _navigation = navigation;
         HasAccount = !string.IsNullOrEmpty(account.AccountId);
         OpenCommand = new RelayCommand<GameSessionRow>(Open);
         ToggleDirectionCommand = new RelayCommand(() => Descending = !Descending);
@@ -191,7 +197,7 @@ public sealed class SessionsViewModel : ViewModelBase
         }
 
         _selected.SelectSession(session.Id, session.Title);
-        App.NavigateTo(typeof(SessionPage));
+        _navigation.NavigateTo(AppPage.Session);
     }
 }
 
@@ -201,6 +207,7 @@ public sealed class SessionViewModel : ViewModelBase
     private readonly SelectedSessionService _selected;
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
+    private readonly INavigationService _navigation;
     private readonly IDialogService _dialogs;
     private readonly string? _accountId;
     private readonly long? _sessionId;
@@ -213,11 +220,13 @@ public sealed class SessionViewModel : ViewModelBase
         SelectedSessionService selected,
         DeleteRequestStore deletes,
         SessionDeletionTracker deleted,
+        INavigationService navigation,
         IDialogService dialogs)
     {
         _selected = selected;
         _deletes = deletes;
         _deleted = deleted;
+        _navigation = navigation;
         _dialogs = dialogs;
         _accountId = account.AccountId;
         _sessionId = selected.GameSessionId;
@@ -281,7 +290,7 @@ public sealed class SessionViewModel : ViewModelBase
             if (visible.Count == 0 && segments.Count > 0)
             {
                 _deleted.MarkSession(sessionId);
-                App.NavigateTo(typeof(SessionsPage));
+                _navigation.NavigateTo(AppPage.Sessions);
                 return;
             }
 
@@ -324,7 +333,7 @@ public sealed class SessionViewModel : ViewModelBase
         // segment is active so the loot page knows whether to offer Delete.
         _selected.SelectSegment(
             segment.Id, $"{segment.CharacterName} ({segment.StartedAtUtc.LocalDateTime:HH:mm})", segment.IsActive);
-        App.NavigateTo(typeof(SessionLootPage));
+        _navigation.NavigateTo(AppPage.SessionLoot);
     }
 
     private async Task DeleteSessionAsync()
@@ -342,7 +351,7 @@ public sealed class SessionViewModel : ViewModelBase
 
         _deleted.MarkSession(sessionId);
         _deletes.Enqueue(DeletableData.Session, accountId, sessionId);
-        App.NavigateTo(typeof(SessionsPage));
+        _navigation.NavigateTo(AppPage.Sessions);
     }
 }
 
@@ -351,6 +360,7 @@ public sealed class SessionLootViewModel : ViewModelBase
 {
     private readonly DeleteRequestStore _deletes;
     private readonly SessionDeletionTracker _deleted;
+    private readonly INavigationService _navigation;
     private readonly IDialogService _dialogs;
     private readonly string? _accountId;
     private readonly long? _segmentId;
@@ -362,10 +372,12 @@ public sealed class SessionLootViewModel : ViewModelBase
         SelectedSessionService selected,
         DeleteRequestStore deletes,
         SessionDeletionTracker deleted,
+        INavigationService navigation,
         IDialogService dialogs)
     {
         _deletes = deletes;
         _deleted = deleted;
+        _navigation = navigation;
         _dialogs = dialogs;
         _accountId = account.AccountId;
         _segmentId = selected.SegmentId;
@@ -438,7 +450,7 @@ public sealed class SessionLootViewModel : ViewModelBase
         // Back to the session, which re-reads without this segment (and bounces to the list if it was the last one).
         _deleted.MarkSegment(segmentId);
         _deletes.Enqueue(DeletableData.SessionSegment, accountId, segmentId);
-        App.NavigateTo(typeof(SessionPage));
+        _navigation.NavigateTo(AppPage.Session);
     }
 }
 

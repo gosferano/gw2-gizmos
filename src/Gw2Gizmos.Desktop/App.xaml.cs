@@ -12,6 +12,7 @@ using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Ui;
 using Microsoft.Extensions.Configuration;
@@ -50,15 +51,16 @@ public partial class App : Application
     /// pass null and fall back to the rail's own current selection. Called by <c>PageShell</c> on load, so any new
     /// page or hierarchy works with no extra wiring or mapping.
     /// </summary>
-    public static void HighlightNavSection(Type? breadcrumbRoot)
+    public static void HighlightNavSection(AppPage? breadcrumbRoot)
     {
         if (MainNavigation is null)
         {
             return;
         }
 
-        Type? section = breadcrumbRoot
-            ?? (MainNavigation.SelectedItem as Wpf.Ui.Controls.NavigationViewItem)?.TargetPageType;
+        Type? section = breadcrumbRoot is { } root
+            ? WpfNavigationService.PageTypeFor(root)
+            : (MainNavigation.SelectedItem as Wpf.Ui.Controls.NavigationViewItem)?.TargetPageType;
         if (section is null)
         {
             return;
@@ -527,6 +529,7 @@ public partial class App : Application
         builder.Services.AddSingleton<IItemsViewFactory, WpfItemsViewFactory>();
         builder.Services.AddSingleton<IDialogService, WpfDialogService>();
         builder.Services.AddSingleton<IClipboardService, WpfClipboardService>();
+        builder.Services.AddSingleton<INavigationService, WpfNavigationService>();
 
         // UI shell: the navigation page provider, the window, pages, and their view-models.
         builder.Services.AddSingleton<INavigationViewPageProvider, PageProvider>();

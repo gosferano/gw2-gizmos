@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Gw2Gizmos.Data.Worker.Features;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -21,16 +22,18 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     private readonly ApiKeyRegistrar _registrar;
     private readonly OnboardingStore _store;
+    private readonly INavigationService _navigation;
     private string _apiKeyInput = "";
     private string _status = "";
     private string _verifiedAccount = "";
     private bool _verified;
     private bool _busy;
 
-    public OnboardingViewModel(ApiKeyRegistrar registrar, OnboardingStore store)
+    public OnboardingViewModel(ApiKeyRegistrar registrar, OnboardingStore store, INavigationService navigation)
     {
         _registrar = registrar;
         _store = store;
+        _navigation = navigation;
         AddCommand = new RelayCommand(() => _ = AddAsync(), () => !_busy);
         OpenApiKeyPageCommand = new RelayCommand(() => OpenUrl(ApiKeyPageUrl));
         ContinueCommand = new RelayCommand(Finish);
@@ -115,7 +118,7 @@ public sealed class OnboardingViewModel : ViewModelBase
     private void Finish()
     {
         _store.MarkCompleted();
-        App.NavigateTo(typeof(DashboardPage));
+        _navigation.NavigateTo(AppPage.Dashboard);
     }
 
     private static void OpenUrl(string url)

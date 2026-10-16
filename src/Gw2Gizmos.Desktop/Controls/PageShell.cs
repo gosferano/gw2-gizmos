@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
+using Gw2Gizmos.Desktop.Ui;
 using Wpf.Ui.Controls;
 
 namespace Gw2Gizmos.Desktop.Controls;
@@ -116,7 +118,7 @@ public class PageShell : ContentControl
     {
         if (args.Item is BreadcrumbEntry { Target: { } target })
         {
-            App.NavigateTo(target);
+            App.NavigateTo(WpfNavigationService.PageTypeFor(target));
         }
     }
 

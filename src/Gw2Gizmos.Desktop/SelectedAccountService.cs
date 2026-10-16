@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -84,7 +84,7 @@ public static class AccountBreadcrumbs
 {
     public static BreadcrumbEntry[] Section(string sectionTitle) => new[]
     {
-        new BreadcrumbEntry { Title = "Account", Target = typeof(AccountPage) },
+        new BreadcrumbEntry { Title = "Account", Target = AppPage.Account },
         new BreadcrumbEntry { Title = sectionTitle },
     };
 }

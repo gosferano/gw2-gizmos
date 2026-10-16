@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.Worker.Features;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.Desktop.Mvvm;
 
@@ -40,7 +40,7 @@ public sealed class StoredDataViewModel : ViewModelBase
 
     public BreadcrumbEntry[] Breadcrumbs { get; } = new[]
     {
-        new BreadcrumbEntry { Title = "Settings", Target = typeof(SettingsPage) },
+        new BreadcrumbEntry { Title = "Settings", Target = AppPage.Settings },
         new BreadcrumbEntry { Title = "Stored data" },
     };
 

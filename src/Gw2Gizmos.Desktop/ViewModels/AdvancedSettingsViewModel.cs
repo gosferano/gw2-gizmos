@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Gw2Gizmos.Data.Worker.Features;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -25,7 +25,7 @@ public sealed class AdvancedSettingsViewModel : ViewModelBase
 
     public BreadcrumbEntry[] Breadcrumbs { get; } = new[]
     {
-        new BreadcrumbEntry { Title = "Settings", Target = typeof(SettingsPage) },
+        new BreadcrumbEntry { Title = "Settings", Target = AppPage.Settings },
         new BreadcrumbEntry { Title = "Advanced" },
     };
 

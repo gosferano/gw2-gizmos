@@ -1,4 +1,4 @@
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -20,14 +20,14 @@ public static class CharacterBreadcrumbs
 {
     public static BreadcrumbEntry[] Character(string name) => new[]
     {
-        new BreadcrumbEntry { Title = "Characters", Target = typeof(CharactersPage) },
+        new BreadcrumbEntry { Title = "Characters", Target = AppPage.Characters },
         new BreadcrumbEntry { Title = name },
     };
 
     public static BreadcrumbEntry[] Inventory(string name) => new[]
     {
-        new BreadcrumbEntry { Title = "Characters", Target = typeof(CharactersPage) },
-        new BreadcrumbEntry { Title = name, Target = typeof(CharacterPage) },
+        new BreadcrumbEntry { Title = "Characters", Target = AppPage.Characters },
+        new BreadcrumbEntry { Title = name, Target = AppPage.Character },
         new BreadcrumbEntry { Title = "Inventory" },
     };
 }

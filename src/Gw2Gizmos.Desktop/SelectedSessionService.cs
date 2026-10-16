@@ -1,4 +1,4 @@
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop;
 
@@ -39,14 +39,14 @@ public static class SessionBreadcrumbs
 {
     public static BreadcrumbEntry[] Session(string sessionTitle) => new[]
     {
-        new BreadcrumbEntry { Title = "Sessions", Target = typeof(SessionsPage) },
+        new BreadcrumbEntry { Title = "Sessions", Target = AppPage.Sessions },
         new BreadcrumbEntry { Title = sessionTitle },
     };
 
     public static BreadcrumbEntry[] Segment(string sessionTitle, string segmentTitle) => new[]
     {
-        new BreadcrumbEntry { Title = "Sessions", Target = typeof(SessionsPage) },
-        new BreadcrumbEntry { Title = sessionTitle, Target = typeof(SessionPage) },
+        new BreadcrumbEntry { Title = "Sessions", Target = AppPage.Sessions },
+        new BreadcrumbEntry { Title = sessionTitle, Target = AppPage.Session },
         new BreadcrumbEntry { Title = segmentTitle },
     };
 }

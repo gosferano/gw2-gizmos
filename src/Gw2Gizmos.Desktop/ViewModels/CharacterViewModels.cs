@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using Gw2Gizmos.Desktop.Controls;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Mvvm;
 
 namespace Gw2Gizmos.Desktop;
@@ -15,11 +15,17 @@ namespace Gw2Gizmos.Desktop;
 public sealed class CharactersViewModel : ViewModelBase
 {
     private readonly SelectedCharacterService _selected;
+    private readonly INavigationService _navigation;
     private string _status = "";
 
-    public CharactersViewModel(AccountReader reader, SelectedAccountService account, SelectedCharacterService selected)
+    public CharactersViewModel(
+        AccountReader reader,
+        SelectedAccountService account,
+        SelectedCharacterService selected,
+        INavigationService navigation)
     {
         _selected = selected;
+        _navigation = navigation;
         HasAccount = !string.IsNullOrEmpty(account.AccountId);
         OpenCommand = new RelayCommand<string>(Open);
 
@@ -76,7 +82,7 @@ public sealed class CharactersViewModel : ViewModelBase
         }
 
         _selected.Select(characterName);
-        App.NavigateTo(typeof(CharacterPage));
+        _navigation.NavigateTo(AppPage.Character);
     }
 }
 
