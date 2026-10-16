@@ -65,8 +65,9 @@ internal static class IdentityParser
         [JsonPropertyName("map_id")]
         public int MapId { get; set; }
 
+        // Unsigned: World vs. World team ids have the top bit set; as an int the whole identity failed to parse there.
         [JsonPropertyName("world_id")]
-        public int WorldId { get; set; }
+        public uint WorldId { get; set; }
 
         [JsonPropertyName("team_color_id")]
         public int TeamColorId { get; set; }

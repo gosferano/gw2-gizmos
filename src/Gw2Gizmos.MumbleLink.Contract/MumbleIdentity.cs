@@ -18,8 +18,11 @@ public sealed class MumbleIdentity
 
     public int MapId { get; init; }
 
-    /// <summary>The world (home server / shard) id.</summary>
-    public int WorldId { get; init; }
+    /// <summary>
+    /// The world id: the home world, or in World vs. World the team id, which has the top bit set (e.g. 2147483651)
+    /// and so doesn't fit an <c>int</c>.
+    /// </summary>
+    public uint WorldId { get; init; }
 
     public int TeamColorId { get; init; }
 
