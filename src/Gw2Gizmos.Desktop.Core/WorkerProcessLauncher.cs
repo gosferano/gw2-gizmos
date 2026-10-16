@@ -19,6 +19,7 @@ public sealed class WorkerProcessLauncher
     private readonly string _workerConfigPipeName;
     private readonly string? _mumbleLinkFilePath;
     private readonly ILogger<WorkerProcessLauncher> _logger;
+    private volatile Process? _process;
 
     /// <param name="mumbleLinkFilePath">Where a MumbleLink bridge mirrors the game's shared memory (Linux, game under
     /// Wine); null to let the worker read the game's shared memory directly (Windows).</param>
@@ -66,6 +67,22 @@ public sealed class WorkerProcessLauncher
         return startInfo;
     }
 
+    /// <summary>True while the worker this launcher last started is running (the Dashboard's status light).</summary>
+    public bool IsRunning
+    {
+        get
+        {
+            try
+            {
+                return _process is { HasExited: false };
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+    }
+
     /// <summary>Starts the worker; null (logged) when its executable isn't there, so ingestion just won't run.</summary>
     public Process? Start()
     {
@@ -77,6 +94,7 @@ public sealed class WorkerProcessLauncher
         }
 
         Process? process = Process.Start(startInfo);
+        _process = process;
         if (process is not null)
         {
             _logger.LogInformation("Started ingestion worker process (pid {Pid}).", process.Id);

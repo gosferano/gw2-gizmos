@@ -23,6 +23,7 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly AccountReader _reader;
+    private readonly WorkerProcessLauncher _worker;
     private readonly IDisposable _dataChanges;
     private DateTimeOffset _countsLoadedAt;
     private bool _loadingCounts;
@@ -59,10 +60,12 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         AppPaths paths,
         UpdateStatus updateStatus,
         IUiDispatcher dispatcher,
-        DataChangeMonitor dataChanges
+        DataChangeMonitor dataChanges,
+        WorkerProcessLauncher worker
     )
     {
         _scopeFactory = scopeFactory;
+        _worker = worker;
         _reader = reader;
         _apiKeyStore = apiKeyStore;
         _features = features;
@@ -90,6 +93,7 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
 
         // The stat queries scan large tables (item catalog, full price history) against a DB that's cold on first
         // open — so they run off the UI thread and populate the cards when ready, rather than freezing navigation.
+        WorkerOperational = worker.IsRunning;
         _ = LoadCountsAsync();
         _ = LoadAccountStatsAsync();
         _ = LoadTokenInfoAsync();
@@ -102,6 +106,9 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
 
     private void OnDataChanged(DataChanges changes)
     {
+        // Cheap, so checked on every notification (at least once a minute): goes grey soon after the worker dies.
+        WorkerOperational = _worker.IsRunning;
+
         if ((changes & (DataChanges.AccountSync | DataChanges.Holdings | DataChanges.Sessions | DataChanges.Clock)) != 0)
         {
             _ = LoadAccountStatsAsync();
@@ -145,9 +152,9 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         TradeableItemCount = counts.Tradeable;
         CurrencyCount = counts.Currencies;
         PriceSnapshotCount = counts.PriceSnapshots;
-        WorkerOperational = counts.WorkerOperational;
-        WorkerUpdated = FormatUpdated(counts.LastPollUtc);
-        WorkerUpdatedTooltip = counts.LastPollUtc is { } poll ? RelativeTime.Exact(poll) : null;
+        WorkerOperational = _worker.IsRunning;
+        WorkerUpdated = FormatUpdated(counts.LastWriteUtc);
+        WorkerUpdatedTooltip = counts.LastWriteUtc is { } write ? RelativeTime.Exact(write) : null;
     }
 
     /// <summary>The on-disk size of the SQLite database (+ its WAL), or "—" if it can't be read.</summary>
@@ -178,8 +185,8 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         : bytes >= 1L << 20 ? $"{bytes / (double)(1L << 20):0.0} MB"
         : $"{Math.Max(1, bytes / 1024)} KB";
 
-    private static string FormatUpdated(DateTimeOffset? lastPollUtc) =>
-        lastPollUtc is { } poll ? $"Updated {RelativeTime.Format(poll)}" : "No data yet";
+    private static string FormatUpdated(DateTimeOffset? lastWriteUtc) =>
+        lastWriteUtc is { } write ? $"Updated {RelativeTime.Format(write)}" : "No data yet";
 
     private async Task LoadAccountStatsAsync()
     {
@@ -257,14 +264,17 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
             int currencies = dbContext.Currencies.Count();
             int priceSnapshots = dbContext.PriceSnapshots.Count();
 
-            // The price poller runs every 5 min, so a recent snapshot means the worker is alive and updating.
+            // "Updated …": the worker's latest periodic write — a price poll (only with Price history on) or an
+            // account sync (only with an API key), whichever is newer.
             DateTimeOffset? lastPoll = dbContext
                 .PriceSnapshots.OrderByDescending(p => p.Id)
                 .Select(p => (DateTimeOffset?)p.TimestampUtc)
                 .FirstOrDefault();
-            bool operational = lastPoll is { } poll && DateTimeOffset.UtcNow - poll < TimeSpan.FromMinutes(15);
+            DateTimeOffset? lastSync = dbContext.Accounts.AsNoTracking()
+                .Select(a => (DateTimeOffset?)a.LastSyncedUtc).AsEnumerable().Max();
+            DateTimeOffset? lastWrite = lastPoll > lastSync || lastSync is null ? lastPoll : lastSync;
 
-            return new DashboardCounts(items, recipes, tradeable, currencies, priceSnapshots, operational, lastPoll);
+            return new DashboardCounts(items, recipes, tradeable, currencies, priceSnapshots, lastWrite);
         }
         catch (Exception)
         {
@@ -490,6 +500,5 @@ internal readonly record struct DashboardCounts(
     int Tradeable,
     int Currencies,
     int PriceSnapshots,
-    bool WorkerOperational,
-    DateTimeOffset? LastPollUtc
+    DateTimeOffset? LastWriteUtc
 );
