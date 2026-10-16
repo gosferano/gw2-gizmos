@@ -9,6 +9,17 @@
         <SolidColorBrush x:Key="DangerButtonForeground" Color="White" />
     </Styles.Resources>
 
+    <!-- A list row with a subtle hover highlight, so it's clear which value belongs to which name (wallet, session
+         loot). -->
+    <Style Selector="Border.hover-row">
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.hover-row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+    </Style>
+
     <!-- Destructive action button (WPF-UI's Appearance="Danger"), mirroring FluentAvalonia's .accent variant: same
          template part, red instead of accent. Declared state by state so hover / pressed / disabled still apply. -->
     <Style Selector="Button.danger /template/ ContentPresenter#PART_ContentPresenter">

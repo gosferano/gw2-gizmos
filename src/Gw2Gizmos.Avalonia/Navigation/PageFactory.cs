@@ -19,6 +19,11 @@ public sealed partial class PageFactory
     {
         [AppPage.Onboarding] = typeof(OnboardingPage),
         [AppPage.Dashboard] = typeof(DashboardPage),
+        [AppPage.Account] = typeof(AccountPage),
+        [AppPage.Wallet] = typeof(WalletPage),
+        [AppPage.MaterialStorage] = typeof(MaterialStoragePage),
+        [AppPage.Bank] = typeof(BankPage),
+        [AppPage.SharedInventory] = typeof(SharedInventoryPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),
         [AppPage.Settings] = typeof(SettingsPage),
         [AppPage.AdvancedSettings] = typeof(AdvancedSettingsPage),
@@ -44,10 +49,6 @@ public sealed partial class PageFactory
     // The section each not-yet-ported sub-page sits under, so its placeholder shows the real breadcrumb trail.
     private static readonly Dictionary<AppPage, AppPage> PlaceholderParents = new()
     {
-        [AppPage.Wallet] = AppPage.Account,
-        [AppPage.MaterialStorage] = AppPage.Account,
-        [AppPage.Bank] = AppPage.Account,
-        [AppPage.SharedInventory] = AppPage.Account,
         [AppPage.Character] = AppPage.Characters,
         [AppPage.CharacterInventory] = AppPage.Characters,
         [AppPage.Session] = AppPage.Sessions,

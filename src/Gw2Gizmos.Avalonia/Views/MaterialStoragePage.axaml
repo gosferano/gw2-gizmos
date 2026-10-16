@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Avalonia.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Avalonia.Views.MaterialStoragePage"
+             x:DataType="core:MaterialStorageViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <!-- In-game categories; expand one to see its slot grid. -->
+        <ItemsControl ItemsSource="{Binding Categories}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="core:MaterialCategoryView">
+                    <Expander Header="{Binding Name}" Margin="0,0,0,4" HorizontalAlignment="Stretch">
+                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0" MaxWidth="720"
+                                      HorizontalAlignment="Stretch" ItemTemplate="{StaticResource MaterialCellTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="10" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </Expander>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </c:PageShell>
+</UserControl>
