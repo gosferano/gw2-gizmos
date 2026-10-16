@@ -77,7 +77,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   # --- Desktop app: one job per platform, each producing its Velopack packages as an artifact. Same pack id and
-  # main exe as the WPF app the desktop app replaces, so existing Windows installs update onto it. ---
+  # main exe as the original WPF app (up to 0.6.0), so its installs updated onto this one. ---
 
   # Self-contained win-x64 publish (incl. the worker) -> Velopack installer, portable zip and update feed.
   desktop-windows:

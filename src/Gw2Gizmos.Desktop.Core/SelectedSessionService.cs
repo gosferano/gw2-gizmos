@@ -3,7 +3,7 @@ using Gw2Gizmos.Desktop.Core.Navigation;
 namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
-/// Carries the drilled-into play session (and segment) across the parameterless WPF-UI navigation — the Sessions
+/// Carries the drilled-into play session (and segment) across the parameterless page navigation — the Sessions
 /// hub → a session's segment timeline → a segment's loot — the way <see cref="SelectedCharacterService"/> carries
 /// the character. Transient navigation context for the current account, so it isn't persisted.
 /// </summary>

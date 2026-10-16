@@ -6,8 +6,8 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Starts the heavy ingestion engine as a separate worker process (so it can't stall the UI). The worker ships as a
 /// sibling executable in the app's own directory, sharing the runtime + common dependencies (see the CopyWorkerCli /
-/// PublishWorkerCli targets in the UI head's csproj). The worker watches this process and exits with it; a head may
-/// bind it more tightly (the WPF app's kill-on-close Job Object).
+/// PublishWorkerCli targets in the UI head's csproj). The worker watches this process and exits with it; a platform
+/// may bind it more tightly (Windows: a kill-on-close Job Object).
 /// </summary>
 public sealed class WorkerProcessLauncher
 {
