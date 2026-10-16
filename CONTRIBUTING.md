@@ -102,4 +102,6 @@ NuGet publishing uses [Trusted Publishing](https://learn.microsoft.com/nuget/nug
 desktop app's version is `<Version>` in `src/Gw2Gizmos.Avalonia/Gw2Gizmos.Avalonia.csproj`; its release is built
 with [Velopack](https://github.com/velopack/velopack) — the Windows installer on a Windows runner, the Linux
 AppImage on a Linux runner, both attached to one GitHub release with each platform's update feed — and
-self-updates on the next restart.
+self-updates on the next restart. A hyphenated version (e.g. `0.7.0-beta.1`) is released as a GitHub
+**prerelease**: installed apps update from the latest release only, so they don't pick it up, and testers install
+it from its release page. The next stable version updates everyone.

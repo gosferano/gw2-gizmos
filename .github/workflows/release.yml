@@ -186,20 +186,34 @@ jobs:
           path: Releases
 
       # Scope the notes' baseline to the desktop tag series; otherwise GitHub's auto previous-tag
-      # detection could pick a library tag (gw2-api-*). Empty on the first release -> action falls
-      # back to GitHub's default (notes from the repo start).
+      # detection could pick a library tag (gw2-api-*). A stable release compares against the previous
+      # stable one (skipping its betas), so its notes cover the whole cycle; a prerelease against the
+      # latest desktop tag of any kind. Empty on the first release -> action falls back to GitHub's
+      # default (notes from the repo start).
       - name: Previous desktop tag
         id: prev_desktop
         if: needs.detect.outputs.desktop_new == 'true'
         shell: bash
-        run: echo "tag=$(git tag --list 'gw2gizmos-desktop-*' --sort=-v:refname | head -n1)" >> "$GITHUB_OUTPUT"
+        env:
+          DESKTOP_V: ${{ needs.detect.outputs.desktop_v }}
+        run: |
+          tags=$(git tag --list 'gw2gizmos-desktop-*' --sort=-v:refname)
+          if [[ "$DESKTOP_V" != *-* ]]; then
+            tags=$(grep -vE '^gw2gizmos-desktop-[^-]+-' <<< "$tags" || true)
+          fi
+          echo "tag=$(head -n1 <<< "$tags")" >> "$GITHUB_OUTPUT"
 
+      # A hyphenated version (e.g. 0.7.0-beta.1) is a GitHub prerelease: never "latest", so installed apps — which
+      # update from releases/latest — don't pick it up; testers install it from its own release page. The next
+      # stable version becomes latest and updates everyone, testers included.
       - name: Release desktop app
         if: needs.detect.outputs.desktop_new == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: gw2gizmos-desktop-${{ needs.detect.outputs.desktop_v }}
           name: Gw2Gizmos ${{ needs.detect.outputs.desktop_v }}
+          prerelease: ${{ contains(needs.detect.outputs.desktop_v, '-') }}
+          make_latest: ${{ !contains(needs.detect.outputs.desktop_v, '-') }}
           previous_tag: ${{ steps.prev_desktop.outputs.tag }}
           generate_release_notes: true
           files: Releases/*
