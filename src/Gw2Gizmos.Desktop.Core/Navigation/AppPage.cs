@@ -23,6 +23,7 @@ public enum AppPage
     Events,
     Items,
     TradingPost,
+    PriceAlerts,
     Notifications,
     Logs,
     ApiKeys,

@@ -32,6 +32,7 @@ public sealed class GlobalSearch
         new("Events", null, "Clock24", AppPage.Events, "timers world bosses metas"),
         new("Items", null, "BoxMultiple24", AppPage.Items, "market prices crafting"),
         new("Trading post", null, "BuildingShop24", AppPage.TradingPost, "orders buys sells undercut outbid tp"),
+        new("Price alerts", null, "AlertOn24", AppPage.PriceAlerts, "notify tp trading post"),
         new("Account", null, "Person24", AppPage.Account, ""),
         new("Value", "Account", "DataTrending24", AppPage.AccountValue, "account value worth net gold"),
         new("Wallet", "Account", "Wallet24", AppPage.Wallet, "currencies coin karma"),
@@ -46,6 +47,22 @@ public sealed class GlobalSearch
         new("Advanced settings", "Settings", "Options24", AppPage.AdvancedSettings, "sync intervals"),
         new("Stored data", "Settings", "Delete24", AppPage.StoredData, "delete history"),
     };
+
+    /// <summary>
+    /// Pages that can't be jumped to on their own — they show one particular character, session or segment, or are the
+    /// first-run welcome. Every other page must be in the search (a test checks every page is in one list or the other).
+    /// </summary>
+    public static IReadOnlySet<AppPage> NotSearchable { get; } = new HashSet<AppPage>
+    {
+        AppPage.Onboarding,
+        AppPage.Character,
+        AppPage.CharacterInventory,
+        AppPage.Session,
+        AppPage.SessionLoot,
+    };
+
+    /// <summary>The pages the search finds.</summary>
+    public static IReadOnlyCollection<AppPage> SearchablePages { get; } = Pages.Select(p => p.Target).ToArray();
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly AccountReader _reader;

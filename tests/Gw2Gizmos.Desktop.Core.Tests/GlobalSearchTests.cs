@@ -1,3 +1,5 @@
+using Gw2Gizmos.Desktop.Core.Navigation;
+
 namespace Gw2Gizmos.Desktop.Core.Tests;
 
 /// <summary>The global search's name matching: start of the name, then start of a word, then anywhere.</summary>
@@ -20,5 +22,16 @@ public sealed class GlobalSearchTests
     {
         // The first "coin" is mid-word (in "Bitcoin"); the second starts a word.
         Assert.Equal(2, GlobalSearch.Score("Bitcoin Coin", "coin"));
+    }
+
+    [Fact]
+    public void Every_page_is_searchable_or_deliberately_left_out()
+    {
+        // A new page must be added to GlobalSearch's page list, or to NotSearchable if it can't be opened on its own.
+        IEnumerable<AppPage> missing = Enum.GetValues<AppPage>()
+            .Where(page => !GlobalSearch.SearchablePages.Contains(page) && !GlobalSearch.NotSearchable.Contains(page));
+
+        Assert.Empty(missing);
+        Assert.Empty(GlobalSearch.SearchablePages.Intersect(GlobalSearch.NotSearchable));
     }
 }

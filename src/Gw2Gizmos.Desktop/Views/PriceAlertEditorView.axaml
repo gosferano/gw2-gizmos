@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.PriceAlertEditorView"
+             x:DataType="core:PriceAlertEditorViewModel">
+    <!-- The price alert dialog's content: the item, the condition, the amount as g/s/c, and re-arming. -->
+    <StackPanel Width="400" Spacing="14">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <c:ItemImage ItemId="{Binding ItemId}" Width="32" Height="32" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding ItemName}" FontWeight="SemiBold" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,8,*">
+            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding SideOptions}"
+                      SelectedItem="{Binding SelectedSide}" />
+            <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" ItemsSource="{Binding DirectionOptions}"
+                      SelectedItem="{Binding SelectedDirection}" />
+        </Grid>
+
+        <!-- The amount: gold, silver and copper, each with its coin. No spinner buttons (they'd crowd out the digits);
+             arrow keys and the mouse wheel still step the value. -->
+        <Grid ColumnDefinitions="*,Auto,*,Auto,*,Auto">
+            <Grid.Styles>
+                <Style Selector="NumericUpDown">
+                    <Setter Property="ShowButtonSpinner" Value="False" />
+                    <Setter Property="Minimum" Value="0" />
+                    <Setter Property="Increment" Value="1" />
+                    <Setter Property="FormatString" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Right" />
+                </Style>
+                <Style Selector="Image">
+                    <Setter Property="Width" Value="16" />
+                    <Setter Property="Height" Value="16" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="Margin" Value="4,0,12,0" />
+                </Style>
+            </Grid.Styles>
+            <NumericUpDown Grid.Column="0" Value="{Binding Gold}" Maximum="99999" />
+            <Image Grid.Column="1" Source="/Assets/coin_gold.png" />
+            <NumericUpDown Grid.Column="2" Value="{Binding Silver}" Maximum="99" />
+            <Image Grid.Column="3" Source="/Assets/coin_silver.png" />
+            <NumericUpDown Grid.Column="4" Value="{Binding Copper}" Maximum="99" />
+            <Image Grid.Column="5" Source="/Assets/coin_copper.png" Margin="4,0,0,0" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasCurrentPrice}">
+            <TextBlock Text="Currently" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+            <c:CoinDisplay Copper="{Binding CurrentPrice}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <CheckBox IsChecked="{Binding Repeat}"
+                  Content="Alert again each time the price crosses back (otherwise once)" />
+    </StackPanel>
+</UserControl>

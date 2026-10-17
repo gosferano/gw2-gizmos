@@ -33,6 +33,7 @@ public sealed class ItemsViewModel : ViewModelBase
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IItemsViewFactory _views;
     private readonly PageTargets _targets;
+    private readonly PriceAlertEditing _alerts;
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
@@ -51,9 +52,14 @@ public sealed class ItemsViewModel : ViewModelBase
         FeatureSettingsStore features,
         IItemsViewFactory views,
         IUiDispatcher dispatcher,
-        PageTargets targets
+        PageTargets targets,
+        PriceAlertEditing alerts
     )
     {
+        _alerts = alerts;
+        AddAlertCommand = new RelayCommand(
+            () => _ = SelectedItem is { } item ? _alerts.AddAsync(item.ItemId, item.Name) : null,
+            () => SelectedItem is not null);
         _scopeFactory = scopeFactory;
         _views = views;
         _targets = targets;
@@ -233,6 +239,9 @@ public sealed class ItemsViewModel : ViewModelBase
     /// <summary>Reloads the grid from the database, keeping the current search filter applied.</summary>
     public RelayCommand RefreshCommand { get; }
 
+    /// <summary>Opens the price alert dialog for the selected item.</summary>
+    public RelayCommand AddAlertCommand { get; }
+
     /// <summary>True while a (re)load is in flight; disables the Refresh button so loads can't stack.</summary>
     public bool IsRefreshing
     {
@@ -296,6 +305,7 @@ public sealed class ItemsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HistoryPlaceholder));
                 OnPropertyChanged(nameof(CraftTreePlaceholder));
                 OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
+                AddAlertCommand.RaiseCanExecuteChanged();
                 _ = LoadDetailsAsync(value);
             }
         }

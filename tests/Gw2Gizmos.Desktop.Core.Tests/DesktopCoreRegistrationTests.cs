@@ -102,6 +102,8 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
     private sealed class StubDialogService : IDialogService
     {
         public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(false);
+
+        public Task<bool> EditPriceAlertAsync(PriceAlertEditorViewModel editor) => Task.FromResult(false);
     }
 
     private sealed class StubClipboardService : IClipboardService
