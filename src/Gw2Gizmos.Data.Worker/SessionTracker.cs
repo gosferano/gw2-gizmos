@@ -31,6 +31,10 @@ public sealed class SessionTracker : BackgroundService
     // Game-end is normally detected from the game process exiting; the tick-freeze timeout is only a fallback for
     // when the process id can't be read.
     private static readonly TimeSpan FreezeTimeout = TimeSpan.FromSeconds(60);
+    // A tick frozen this long while the game runs means the player left the world: character select, a minimised
+    // game or a long loading screen (MumbleLink stops updating in all of them). Shorter freezes, like most loading
+    // screens, are ignored.
+    private static readonly TimeSpan AwayTimeout = TimeSpan.FromSeconds(30);
     // On startup, when the game process can't be checked, the game counts as running if MumbleLink's
     // tick advances within this many probes. A few seconds' grace covers the Proton bridge (re)starting with the app.
     private const int TickProbeAttempts = 10;
@@ -52,6 +56,8 @@ public sealed class SessionTracker : BackgroundService
     private int _currentMapId;
     private uint _lastTick;
     private DateTimeOffset _lastTickChangeUtc;
+    // Since when the player has been out of the world (the open segment is "away"), or null while in it.
+    private DateTimeOffset? _awaySinceUtc;
     // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
     private bool _gameActive;
 
@@ -151,9 +157,11 @@ public sealed class SessionTracker : BackgroundService
 
         if (_gameSessionId is not null && ended)
         {
-            // Ended by the tick-freeze fallback: the game stopped at the last tick movement, not a timeout later.
+            // Played until the player left the world (closed from character select), or — ended by the tick-freeze
+            // fallback — until the last tick movement, not a timeout later.
             bool endedByFreeze = snapshot is not null && processAlive is null && tickFrozen;
-            await EndGameSessionAsync(endedByFreeze ? _lastTickChangeUtc : now, wentQuiet: endedByFreeze, stoppingToken);
+            DateTimeOffset endedAt = _awaySinceUtc ?? (endedByFreeze ? _lastTickChangeUtc : now);
+            await EndGameSessionAsync(endedAt, wentQuiet: endedAt < now, stoppingToken);
             return;
         }
 
@@ -172,6 +180,32 @@ public sealed class SessionTracker : BackgroundService
             }
 
             return;
+        }
+
+        // Out of the world while the game runs: its time isn't played, so the open segment is marked away until the
+        // player is back.
+        if (now - _lastTickChangeUtc >= AwayTimeout)
+        {
+            if (_segmentId is not null && _awaySinceUtc is null)
+            {
+                await LeaveWorldAsync(_lastTickChangeUtc, stoppingToken);
+            }
+
+            return;
+        }
+
+        if (_awaySinceUtc is { } awaySince)
+        {
+            if (character is not null && string.Equals(character, _activeCharacter, StringComparison.Ordinal))
+            {
+                // Back on the same character: the segment carries on, minus the time away.
+                await ReturnToWorldAsync(now, stoppingToken);
+            }
+            else
+            {
+                // Back on another character (or still loading): the old character's segment ended when it left.
+                await EndAwaySegmentAsync(awaySince, now, stoppingToken);
+            }
         }
 
         if (character is null)
@@ -201,6 +235,99 @@ public sealed class SessionTracker : BackgroundService
 
         await TrackMapAsync(MapIdOf(snapshot!), now, stoppingToken);
     }
+
+    /// <summary>
+    /// The player left the world at <paramref name="leftAt"/> (when the tick froze): the open segment is marked away
+    /// and its map segment closes. No account sync: nothing is played while away, and whatever comes next syncs.
+    /// </summary>
+    private async Task LeaveWorldAsync(DateTimeOffset leftAt, CancellationToken stoppingToken)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        if (await db.CharacterSegments.FirstOrDefaultAsync(s => s.Id == _segmentId, stoppingToken) is { } segment)
+        {
+            segment.AwaySinceUtc = leftAt;
+            await CloseMapSegmentsAsync(db, [segment.Id], leftAt, stoppingToken);
+            await db.SaveChangesAsync(stoppingToken);
+        }
+
+        _awaySinceUtc = leftAt;
+        _mapSegmentId = null;
+        _currentMapId = 0;
+        _logger.LogInformation("{Character} left the world (character select, minimised or loading).", _activeCharacter);
+    }
+
+    /// <summary>Back in the world on the same character: the time away is added to the segment, which carries on.</summary>
+    private async Task ReturnToWorldAsync(DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        TimeSpan away = now - _awaySinceUtc!.Value;
+        if (await db.CharacterSegments.FirstOrDefaultAsync(s => s.Id == _segmentId, stoppingToken) is { } segment)
+        {
+            segment.AwayTime += away;
+            segment.AwaySinceUtc = null;
+            await db.SaveChangesAsync(stoppingToken);
+        }
+
+        _awaySinceUtc = null;
+        _logger.LogInformation("{Character} is back in the world after {Away}.", _activeCharacter, SpanText(away));
+    }
+
+    /// <summary>
+    /// Ends the away segment at <paramref name="leftAt"/>, when its character left the world, because the player came
+    /// back on another character (which then gets its own segment).
+    /// </summary>
+    private async Task EndAwaySegmentAsync(DateTimeOffset leftAt, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        using (IServiceScope scope = _scopeFactory.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+            if (await db.CharacterSegments.FirstOrDefaultAsync(s => s.Id == _segmentId, stoppingToken) is { } segment)
+            {
+                segment.EndedAtUtc = leftAt;
+                segment.AwaySinceUtc = null;
+                await db.SaveChangesAsync(stoppingToken);
+            }
+
+            await DateLateObservationsAsync(db, leftAt, now, stoppingToken);
+        }
+
+        _logger.LogInformation("Character segment on {Character} ended when it left the world.", _activeCharacter);
+        _segmentId = null;
+        _activeCharacter = null;
+        _awaySinceUtc = null;
+    }
+
+    /// <summary>
+    /// Dates to <paramref name="leftAt"/> the account changes recorded after the player left the world (up to now):
+    /// a sync while they were out recorded what their play left behind (the API lags a few minutes), but stamped later —
+    /// and the log only appends changes, so the next boundary's sync wouldn't record it again.
+    /// </summary>
+    private async Task DateLateObservationsAsync(
+        Gw2GizmosDbContext db, DateTimeOffset leftAt, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        string? accountId = await db.GameSessions
+            .Where(s => s.Id == _gameSessionId)
+            .Select(s => s.AccountId)
+            .FirstOrDefaultAsync(stoppingToken);
+        if (accountId is null)
+        {
+            return;
+        }
+
+        await db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > leftAt && o.ObservedAtUtc <= now)
+            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, leftAt), stoppingToken);
+        await db.AccountWalletObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > leftAt && o.ObservedAtUtc <= now)
+            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, leftAt), stoppingToken);
+    }
+
+    private static string SpanText(TimeSpan span) =>
+        span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes}m" : span.TotalMinutes >= 1 ? $"{span.Minutes}m {span.Seconds}s" : $"{span.Seconds}s";
 
     /// <summary>
     /// Records a map change within the current character segment: closes the open map segment and opens one for the new
@@ -353,7 +480,7 @@ public sealed class SessionTracker : BackgroundService
     }
 
     /// <param name="wentQuiet">
-    /// Ended by the tick-freeze fallback, so <paramref name="detectedAt"/> is when the game went quiet, a timeout ago.
+    /// <paramref name="detectedAt"/> is in the past: when the player left the world, or the tick went quiet.
     /// </param>
     private async Task EndGameSessionAsync(DateTimeOffset detectedAt, bool wentQuiet, CancellationToken stoppingToken)
     {
@@ -371,14 +498,8 @@ public sealed class SessionTracker : BackgroundService
 
         if (wentQuiet)
         {
-            // A sync that ran while the game was quiet recorded what it left behind, but stamped after the end —
-            // and the log only appends changes, so the end's own sync didn't record it again. Date it to the end.
-            await db.AccountItemObservations
-                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
-                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
-            await db.AccountWalletObservations
-                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
-                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
+            // Ended at a past moment (left the world, or the tick went quiet): date what syncs recorded since to it.
+            await DateLateObservationsAsync(db, boundary, _timeProvider.GetUtcNow(), stoppingToken);
         }
 
         // A sitting that captured no item/wallet change isn't worth keeping (its loot/value would all be zero) —
@@ -402,6 +523,7 @@ public sealed class SessionTracker : BackgroundService
         foreach (CharacterSegment open in openSegments)
         {
             open.EndedAtUtc = boundary;
+            open.AwaySinceUtc = null;
         }
 
         await CloseMapSegmentsAsync(db, openSegments.Select(s => s.Id).ToList(), boundary, stoppingToken);
@@ -623,6 +745,7 @@ public sealed class SessionTracker : BackgroundService
                 _gameSessionId = session.Id;
                 _segmentId = openSegment?.Id;
                 _activeCharacter = openSegment?.CharacterName;
+                _awaySinceUtc = openSegment?.AwaySinceUtc;
                 _nextSequence = segments.Count == 0 ? 0 : segments.Max(s => s.Sequence) + 1;
                 // The map may have changed while the worker was down: close the open map segment now; the next tick
                 // opens one for wherever the character is.
@@ -680,6 +803,7 @@ public sealed class SessionTracker : BackgroundService
 
     private void ResetState()
     {
+        _awaySinceUtc = null;
         _gameSessionId = null;
         _segmentId = null;
         _activeCharacter = null;

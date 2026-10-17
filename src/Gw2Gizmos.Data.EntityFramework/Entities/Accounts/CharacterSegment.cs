@@ -29,4 +29,22 @@ public class CharacterSegment
 
     /// <summary>When the player switched away (or the game closed), or <c>null</c> while this character is active.</summary>
     public DateTimeOffset? EndedAtUtc { get; set; }
+
+    /// <summary>
+    /// Total time spent out of the world during this segment — on character select, with the game minimised or on a
+    /// long loading screen — when the player came back on the same character. Not playing, so it's left out of
+    /// in-world time.
+    /// </summary>
+    public TimeSpan AwayTime { get; set; }
+
+    /// <summary>
+    /// Since when the player has been out of the world, while they still are (character select, minimised); <c>null</c>
+    /// while in the world. If they come back on this character it's added to <see cref="AwayTime"/>; otherwise the
+    /// segment ends at this moment.
+    /// </summary>
+    public DateTimeOffset? AwaySinceUtc { get; set; }
+
+    /// <summary>Time actually played: from start to end (or to now, or to leaving the world), minus the time away.</summary>
+    public TimeSpan InWorldTime(DateTimeOffset now) =>
+        ((AwaySinceUtc ?? EndedAtUtc ?? now) - StartedAtUtc - AwayTime) is { Ticks: > 0 } time ? time : TimeSpan.Zero;
 }
