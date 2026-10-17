@@ -112,7 +112,7 @@ public sealed class SessionTracker : BackgroundService
             // Feature turned off mid-session — close cleanly so we don't leave a dangling open session.
             if (_gameSessionId is not null)
             {
-                await EndGameSessionAsync(_timeProvider.GetUtcNow(), stoppingToken);
+                await EndGameSessionAsync(_timeProvider.GetUtcNow(), wentQuiet: false, stoppingToken);
             }
 
             return;
@@ -147,7 +147,9 @@ public sealed class SessionTracker : BackgroundService
 
         if (_gameSessionId is not null && ended)
         {
-            await EndGameSessionAsync(now, stoppingToken);
+            // Ended by the tick-freeze fallback: the game stopped at the last tick movement, not a timeout later.
+            bool endedByFreeze = snapshot is not null && processAlive is null && tickFrozen;
+            await EndGameSessionAsync(endedByFreeze ? _lastTickChangeUtc : now, wentQuiet: endedByFreeze, stoppingToken);
             return;
         }
 
@@ -346,7 +348,10 @@ public sealed class SessionTracker : BackgroundService
         _logger.LogInformation("Character switched to {Character}.", character);
     }
 
-    private async Task EndGameSessionAsync(DateTimeOffset detectedAt, CancellationToken stoppingToken)
+    /// <param name="wentQuiet">
+    /// Ended by the tick-freeze fallback, so <paramref name="detectedAt"/> is when the game went quiet, a timeout ago.
+    /// </param>
+    private async Task EndGameSessionAsync(DateTimeOffset detectedAt, bool wentQuiet, CancellationToken stoppingToken)
     {
         DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [_activeCharacter], stoppingToken);
 
@@ -358,6 +363,18 @@ public sealed class SessionTracker : BackgroundService
         {
             ResetState();
             return;
+        }
+
+        if (wentQuiet)
+        {
+            // A sync that ran while the game was quiet recorded what it left behind, but stamped after the end —
+            // and the log only appends changes, so the end's own sync didn't record it again. Date it to the end.
+            await db.AccountItemObservations
+                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
+                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
+            await db.AccountWalletObservations
+                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
+                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
         }
 
         // A sitting that captured no item/wallet change isn't worth keeping (its loot/value would all be zero) —

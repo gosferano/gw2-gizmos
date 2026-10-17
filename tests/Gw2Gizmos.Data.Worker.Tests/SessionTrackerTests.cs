@@ -172,8 +172,11 @@ public sealed class SessionTrackerTests : IDisposable
     public async Task TickFreeze_EndsSession_WhenProcessIdUnknown()
     {
         await Live("Alice"); // opens with a tick; ProcessId is 0 (unknown) so the freeze timeout is the fallback
+        await Live("Alice"); // played a little
+        DateTimeOffset lastMoved = _time.Now;
 
-        // Activity recorded so the session survives the end (not discarded as empty).
+        // Activity recorded so the session survives the end (not discarded as empty) — by a sync that ran while the
+        // game was already quiet, so it's stamped after the tick stopped.
         _time.Advance(TimeSpan.FromSeconds(30));
         SeedObservation(_time.Now);
 
@@ -183,7 +186,9 @@ public sealed class SessionTrackerTests : IDisposable
         await _tracker.TickAsync(CancellationToken.None);
 
         GameSession session = await Db.GameSessions.SingleAsync();
-        Assert.NotNull(session.EndedAtUtc);
+        Assert.Equal(lastMoved, session.EndedAtUtc);
+        // The quiet-time sync's observation is dated to the end, so it counts towards the session.
+        Assert.Equal(lastMoved, (await Db.AccountItemObservations.AsNoTracking().SingleAsync()).ObservedAtUtc);
     }
 
     // --- maps ---
@@ -320,6 +325,27 @@ public sealed class SessionTrackerTests : IDisposable
         await _tracker.ResumeOrCloseOpenSessionsAsync(CancellationToken.None);
 
         Assert.NotNull((await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task A_session_ended_by_a_frozen_tick_ends_when_the_tick_last_moved()
+    {
+        await Live("Alice");
+        SeedObservation(_time.Now.AddSeconds(1)); // some activity, so the session is kept
+        await Live("Alice");
+        DateTimeOffset lastMoved = _time.Now;
+
+        // The game goes quiet (process can't be checked): the tick stops moving until the timeout runs out.
+        for (int i = 0; i < 15; i++)
+        {
+            _time.Advance(TimeSpan.FromSeconds(5));
+            _reader.Snapshot = Snapshot(_tick, "Alice");
+            await _tracker.TickAsync(CancellationToken.None);
+        }
+
+        GameSession session = await Db.GameSessions.AsNoTracking().SingleAsync();
+        Assert.Equal(lastMoved, session.EndedAtUtc);
+        Assert.Equal(lastMoved, (await OrderedSegments()).Single().EndedAtUtc);
     }
 
     /// <summary>A session left open by a previous run, with an open character and map segment.</summary>
