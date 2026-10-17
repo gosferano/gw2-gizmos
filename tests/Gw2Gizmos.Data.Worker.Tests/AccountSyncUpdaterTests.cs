@@ -160,6 +160,48 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         Assert.Equal(observationsBefore, await ItemObsCount(AccountContainer.CharacterInventory));
     }
 
+    [Fact]
+    public async Task BoundarySync_RecordsHoldingsAtTheBoundary_ForJustTheGivenCharacters()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Characters["Bob Guard"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 800, Count: 1) };
+        state.Permissions.Add("tradingpost"); // so a full sync would read the trading post
+        state.Apply(_stub);
+        await Sync();
+        Assert.Contains(_stub.RequestedPaths, path => path.StartsWith("/v2/commerce/"));
+        int bobObservations = await Db.AccountItemObservations.CountAsync(o => o.ItemId == 800);
+
+        // Alice picks up coin and an item; the boundary was a minute before the sync runs.
+        state.Wallet[1] = 12_000;
+        state.Characters["Alice Necro"] = new List<AccountStateBuilder.ItemSlot?> { new(Id: 700, Count: 9) };
+        state.Apply(_stub);
+        DateTimeOffset boundary = _time.Now.AddMinutes(1);
+        _time.Advance(TimeSpan.FromMinutes(2));
+        _stub.RequestedPaths.Clear();
+
+        await using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            await NewUpdater(db).SyncHoldingsAt(boundary, new[] { "Alice Necro" }, CancellationToken.None);
+        }
+
+        // Only Alice was fetched, and the trading post was left alone.
+        Assert.Contains("/v2/characters/Alice Necro", _stub.RequestedPaths);
+        Assert.DoesNotContain("/v2/characters/Bob Guard", _stub.RequestedPaths);
+        Assert.DoesNotContain(_stub.RequestedPaths, path => path.StartsWith("/v2/commerce/"));
+
+        // The changes are stamped at the boundary, not when the sync ran.
+        AccountWalletObservation coin = await Db.AccountWalletObservations.OrderByDescending(o => o.Id).FirstAsync(o => o.CurrencyId == 1);
+        Assert.Equal((12_000, boundary), (coin.Value, coin.ObservedAtUtc));
+        AccountItemObservation alicesItem = await Db.AccountItemObservations.OrderByDescending(o => o.Id).FirstAsync(o => o.ItemId == 700);
+        Assert.Equal((9, boundary), (alicesItem.Count, alicesItem.ObservedAtUtc));
+
+        // Bob's bags weren't touched and still count: no "gone" row for his item.
+        Assert.Equal(new int?[] { 800 }, await SlotItems("Bob Guard"));
+        Assert.Equal(bobObservations, await Db.AccountItemObservations.CountAsync(o => o.ItemId == 800));
+        // The account's synced time is when the sync actually ran.
+        Assert.Equal(_time.Now, (await Db.Accounts.SingleAsync()).LastSyncedUtc);
+    }
+
     private Task<List<int?>> SlotItems(string characterName) =>
         Db.CharacterItemSlots.Where(s => s.CharacterName == characterName)
             .OrderBy(s => s.SlotIndex)

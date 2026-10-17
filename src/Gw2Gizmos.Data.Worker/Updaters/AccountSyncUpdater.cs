@@ -50,7 +50,28 @@ public class AccountSyncUpdater
         _logger = logger;
     }
 
-    public async Task SyncAccount(CancellationToken stoppingToken)
+    /// <summary>The regular sync: everything enabled, stamped now.</summary>
+    public Task SyncAccount(CancellationToken stoppingToken) => SyncAsync(SyncScope.Full, stoppingToken);
+
+    /// <summary>
+    /// The sync at a play-session boundary: only what can change during a sitting — wallet, material storage, bank,
+    /// shared inventory and the given characters' bags (the others' stored bags still count towards the totals) — so
+    /// it takes seconds, not the full sync's minute. Its observations are stamped <paramref name="observedAt"/>, the
+    /// moment the boundary happened, so the session's holdings at that boundary include them however long the sync
+    /// took.
+    /// </summary>
+    public Task SyncHoldingsAt(DateTimeOffset observedAt, IEnumerable<string> characters, CancellationToken stoppingToken) =>
+        SyncAsync(new SyncScope(observedAt, characters.ToHashSet(StringComparer.Ordinal)), stoppingToken);
+
+    /// <summary>What a sync covers: everything (<see cref="Full"/>), or a session boundary's holdings.</summary>
+    private sealed record SyncScope(DateTimeOffset? ObservedAt, IReadOnlySet<string>? Characters)
+    {
+        public static SyncScope Full { get; } = new(null, null);
+
+        public bool IsBoundary => ObservedAt is not null;
+    }
+
+    private async Task SyncAsync(SyncScope scope, CancellationToken stoppingToken)
     {
         IReadOnlyList<string> apiKeys = _apiKeyProvider.GetApiKeys();
         if (apiKeys.Count == 0)
@@ -79,7 +100,7 @@ public class AccountSyncUpdater
 
             try
             {
-                string? name = await SyncOneAccountAsync(apiKey, seenAccounts, stoppingToken);
+                string? name = await SyncOneAccountAsync(apiKey, seenAccounts, scope, stoppingToken);
                 if (name is not null)
                 {
                     syncedNames.Add(name);
@@ -92,7 +113,9 @@ public class AccountSyncUpdater
         }
 
         _logger.LogInformation(
-            "Account sync completed for {Count} account(s): {Accounts}.",
+            scope.IsBoundary
+                ? "Session-boundary sync completed for {Count} account(s): {Accounts}."
+                : "Account sync completed for {Count} account(s): {Accounts}.",
             syncedNames.Count,
             syncedNames.Count == 0 ? "(none)" : string.Join(", ", syncedNames)
         );
@@ -103,6 +126,7 @@ public class AccountSyncUpdater
     private async Task<string?> SyncOneAccountAsync(
         string apiKey,
         HashSet<string> seenAccounts,
+        SyncScope scope,
         CancellationToken stoppingToken
     )
     {
@@ -121,8 +145,10 @@ public class AccountSyncUpdater
             return null;
         }
 
-        DateTimeOffset now = _timeProvider.GetUtcNow();
-        await UpsertAccountAsync(account, now, stoppingToken);
+        // A boundary sync records its observations at the boundary; the account's "synced" time is when it ran.
+        DateTimeOffset syncedAt = _timeProvider.GetUtcNow();
+        DateTimeOffset now = scope.ObservedAt ?? syncedAt;
+        await UpsertAccountAsync(account, syncedAt, stoppingToken);
 
         // The key's live permissions, so an enabled feature whose key lacks a permission can be warned about
         // up front rather than silently failing the request.
@@ -137,8 +163,12 @@ public class AccountSyncUpdater
         await RunSection(WorkerFeatures.MaterialStorage, account, permissions, () => SyncMaterialsAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.Bank, account, permissions, () => SyncBankAsync(client, account.Id, now, stoppingToken));
         await RunSection(WorkerFeatures.SharedInventory, account, permissions, () => SyncSharedInventoryAsync(client, account.Id, now, stoppingToken));
-        await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharactersAsync(client, account.Id, now, stoppingToken));
-        await RunSection(WorkerFeatures.TradingPost, account, permissions, () => SyncTradingPostAsync(client, account.Id, now, stoppingToken));
+        await RunSection(WorkerFeatures.CharacterInventory, account, permissions, () => SyncCharactersAsync(client, account.Id, now, scope.Characters, stoppingToken));
+        if (!scope.IsBoundary)
+        {
+            // The trading post doesn't change what a session earned in-game, so a boundary sync leaves it.
+            await RunSection(WorkerFeatures.TradingPost, account, permissions, () => SyncTradingPostAsync(client, account.Id, now, stoppingToken));
+        }
 
         return account.Name;
     }
@@ -417,7 +447,9 @@ public class AccountSyncUpdater
         return inventory is null ? 0 : await SyncContainerAsync(accountId, AccountContainer.SharedInventory, inventory, now, stoppingToken);
     }
 
-    private async Task<int> SyncCharactersAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    /// <param name="only">Just these characters (the rest keep their stored bags, which still count), or all when null.</param>
+    private async Task<int> SyncCharactersAsync(
+        Gw2ApiClient client, string accountId, DateTimeOffset now, IReadOnlySet<string>? only, CancellationToken stoppingToken)
     {
         // One full-character request per character (1 + N) — the heavy object carries details AND bags, so no
         // separate inventory call is needed. Rides the shared account-sync pass.
@@ -435,6 +467,11 @@ public class AccountSyncUpdater
         foreach (string characterName in characterNames)
         {
             stoppingToken.ThrowIfCancellationRequested();
+            if (only is not null && !only.Contains(characterName))
+            {
+                unfetched.Add(characterName);
+                continue;
+            }
 
             ApiChar.Character? character;
             try
@@ -507,8 +544,8 @@ public class AccountSyncUpdater
             }
         }
 
-        // A character that couldn't be fetched keeps its stored bags; count those too, so its items don't read as
-        // lost now and gained back on the next sync.
+        // A character not fetched — its request failed, or a session-boundary sync left it out — keeps its stored
+        // bags; count those too, so its items don't read as lost now and gained back on the next sync.
         if (unfetched.Count > 0)
         {
             var kept = await _dbContext
