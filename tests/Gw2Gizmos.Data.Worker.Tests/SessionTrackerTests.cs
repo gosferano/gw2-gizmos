@@ -62,6 +62,8 @@ public sealed class SessionTrackerTests : IDisposable
         )
         {
             TickProbeInterval = TimeSpan.Zero,
+            // ProcessId 0 means "can't tell" — not whatever happens to be running on this machine.
+            GameProcessAlive = _ => null,
         };
     }
 
