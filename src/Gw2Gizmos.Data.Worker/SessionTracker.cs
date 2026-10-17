@@ -31,6 +31,9 @@ public sealed class SessionTracker : BackgroundService
     // Game-end is normally detected from the game process exiting; the tick-freeze timeout is only a fallback for
     // when the process id can't be read.
     private static readonly TimeSpan FreezeTimeout = TimeSpan.FromSeconds(60);
+    // On startup, when the game process can't be checked (Wine/Proton), the game counts as running if MumbleLink's
+    // tick advances within this many probes. A few seconds' grace covers the Proton bridge (re)starting with the app.
+    private const int TickProbeAttempts = 10;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMumbleLinkReader _reader;
@@ -51,6 +54,9 @@ public sealed class SessionTracker : BackgroundService
     private DateTimeOffset _lastTickChangeUtc;
     // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
     private bool _gameActive;
+
+    /// <summary>The wait between startup tick probes (see <see cref="IsGameRunningAsync"/>); tests set it to zero.</summary>
+    internal TimeSpan TickProbeInterval { get; set; } = TimeSpan.FromMilliseconds(500);
 
     public SessionTracker(
         IServiceScopeFactory scopeFactory,
@@ -497,6 +503,40 @@ public sealed class SessionTracker : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Whether the game is running, for deciding on startup whether an open session continues. The game process
+    /// answers where it can be checked (Windows). Where it can't — the game under Wine/Proton, whose process ids
+    /// aren't the host's — an advancing MumbleLink tick is the proof, as for the Dashboard's live card: the block is
+    /// read a few times over a few seconds, and running means the tick moved. A minimised game freezes its tick, so it
+    /// reads as closed (the session is then closed, as before).
+    /// </summary>
+    private async Task<bool> IsGameRunningAsync(CancellationToken stoppingToken)
+    {
+        MumbleLinkSnapshot? first = _reader.Read();
+        if (first is null)
+        {
+            return false;
+        }
+
+        if (IsGameProcessAlive(first) is { } alive)
+        {
+            return alive;
+        }
+
+        for (int probe = 0; probe < TickProbeAttempts; probe++)
+        {
+            await Task.Delay(TickProbeInterval, stoppingToken);
+            if (_reader.Read() is { } next && next.UiTick != first.UiTick)
+            {
+                _logger.LogInformation("Game process can't be checked; MumbleLink's tick is advancing, so the game is running.");
+                return true;
+            }
+        }
+
+        _logger.LogInformation("Game process can't be checked and MumbleLink's tick isn't advancing; treating the game as closed.");
+        return false;
+    }
+
     /// <summary>The account for a character (from the synced roster); falls back to the sole account if only one.</summary>
     private static async Task<string?> ResolveAccountIdAsync(Gw2GizmosDbContext db, string characterName, CancellationToken stoppingToken)
     {
@@ -535,8 +575,7 @@ public sealed class SessionTracker : BackgroundService
 
         // Newest = highest Id (avoid ordering by DateTimeOffset, which SQLite can't do server-side here).
         long newestId = openSessions.Max(s => s.Id);
-        MumbleLinkSnapshot? snapshot = _reader.Read();
-        bool gameRunning = snapshot is not null && IsGameProcessAlive(snapshot) == true;
+        bool gameRunning = await IsGameRunningAsync(stoppingToken);
 
         foreach (GameSession session in openSessions)
         {

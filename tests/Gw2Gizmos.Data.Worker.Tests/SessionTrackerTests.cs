@@ -55,7 +55,10 @@ public sealed class SessionTrackerTests : IDisposable
             new AccountSyncGate(),
             _time,
             NullLogger<SessionTracker>.Instance
-        );
+        )
+        {
+            TickProbeInterval = TimeSpan.Zero,
+        };
     }
 
     public void Dispose()
@@ -281,6 +284,55 @@ public sealed class SessionTrackerTests : IDisposable
         Assert.Equal((await Db.CharacterSegments.AsNoTracking().SingleAsync()).EndedAtUtc, map.EndedAtUtc);
     }
 
+    [Fact]
+    public async Task OnStartup_WhenTheProcessCantBeChecked_AnAdvancingTickResumesTheOpenSession()
+    {
+        // As under Wine/Proton: ProcessId 0 (can't be checked), but the game's tick is moving.
+        long sessionId = SeedOpenSession("Alice", mapId: 50);
+        _reader.Snapshot = Snapshot(_tick, "Alice", mapId: 50);
+        _reader.AdvanceOnRead = true;
+
+        await _tracker.ResumeOrCloseOpenSessionsAsync(CancellationToken.None);
+
+        GameSession session = await Db.GameSessions.AsNoTracking().SingleAsync();
+        Assert.Equal(sessionId, session.Id);
+        Assert.Null(session.EndedAtUtc);
+        Assert.Null((await Db.CharacterSegments.AsNoTracking().SingleAsync()).EndedAtUtc);
+
+        // The next tick carries on in the same session and segment (and reopens the map segment).
+        await Live("Alice", mapId: 50);
+        Assert.Equal(1, await Db.GameSessions.CountAsync());
+        Assert.Single(await OrderedSegments());
+    }
+
+    [Fact]
+    public async Task OnStartup_WhenTheProcessCantBeChecked_AFrozenTickClosesTheOpenSession()
+    {
+        SeedOpenSession("Alice", mapId: 50);
+        _time.Advance(TimeSpan.FromMinutes(10));
+        SeedObservation(_time.Now);
+        _reader.Snapshot = Snapshot(_tick, "Alice", mapId: 50); // the block is there, but the tick doesn't move
+
+        await _tracker.ResumeOrCloseOpenSessionsAsync(CancellationToken.None);
+
+        Assert.NotNull((await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc);
+    }
+
+    /// <summary>A session left open by a previous run, with an open character and map segment.</summary>
+    private long SeedOpenSession(string character, int mapId)
+    {
+        using Gw2GizmosDbContext db = _fixture.NewContext();
+        var session = new GameSession { AccountId = AccountId, StartedAtUtc = _time.Now };
+        db.GameSessions.Add(session);
+        db.SaveChanges();
+        var segment = new CharacterSegment { GameSessionId = session.Id, CharacterName = character, StartedAtUtc = _time.Now };
+        db.CharacterSegments.Add(segment);
+        db.SaveChanges();
+        db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = mapId, StartedAtUtc = _time.Now });
+        db.SaveChanges();
+        return session.Id;
+    }
+
     // --- driving helpers ---
 
     /// <summary>Advances the clock and feeds one "game live" tick with a fresh UiTick (so it's never seen as frozen)
@@ -337,12 +389,28 @@ public sealed class SessionTrackerTests : IDisposable
         db.SaveChanges();
     }
 
-    /// <summary>A scriptable <see cref="IMumbleLinkReader"/>: <see cref="Read"/> returns whatever the test last set.</summary>
+    /// <summary>A scriptable <see cref="IMumbleLinkReader"/>: <see cref="Read"/> returns whatever the test last set,
+    /// or, with <see cref="AdvanceOnRead"/>, the same block with its tick moved on each read (a running game).</summary>
     private sealed class FakeMumbleLinkReader : IMumbleLinkReader
     {
         public MumbleLinkSnapshot? Snapshot { get; set; }
 
-        public MumbleLinkSnapshot? Read() => Snapshot;
+        public bool AdvanceOnRead { get; set; }
+
+        public MumbleLinkSnapshot? Read()
+        {
+            if (AdvanceOnRead && Snapshot is not null)
+            {
+                Snapshot = new MumbleLinkSnapshot
+                {
+                    UiTick = Snapshot.UiTick + 1,
+                    Identity = Snapshot.Identity,
+                    Context = Snapshot.Context,
+                };
+            }
+
+            return Snapshot;
+        }
 
         public bool TryRead([NotNullWhen(true)] out MumbleLinkSnapshot? snapshot)
         {
