@@ -11,15 +11,15 @@ namespace Gw2Gizmos.Data.Worker;
 
 /// <summary>
 /// Detects play sessions from MumbleLink and records them as <see cref="GameSession"/> + ordered
-/// <see cref="CharacterSegment"/> rows. The game process (<c>Context.ProcessId</c>) being alive drives the
-/// game-session boundaries (launch → close), so a long alt-tab/minimise keeps the session open; the <c>uiTick</c>
-/// freeze is only a fallback for when the process can't be read. The identity's active character drives the
+/// <see cref="CharacterSegment"/> rows. The game process being alive (<c>Context.ProcessId</c> on Windows, the
+/// <see cref="LinuxGameProcess"/> on Linux) drives the game-session boundaries (launch → close), so character select or
+/// a minimised game — which stop MumbleLink updating — keep the session open; the <c>uiTick</c> freeze is only a
+/// fallback for when the process can't be read. The identity's active character drives the
 /// segment boundaries (the switches within a sitting), and the map id splits each segment into
 /// <see cref="MapSegment"/>s (where it was played).
 /// Each session/segment boundary is stamped when it's detected, and a lean account sync of the holdings records a fresh
 /// data point at that same moment — the desktop reconstructs per-segment "hoarded" deltas from those.
-/// Gated on <see cref="WorkerFeatures.PlaySessions"/>; only registered on Windows (the reader uses Windows named
-/// shared memory).
+/// Gated on <see cref="WorkerFeatures.PlaySessions"/>.
 /// </summary>
 public sealed class SessionTracker : BackgroundService
 {
@@ -31,7 +31,7 @@ public sealed class SessionTracker : BackgroundService
     // Game-end is normally detected from the game process exiting; the tick-freeze timeout is only a fallback for
     // when the process id can't be read.
     private static readonly TimeSpan FreezeTimeout = TimeSpan.FromSeconds(60);
-    // On startup, when the game process can't be checked (Wine/Proton), the game counts as running if MumbleLink's
+    // On startup, when the game process can't be checked, the game counts as running if MumbleLink's
     // tick advances within this many probes. A few seconds' grace covers the Proton bridge (re)starting with the app.
     private const int TickProbeAttempts = 10;
 
@@ -54,6 +54,10 @@ public sealed class SessionTracker : BackgroundService
     private DateTimeOffset _lastTickChangeUtc;
     // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
     private bool _gameActive;
+
+    /// <summary>Whether the game process is running (true / false / null when it can't be told); tests replace it so
+    /// they don't depend on what's running on the machine.</summary>
+    internal Func<MumbleLinkSnapshot, bool?> GameProcessAlive { get; set; } = IsGameProcessAlive;
 
     /// <summary>The wait between startup tick probes (see <see cref="IsGameRunningAsync"/>); tests set it to zero.</summary>
     internal TimeSpan TickProbeInterval { get; set; } = TimeSpan.FromMilliseconds(500);
@@ -134,7 +138,7 @@ public sealed class SessionTracker : BackgroundService
 
             tickFrozen = now - _lastTickChangeUtc >= FreezeTimeout;
             character = string.IsNullOrEmpty(snapshot.Identity?.Name) ? null : snapshot.Identity!.Name;
-            processAlive = IsGameProcessAlive(snapshot);
+            processAlive = GameProcessAlive(snapshot);
         }
 
         // The game has ended when there's no block, the game process has exited, or — when the process can't be
@@ -487,11 +491,16 @@ public sealed class SessionTracker : BackgroundService
     /// Whether the Guild Wars 2 process the block reports (<c>Context.ProcessId</c>) is still running: <c>true</c>
     /// alive, <c>false</c> exited, <c>null</c> when it can't be determined (no context yet, or access denied) — the
     /// caller then falls back to the tick-freeze timeout. The process name is checked to guard against the OS
-    /// reusing the pid for an unrelated process after the game closes. Off Windows the game runs under Wine, whose
-    /// process ids aren't the host's, so it's always undetermined there.
+    /// reusing the pid for an unrelated process after the game closes. On Linux the game runs under Wine, whose
+    /// process ids aren't the host's, so it's found by its executable instead (<see cref="LinuxGameProcess"/>).
     /// </summary>
     private static bool? IsGameProcessAlive(MumbleLinkSnapshot snapshot)
     {
+        if (OperatingSystem.IsLinux())
+        {
+            return LinuxGameProcess.IsRunning();
+        }
+
         uint processId = snapshot.Context?.ProcessId ?? 0;
         if (processId == 0 || !OperatingSystem.IsWindows())
         {
@@ -528,10 +537,9 @@ public sealed class SessionTracker : BackgroundService
 
     /// <summary>
     /// Whether the game is running, for deciding on startup whether an open session continues. The game process
-    /// answers where it can be checked (Windows). Where it can't — the game under Wine/Proton, whose process ids
-    /// aren't the host's — an advancing MumbleLink tick is the proof, as for the Dashboard's live card: the block is
-    /// read a few times over a few seconds, and running means the tick moved. A minimised game freezes its tick, so it
-    /// reads as closed (the session is then closed, as before).
+    /// answers where it can be checked (Windows, and Linux by its executable). Where it can't, an advancing MumbleLink
+    /// tick is the proof, as for the Dashboard's live card: the block is read a few times over a few seconds, and
+    /// running means the tick moved — though a minimised game freezes its tick, so then it reads as closed.
     /// </summary>
     private async Task<bool> IsGameRunningAsync(CancellationToken stoppingToken)
     {
@@ -541,7 +549,7 @@ public sealed class SessionTracker : BackgroundService
             return false;
         }
 
-        if (IsGameProcessAlive(first) is { } alive)
+        if (GameProcessAlive(first) is { } alive)
         {
             return alive;
         }
