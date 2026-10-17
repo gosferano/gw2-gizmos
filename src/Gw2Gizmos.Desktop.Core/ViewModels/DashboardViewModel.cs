@@ -220,7 +220,7 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         IsLiveActive = _openSessionValue is not null;
         if (_openSessionValue is { } value)
         {
-            LiveDuration = FormatSessionDuration(DateTimeOffset.UtcNow - value.StartedAtUtc);
+            LiveDuration = FormatSessionDuration(value.PlayedTime(DateTimeOffset.UtcNow));
             OnPropertyChanged(nameof(LiveGoldPerHour));
             OnPropertyChanged(nameof(HasLiveGoldPerHour));
         }

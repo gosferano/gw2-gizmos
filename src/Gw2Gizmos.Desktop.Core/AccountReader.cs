@@ -274,10 +274,9 @@ public sealed class AccountReader
         }
 
         long[] sessionIds = sessions.Select(s => s.Id).ToArray();
-        var segments = db.CharacterSegments.AsNoTracking()
+        List<CharacterSegment> segments = db.CharacterSegments.AsNoTracking()
             .Where(s => sessionIds.Contains(s.GameSessionId))
             .OrderBy(s => s.Sequence)
-            .Select(s => new { s.Id, s.GameSessionId, s.CharacterName })
             .ToList();
         Dictionary<long, List<string>> charactersBySession = segments
             .GroupBy(s => s.GameSessionId)
@@ -294,6 +293,9 @@ public sealed class AccountReader
         // Reconstruct each sitting's item + coin delta over its window, then value them all with one shared
         // price/vendor lookup so the list badge matches the session-detail summary.
         DateTimeOffset now = DateTimeOffset.UtcNow;
+        Dictionary<long, TimeSpan> played = segments
+            .GroupBy(s => s.GameSessionId)
+            .ToDictionary(g => g.Key, g => PlayedTime(g, now));
         Dictionary<long, (Dictionary<int, int> Items, long Coin)> deltas = sessions.ToDictionary(
             s => s.Id,
             s => (
@@ -312,6 +314,7 @@ public sealed class AccountReader
                     s.EndedAtUtc,
                     charactersBySession.TryGetValue(s.Id, out List<string>? chars) ? string.Join(", ", chars) : "—",
                     total,
+                    played.GetValueOrDefault(s.Id),
                     mainMapBySession.GetValueOrDefault(s.Id));
             })
             .ToList();
@@ -367,7 +370,8 @@ public sealed class AccountReader
 
             rows.Add(new SessionSegmentRow(
                 segment.Id, segment.Sequence, segment.CharacterName,
-                segment.StartedAtUtc, segment.EndedAtUtc, coin, gained, lost, loot));
+                segment.StartedAtUtc, segment.EndedAtUtc, coin, gained, lost, loot,
+                segment.InWorldTime(now), segment.AwayTime + (segment.AwaySinceUtc is { } since ? now - since : TimeSpan.Zero)));
         }
 
         return rows;
@@ -522,13 +526,25 @@ public sealed class AccountReader
             return SessionValueSummary.Empty;
         }
 
-        DateTimeOffset end = session.EndedAtUtc ?? DateTimeOffset.UtcNow;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset end = session.EndedAtUtc ?? now;
         Dictionary<int, int> deltas = ItemDeltaOver(db, accountId, session.StartedAtUtc, end);
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, deltas.Keys.ToList());
         long loot = deltas.Sum(kv => (long)kv.Value * values.GetValueOrDefault(kv.Key));
         long coin = CoinDeltaOver(db, accountId, session.StartedAtUtc, end);
-        return new SessionValueSummary(coin, loot, session.StartedAtUtc, session.EndedAtUtc);
+
+        List<CharacterSegment> segments = db.CharacterSegments.AsNoTracking()
+            .Where(s => s.GameSessionId == session.Id)
+            .ToList();
+        // Still running only while a character is in the world (not ended, not away).
+        bool inWorld = session.EndedAtUtc is null && segments.Any(s => s.EndedAtUtc is null && s.AwaySinceUtc is null);
+        return new SessionValueSummary(coin, loot, session.StartedAtUtc, session.EndedAtUtc, PlayedTime(segments, now), now, inWorld);
     }
+
+    /// <summary>Time actually played across <paramref name="segments"/>: in the world, not away (character select,
+    /// minimised).</summary>
+    private static TimeSpan PlayedTime(IEnumerable<CharacterSegment> segments, DateTimeOffset now) =>
+        segments.Aggregate(TimeSpan.Zero, (total, segment) => total + segment.InWorldTime(now));
 
     /// <summary>Net per-item holdings delta over a window (end totals minus start totals); zero deltas dropped.</summary>
     private static Dictionary<int, int> ItemDeltaOver(Gw2GizmosDbContext db, string accountId, DateTimeOffset start, DateTimeOffset end)
@@ -642,16 +658,11 @@ public sealed class AccountReader
                     return new DashboardSessionStats(0, TimeSpan.Zero, null, false, null);
                 }
 
+                // Time actually played: in the world, across every session's segments.
                 DateTimeOffset now = DateTimeOffset.UtcNow;
-                TimeSpan total = TimeSpan.Zero;
-                foreach (var s in sessions)
-                {
-                    DateTimeOffset end = s.EndedAtUtc ?? now;
-                    if (end > s.StartedAtUtc)
-                    {
-                        total += end - s.StartedAtUtc;
-                    }
-                }
+                long[] sessionIds = sessions.Select(s => s.Id).ToArray();
+                TimeSpan total = PlayedTime(
+                    db.CharacterSegments.AsNoTracking().Where(seg => sessionIds.Contains(seg.GameSessionId)).ToList(), now);
 
                 // Most recent sitting (the list is already materialised for the playtime sum above).
                 var latest = sessions.OrderByDescending(s => s.StartedAtUtc).First();
@@ -776,6 +787,7 @@ public sealed record GameSessionRow(
     DateTimeOffset? EndedAtUtc,
     string CharactersDisplay,
     long TotalValueCopper,
+    TimeSpan PlayedTime,
     string? MainMap = null
 )
 {
@@ -784,16 +796,10 @@ public sealed record GameSessionRow(
     public bool HasValue => TotalValueCopper != 0;
 
     /// <summary>Hours the sitting lasted (open sessions measured to now); 0 when unknown/negative.</summary>
-    private double DurationHours
-    {
-        get
-        {
-            TimeSpan span = (EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc;
-            return span > TimeSpan.Zero ? span.TotalHours : 0;
-        }
-    }
+    /// <summary>Hours actually played (in the world); 0 when unknown.</summary>
+    private double DurationHours => PlayedTime.TotalHours;
 
-    /// <summary>Estimated value earned per hour (copper), for sorting; 0 for sub-minute sittings.</summary>
+    /// <summary>Estimated value earned per hour played (copper), for sorting; 0 for sub-minute sittings.</summary>
     public long ProfitPerHourCopper => DurationHours <= 1.0 / 60 ? 0 : (long)(TotalValueCopper / DurationHours);
 
     /// <summary>Card title, e.g. "Mon 16 Jun, 19:04".</summary>
@@ -805,7 +811,8 @@ public sealed record GameSessionRow(
         ? $"{DurationDisplay} · {CharactersDisplay}"
         : $"{DurationDisplay} · {MainMap} · {CharactersDisplay}";
 
-    public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+    /// <summary>Time actually played, e.g. "1h 5m" — character select and a minimised game don't count.</summary>
+    public string DurationDisplay => SessionFormat.Span(PlayedTime);
 }
 
 /// <summary>The account's estimated value at one point in time, by where it's held (copper).</summary>
@@ -968,7 +975,9 @@ public sealed record SessionSegmentRow(
     long CoinDelta,
     int ItemsGained,
     int ItemsLost,
-    long LootValueCopper
+    long LootValueCopper,
+    TimeSpan PlayedTime,
+    TimeSpan AwayTime
 )
 {
     public bool IsActive => EndedAtUtc is null;
@@ -982,7 +991,11 @@ public sealed record SessionSegmentRow(
     public string TimeRange =>
         $"{StartedAtUtc.LocalDateTime:HH:mm} – {(EndedAtUtc is { } e ? e.LocalDateTime.ToString("HH:mm") : "now")}";
 
-    public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
+    /// <summary>Time actually played, plus any time out of the world, e.g. "45m (12m away)".</summary>
+    public string DurationDisplay =>
+        AwayTime >= TimeSpan.FromMinutes(1)
+            ? $"{SessionFormat.Span(PlayedTime)} ({SessionFormat.Span(AwayTime)} away)"
+            : SessionFormat.Span(PlayedTime);
 
     public bool HasCoin => CoinDelta != 0;
 
@@ -1035,16 +1048,22 @@ public sealed record SessionLoot(IReadOnlyList<SessionLootCurrency> Currencies, 
 }
 
 /// <summary>A session's estimated worth: coin gained plus the instant-sell value of net item loot, with the
-/// gold-per-hour rate over the sitting's duration. Item value is the latest trading-post buy order minus the 15%
+/// gold-per-hour rate over the time actually played. Item value is the latest trading-post buy order minus the 15%
 /// fee, falling back to vendor value for untradeable loot.</summary>
 public sealed record SessionValueSummary(
     long CoinDeltaCopper,
     long LootValueCopper,
     DateTimeOffset StartedAtUtc,
-    DateTimeOffset? EndedAtUtc
+    DateTimeOffset? EndedAtUtc,
+    TimeSpan PlayedTimeAsOf = default,
+    DateTimeOffset AsOfUtc = default,
+    bool InWorld = false
 )
 {
     public static SessionValueSummary Empty { get; } = new(0, 0, DateTimeOffset.UnixEpoch, null);
+
+    /// <summary>Time actually played up to <paramref name="now"/>: as read, plus the time since while still in the world.</summary>
+    public TimeSpan PlayedTime(DateTimeOffset now) => InWorld ? PlayedTimeAsOf + (now - AsOfUtc) : PlayedTimeAsOf;
 
     public long TotalValueCopper => CoinDeltaCopper + LootValueCopper;
 
@@ -1053,7 +1072,7 @@ public sealed record SessionValueSummary(
     {
         get
         {
-            double hours = ((EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc).TotalHours;
+            double hours = PlayedTime(DateTimeOffset.UtcNow).TotalHours;
             return hours <= 1.0 / 60 ? null : (long)(TotalValueCopper / hours);
         }
     }
@@ -1062,9 +1081,6 @@ public sealed record SessionValueSummary(
 /// <summary>Shared formatting for the session views (durations and signed coin amounts).</summary>
 internal static class SessionFormat
 {
-    public static string Duration(DateTimeOffset start, DateTimeOffset? end) =>
-        Span((end ?? DateTimeOffset.UtcNow) - start);
-
     /// <summary>A length of play time, e.g. "1h 5m", "25m", "40s".</summary>
     public static string Span(TimeSpan span)
     {
