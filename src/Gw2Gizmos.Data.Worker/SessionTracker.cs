@@ -16,8 +16,8 @@ namespace Gw2Gizmos.Data.Worker;
 /// freeze is only a fallback for when the process can't be read. The identity's active character drives the
 /// segment boundaries (the switches within a sitting), and the map id splits each segment into
 /// <see cref="MapSegment"/>s (where it was played).
-/// At every session/segment boundary it runs an account sync first, then stamps the boundary time, so the observation logs carry a
-/// fresh data point just before each timestamp — the desktop reconstructs per-segment "hoarded" deltas from those.
+/// Each session/segment boundary is stamped when it's detected, and a lean account sync of the holdings records a fresh
+/// data point at that same moment — the desktop reconstructs per-segment "hoarded" deltas from those.
 /// Gated on <see cref="WorkerFeatures.PlaySessions"/>; only registered on Windows (the reader uses Windows named
 /// shared memory).
 /// </summary>
@@ -112,7 +112,7 @@ public sealed class SessionTracker : BackgroundService
             // Feature turned off mid-session — close cleanly so we don't leave a dangling open session.
             if (_gameSessionId is not null)
             {
-                await EndGameSessionAsync(stoppingToken);
+                await EndGameSessionAsync(_timeProvider.GetUtcNow(), wentQuiet: false, stoppingToken);
             }
 
             return;
@@ -147,7 +147,9 @@ public sealed class SessionTracker : BackgroundService
 
         if (_gameSessionId is not null && ended)
         {
-            await EndGameSessionAsync(stoppingToken);
+            // Ended by the tick-freeze fallback: the game stopped at the last tick movement, not a timeout later.
+            bool endedByFreeze = snapshot is not null && processAlive is null && tickFrozen;
+            await EndGameSessionAsync(endedByFreeze ? _lastTickChangeUtc : now, wentQuiet: endedByFreeze, stoppingToken);
             return;
         }
 
@@ -162,7 +164,7 @@ public sealed class SessionTracker : BackgroundService
             // Game became live; only open once a character has actually loaded (skip the char-select screen).
             if (character is not null)
             {
-                await StartGameSessionAsync(character, stoppingToken);
+                await StartGameSessionAsync(character, now, stoppingToken);
             }
 
             return;
@@ -173,7 +175,7 @@ public sealed class SessionTracker : BackgroundService
             // At character-select / loading: close the current character's segment and await the next character.
             if (_segmentId is not null)
             {
-                await EndCurrentSegmentAsync(stoppingToken);
+                await EndCurrentSegmentAsync(now, stoppingToken);
             }
 
             return;
@@ -182,14 +184,14 @@ public sealed class SessionTracker : BackgroundService
         if (_activeCharacter is null)
         {
             // Returned from char-select to a character — open the next segment.
-            await StartSegmentAsync(character, stoppingToken);
+            await StartSegmentAsync(character, now, stoppingToken);
             return;
         }
 
         if (!string.Equals(character, _activeCharacter, StringComparison.Ordinal))
         {
             // A switch with no observed char-select gap — close the old segment and open the new one in one boundary.
-            await SwitchSegmentAsync(character, stoppingToken);
+            await SwitchSegmentAsync(character, now, stoppingToken);
             return;
         }
 
@@ -247,9 +249,9 @@ public sealed class SessionTracker : BackgroundService
         _currentMapId = 0;
     }
 
-    private async Task StartGameSessionAsync(string character, CancellationToken stoppingToken)
+    private async Task StartGameSessionAsync(string character, DateTimeOffset detectedAt, CancellationToken stoppingToken)
     {
-        DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
+        DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [character], stoppingToken);
 
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -282,9 +284,9 @@ public sealed class SessionTracker : BackgroundService
         _logger.LogInformation("Play session started for {Account} on {Character}.", accountId, character);
     }
 
-    private async Task StartSegmentAsync(string character, CancellationToken stoppingToken)
+    private async Task StartSegmentAsync(string character, DateTimeOffset detectedAt, CancellationToken stoppingToken)
     {
-        DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
+        DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [character], stoppingToken);
 
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -304,17 +306,18 @@ public sealed class SessionTracker : BackgroundService
         _logger.LogInformation("Character segment started on {Character}.", character);
     }
 
-    private async Task EndCurrentSegmentAsync(CancellationToken stoppingToken)
+    private async Task EndCurrentSegmentAsync(DateTimeOffset detectedAt, CancellationToken stoppingToken)
     {
         string? character = _activeCharacter;
-        DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
+        DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [character], stoppingToken);
         await CloseSegmentAsync(boundary, stoppingToken);
         _logger.LogInformation("Character {Character} left to character select.", character ?? "(unknown)");
     }
 
-    private async Task SwitchSegmentAsync(string character, CancellationToken stoppingToken)
+    private async Task SwitchSegmentAsync(string character, DateTimeOffset detectedAt, CancellationToken stoppingToken)
     {
-        DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
+        // Both characters' bags: what the old one ended with, and what the new one starts with.
+        DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [_activeCharacter, character], stoppingToken);
 
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -345,9 +348,12 @@ public sealed class SessionTracker : BackgroundService
         _logger.LogInformation("Character switched to {Character}.", character);
     }
 
-    private async Task EndGameSessionAsync(CancellationToken stoppingToken)
+    /// <param name="wentQuiet">
+    /// Ended by the tick-freeze fallback, so <paramref name="detectedAt"/> is when the game went quiet, a timeout ago.
+    /// </param>
+    private async Task EndGameSessionAsync(DateTimeOffset detectedAt, bool wentQuiet, CancellationToken stoppingToken)
     {
-        DateTimeOffset boundary = await SyncAndStampAsync(stoppingToken);
+        DateTimeOffset boundary = await SyncAtBoundaryAsync(detectedAt, [_activeCharacter], stoppingToken);
 
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
@@ -357,6 +363,18 @@ public sealed class SessionTracker : BackgroundService
         {
             ResetState();
             return;
+        }
+
+        if (wentQuiet)
+        {
+            // A sync that ran while the game was quiet recorded what it left behind, but stamped after the end —
+            // and the log only appends changes, so the end's own sync didn't record it again. Date it to the end.
+            await db.AccountItemObservations
+                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
+                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
+            await db.AccountWalletObservations
+                .Where(o => o.AccountId == session.AccountId && o.ObservedAtUtc > boundary)
+                .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, boundary), stoppingToken);
         }
 
         // A sitting that captured no item/wallet change isn't worth keeping (its loot/value would all be zero) —
@@ -434,12 +452,17 @@ public sealed class SessionTracker : BackgroundService
     }
 
     /// <summary>
-    /// Runs a full account sync (serialized against the periodic loop), then returns the boundary timestamp. The
-    /// sync lands fresh observations just before the returned time, so a later "totals as-of this boundary" read
-    /// includes them. A sync failure is logged but still yields a timestamp — the boundary is recorded regardless.
+    /// Records the holdings at a boundary detected at <paramref name="detectedAt"/> and returns that time as the
+    /// boundary. The sync is the lean session one (wallet, materials, bank, shared inventory and the characters
+    /// involved — seconds, not the full sync's minute), serialized against the periodic loop, and its observations are
+    /// stamped at <paramref name="detectedAt"/>: the boundary is when it happened, not when the sync finished, and a
+    /// later "totals as-of this boundary" read still includes them. A sync failure is logged; the boundary is recorded
+    /// regardless.
     /// </summary>
-    private async Task<DateTimeOffset> SyncAndStampAsync(CancellationToken stoppingToken)
+    private async Task<DateTimeOffset> SyncAtBoundaryAsync(
+        DateTimeOffset detectedAt, IEnumerable<string?> characters, CancellationToken stoppingToken)
     {
+        string[] names = characters.OfType<string>().Distinct().ToArray();
         try
         {
             await _accountSyncGate.RunExclusivelyAsync(
@@ -447,7 +470,7 @@ public sealed class SessionTracker : BackgroundService
                 {
                     using IServiceScope scope = _scopeFactory.CreateScope();
                     var updater = scope.ServiceProvider.GetRequiredService<AccountSyncUpdater>();
-                    await updater.SyncAccount(stoppingToken);
+                    await updater.SyncHoldingsAt(detectedAt, names, stoppingToken);
                 },
                 stoppingToken
             );
@@ -457,7 +480,7 @@ public sealed class SessionTracker : BackgroundService
             _logger.LogWarning(ex, "Session-boundary account sync failed; recording the boundary anyway.");
         }
 
-        return _timeProvider.GetUtcNow();
+        return detectedAt;
     }
 
     /// <summary>

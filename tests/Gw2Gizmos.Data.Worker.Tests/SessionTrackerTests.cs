@@ -32,8 +32,12 @@ public sealed class SessionTrackerTests : IDisposable
 
     private uint _tick;
 
+    // No keys (so a sync makes no requests), but it can be made to "take" time, like a real sync.
+    private readonly SlowSyncKeyProvider _keys;
+
     public SessionTrackerTests()
     {
+        _keys = new SlowSyncKeyProvider(_time);
         SeedAccount();
 
         // A real scope factory over the same temp DB, plus a no-op AccountSyncUpdater (no keys → SyncAccount returns
@@ -42,7 +46,7 @@ public sealed class SessionTrackerTests : IDisposable
         services.AddLogging();
         services.AddDbContext<Gw2GizmosDbContext>(o => new SqliteDbProvider().Configure(o, _fixture.ConnectionString));
         services.AddSingleton<TimeProvider>(_time);
-        services.AddSingleton<IGw2ApiKeyProvider, EmptyApiKeyProvider>();
+        services.AddSingleton<IGw2ApiKeyProvider>(_keys);
         services.AddSingleton<IFeatureGate, AllEnabledFeatureGate>();
         services.AddSingleton<IGw2ApiClientFactory>(new RoutingHttpStub().BuildClientFactory()); // never called (no keys)
         services.AddScoped<AccountSyncUpdater>();
@@ -168,8 +172,11 @@ public sealed class SessionTrackerTests : IDisposable
     public async Task TickFreeze_EndsSession_WhenProcessIdUnknown()
     {
         await Live("Alice"); // opens with a tick; ProcessId is 0 (unknown) so the freeze timeout is the fallback
+        await Live("Alice"); // played a little
+        DateTimeOffset lastMoved = _time.Now;
 
-        // Activity recorded so the session survives the end (not discarded as empty).
+        // Activity recorded so the session survives the end (not discarded as empty) — by a sync that ran while the
+        // game was already quiet, so it's stamped after the tick stopped.
         _time.Advance(TimeSpan.FromSeconds(30));
         SeedObservation(_time.Now);
 
@@ -179,7 +186,9 @@ public sealed class SessionTrackerTests : IDisposable
         await _tracker.TickAsync(CancellationToken.None);
 
         GameSession session = await Db.GameSessions.SingleAsync();
-        Assert.NotNull(session.EndedAtUtc);
+        Assert.Equal(lastMoved, session.EndedAtUtc);
+        // The quiet-time sync's observation is dated to the end, so it counts towards the session.
+        Assert.Equal(lastMoved, (await Db.AccountItemObservations.AsNoTracking().SingleAsync()).ObservedAtUtc);
     }
 
     // --- maps ---
@@ -318,6 +327,27 @@ public sealed class SessionTrackerTests : IDisposable
         Assert.NotNull((await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc);
     }
 
+    [Fact]
+    public async Task A_session_ended_by_a_frozen_tick_ends_when_the_tick_last_moved()
+    {
+        await Live("Alice");
+        SeedObservation(_time.Now.AddSeconds(1)); // some activity, so the session is kept
+        await Live("Alice");
+        DateTimeOffset lastMoved = _time.Now;
+
+        // The game goes quiet (process can't be checked): the tick stops moving until the timeout runs out.
+        for (int i = 0; i < 15; i++)
+        {
+            _time.Advance(TimeSpan.FromSeconds(5));
+            _reader.Snapshot = Snapshot(_tick, "Alice");
+            await _tracker.TickAsync(CancellationToken.None);
+        }
+
+        GameSession session = await Db.GameSessions.AsNoTracking().SingleAsync();
+        Assert.Equal(lastMoved, session.EndedAtUtc);
+        Assert.Equal(lastMoved, (await OrderedSegments()).Single().EndedAtUtc);
+    }
+
     /// <summary>A session left open by a previous run, with an open character and map segment.</summary>
     private long SeedOpenSession(string character, int mapId)
     {
@@ -331,6 +361,28 @@ public sealed class SessionTrackerTests : IDisposable
         db.MapSegments.Add(new MapSegment { CharacterSegmentId = segment.Id, MapId = mapId, StartedAtUtc = _time.Now });
         db.SaveChanges();
         return session.Id;
+    }
+
+    [Fact]
+    public async Task Boundaries_are_stamped_when_they_happen_not_when_their_sync_finishes()
+    {
+        _keys.SyncTakes = TimeSpan.FromSeconds(90);
+
+        _time.Advance(TimeSpan.FromSeconds(5));
+        DateTimeOffset launched = _time.Now;
+        _reader.Snapshot = Snapshot(++_tick, "Alice");
+        await _tracker.TickAsync(CancellationToken.None);
+
+        _time.Advance(TimeSpan.FromSeconds(5));
+        DateTimeOffset switched = _time.Now;
+        _reader.Snapshot = Snapshot(++_tick, "Bob");
+        await _tracker.TickAsync(CancellationToken.None);
+
+        Assert.Equal(launched, (await Db.GameSessions.AsNoTracking().SingleAsync()).StartedAtUtc);
+        List<CharacterSegment> segments = await OrderedSegments();
+        Assert.Equal(launched, segments[0].StartedAtUtc);
+        Assert.Equal(switched, segments[0].EndedAtUtc);
+        Assert.Equal(switched, segments[1].StartedAtUtc);
     }
 
     // --- driving helpers ---
@@ -419,5 +471,19 @@ public sealed class SessionTrackerTests : IDisposable
         }
 
         public void Dispose() { }
+    }
+
+    /// <summary>No API keys, but each sync moves the clock on by <see cref="SyncTakes"/>, as a real sync takes time.</summary>
+    private sealed class SlowSyncKeyProvider(MutableTimeProvider time) : IGw2ApiKeyProvider
+    {
+        public TimeSpan SyncTakes { get; set; }
+
+        public string? GetApiKey() => null;
+
+        public IReadOnlyList<string> GetApiKeys()
+        {
+            time.Advance(SyncTakes);
+            return Array.Empty<string>();
+        }
     }
 }
