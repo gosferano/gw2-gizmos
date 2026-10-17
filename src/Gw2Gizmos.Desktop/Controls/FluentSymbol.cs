@@ -10,6 +10,7 @@ namespace Gw2Gizmos.Desktop.Controls;
 public enum FluentSymbol
 {
     Alert24 = 0xF115,
+    AlertOn24 = 0xF11B,
     ArrowDown24 = 0xF149,
     ArrowSync24 = 0xF191,
     ArrowUp24 = 0xF19C,
@@ -24,6 +25,7 @@ public enum FluentSymbol
     DataTrending24 = 0xE45E,
     Delete24 = 0xF34D,
     DocumentBulletList24 = 0xF403,
+    Edit24 = 0xF3DE,
     History24 = 0xF47F,
     Home24 = 0xF481,
     Key24 = 0xF4B7,

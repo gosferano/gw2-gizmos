@@ -105,6 +105,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // The user's price alerts on trading-post items.
         services.AddSingleton<PriceAlertStore>();
         services.AddHostedService<PriceAlertService>();
+        services.AddSingleton<PriceAlertEditing>();
 
         // Notifies when one of the selected account's trading-post orders gets undercut or outbid.
         services.AddHostedService<TradingPostAlertService>();
@@ -154,6 +155,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<SelectedSessionService>();
         services.AddTransient<SessionsViewModel>();
         services.AddTransient<TradingPostViewModel>();
+        services.AddTransient<PriceAlertsViewModel>();
         services.AddTransient<SessionViewModel>();
         services.AddTransient<SessionLootViewModel>();
 
