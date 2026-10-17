@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Desktop.Core.Mvvm;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
@@ -31,6 +32,7 @@ public sealed class ItemsViewModel : ViewModelBase
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IItemsViewFactory _views;
+    private readonly PageTargets _targets;
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
@@ -48,11 +50,13 @@ public sealed class ItemsViewModel : ViewModelBase
         IServiceScopeFactory scopeFactory,
         FeatureSettingsStore features,
         IItemsViewFactory views,
-        IUiDispatcher dispatcher
+        IUiDispatcher dispatcher,
+        PageTargets targets
     )
     {
         _scopeFactory = scopeFactory;
         _views = views;
+        _targets = targets;
         // Read once — the VM is transient, so this reflects the toggle's state at navigation time.
         PricesEnabled = features.IsEnabled(WorkerFeatures.PricesSync.Key);
         _view = views.Create(_items);
@@ -93,6 +97,8 @@ public sealed class ItemsViewModel : ViewModelBase
             // Warm a fresh tree builder in the background with these prices, so the first craft-tree click is
             // instant (and uses current prices) instead of paying the load on click.
             _treeBuilderTask = BuildTreeBuilderAsync(prices);
+
+            SelectTargetItem();
 
             PricesUpdatedAt = updatedAt;
             OnPropertyChanged(nameof(PricesUpdatedAt));
@@ -329,6 +335,23 @@ public sealed class ItemsViewModel : ViewModelBase
     {
         _filterDebounce.Stop();
         View.Refresh();
+    }
+
+    /// <summary>
+    /// Opened on a particular item (e.g. from the global search): filters the grid to its name and selects it, so it's
+    /// in view with its price history and craft tree.
+    /// </summary>
+    private void SelectTargetItem()
+    {
+        if (_targets.TakeItem() is not { } itemId || _items.FirstOrDefault(row => row.ItemId == itemId) is not { } row)
+        {
+            return;
+        }
+
+        _filterText = row.Name;
+        OnPropertyChanged(nameof(FilterText));
+        View.Refresh();
+        SelectedItem = row;
     }
 
     private bool MatchesFilter(object obj) =>

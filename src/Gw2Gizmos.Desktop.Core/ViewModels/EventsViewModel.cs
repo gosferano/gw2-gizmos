@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Gw2Gizmos.Data.Static.Events;
 using Gw2Gizmos.Desktop.Core.Mvvm;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
 
 namespace Gw2Gizmos.Desktop.Core;
@@ -31,9 +32,12 @@ public sealed class EventsViewModel : ViewModelBase
         ReminderSettingsStore reminderSettings,
         IItemsViewFactory views,
         IUiDispatcher dispatcher,
-        IClipboardService clipboard
+        IClipboardService clipboard,
+        PageTargets targets
     )
     {
+        // Opened on a particular event (e.g. from the global search): start filtered to it.
+        _searchText = targets.TakeEventSearch() ?? string.Empty;
         _reminderSettings = reminderSettings;
         _clipboard = clipboard;
         CopyChatLinkCommand = new RelayCommand<string>(chatLink => _ = CopyChatLinkAsync(chatLink));

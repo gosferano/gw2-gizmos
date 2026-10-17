@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using Gw2Gizmos.Desktop.Navigation;
 using Gw2Gizmos.Desktop.Core;
@@ -10,6 +12,7 @@ namespace Gw2Gizmos.Desktop;
 public partial class MainWindow : Window
 {
     private readonly PageFactory? _pages;
+    private readonly GlobalSearchViewModel? _search;
     private AppPage? _current;
     private bool _syncingSelection;
 
@@ -19,12 +22,18 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    public MainWindow(AvaloniaNavigationService navigation, PageFactory pages, OnboardingStore onboarding)
+    public MainWindow(
+        AvaloniaNavigationService navigation, PageFactory pages, OnboardingStore onboarding, GlobalSearchViewModel search)
         : this()
     {
         _pages = pages;
+        _search = search;
         navigation.Attach(this);
         RootNavigation.SelectionChanged += OnSelectionChanged;
+        RootNavigation.ItemInvoked += OnItemInvoked;
+        SearchOverlay.DataContext = search;
+        // Ctrl+K from anywhere in the window, even while a text box has focus.
+        AddHandler(KeyDownEvent, OnWindowKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         // First launch lands on the one-time welcome/onboarding page; afterwards straight to the dashboard.
         ShowPage(StartPageOverride() ?? (onboarding.IsCompleted ? AppPage.Dashboard : AppPage.Onboarding));
@@ -44,10 +53,11 @@ public partial class MainWindow : Window
         return null;
     }
 
-    /// <summary>Shows <paramref name="page"/> and highlights its rail item (if it has one).</summary>
-    public void ShowPage(AppPage page)
+    /// <summary>Shows <paramref name="page"/> and highlights its rail item (if it has one); <paramref name="reload"/>
+    /// re-creates it even when it's already shown.</summary>
+    public void ShowPage(AppPage page, bool reload = false)
     {
-        if (_current == page)
+        if (_current == page && !reload)
         {
             return;
         }
@@ -85,6 +95,82 @@ public partial class MainWindow : Window
             _syncingSelection = false;
         }
     }
+
+    private void OnItemInvoked(object? sender, FANavigationViewItemInvokedEventArgs e)
+    {
+        if (e.InvokedItemContainer is FANavigationViewItem { Tag: "search" })
+        {
+            OpenSearch();
+        }
+    }
+
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            e.Handled = true;
+            if (_search is { IsOpen: true })
+            {
+                _search.Close();
+            }
+            else
+            {
+                OpenSearch();
+            }
+        }
+        else if (e.Key == Key.Escape && _search is { IsOpen: true })
+        {
+            e.Handled = true;
+            _search.Close();
+        }
+    }
+
+    private void OpenSearch()
+    {
+        if (_search is null)
+        {
+            return;
+        }
+
+        _ = _search.OpenAsync();
+        // Focus once the overlay is visible.
+        Dispatcher.UIThread.Post(() => SearchBox.Focus(), DispatcherPriority.Input);
+    }
+
+    /// <summary>Arrow keys move through the results and Enter opens one, while typing stays in the box.</summary>
+    private void OnSearchKeyDown(object? sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Down:
+                _search?.MoveSelection(1);
+                break;
+            case Key.Up:
+                _search?.MoveSelection(-1);
+                break;
+            case Key.Enter:
+                _search?.Activate();
+                break;
+            default:
+                return;
+        }
+
+        e.Handled = true;
+        if (_search?.SelectedResult is { } selected)
+        {
+            SearchResults.ScrollIntoView(selected);
+        }
+    }
+
+    private void OnSearchResultTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is Control { DataContext: SearchResult result })
+        {
+            _search?.Activate(result);
+        }
+    }
+
+    private void OnSearchBackdropPressed(object? sender, PointerPressedEventArgs e) => _search?.Close();
 
     private void OnSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {

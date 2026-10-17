@@ -2,6 +2,7 @@ using Gw2Gizmos.Data.Worker;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Notifications;
 using Gw2Gizmos.Data.Worker.Updaters;
+using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.MumbleLink.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -137,6 +138,11 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddTransient<SharedInventoryViewModel>();
         // Characters: the drilled-into character (transient nav context), the hub + per-character VMs.
         services.AddSingleton<SelectedCharacterService>();
+        // What the Items / Events pages open on when navigated to from elsewhere (the global search).
+        services.AddSingleton<PageTargets>();
+        // The global search (Ctrl+K): one overlay for the app's lifetime.
+        services.AddSingleton<GlobalSearch>();
+        services.AddSingleton<GlobalSearchViewModel>();
         services.AddTransient<CharactersViewModel>();
         services.AddTransient<CharacterViewModel>();
         services.AddTransient<CharacterInventoryViewModel>();

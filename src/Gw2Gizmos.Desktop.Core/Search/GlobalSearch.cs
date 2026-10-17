@@ -1,0 +1,264 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.Static.Events;
+using Gw2Gizmos.Desktop.Core.Navigation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Gw2Gizmos.Desktop.Core;
+
+/// <summary>
+/// Finds pages, characters, events and items by name for the global search. Pages and events are static lists;
+/// characters and the set of items the Items page lists (tradeable or craftable) are read once per opening
+/// (<see cref="PrepareAsync"/>); item names are looked up in the database per query. Within each kind, names that
+/// start with the query rank first, then names with a word starting with it, then names merely containing it.
+/// </summary>
+public sealed class GlobalSearch
+{
+    private const int PageLimit = 5;
+    private const int CharacterLimit = 5;
+    private const int EventLimit = 5;
+    private const int ItemLimit = 8;
+
+    /// <summary>Every page worth jumping to, with extra words it should be found by.</summary>
+    private static readonly SearchPage[] Pages =
+    {
+        new("Dashboard", null, "Home24", AppPage.Dashboard, "home overview"),
+        new("Notifications", null, "Alert24", AppPage.Notifications, "alerts toasts"),
+        new("Events", null, "Clock24", AppPage.Events, "timers world bosses metas"),
+        new("Items", null, "BoxMultiple24", AppPage.Items, "market prices crafting"),
+        new("Trading post", null, "BuildingShop24", AppPage.TradingPost, "orders buys sells undercut outbid tp"),
+        new("Account", null, "Person24", AppPage.Account, ""),
+        new("Value", "Account", "DataTrending24", AppPage.AccountValue, "account value worth net gold"),
+        new("Wallet", "Account", "Wallet24", AppPage.Wallet, "currencies coin karma"),
+        new("Material storage", "Account", "BoxMultiple24", AppPage.MaterialStorage, "materials"),
+        new("Bank", "Account", "BuildingBank24", AppPage.Bank, ""),
+        new("Shared inventory", "Account", "Backpack24", AppPage.SharedInventory, "slots"),
+        new("Characters", null, "People24", AppPage.Characters, ""),
+        new("Sessions", null, "History24", AppPage.Sessions, "play sessions loot profit"),
+        new("Logs", null, "DocumentBulletList24", AppPage.Logs, ""),
+        new("API keys", null, "Key24", AppPage.ApiKeys, "token permissions"),
+        new("Settings", null, "Settings24", AppPage.Settings, "features options"),
+        new("Advanced settings", "Settings", "Options24", AppPage.AdvancedSettings, "sync intervals"),
+        new("Stored data", "Settings", "Delete24", AppPage.StoredData, "delete history"),
+    };
+
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly AccountReader _reader;
+    private readonly SelectedAccountService _account;
+    private readonly ReminderSettingsStore _reminderSettings;
+    private IReadOnlyList<CharacterCard> _characters = Array.Empty<CharacterCard>();
+    private Dictionary<int, bool> _items = new(); // listed item id → tradeable
+
+    public GlobalSearch(
+        IServiceScopeFactory scopeFactory,
+        AccountReader reader,
+        SelectedAccountService account,
+        ReminderSettingsStore reminderSettings)
+    {
+        _scopeFactory = scopeFactory;
+        _reader = reader;
+        _account = account;
+        _reminderSettings = reminderSettings;
+    }
+
+    /// <summary>Reads what's searched in memory: the account's characters, and which items the Items page lists.</summary>
+    public async Task PrepareAsync()
+    {
+        string? accountId = _account.AccountId;
+        (List<CharacterCard> characters, Dictionary<int, bool> items) = await Task.Run(() =>
+            (accountId is null ? new List<CharacterCard>() : _reader.GetCharacterCards(accountId), ReadListedItems()));
+        _characters = characters;
+        _items = items;
+    }
+
+    /// <summary>Results for <paramref name="query"/>, grouped by kind (pages, characters, events, items).</summary>
+    public async Task<List<SearchResult>> SearchAsync(string query, CancellationToken cancellationToken)
+    {
+        query = query.Trim();
+        if (query.Length == 0)
+        {
+            // Nothing typed yet: every page, for quick keyboard navigation.
+            return Pages.Select(ToResult).ToList();
+        }
+
+        var results = new List<SearchResult>();
+        results.AddRange(Best(Pages, p => new[] { p.Title, p.Keywords }, query, PageLimit).Select(ToResult));
+        results.AddRange(Best(_characters, c => new[] { c.Name, c.Profession, c.EliteSpecialization }, query, CharacterLimit)
+            .Select(c => new SearchResult(SearchResultKind.Character, c.Name, c.Summary)
+            {
+                IconUrl = c.ProfessionIconUrl,
+                CharacterName = c.Name,
+            }));
+        results.AddRange(Best(SearchableEvents(), e => new[] { e.Name, e.Map }, query, EventLimit)
+            .Select(e => new SearchResult(SearchResultKind.Event, e.Name, e.Map) { Symbol = "Clock24", EventName = e.Name }));
+
+        if (query.Length >= 2)
+        {
+            List<SearchResult> items = await Task.Run(() => SearchItems(query), cancellationToken);
+            results.AddRange(items);
+        }
+
+        return results;
+    }
+
+    /// <summary>How well <paramref name="text"/> matches <paramref name="query"/>: 3 starts with it, 2 has a word
+    /// starting with it, 1 contains it, 0 no match (case-insensitive).</summary>
+    public static int Score(string? text, string query)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        int index = text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            return 0;
+        }
+
+        if (index == 0)
+        {
+            return 3;
+        }
+
+        // Any later occurrence at the start of a word ("coin" in "Mystic Coin").
+        for (int i = index; i >= 0; i = text.IndexOf(query, i + 1, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!char.IsLetterOrDigit(text[i - 1]))
+            {
+                return 2;
+            }
+        }
+
+        return 1;
+    }
+
+    private static IEnumerable<T> Best<T>(IEnumerable<T> candidates, Func<T, IEnumerable<string?>> names, string query, int limit) =>
+        candidates
+            .Select(c => (Candidate: c, Score: names(c).Max(n => Score(n, query))))
+            .Where(c => c.Score > 0)
+            .OrderByDescending(c => c.Score)
+            .Take(limit)
+            .Select(c => c.Candidate);
+
+    private IEnumerable<ScheduledEvent> SearchableEvents()
+    {
+        // Festival events only show on the Events page while their festival is the one marked as running.
+        Festival? festival = _reminderSettings.SelectedFestival;
+        return EventSchedule.All
+            .Where(e => e.Festival is null || e.Festival == festival)
+            .DistinctBy(e => e.Name);
+    }
+
+    private List<SearchResult> SearchItems(string query)
+    {
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        // A generous slice of name matches, narrowed to what the Items page lists, then ranked: better name match
+        // first, tradeable before craftable-only, shorter (closer) names first.
+        string pattern = $"%{query.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_")}%";
+        var matches = db.Items.AsNoTracking()
+            .Where(i => EF.Functions.Like(i.Name, pattern, "\\"))
+            .Select(i => new { i.Id, i.Name })
+            .Take(500)
+            .ToList();
+
+        return matches
+            .Where(m => _items.ContainsKey(m.Id))
+            .OrderByDescending(m => Score(m.Name, query))
+            .ThenByDescending(m => _items[m.Id])
+            .ThenBy(m => m.Name.Length)
+            .ThenBy(m => m.Name)
+            .Take(ItemLimit)
+            .Select(m => new SearchResult(SearchResultKind.Item, m.Name, _items[m.Id] ? "Tradeable" : "Craftable")
+            {
+                ItemId = m.Id,
+            })
+            .ToList();
+    }
+
+    /// <summary>The items the Items page lists — tradeable (seen on the trading post) or craftable — mapped to
+    /// whether they're tradeable.</summary>
+    private Dictionary<int, bool> ReadListedItems()
+    {
+        try
+        {
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+            var listed = new Dictionary<int, bool>();
+            foreach (int id in db.Recipes.AsNoTracking().Select(r => r.OutputItemId).Distinct())
+            {
+                listed[id] = false;
+            }
+
+            foreach (int id in Gw2Gizmos.Data.Static.Crafting.StaticRecipes.ByOutputItemId.Keys)
+            {
+                listed[id] = false;
+            }
+
+            foreach (int id in db.PriceSnapshots.AsNoTracking().Select(s => s.ItemId).Distinct())
+            {
+                listed[id] = true;
+            }
+
+            return listed;
+        }
+        catch (Exception)
+        {
+            // Database not ready yet: no item results.
+            return new Dictionary<int, bool>();
+        }
+    }
+
+    private static SearchResult ToResult(SearchPage page) =>
+        new(SearchResultKind.Page, page.Title, page.Section ?? "") { Symbol = page.Symbol, Page = page.Target };
+
+    private sealed record SearchPage(string Title, string? Section, string Symbol, AppPage Target, string Keywords);
+}
+
+public enum SearchResultKind
+{
+    Page,
+    Character,
+    Event,
+    Item,
+}
+
+/// <summary>
+/// One global search result: what it is, how it's shown (a Fluent icon, an icon URL or an item icon), and the target
+/// it opens.
+/// </summary>
+public sealed record SearchResult(SearchResultKind Kind, string Title, string Subtitle)
+{
+    /// <summary>A Fluent icon name (the desktop's FluentSymbol), for pages and events.</summary>
+    public string? Symbol { get; init; }
+
+    /// <summary>An icon by URL, e.g. a character's profession icon.</summary>
+    public string? IconUrl { get; init; }
+
+    public int? ItemId { get; init; }
+
+    public AppPage? Page { get; init; }
+
+    public string? CharacterName { get; init; }
+
+    public string? EventName { get; init; }
+
+    public bool HasSymbol => Symbol is not null;
+
+    public bool HasIconUrl => IconUrl is not null;
+
+    public bool HasItem => ItemId is not null;
+
+    public bool HasSubtitle => Subtitle.Length > 0;
+
+    /// <summary>E.g. "Page", "Character" — shown at the row's end.</summary>
+    public string KindLabel => Kind.ToString();
+}
