@@ -350,6 +350,101 @@ public sealed class SessionTrackerTests : IDisposable
         Assert.Equal(lastMoved, (await OrderedSegments()).Single().EndedAtUtc);
     }
 
+    // --- out of the world (character select, minimised, long loading) ---
+
+    /// <summary>The game keeps running but stops updating MumbleLink for <paramref name="duration"/>: the tick
+    /// doesn't move.</summary>
+    private async Task Quiet(TimeSpan duration, string character = "Alice", int mapId = 50)
+    {
+        for (TimeSpan passed = TimeSpan.Zero; passed < duration; passed += TimeSpan.FromSeconds(5))
+        {
+            _time.Advance(TimeSpan.FromSeconds(5));
+            _reader.Snapshot = Snapshot(_tick, character, mapId);
+            await _tracker.TickAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Away_and_back_on_the_same_character_continues_the_segment_minus_the_time_away()
+    {
+        _tracker.GameProcessAlive = _ => true;
+        await Live("Alice", mapId: 50);
+        await Live("Alice", mapId: 50);
+        DateTimeOffset left = _time.Now;
+
+        await Quiet(TimeSpan.FromMinutes(3));
+        CharacterSegment away = (await OrderedSegments()).Single();
+        Assert.Equal(left, away.AwaySinceUtc);
+        Assert.Equal(left, (await MapSegments()).Single().EndedAtUtc); // the map segment closed when it left
+
+        await Live("Alice", mapId: 50);
+        DateTimeOffset back = _time.Now;
+
+        CharacterSegment segment = (await OrderedSegments()).Single();
+        Assert.Null(segment.EndedAtUtc);
+        Assert.Null(segment.AwaySinceUtc);
+        Assert.Equal(back - left, segment.AwayTime);
+        Assert.Equal(TimeSpan.FromSeconds(5), segment.InWorldTime(back)); // only the time in the world
+        Assert.Equal(2, (await MapSegments()).Count); // a new map segment once back
+        Assert.Null((await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc);
+    }
+
+    [Fact]
+    public async Task Away_and_back_on_another_character_ends_the_segment_when_it_left()
+    {
+        _tracker.GameProcessAlive = _ => true;
+        await Live("Alice");
+        await Live("Alice");
+        DateTimeOffset left = _time.Now;
+
+        await Quiet(TimeSpan.FromMinutes(2));
+        await Live("Bob");
+        DateTimeOffset back = _time.Now;
+
+        List<CharacterSegment> segments = await OrderedSegments();
+        Assert.Equal(("Alice", left), (segments[0].CharacterName, segments[0].EndedAtUtc!.Value));
+        Assert.Null(segments[0].AwaySinceUtc);
+        Assert.Equal(("Bob", back), (segments[1].CharacterName, segments[1].StartedAtUtc));
+        Assert.Equal(1, await Db.GameSessions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Closing_the_game_while_away_ends_the_session_when_the_player_left_the_world()
+    {
+        bool running = true;
+        _tracker.GameProcessAlive = _ => running;
+        await Live("Alice");
+        SeedObservation(_time.Now.AddSeconds(1));
+        await Live("Alice");
+        DateTimeOffset left = _time.Now;
+
+        await Quiet(TimeSpan.FromMinutes(2));
+        running = false;
+        await Quiet(TimeSpan.FromSeconds(5));
+
+        GameSession session = await Db.GameSessions.AsNoTracking().SingleAsync();
+        Assert.Equal(left, session.EndedAtUtc);
+        CharacterSegment segment = (await OrderedSegments()).Single();
+        Assert.Equal(left, segment.EndedAtUtc);
+        Assert.Null(segment.AwaySinceUtc);
+    }
+
+    [Fact]
+    public async Task A_short_freeze_like_a_loading_screen_isnt_time_away()
+    {
+        _tracker.GameProcessAlive = _ => true;
+        await Live("Alice", mapId: 50);
+        await Live("Alice", mapId: 50);
+
+        await Quiet(TimeSpan.FromSeconds(20));
+        await Live("Alice", mapId: 50);
+
+        CharacterSegment segment = (await OrderedSegments()).Single();
+        Assert.Equal(TimeSpan.Zero, segment.AwayTime);
+        Assert.Null(segment.AwaySinceUtc);
+        Assert.Single(await MapSegments());
+    }
+
     /// <summary>A session left open by a previous run, with an open character and map segment.</summary>
     private long SeedOpenSession(string character, int mapId)
     {
