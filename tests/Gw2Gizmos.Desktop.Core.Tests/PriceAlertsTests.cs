@@ -71,3 +71,17 @@ public sealed class PriceAlertsTests
         Assert.Equal("Buy price above", PriceAlerts.Condition(buyAbove));
     }
 }
+
+/// <summary>An alert's row only changes when something it shows changes.</summary>
+public sealed class PriceAlertRowTests
+{
+    [Fact]
+    public void Rows_differing_only_in_the_time_of_the_last_check_are_equal()
+    {
+        var checkedAlert = new PriceAlert { ItemId = 1, PriceCopper = 100, LastPrice = 120, LastCheckedUtc = DateTimeOffset.UnixEpoch };
+
+        Assert.Equal(new PriceAlertRow(checkedAlert), new PriceAlertRow(checkedAlert with { LastCheckedUtc = DateTimeOffset.UtcNow }));
+        Assert.NotEqual(new PriceAlertRow(checkedAlert), new PriceAlertRow(checkedAlert with { LastPrice = 110 }));
+        Assert.NotEqual(new PriceAlertRow(checkedAlert), new PriceAlertRow(checkedAlert with { LastCheckedUtc = null }));
+    }
+}

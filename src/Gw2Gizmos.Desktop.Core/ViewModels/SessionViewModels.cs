@@ -194,11 +194,7 @@ public sealed class SessionsViewModel : ViewModelBase, INavigationAware
         };
         IEnumerable<GameSessionRow> ordered = Descending ? query.OrderByDescending(key) : query.OrderBy(key);
 
-        Sessions.Clear();
-        foreach (GameSessionRow session in ordered)
-        {
-            Sessions.Add(session);
-        }
+        Sessions.ReplaceWith(ordered);
 
         OnPropertyChanged(nameof(HasResults));
         OnPropertyChanged(nameof(FilteredEmpty));
@@ -599,10 +595,6 @@ public sealed class LootItemsSorter : ViewModelBase
         Func<SessionLootItem, IComparable> key = _selectedSortIndex == 1 ? i => i.Delta : i => i.ValueCopper;
         IEnumerable<SessionLootItem> ordered = _descending ? _source.OrderByDescending(key) : _source.OrderBy(key);
 
-        View.Clear();
-        foreach (SessionLootItem item in ordered)
-        {
-            View.Add(item);
-        }
+        View.ReplaceWith(ordered);
     }
 }

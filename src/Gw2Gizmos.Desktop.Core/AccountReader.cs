@@ -866,6 +866,17 @@ public sealed record CharacterCard(
     public string CreatedText => $"Created {CreatedDate}";
 
     public bool HasCrafting => Crafting.Count > 0;
+
+    // By value, including the crafting list (a record compares lists by reference), so a refresh that changed nothing
+    // leaves the row on screen as it is.
+    public bool Equals(CharacterCard? other) =>
+        other is not null
+        && (Name, Profession, Race, Gender, Level, AgeSeconds, Created, Deaths, ProfessionIconUrl, EliteSpecialization)
+        == (other.Name, other.Profession, other.Race, other.Gender, other.Level, other.AgeSeconds, other.Created,
+            other.Deaths, other.ProfessionIconUrl, other.EliteSpecialization)
+        && Crafting.SequenceEqual(other.Crafting);
+
+    public override int GetHashCode() => HashCode.Combine(Name, Level, AgeSeconds, Deaths);
 }
 
 /// <summary>A crafting discipline a character has learned, e.g. Chef 400; the inactive ones are shown dimmed.</summary>

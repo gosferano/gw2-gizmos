@@ -8,7 +8,7 @@
         <!-- In-game categories; expand one to see its slot grid. -->
         <ItemsControl ItemsSource="{Binding Categories}">
             <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="core:MaterialCategoryView">
+                <DataTemplate x:DataType="core:MaterialCategoryRow">
                     <Expander Header="{Binding Name}" Margin="0,0,0,4" HorizontalAlignment="Stretch">
                         <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0" MaxWidth="720"
                                       HorizontalAlignment="Stretch" ItemTemplate="{StaticResource MaterialCellTemplate}">
