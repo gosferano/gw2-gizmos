@@ -445,6 +445,82 @@ public sealed class SessionTrackerTests : IDisposable
         Assert.Single(await MapSegments());
     }
 
+    // --- late loot (the API reports some of a session's loot minutes after it ended) ---
+
+    /// <summary>Plays a short session on Alice (with some activity) and closes the game; returns when it ended.</summary>
+    private async Task<DateTimeOffset> PlayAndCloseAsync()
+    {
+        _tracker.GameProcessAlive = _ => _reader.Snapshot is not null;
+        await Live("Alice");
+        SeedObservation(_time.Now.AddSeconds(1));
+        await Live("Alice");
+        _time.Advance(TimeSpan.FromSeconds(5));
+        _reader.Snapshot = null; // the game closed
+        await _tracker.TickAsync(CancellationToken.None);
+        return (await Db.GameSessions.AsNoTracking().SingleAsync()).EndedAtUtc!.Value;
+    }
+
+    private async Task WaitAsync(TimeSpan duration)
+    {
+        for (TimeSpan passed = TimeSpan.Zero; passed < duration; passed += TimeSpan.FromMinutes(1))
+        {
+            _time.Advance(TimeSpan.FromMinutes(1));
+            await _tracker.TickAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task<DateTimeOffset> ObservedAt(int itemId) =>
+        (await Db.AccountItemObservations.AsNoTracking().SingleAsync(o => o.ItemId == itemId)).ObservedAtUtc;
+
+    [Fact]
+    public async Task Loot_reported_within_ten_minutes_of_the_end_counts_towards_the_session()
+    {
+        DateTimeOffset ended = await PlayAndCloseAsync();
+        SeedObservation(ended.AddMinutes(6), itemId: 2); // the API's refreshed snapshot, minutes later
+        SeedObservation(ended.AddMinutes(12), itemId: 3); // something unrelated, well after
+
+        await WaitAsync(TimeSpan.FromMinutes(15));
+
+        Assert.Equal(ended, await ObservedAt(2));
+        Assert.Equal(ended.AddMinutes(12), await ObservedAt(3));
+    }
+
+    [Fact]
+    public async Task The_next_session_starting_closes_the_window_early()
+    {
+        DateTimeOffset ended = await PlayAndCloseAsync();
+        SeedObservation(ended.AddMinutes(2), itemId: 2);
+
+        // Back in the game three minutes later; what's recorded from then on is the new session's.
+        _time.Advance(TimeSpan.FromMinutes(3));
+        DateTimeOffset restarted = _time.Now + TimeSpan.FromSeconds(5);
+        SeedObservation(restarted.AddMinutes(1), itemId: 3);
+        await Live("Alice");
+        await WaitAsync(TimeSpan.FromMinutes(10));
+
+        Assert.Equal(ended, await ObservedAt(2));
+        Assert.Equal(restarted.AddMinutes(1), await ObservedAt(3));
+    }
+
+    [Fact]
+    public async Task A_session_that_ended_just_before_a_restart_still_collects_its_late_loot()
+    {
+        // The previous run closed a session three minutes ago, then the worker restarted.
+        DateTimeOffset ended = _time.Now.AddMinutes(-3);
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.GameSessions.Add(new GameSession { AccountId = AccountId, StartedAtUtc = ended.AddHours(-1), EndedAtUtc = ended });
+            db.SaveChanges();
+        }
+
+        SeedObservation(ended.AddMinutes(5), itemId: 2);
+        _reader.Snapshot = null;
+        await _tracker.ResumeOrCloseOpenSessionsAsync(CancellationToken.None);
+        await WaitAsync(TimeSpan.FromMinutes(8));
+
+        Assert.Equal(ended, await ObservedAt(2));
+    }
+
     /// <summary>A session left open by a previous run, with an open character and map segment.</summary>
     private long SeedOpenSession(string character, int mapId)
     {
@@ -524,14 +600,14 @@ public sealed class SessionTrackerTests : IDisposable
 
     /// <summary>Records one item observation at <paramref name="at"/>, marking real activity in a session's window
     /// (so the tracker doesn't discard the session as empty when it ends).</summary>
-    private void SeedObservation(DateTimeOffset at)
+    private void SeedObservation(DateTimeOffset at, int itemId = 1)
     {
         using Gw2GizmosDbContext db = _fixture.NewContext();
         db.AccountItemObservations.Add(new AccountItemObservation
         {
             AccountId = AccountId,
             Container = AccountContainer.Bank,
-            ItemId = 1,
+            ItemId = itemId,
             Count = 1,
             ObservedAtUtc = at,
         });

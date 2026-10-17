@@ -35,6 +35,10 @@ public sealed class SessionTracker : BackgroundService
     // game or a long loading screen (MumbleLink stops updating in all of them). Shorter freezes, like most loading
     // screens, are ignored.
     private static readonly TimeSpan AwayTimeout = TimeSpan.FromSeconds(30);
+    // The GW2 API serves account data a few minutes stale (it hands over a refreshed snapshot several minutes after
+    // logging out), so loot from a session's last minutes can arrive after it ended. Changes recorded this long after
+    // a session ended still count towards it.
+    private static readonly TimeSpan LateLootGrace = TimeSpan.FromMinutes(10);
     // On startup, when the game process can't be checked, the game counts as running if MumbleLink's
     // tick advances within this many probes. A few seconds' grace covers the Proton bridge (re)starting with the app.
     private const int TickProbeAttempts = 10;
@@ -58,6 +62,8 @@ public sealed class SessionTracker : BackgroundService
     private DateTimeOffset _lastTickChangeUtc;
     // Since when the player has been out of the world (the open segment is "away"), or null while in it.
     private DateTimeOffset? _awaySinceUtc;
+    // Ended sessions still collecting the loot the API reports late (see LateLootGrace).
+    private readonly List<EndedSession> _lateLootWindows = new();
     // True when a game/session is live, so the loop polls fast; false when idle, so it backs off.
     private bool _gameActive;
 
@@ -130,6 +136,7 @@ public sealed class SessionTracker : BackgroundService
 
         MumbleLinkSnapshot? snapshot = _reader.Read();
         DateTimeOffset now = _timeProvider.GetUtcNow();
+        await CloseLateLootWindowsAsync(now, nextSessionStart: null, stoppingToken);
 
         string? character = null;
         bool? processAlive = null;
@@ -313,18 +320,61 @@ public sealed class SessionTracker : BackgroundService
             .Where(s => s.Id == _gameSessionId)
             .Select(s => s.AccountId)
             .FirstOrDefaultAsync(stoppingToken);
-        if (accountId is null)
+        if (accountId is not null)
+        {
+            await DateObservationsAsync(db, accountId, leftAt, now, stoppingToken);
+        }
+    }
+
+    /// <summary>Re-dates the account's observations recorded after <paramref name="to"/>, up to and including
+    /// <paramref name="through"/>, to <paramref name="to"/>; returns how many.</summary>
+    private static async Task<int> DateObservationsAsync(
+        Gw2GizmosDbContext db, string accountId, DateTimeOffset to, DateTimeOffset through, CancellationToken stoppingToken) =>
+        await db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > to && o.ObservedAtUtc <= through)
+            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, to), stoppingToken)
+        + await db.AccountWalletObservations
+            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > to && o.ObservedAtUtc <= through)
+            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, to), stoppingToken);
+
+    /// <summary>
+    /// Closes the late-loot windows that are over — after <see cref="LateLootGrace"/>, or all of them when the next
+    /// session starts at <paramref name="nextSessionStart"/> — dating what was recorded in each to its session's end, so
+    /// the session's loot includes what the API only reported after it ended.
+    /// </summary>
+    private async Task CloseLateLootWindowsAsync(
+        DateTimeOffset now, DateTimeOffset? nextSessionStart, CancellationToken stoppingToken)
+    {
+        List<EndedSession> over = _lateLootWindows
+            .Where(w => nextSessionStart is not null || now >= w.EndedAt + LateLootGrace)
+            .ToList();
+        if (over.Count == 0)
         {
             return;
         }
 
-        await db.AccountItemObservations
-            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > leftAt && o.ObservedAtUtc <= now)
-            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, leftAt), stoppingToken);
-        await db.AccountWalletObservations
-            .Where(o => o.AccountId == accountId && o.ObservedAtUtc > leftAt && o.ObservedAtUtc <= now)
-            .ExecuteUpdateAsync(o => o.SetProperty(x => x.ObservedAtUtc, leftAt), stoppingToken);
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+        foreach (EndedSession window in over)
+        {
+            _lateLootWindows.Remove(window);
+
+            // Up to the window's end, or to just before the next session started (its own start belongs to it).
+            DateTimeOffset through = window.EndedAt + LateLootGrace;
+            if (nextSessionStart is { } start && start <= through)
+            {
+                through = start - TimeSpan.FromTicks(1);
+            }
+
+            int counted = await DateObservationsAsync(db, window.AccountId, window.EndedAt, through, stoppingToken);
+            if (counted > 0)
+            {
+                _logger.LogInformation("Counted {Count} late change(s) towards play session {Id}.", counted, window.SessionId);
+            }
+        }
     }
+
+    private sealed record EndedSession(long SessionId, string AccountId, DateTimeOffset EndedAt);
 
     private static string SpanText(TimeSpan span) =>
         span.TotalHours >= 1 ? $"{(int)span.TotalHours}h {span.Minutes}m" : span.TotalMinutes >= 1 ? $"{span.Minutes}m {span.Seconds}s" : $"{span.Seconds}s";
@@ -393,6 +443,9 @@ public sealed class SessionTracker : BackgroundService
             _logger.LogDebug("No account resolved for character {Character}; not starting a session yet.", character);
             return;
         }
+
+        // A new sitting closes the previous one's late-loot window: what's recorded from here on is this one's.
+        await CloseLateLootWindowsAsync(boundary, nextSessionStart: boundary, stoppingToken);
 
         var session = new GameSession { AccountId = accountId, StartedAtUtc = boundary };
         db.GameSessions.Add(session);
@@ -535,6 +588,7 @@ public sealed class SessionTracker : BackgroundService
 
         await db.SaveChangesAsync(stoppingToken);
         _logger.LogInformation("Play session ended for {Account}.", session.AccountId);
+        _lateLootWindows.Add(new EndedSession(session.Id, session.AccountId, session.EndedAtUtc!.Value));
         ResetState();
     }
 
@@ -719,6 +773,15 @@ public sealed class SessionTracker : BackgroundService
     {
         using IServiceScope scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
+
+        // Sessions that ended moments before this run started are still collecting their late loot.
+        DateTimeOffset graceSince = _timeProvider.GetUtcNow() - LateLootGrace;
+        foreach (GameSession ended in await db.GameSessions
+                     .Where(s => s.EndedAtUtc != null && s.EndedAtUtc >= graceSince)
+                     .ToListAsync(stoppingToken))
+        {
+            _lateLootWindows.Add(new EndedSession(ended.Id, ended.AccountId, ended.EndedAtUtc!.Value));
+        }
 
         List<GameSession> openSessions = await db.GameSessions.Where(s => s.EndedAtUtc == null).ToListAsync(stoppingToken);
         if (openSessions.Count == 0)
