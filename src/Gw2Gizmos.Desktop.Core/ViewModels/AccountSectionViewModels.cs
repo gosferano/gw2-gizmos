@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Desktop.Core.Mvvm;
@@ -74,7 +75,7 @@ public sealed class MaterialStorageViewModel : ViewModelBase, INavigationAware
 
     public void OnNavigatedFrom() => _dataChanges.Dispose();
 
-    public ObservableCollection<MaterialCategoryView> Categories { get; } = new();
+    public ObservableCollection<MaterialCategoryRow> Categories { get; } = new();
 
     public BreadcrumbEntry[] Breadcrumbs { get; }
 
@@ -90,7 +91,11 @@ public sealed class MaterialStorageViewModel : ViewModelBase, INavigationAware
                 return id is null ? new List<MaterialCategoryView>() : reader.GetMaterials(id);
             });
 
-            Categories.ReplaceWith(categories);
+            // Matched by name and updated in place (only changed cells change), so expanded categories stay open.
+            Categories.ReplaceWith(
+                categories.Select(c => new MaterialCategoryRow(c)),
+                row => row.Name,
+                (row, latest) => row.Items.ReplaceWith(latest.Items));
         }
         catch (Exception)
         {
@@ -193,4 +198,18 @@ internal static class AccountPageRefresh
             reload();
         }
     };
+}
+
+/// <summary>A material category on the page, whose cells refresh in place (so its expander keeps its state).</summary>
+public sealed class MaterialCategoryRow
+{
+    public MaterialCategoryRow(MaterialCategoryView category)
+    {
+        Name = category.Name;
+        Items = new ObservableCollection<SlotRow>(category.Items);
+    }
+
+    public string Name { get; }
+
+    public ObservableCollection<SlotRow> Items { get; }
 }
