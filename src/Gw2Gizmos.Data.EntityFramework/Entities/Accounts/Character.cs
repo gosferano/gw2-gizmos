@@ -71,6 +71,7 @@ public class Character
 public class CharacterCrafting
 {
     /// <summary>The API's discipline name, e.g. "Weaponsmith".</summary>
+    [MaxLength(32)]
     public string Discipline { get; set; } = "";
 
     public int Rating { get; set; }
