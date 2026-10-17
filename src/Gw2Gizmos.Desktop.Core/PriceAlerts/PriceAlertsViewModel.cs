@@ -96,6 +96,16 @@ public sealed record PriceAlertRow(PriceAlert Alert)
 
     public bool HasStatus => Status.Length > 0;
 
+    // By what's shown: the time of the last check changes on every price check even when nothing on screen does, so
+    // only whether it has been checked counts — otherwise every row would be replaced each check.
+    public bool Equals(PriceAlertRow? other) =>
+        other is not null && Shown(Alert) == Shown(other.Alert);
+
+    public override int GetHashCode() => Shown(Alert).GetHashCode();
+
+    private static PriceAlert Shown(PriceAlert alert) =>
+        alert with { LastCheckedUtc = alert.LastCheckedUtc is null ? null : DateTimeOffset.MinValue };
+
     private static string FormatTime(DateTimeOffset? utc)
     {
         if (utc is not { } time)
