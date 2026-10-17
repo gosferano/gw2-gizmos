@@ -89,6 +89,10 @@ public partial class App : Application
 
             _window = _host.Services.GetRequiredService<MainWindow>();
             _window.Title = appTitle;
+            // The lifetime's main window is where services find a window to work through — the clipboard for
+            // "copy" buttons (in notifications and on the Events page) among them. It doesn't decide shutdown here
+            // (that's explicit), so hiding it to the tray is unaffected.
+            _desktop!.MainWindow = _window;
             _window.Closing += (_, e) =>
             {
                 if (!_isExiting)
