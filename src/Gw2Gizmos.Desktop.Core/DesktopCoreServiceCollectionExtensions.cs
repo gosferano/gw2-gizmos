@@ -104,6 +104,7 @@ public static class DesktopCoreServiceCollectionExtensions
 
         // The user's price alerts on trading-post items.
         services.AddSingleton<PriceAlertStore>();
+        services.AddHostedService<PriceAlertService>();
 
         // Notifies when one of the selected account's trading-post orders gets undercut or outbid.
         services.AddHostedService<TradingPostAlertService>();
