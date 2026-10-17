@@ -3,15 +3,25 @@
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:nav="using:Gw2Gizmos.Desktop.Core.Navigation"
         xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+        xmlns:core="using:Gw2Gizmos.Desktop.Core"
+        xmlns:conv="using:Gw2Gizmos.Desktop.Converters"
         x:Class="Gw2Gizmos.Desktop.MainWindow"
         Title="Gw2Gizmos" Width="940" Height="620"
         Icon="/Assets/gw2gizmos.png"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <conv:FluentSymbolConverter x:Key="FluentSymbol" />
+    </Window.Resources>
+
+    <Panel>
     <!-- The shell: a left navigation rail; each item's Tag is the AppPage it opens, and the
          page view is hosted as the NavigationView's content. -->
     <ui:FANavigationView x:Name="RootNavigation" PaneDisplayMode="Left" OpenPaneLength="190"
                          IsBackButtonVisible="False" IsPaneToggleButtonVisible="False" IsSettingsVisible="False">
         <ui:FANavigationView.MenuItems>
+            <!-- Opens the global search rather than a page. -->
+            <ui:FANavigationViewItem Content="Search" IconSource="{c:FluentIconSource Search24}" Tag="search"
+                                     SelectsOnInvoked="False" ToolTip.Tip="Search (Ctrl+K)" />
             <ui:FANavigationViewItem Content="Dashboard" IconSource="{c:FluentIconSource Home24}" Tag="{x:Static nav:AppPage.Dashboard}" />
             <ui:FANavigationViewItem Content="Notifications" IconSource="{c:FluentIconSource Alert24}" Tag="{x:Static nav:AppPage.Notifications}" />
             <ui:FANavigationViewItem Content="Events" IconSource="{c:FluentIconSource Clock24}" Tag="{x:Static nav:AppPage.Events}" />
@@ -27,4 +37,47 @@
             <ui:FANavigationViewItem Content="Settings" IconSource="{c:FluentIconSource Settings24}" Tag="{x:Static nav:AppPage.Settings}" />
         </ui:FANavigationView.FooterMenuItems>
     </ui:FANavigationView>
+
+    <!-- The global search (Ctrl+K): a dimmed backdrop (click to close) under a search card near the top. -->
+    <Grid Name="SearchOverlay" x:DataType="core:GlobalSearchViewModel" IsVisible="{Binding IsOpen}">
+        <Border Background="#80000000" PointerPressed="OnSearchBackdropPressed" />
+        <Border Width="640" Margin="16,64,16,16" VerticalAlignment="Top" CornerRadius="8" Padding="8"
+                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+            <StackPanel>
+                <TextBox Name="SearchBox" Text="{Binding Query}" KeyDown="OnSearchKeyDown"
+                         Watermark="Search pages, characters, events and items…"
+                         Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" />
+                <TextBlock Text="No matches." Margin="8,10,8,4" IsVisible="{Binding NoResults}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ListBox Name="SearchResults" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
+                         Margin="0,6,0,0" MaxHeight="440" Background="Transparent" Tapped="OnSearchResultTapped">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="core:SearchResult">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding KindLabel}" FontSize="12"
+                                           VerticalAlignment="Center" Margin="12,0,0,0"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                <!-- A Fluent icon (pages, events), an icon by URL (characters) or the item's icon. -->
+                                <Panel DockPanel.Dock="Left" Width="28" Height="28" Margin="0,0,10,0">
+                                    <c:FluentIcon Symbol="{Binding Symbol, Converter={StaticResource FluentSymbol}}"
+                                                  FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  IsVisible="{Binding HasSymbol}" />
+                                    <c:IconImage IconUrl="{Binding IconUrl}" IsVisible="{Binding HasIconUrl}" />
+                                    <c:ItemImage ItemId="{Binding ItemId, TargetNullValue=0}" IsVisible="{Binding HasItem}" />
+                                </Panel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Subtitle}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               IsVisible="{Binding HasSubtitle}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+    </Grid>
+    </Panel>
 </Window>

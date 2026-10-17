@@ -111,7 +111,7 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
 
     private sealed class StubNavigationService : INavigationService
     {
-        public void NavigateTo(AppPage page)
+        public void NavigateTo(AppPage page, bool reload = false)
         {
         }
     }
