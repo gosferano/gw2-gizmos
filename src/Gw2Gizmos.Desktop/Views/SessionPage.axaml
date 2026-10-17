@@ -14,7 +14,9 @@
             <UniformGrid Columns="3" Margin="-6,0,-6,14" IsVisible="{Binding HasSegments}">
                 <c:StatCard Margin="6" Title="Estimated value" Coin="{Binding Value.TotalValueCopper}" CoinSigned="True"
                             Caption="instant-sell + coin" />
-                <c:StatCard Margin="6" Title="Gold / hour" Value="{Binding Value.GoldPerHourDisplay}" />
+                <!-- "—" in a session's first minute, when there's no meaningful rate yet. -->
+                <c:StatCard Margin="6" Title="Gold / hour" Value="—" Coin="{Binding Value.GoldPerHourCopper}"
+                            CoinSigned="True" />
                 <c:StatCard Margin="6" Title="Coin" Coin="{Binding Value.CoinDeltaCopper}" CoinSigned="True" />
             </UniformGrid>
 

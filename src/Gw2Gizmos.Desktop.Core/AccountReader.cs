@@ -95,7 +95,9 @@ public sealed class AccountReader
             .Select(o =>
             {
                 currencies.TryGetValue(o.CurrencyId, out Currency? c);
-                return new WalletRow(c?.Name ?? $"Currency {o.CurrencyId}", o.Value, c?.Icon ?? "");
+                return new WalletRow(
+                    c?.Name ?? $"Currency {o.CurrencyId}", o.Value, c?.Icon ?? "",
+                    IsCoin: o.CurrencyId == AccountValuation.CoinCurrencyId);
             })
             .ToList();
     }
@@ -781,9 +783,6 @@ public sealed record GameSessionRow(
 
     public bool HasValue => TotalValueCopper != 0;
 
-    /// <summary>Signed estimated value earned, e.g. "+42g 50s".</summary>
-    public string ValueDisplay => SessionFormat.SignedCoin(TotalValueCopper);
-
     /// <summary>Hours the sitting lasted (open sessions measured to now); 0 when unknown/negative.</summary>
     private double DurationHours
     {
@@ -934,9 +933,11 @@ public sealed record TradingPostTradeRow(
     /// <summary>What the trade did to the wallet: a sale's payout after the exchange fee (+), a purchase's cost (−).</summary>
     public long WalletCopper => IsSell ? (long)Math.Floor(TotalCopper * SaleNetFactor) : -TotalCopper;
 
-    /// <summary>E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05" (local time).</summary>
-    public string Details =>
-        $"{(IsSell ? "Sold" : "Bought")} {Quantity:N0} × {Coin.Format(Price)} · {PurchasedUtc.LocalDateTime:yyyy-MM-dd HH:mm}";
+    /// <summary>E.g. "Sold 25 ×", followed in the view by the unit price.</summary>
+    public string Action => $"{(IsSell ? "Sold" : "Bought")} {Quantity:N0} ×";
+
+    /// <summary>E.g. "2026-10-16 14:05" (local time).</summary>
+    public string PurchasedText => $"{PurchasedUtc.LocalDateTime:yyyy-MM-dd HH:mm}";
 }
 
 /// <summary>A map played during a session or segment, and the total time spent on it.</summary>
@@ -966,9 +967,6 @@ public sealed record SessionSegmentRow(
 
     public bool HasValue => TotalValueCopper != 0;
 
-    /// <summary>Signed estimated value earned in this segment, e.g. "+8g 12s".</summary>
-    public string ValueDisplay => SessionFormat.SignedCoin(TotalValueCopper);
-
     /// <summary>Local time range, e.g. "19:04 – 19:48" (or "19:04 – now" while active).</summary>
     public string TimeRange =>
         $"{StartedAtUtc.LocalDateTime:HH:mm} – {(EndedAtUtc is { } e ? e.LocalDateTime.ToString("HH:mm") : "now")}";
@@ -976,8 +974,6 @@ public sealed record SessionSegmentRow(
     public string DurationDisplay => SessionFormat.Duration(StartedAtUtc, EndedAtUtc);
 
     public bool HasCoin => CoinDelta != 0;
-
-    public string CoinDisplay => SessionFormat.SignedCoin(CoinDelta);
 
     public bool HasItems => ItemsGained != 0 || ItemsLost != 0;
 
@@ -1002,12 +998,13 @@ public sealed record SessionSegmentRow(
     }
 }
 
-/// <summary>A currency gained/lost over a segment (coin shown as g/s/c, others as a signed count).</summary>
+/// <summary>A currency gained/lost over a segment (coin shown as g/s/c with coin icons, others as a signed count).</summary>
 public sealed record SessionLootCurrency(int CurrencyId, string Name, string IconUrl, long Delta)
 {
-    public string DeltaDisplay => CurrencyId == 1
-        ? SessionFormat.SignedCoin(Delta)
-        : (Delta >= 0 ? "+" : "−") + Math.Abs(Delta).ToString("N0");
+    public bool IsCoin => CurrencyId == AccountValuation.CoinCurrencyId;
+
+    /// <summary>The signed count, e.g. "+1,250" (for currencies other than coin).</summary>
+    public string DeltaDisplay => (Delta >= 0 ? "+" : "−") + Math.Abs(Delta).ToString("N0");
 }
 
 /// <summary>An item gained/lost over a segment, with the instant-sell gold value of that delta.</summary>
@@ -1016,9 +1013,6 @@ public sealed record SessionLootItem(int ItemId, string Name, int Delta, long Va
     public string DeltaDisplay => (Delta >= 0 ? "+" : "−") + Math.Abs(Delta).ToString("N0");
 
     public bool HasValue => ValueCopper != 0;
-
-    /// <summary>Signed gold value of the delta (instant-sell), e.g. "+12g 50s".</summary>
-    public string ValueDisplay => SessionFormat.SignedCoin(ValueCopper);
 }
 
 /// <summary>A segment's full hoarded delta: currencies and items gained/lost over its window.</summary>
@@ -1043,12 +1037,6 @@ public sealed record SessionValueSummary(
 
     public long TotalValueCopper => CoinDeltaCopper + LootValueCopper;
 
-    public string TotalDisplay => SessionFormat.SignedCoin(TotalValueCopper);
-
-    public string CoinDisplay => SessionFormat.SignedCoin(CoinDeltaCopper);
-
-    public string LootDisplay => SessionFormat.SignedCoin(LootValueCopper);
-
     /// <summary>Estimated value earned per hour over the sitting, in copper; null for sub-minute sessions.</summary>
     public long? GoldPerHourCopper
     {
@@ -1056,20 +1044,6 @@ public sealed record SessionValueSummary(
         {
             double hours = ((EndedAtUtc ?? DateTimeOffset.UtcNow) - StartedAtUtc).TotalHours;
             return hours <= 1.0 / 60 ? null : (long)(TotalValueCopper / hours);
-        }
-    }
-
-    /// <summary>Estimated value earned per hour over the sitting, e.g. "+12g 30s / h" (— for sub-minute sessions).</summary>
-    public string GoldPerHourDisplay
-    {
-        get
-        {
-            if (GoldPerHourCopper is not { } perHour)
-            {
-                return "—";
-            }
-
-            return SessionFormat.SignedCoin(perHour) + " / h";
         }
     }
 }
@@ -1094,7 +1068,4 @@ internal static class SessionFormat
                 ? $"{span.Minutes}m"
                 : $"{span.Seconds}s";
     }
-
-    public static string SignedCoin(long copper) =>
-        (copper >= 0 ? "+" : "−") + Coin.Format(Math.Abs(copper));
 }

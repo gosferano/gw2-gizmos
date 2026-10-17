@@ -8,7 +8,6 @@
              x:DataType="core:ItemsViewModel">
     <UserControl.Resources>
         <conv:BoolToFontWeightConverter x:Key="Bold" />
-        <conv:VendorOfferCostConverter x:Key="VendorOfferCost" />
     </UserControl.Resources>
     <UserControl.Styles>
         <!-- Only the top couple of levels expand by default; deeper nodes (a legendary's promotion chains run to tens of
@@ -205,9 +204,33 @@
                                                                 <ItemsControl ItemsSource="{Binding VendorPurchases}">
                                                                     <ItemsControl.ItemTemplate>
                                                                         <DataTemplate x:DataType="model:VendorOffer">
-                                                                            <!-- One offer per line; wraps so long multi-currency costs fit. -->
-                                                                            <TextBlock Text="{Binding Converter={StaticResource VendorOfferCost}}"
-                                                                                       TextWrapping="Wrap" Margin="0,1" />
+                                                                            <!-- One offer per line, each cost part with its icon
+                                                                                 (coin as g/s/c); wraps so long multi-currency costs fit. -->
+                                                                            <ItemsControl ItemsSource="{Binding Cost}" Margin="0,1">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <WrapPanel />
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="model:VendorCost">
+                                                                                        <StackPanel Orientation="Horizontal" Margin="0,0,10,2">
+                                                                                            <c:CoinDisplay Copper="{Binding Amount}" VerticalAlignment="Center"
+                                                                                                           IsVisible="{Binding IsCoin}" />
+                                                                                            <TextBlock Text="{Binding Amount, StringFormat='{}{0:N0}'}"
+                                                                                                       VerticalAlignment="Center" IsVisible="{Binding !IsCoin}" />
+                                                                                            <c:ItemImage ItemId="{Binding ItemId, TargetNullValue=0}" Width="16" Height="16"
+                                                                                                         Margin="3,0,0,0" VerticalAlignment="Center"
+                                                                                                         IsVisible="{Binding HasItemIcon}" />
+                                                                                            <c:IconImage IconUrl="{Binding IconUrl}" Width="16" Height="16"
+                                                                                                         Margin="3,0,0,0" VerticalAlignment="Center"
+                                                                                                         IsVisible="{Binding HasCurrencyIcon}" />
+                                                                                            <TextBlock Text="{Binding Currency}" Margin="4,0,0,0" Opacity="0.7"
+                                                                                                       VerticalAlignment="Center" IsVisible="{Binding !IsCoin}" />
+                                                                                        </StackPanel>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
                                                                         </DataTemplate>
                                                                     </ItemsControl.ItemTemplate>
                                                                 </ItemsControl>

@@ -115,7 +115,8 @@ public partial class AccountValueChart : UserControl
         int index = NearestIndex(at.X);
         AccountValuePoint point = _model.Points[index];
 
-        ReadoutText.Text = $"{point.Time.LocalDateTime:yyyy-MM-dd HH:mm}   Total {Coin.Format(point.Total)}";
+        ReadoutTime.Text = $"{point.Time.LocalDateTime:yyyy-MM-dd HH:mm}";
+        ReadoutTotal.Copper = point.Total;
         Readout.IsVisible = true;
         Readout.Measure(Size.Infinity);
         Canvas.SetLeft(Readout, Math.Clamp(position.X - (Readout.DesiredSize.Width / 2), 0,
