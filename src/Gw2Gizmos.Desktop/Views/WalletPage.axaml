@@ -11,8 +11,13 @@
                     <!-- Hover highlight so it's clear which amount belongs to which currency. -->
                     <Border Classes="hover-row">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
-                                       Text="{Binding Value, StringFormat='{}{0:N0}'}" />
+                            <!-- Coin as g/s/c with coin icons; other currencies as a count. -->
+                            <Panel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <c:CoinDisplay Copper="{Binding Value}" FontWeight="Medium" HorizontalAlignment="Right"
+                                               IsVisible="{Binding IsCoin}" />
+                                <TextBlock FontWeight="Medium" HorizontalAlignment="Right" IsVisible="{Binding !IsCoin}"
+                                           Text="{Binding Value, StringFormat='{}{0:N0}'}" />
+                            </Panel>
                             <c:IconImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
                                          VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"

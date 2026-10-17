@@ -166,8 +166,13 @@
     <DataTemplate x:Key="SessionCurrencyRowTemplate" x:DataType="core:SessionLootCurrency">
         <Border Classes="hover-row">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Right" FontWeight="Medium" VerticalAlignment="Center"
-                           Text="{Binding DeltaDisplay}" />
+                <!-- Coin as g/s/c with coin icons; other currencies as a signed count. -->
+                <Panel DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <c:CoinDisplay Copper="{Binding Delta}" Signed="True" FontWeight="Medium"
+                                   HorizontalAlignment="Right" IsVisible="{Binding IsCoin}" />
+                    <TextBlock FontWeight="Medium" HorizontalAlignment="Right" Text="{Binding DeltaDisplay}"
+                               IsVisible="{Binding !IsCoin}" />
+                </Panel>
                 <c:IconImage IconUrl="{Binding IconUrl}" Width="28" Height="28" Margin="0,0,10,0"
                              VerticalAlignment="Center" />
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"

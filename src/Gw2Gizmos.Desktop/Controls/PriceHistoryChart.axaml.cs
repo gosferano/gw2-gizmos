@@ -220,8 +220,10 @@ public partial class PriceHistoryChart : UserControl
         }
 
         HistoryPoint point = _history.Points[index];
-        ReadoutText.Text = $"{point.Time:yyyy-MM-dd HH:mm}   "
-            + $"Buy {Format(point.Buy)}   Sell {Format(point.Sell)}   Volume {point.Volume:N0}";
+        ReadoutTime.Text = $"{point.Time:yyyy-MM-dd HH:mm}";
+        ShowPrice(ReadoutBuy, ReadoutBuyNone, point.Buy);
+        ShowPrice(ReadoutSell, ReadoutSellNone, point.Sell);
+        ReadoutVolume.Text = $"Volume {point.Volume:N0}";
         Readout.IsVisible = true;
         Readout.Measure(Size.Infinity);
         double left = Math.Clamp(position.X - (Readout.DesiredSize.Width / 2), 0,
@@ -370,7 +372,13 @@ public partial class PriceHistoryChart : UserControl
         return Math.Max(steps[steps.Length / 2], 1.0 / (24 * 60));
     }
 
-    private static string Format(int? copper) => copper is { } value ? Coin.Format(value) : "—";
+    /// <summary>Shows a price with coin icons, or the dash when that side of the book was empty.</summary>
+    private static void ShowPrice(CoinDisplay coins, TextBlock none, int? copper)
+    {
+        coins.Copper = copper;
+        coins.IsVisible = copper is not null;
+        none.IsVisible = copper is null;
+    }
 
     private static ScottPlot.Color ToColor(uint argb) =>
         new((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, (byte)(argb >> 24));

@@ -73,7 +73,7 @@ public sealed class AccountViewModel : ViewModelBase, INavigationAware
 }
 
 /// <summary>A wallet currency and its current amount, with its icon URL for display.</summary>
-public sealed record WalletRow(string Name, long Value, string IconUrl);
+public sealed record WalletRow(string Name, long Value, string IconUrl, bool IsCoin = false);
 
 /// <summary>A material-storage category and its item cells (in-game order), for the grouped grid.</summary>
 public sealed record MaterialCategoryView(string Name, System.Collections.Generic.IReadOnlyList<SlotRow> Items);

@@ -89,8 +89,19 @@
                                                          VerticalAlignment="Center" />
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Details}" FontSize="12"
-                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <!-- E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05", the unit price with coin icons. -->
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <StackPanel.Styles>
+                                                        <Style Selector="TextBlock">
+                                                            <Setter Property="FontSize" Value="12" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        </Style>
+                                                    </StackPanel.Styles>
+                                                    <TextBlock Text="{Binding Action}" VerticalAlignment="Center" />
+                                                    <c:CoinDisplay Copper="{Binding Price}" IconSize="11" VerticalAlignment="Center" />
+                                                    <TextBlock Text="·" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding PurchasedText}" VerticalAlignment="Center" />
+                                                </StackPanel>
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
