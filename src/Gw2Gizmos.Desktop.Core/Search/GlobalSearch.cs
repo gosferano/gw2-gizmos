@@ -13,9 +13,10 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Finds pages, characters, events and items by name for the global search. Pages and events are static lists;
-/// characters and the set of items the Items page lists (tradeable or craftable) are read once per opening
-/// (<see cref="PrepareAsync"/>); item names are looked up in the database per query. Within each kind, names that
-/// start with the query rank first, then names with a word starting with it, then names merely containing it.
+/// characters and the items the Items page lists (tradeable or craftable) are read once per opening
+/// (<see cref="PrepareAsync"/>), and items are matched in memory, typo-tolerant (<see cref="ItemMatcher"/>). Within
+/// each kind, names that start with the query rank first, then names with a word starting with it, then names merely
+/// containing it.
 /// </summary>
 public sealed class GlobalSearch
 {
@@ -69,7 +70,7 @@ public sealed class GlobalSearch
     private readonly SelectedAccountService _account;
     private readonly ReminderSettingsStore _reminderSettings;
     private IReadOnlyList<CharacterCard> _characters = Array.Empty<CharacterCard>();
-    private Dictionary<int, bool> _items = new(); // listed item id → tradeable
+    private IReadOnlyList<SearchableItem> _items = Array.Empty<SearchableItem>();
 
     public GlobalSearch(
         IServiceScopeFactory scopeFactory,
@@ -87,7 +88,7 @@ public sealed class GlobalSearch
     public async Task PrepareAsync()
     {
         string? accountId = _account.AccountId;
-        (List<CharacterCard> characters, Dictionary<int, bool> items) = await Task.Run(() =>
+        (List<CharacterCard> characters, List<SearchableItem> items) = await Task.Run(() =>
             (accountId is null ? new List<CharacterCard>() : _reader.GetCharacterCards(accountId), ReadListedItems()));
         _characters = characters;
         _items = items;
@@ -116,8 +117,14 @@ public sealed class GlobalSearch
 
         if (query.Length >= 2)
         {
-            List<SearchResult> items = await Task.Run(() => SearchItems(query), cancellationToken);
-            results.AddRange(items);
+            IReadOnlyList<SearchableItem> searchable = _items;
+            List<SearchableItem> items = await Task.Run(() => ItemMatcher.Find(searchable, query, ItemLimit), cancellationToken);
+            // The rarity tells same-named items apart (e.g. an exotic and an ascended Fiber Splicer).
+            results.AddRange(items.Select(item => new SearchResult(
+                SearchResultKind.Item, item.Name, $"{item.Rarity} · {(item.Tradeable ? "Tradeable" : "Craftable")}")
+            {
+                ItemId = item.Id,
+            }));
         }
 
         return results;
@@ -172,37 +179,9 @@ public sealed class GlobalSearch
             .DistinctBy(e => e.Name);
     }
 
-    private List<SearchResult> SearchItems(string query)
-    {
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-
-        // A generous slice of name matches, narrowed to what the Items page lists, then ranked: better name match
-        // first, tradeable before craftable-only, shorter (closer) names first.
-        string pattern = $"%{query.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_")}%";
-        var matches = db.Items.AsNoTracking()
-            .Where(i => EF.Functions.Like(i.Name, pattern, "\\"))
-            .Select(i => new { i.Id, i.Name })
-            .Take(500)
-            .ToList();
-
-        return matches
-            .Where(m => _items.ContainsKey(m.Id))
-            .OrderByDescending(m => Score(m.Name, query))
-            .ThenByDescending(m => _items[m.Id])
-            .ThenBy(m => m.Name.Length)
-            .ThenBy(m => m.Name)
-            .Take(ItemLimit)
-            .Select(m => new SearchResult(SearchResultKind.Item, m.Name, _items[m.Id] ? "Tradeable" : "Craftable")
-            {
-                ItemId = m.Id,
-            })
-            .ToList();
-    }
-
-    /// <summary>The items the Items page lists — tradeable (seen on the trading post) or craftable — mapped to
-    /// whether they're tradeable.</summary>
-    private Dictionary<int, bool> ReadListedItems()
+    /// <summary>The items the Items page lists — tradeable (seen on the trading post) or craftable — with their names,
+    /// for matching in memory.</summary>
+    private List<SearchableItem> ReadListedItems()
     {
         try
         {
@@ -225,12 +204,17 @@ public sealed class GlobalSearch
                 listed[id] = true;
             }
 
-            return listed;
+            return db.Items.AsNoTracking()
+                .Select(i => new { i.Id, i.Name, i.Rarity })
+                .AsEnumerable()
+                .Where(i => listed.ContainsKey(i.Id))
+                .Select(i => new SearchableItem(i.Id, i.Name, i.Rarity, listed[i.Id]))
+                .ToList();
         }
         catch (Exception)
         {
             // Database not ready yet: no item results.
-            return new Dictionary<int, bool>();
+            return new List<SearchableItem>();
         }
     }
 
