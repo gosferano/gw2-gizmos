@@ -15,6 +15,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         Finishers = new AccountFinishersClient(httpClient);
         Gliders = new AccountGlidersClient(httpClient);
         Home = new AccountHomeClient(httpClient);
+        Homestead = new AccountHomesteadClient(httpClient);
         Inventory = new AccountInventoryClient(httpClient);
         JadeBots = new AccountJadeBotsClient(httpClient);
         LegendaryArmory = new AccountLegendaryArmoryClient(httpClient);
@@ -53,6 +54,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountFinishersClient Finishers { get; }
     public IAccountGlidersClient Gliders { get; }
     public IAccountHomeClient Home { get; }
+    public IAccountHomesteadClient Homestead { get; }
     public IAccountInventoryClient Inventory { get; }
     public IAccountJadeBotsClient JadeBots { get; }
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }

@@ -18,6 +18,7 @@ using Gw2Gizmos.Gw2Api.Contract.V2.Finishers;
 using Gw2Gizmos.Gw2Api.Contract.V2.Gliders;
 using Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 using Gw2Gizmos.Gw2Api.Contract.V2.Home;
+using Gw2Gizmos.Gw2Api.Contract.V2.Homestead;
 using Gw2Gizmos.Gw2Api.Contract.V2.Items;
 using Gw2Gizmos.Gw2Api.Contract.V2.ItemStats;
 using Gw2Gizmos.Gw2Api.Contract.V2.JadeBots;
@@ -60,6 +61,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Account
 [JsonSerializable(typeof(Account))]
 [JsonSerializable(typeof(AccountAchievement[]))]
+[JsonSerializable(typeof(AccountHomesteadDecoration[]))]
 [JsonSerializable(typeof(AccountItem?[]))]
 [JsonSerializable(typeof(AccountMaterial[]))]
 [JsonSerializable(typeof(AccountLegendaryArmoryItem[]))]
@@ -142,6 +144,10 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Home
 [JsonSerializable(typeof(HomeCat[]))]
 [JsonSerializable(typeof(HomeNode[]))]
+// Homestead
+[JsonSerializable(typeof(HomesteadDecoration[]))]
+[JsonSerializable(typeof(HomesteadDecorationCategory[]))]
+[JsonSerializable(typeof(HomesteadGlyph[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(ItemSimple))]

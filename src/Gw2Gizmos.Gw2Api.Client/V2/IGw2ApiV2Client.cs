@@ -16,6 +16,7 @@ using Gw2Gizmos.Gw2Api.Client.V2.Clients.Finishers;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Gliders;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Guild;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Home;
+using Gw2Gizmos.Gw2Api.Client.V2.Clients.Homestead;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.Items;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.ItemStats;
 using Gw2Gizmos.Gw2Api.Client.V2.Clients.JadeBots;
@@ -72,6 +73,7 @@ public interface IGw2ApiV2Client
     public IGlidersClient Gliders { get; }
     public IGuildClient Guild { get; }
     public IHomeClient Home { get; }
+    public IHomesteadClient Homestead { get; }
     public IItemsClient Items { get; }
     public IItemStatsClient ItemStats { get; }
     public IJadeBotsClient JadeBots { get; }
