@@ -66,6 +66,7 @@ public partial class MainWindow : Window
         // Let the page being left stop its live updates.
         ((RootNavigation.Content as Control)?.DataContext as INavigationAware)?.OnNavigatedFrom();
         RootNavigation.Content = _pages?.Create(page);
+        ((RootNavigation.Content as Control)?.DataContext as INavigationAware)?.OnNavigatedTo();
 
         // Keep the rail in sync when navigation comes from code. Sub-pages without their own rail item leave the
         // selection to their PageShell, which highlights their section (root breadcrumb) once loaded.

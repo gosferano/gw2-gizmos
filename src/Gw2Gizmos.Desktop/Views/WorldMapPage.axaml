@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.WorldMapPage"
+             x:DataType="core:WorldMapViewModel">
+    <c:PageShell Title="World map" Scrollable="False" MaxContentWidth="100000">
+        <Grid RowDefinitions="Auto,*">
+            <!-- Which scheduled events are pinned on the map. -->
+            <WrapPanel Grid.Row="0" Margin="0,0,0,10" ItemSpacing="6" LineSpacing="6">
+                <ToggleButton Content="World bosses" IsChecked="{Binding ShowWorldBosses}" />
+                <ToggleButton Content="Metas" IsChecked="{Binding ShowMetaEvents}" />
+                <ToggleButton Content="Public instances" IsChecked="{Binding ShowPublicInstances}" />
+                <ToggleButton Content="Invasions" IsChecked="{Binding ShowInvasions}" />
+                <ToggleButton Content="Festival" IsChecked="{Binding ShowFestival}" IsVisible="{Binding HasFestival}" />
+                <CheckBox Content="Favourites only" IsChecked="{Binding OnlyFavorites}" Margin="10,0,0,0" />
+            </WrapPanel>
+
+            <Border Grid.Row="1" CornerRadius="8" ClipToBounds="True">
+                <Panel>
+                    <c:MapView Continent="{Binding Continent}" CenterX="{Binding CenterX}" CenterY="{Binding CenterY}"
+                               Zoom="{Binding Zoom}" MinZoom="{Binding MinZoom}" MaxZoom="{Binding MaxZoom}"
+                               Landmarks="{Binding Landmarks}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}"
+                               Player="{Binding Player}" IsFollowing="{Binding IsFollowing}" Flight="{Binding Flight}"
+                               EventSpots="{Binding EventSpots}" />
+
+                    <!-- What a click just copied, for a few seconds. -->
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12" Padding="12,8"
+                            CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                            IsVisible="{Binding HasCopiedMessage}" IsHitTestVisible="False">
+                        <TextBlock Text="{Binding CopiedMessage}" />
+                    </Border>
+
+                    <!-- Following the character, zoom and home, over the map's bottom-right corner. -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12" Padding="4"
+                            CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        <StackPanel Spacing="2">
+                            <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Centre on your character"
+                                    Command="{Binding FollowPlayerCommand}">
+                                <c:FluentIcon Symbol="MyLocation24" FontSize="16" />
+                            </Button>
+                            <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Zoom in"
+                                    Command="{Binding ZoomInCommand}">
+                                <c:FluentIcon Symbol="ZoomIn24" FontSize="16" />
+                            </Button>
+                            <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Zoom out"
+                                    Command="{Binding ZoomOutCommand}">
+                                <c:FluentIcon Symbol="ZoomOut24" FontSize="16" />
+                            </Button>
+                            <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Back to central Tyria"
+                                    Command="{Binding HomeCommand}">
+                                <c:FluentIcon Symbol="Home24" FontSize="16" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Panel>
+            </Border>
+        </Grid>
+    </c:PageShell>
+</UserControl>

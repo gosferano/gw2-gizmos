@@ -32,6 +32,7 @@ public enum FluentSymbol
     Home24 = 0xF481,
     Key24 = 0xF4B7,
     Map24 = 0xF52E,
+    MyLocation24 = 0xF55F,
     Open24 = 0xF583,
     Options24 = 0xF588,
     People24 = 0xF5A9,
@@ -41,4 +42,6 @@ public enum FluentSymbol
     Star24 = 0xF710,
     Wallet24 = 0xEE2D,
     Warning24 = 0xF86A,
+    ZoomIn24 = 0xF8C5,
+    ZoomOut24 = 0xF8C7,
 }

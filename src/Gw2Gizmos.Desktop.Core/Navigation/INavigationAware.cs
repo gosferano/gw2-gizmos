@@ -7,4 +7,10 @@ namespace Gw2Gizmos.Desktop.Core.Navigation;
 public interface INavigationAware
 {
     void OnNavigatedFrom();
+
+    /// <summary>
+    /// The shell has just shown the page. Transient page view-models start in their constructor; this is for a
+    /// singleton one, which lives on between visits and restarts what <see cref="OnNavigatedFrom"/> stopped.
+    /// </summary>
+    void OnNavigatedTo() { }
 }
