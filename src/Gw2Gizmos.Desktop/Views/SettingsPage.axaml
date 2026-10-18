@@ -55,9 +55,9 @@
                                    IconSource="{c:FluentIconSource Options24}" IsClickEnabled="True" ActionIconSource="ChevronRight"
                                    Click="OnOpenAdvanced" />
 
-            <!-- Stored data: delete locally-stored data per type, per account (sub-page). -->
-            <ui:FASettingsExpander Header="Stored data" Description="Delete locally-stored data per type, per account"
-                                   Margin="0,8,0,0" IconSource="{c:FluentIconSource Delete24}" IsClickEnabled="True"
+            <!-- Stored data: review and delete locally-stored data per type, per account, and open the data folder (sub-page). -->
+            <ui:FASettingsExpander Header="Stored data" Description="Review and delete locally stored data, per type and account"
+                                   Margin="0,8,0,0" IconSource="{c:FluentIconSource Database24}" IsClickEnabled="True"
                                    ActionIconSource="ChevronRight" Click="OnOpenStoredData" />
 
             <!-- Uninstall: only where the app manages its own installation (the Linux AppImage). -->

@@ -38,6 +38,7 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
         services.AddSingleton<IItemsViewFactory, StubItemsViewFactory>();
         services.AddSingleton<IDialogService, StubDialogService>();
         services.AddSingleton<IClipboardService, StubClipboardService>();
+        services.AddSingleton<IFolderLauncher, StubFolderLauncher>();
         services.AddSingleton<INavigationService, StubNavigationService>();
         services.AddSingleton<IToastService, StubToastService>();
         services.AddSingleton<IStartupRegistration, StubStartupRegistration>();
@@ -104,6 +105,11 @@ public sealed class DesktopCoreRegistrationTests : IDisposable
         public Task<bool> ConfirmAsync(string title, string message) => Task.FromResult(false);
 
         public Task<bool> EditPriceAlertAsync(PriceAlertEditorViewModel editor) => Task.FromResult(false);
+    }
+
+    private sealed class StubFolderLauncher : IFolderLauncher
+    {
+        public Task<bool> OpenAsync(string path) => Task.FromResult(false);
     }
 
     private sealed class StubClipboardService : IClipboardService

@@ -24,19 +24,37 @@ public sealed class StoredDataViewModel : ViewModelBase
     private readonly AccountReader _reader;
     private readonly DeleteRequestStore _deletes;
     private readonly IDialogService _dialogs;
+    private bool _openFailed;
     private bool _hasAccounts;
 
-    public StoredDataViewModel(AccountReader reader, DeleteRequestStore deletes, IDialogService dialogs)
+    public StoredDataViewModel(
+        AccountReader reader, DeleteRequestStore deletes, IDialogService dialogs, AppPaths paths, IFolderLauncher folders)
     {
         _reader = reader;
         _deletes = deletes;
         _dialogs = dialogs;
+        DataDirectory = paths.DataDirectory;
+        OpenDataFolderCommand = new RelayCommand(() => _ = OpenDataFolderAsync(folders));
         var priceHistory = new StoredDataItem(DeletableData.PriceHistory, "Price history");
         priceHistory.Delete = new RelayCommand(() => _ = DeleteGlobalAsync(priceHistory, "price history (all accounts)"));
         PriceHistory = priceHistory;
 
         _ = LoadAsync();
     }
+
+    /// <summary>Where the app keeps its data (database, settings, logs, icon cache).</summary>
+    public string DataDirectory { get; }
+
+    public RelayCommand OpenDataFolderCommand { get; }
+
+    /// <summary>Shown when the folder couldn't be opened (no file manager set up): the path is still there to copy.</summary>
+    public bool OpenFailed
+    {
+        get => _openFailed;
+        private set => SetProperty(ref _openFailed, value);
+    }
+
+    private async Task OpenDataFolderAsync(IFolderLauncher folders) => OpenFailed = !await folders.OpenAsync(DataDirectory);
 
     public BreadcrumbEntry[] Breadcrumbs { get; } = new[]
     {
