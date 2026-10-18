@@ -28,6 +28,11 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
 
     private static readonly TimeSpan CopiedMessageDuration = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// A live match's data changes every refresh or two; this long without a change means it's stuck.
+    /// </summary>
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(5);
+
     /// <summary>How often the character's position is read while the page is open.</summary>
     private static readonly TimeSpan PlayerPollInterval = TimeSpan.FromMilliseconds(200);
 
@@ -58,6 +63,9 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     private string? _problem;
     private bool _isLoading;
     private string _skirmishText = "";
+    private DateTimeOffset? _dataChangedAt;
+    private string _dataAgeText = "";
+    private bool _isDataStale;
     private MapLandmarks _landmarks = MapLandmarks.Empty;
 
     public WvwViewModel(
@@ -214,6 +222,24 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     /// <summary>Glides the map to a flipped objective.</summary>
     public ICommand FlyToFlipCommand { get; }
 
+    /// <summary>
+    /// E.g. "Data from 12 s ago": since the match's data last changed, which a live match does almost every refresh.
+    /// Until a change is seen, it's the age of the newest flip or claim. The API can serve a match frozen for long
+    /// spells, and this shows it.
+    /// </summary>
+    public string DataAgeText
+    {
+        get => _dataAgeText;
+        private set => SetProperty(ref _dataAgeText, value);
+    }
+
+    /// <summary>The match's data hasn't changed for longer than <see cref="StaleAfter"/>.</summary>
+    public bool IsDataStale
+    {
+        get => _isDataStale;
+        private set => SetProperty(ref _isDataStale, value);
+    }
+
     /// <summary>E.g. "Skirmish 12 · ends in 1h 05m".</summary>
     public string SkirmishText
     {
@@ -314,6 +340,19 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
             if (result.Matchup is { } matchup)
             {
                 Problem = null;
+                if (Matchup is { } before && before.MatchId == matchup.MatchId)
+                {
+                    if (before.DataStamp != matchup.DataStamp)
+                    {
+                        _dataChangedAt = DateTimeOffset.UtcNow;
+                    }
+                }
+                else
+                {
+                    // A match first seen: its data is at least as old as its newest flip or claim.
+                    _dataChangedAt = null;
+                }
+
                 bool mapsChanged =
                     Matchup is null
                     || !Matchup.Maps.Select(m => m.MapId).SequenceEqual(matchup.Maps.Select(m => m.MapId));
@@ -425,6 +464,20 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         string remaining =
             left.TotalHours >= 1 ? $"{(int)left.TotalHours}h {left.Minutes:00}m" : $"{left.Minutes}:{left.Seconds:00}";
         SkirmishText = $"Skirmish {matchup.Skirmish} · ends in {remaining}";
+
+        DateTimeOffset dataFrom = _dataChangedAt ?? matchup.NewestEvent;
+        TimeSpan age = DateTimeOffset.UtcNow - dataFrom;
+        if (age < TimeSpan.Zero)
+        {
+            age = TimeSpan.Zero;
+        }
+
+        IsDataStale = age > StaleAfter;
+        string ago =
+            age < TimeSpan.FromMinutes(1) ? $"{(int)age.TotalSeconds} s ago"
+            : age < TimeSpan.FromHours(1) ? $"{(int)age.TotalMinutes} min ago"
+            : $"{(int)age.TotalHours}h {age.Minutes:00}m ago";
+        DataAgeText = IsDataStale ? $"Data from {ago} · the API may be stuck" : $"Data from {ago}";
     }
 
     private void FlyTo(double x, double y, double zoom) => Flight = new MapFlight(x, y, zoom);

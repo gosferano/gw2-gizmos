@@ -222,4 +222,43 @@ public sealed class WvwMatchupTests
         Assert.Equal([WvwColor.Green, WvwColor.Red, WvwColor.Blue], usual.Teams.Select(t => t.Color));
         Assert.Equal([WvwColor.Blue, WvwColor.Red, WvwColor.Green], moved.Teams.Select(t => t.Color));
     }
+
+    [Fact]
+    public void The_data_stamp_changes_with_the_match_and_the_newest_event_is_the_latest_flip_or_claim()
+    {
+        WvwMatchup before = WvwMatchup.From(Match, 12008, Rects, DuringSkirmish2);
+        WvwMatchup same = WvwMatchup.From(Match, 12008, Rects, DuringSkirmish2.AddSeconds(15));
+        Match.Kills.Red += 1;
+        WvwMatchup moreKills = WvwMatchup.From(Match, 12008, Rects, DuringSkirmish2.AddSeconds(30));
+        Match.Kills.Red -= 1;
+
+        Assert.Equal(before.DataStamp, same.DataStamp);
+        Assert.NotEqual(before.DataStamp, moreKills.DataStamp);
+
+        WvwMatchMapObjective claimed = new()
+        {
+            Id = "38-1",
+            Owner = WvwOwner.Red,
+            LastFlipped = DuringSkirmish2.AddMinutes(-30),
+            ClaimedAt = DuringSkirmish2.AddMinutes(-10),
+        };
+        WvwMatch withClaim = new()
+        {
+            Id = Match.Id,
+            StartTime = Match.StartTime,
+            EndTime = Match.EndTime,
+            Scores = Match.Scores,
+            Worlds = Match.Worlds,
+            AllWorlds = Match.AllWorlds,
+            Kills = Match.Kills,
+            Deaths = Match.Deaths,
+            VictoryPoints = Match.VictoryPoints,
+            Skirmishes = Match.Skirmishes,
+            Maps = [Map(38, WvwMapType.Center, claimed)],
+        };
+        Assert.Equal(
+            DuringSkirmish2.AddMinutes(-10),
+            WvwMatchup.From(withClaim, 12008, Rects, DuringSkirmish2).NewestEvent
+        );
+    }
 }

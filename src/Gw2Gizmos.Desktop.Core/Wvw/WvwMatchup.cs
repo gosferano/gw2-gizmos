@@ -79,6 +79,15 @@ public sealed record WvwMatchup(
     IReadOnlyList<WvwObjectiveMarker> Objectives
 )
 {
+    /// <summary>
+    /// Changes whenever anything in the match does — kills, deaths, scores, flips, claims, yaks — so two matchups with
+    /// the same stamp hold the same data.
+    /// </summary>
+    public string DataStamp { get; init; } = "";
+
+    /// <summary>The newest flip or claim in the match: as old as its data is at least, if it changed since.</summary>
+    public DateTimeOffset NewestEvent { get; init; }
+
     /// <summary>The objectives drawn on the map: the ones the match scores.</summary>
     private static readonly HashSet<string> ShownObjectiveTypes = ["Camp", "Tower", "Keep", "Castle"];
 
@@ -177,6 +186,22 @@ public sealed record WvwMatchup(
         }
 
         WvwTeamStanding[] teams = order.Select(Standing).ToArray();
+        var states = match.Maps.SelectMany(m => m.Objectives).ToList();
+        DateTimeOffset newestEvent = states
+            .Select(o => o.LastFlipped)
+            .Concat(states.Select(o => o.ClaimedAt).OfType<DateTimeOffset>())
+            .DefaultIfEmpty()
+            .Max();
+        string stamp = string.Join(
+            "|",
+            Total(match.Kills),
+            Total(match.Deaths),
+            Total(match.Scores),
+            Total(match.VictoryPoints),
+            newestEvent.ToUnixTimeSeconds(),
+            states.Sum(o => o.YaksDelivered ?? 0),
+            states.Count(o => o.ClaimedBy is not null)
+        );
         return new WvwMatchup(
             match.Id,
             teams,
@@ -185,8 +210,15 @@ public sealed record WvwMatchup(
             match.EndTime,
             maps,
             ObjectivesOf(match, objectives, guilds, upgrades, guildUpgrades, teams)
-        );
+        )
+        {
+            DataStamp = stamp,
+            NewestEvent = newestEvent,
+        };
     }
+
+    private static long Total(WvwMatchTeamValues<int>? values) =>
+        values is null ? 0 : (long)values.Red + values.Blue + values.Green;
 
     private static List<WvwObjectiveMarker> ObjectivesOf(
         WvwMatch match,

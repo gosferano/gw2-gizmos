@@ -40,6 +40,12 @@
         <Style Selector="TextBlock.side.green">
             <Setter Property="Foreground" Value="#7ACC7A" />
         </Style>
+        <Style Selector="TextBlock.data-age">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.data-age.stale">
+            <Setter Property="Foreground" Value="#F5A142" />
+        </Style>
         <Style Selector="Border.map-row">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Cursor" Value="Hand" />
@@ -116,12 +122,16 @@
                                    Objectives="{Binding Objectives}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}"
                                    Player="{Binding Player}" IsFollowing="{Binding IsFollowing}" />
 
-                        <!-- The skirmish under way, over the map's top-left corner. -->
+                        <!-- The skirmish under way and how fresh the data is, over the map's top-left corner. -->
                         <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" Padding="10,6"
                                 CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                 IsVisible="{Binding HasMatchup}" IsHitTestVisible="False">
-                            <TextBlock Text="{Binding SkirmishText}" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding SkirmishText}" />
+                                <TextBlock Text="{Binding DataAgeText}" FontSize="12" Classes="data-age"
+                                           Classes.stale="{Binding IsDataStale}" />
+                            </StackPanel>
                         </Border>
 
                         <!-- What a click just copied, for a few seconds. -->
