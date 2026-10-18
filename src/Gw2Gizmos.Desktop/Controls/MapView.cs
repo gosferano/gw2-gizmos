@@ -184,16 +184,11 @@ public sealed partial class MapView : Control
                 {
                     RequestTile(tiles, continent, key);
                 }
-                else if (key.Zoom > 0 && !HasAncestorInMemory(tiles, key))
+                else if (SharpestStandIn(tiles, key) is { } standIn && tiles.TryGet(standIn) is null)
                 {
-                    // Nothing to stand in yet: load the tile a level up, which will.
-                    MapTileKey parent = key with
-                    {
-                        Zoom = key.Zoom - 1,
-                        X = key.X / 2,
-                        Y = key.Y / 2,
-                    };
-                    RequestTile(tiles, continent, parent, wanted: true);
+                    // The server doesn't have this tile: load the most detailed one above it that it has, so the
+                    // stand-in is as sharp as can be rather than whatever lower level happens to be in memory.
+                    RequestTile(tiles, continent, standIn, wanted: true);
                 }
             }
         }
@@ -228,21 +223,22 @@ public sealed partial class MapView : Control
         }
     }
 
-    private static bool HasAncestorInMemory(MapTileCache<Bitmap> tiles, MapTileKey key)
+    /// <summary>
+    /// The nearest tile above <paramref name="key"/> the server isn't known to lack; null if none is.
+    /// </summary>
+    private static MapTileKey? SharpestStandIn(MapTileCache<Bitmap> tiles, MapTileKey key)
     {
         for (int levelsUp = 1; levelsUp <= key.Zoom; levelsUp++)
         {
             int factor = 1 << levelsUp;
-            if (
-                tiles.TryGet(key with { Zoom = key.Zoom - levelsUp, X = key.X / factor, Y = key.Y / factor })
-                is not null
-            )
+            MapTileKey ancestor = key with { Zoom = key.Zoom - levelsUp, X = key.X / factor, Y = key.Y / factor };
+            if (!tiles.IsMissing(ancestor))
             {
-                return true;
+                return ancestor;
             }
         }
 
-        return false;
+        return null;
     }
 
     /// <summary>
