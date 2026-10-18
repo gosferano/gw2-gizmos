@@ -29,6 +29,9 @@ public sealed class WvwMatchupProvider
     private readonly SelectedAccountService _account;
     private readonly IServiceScopeFactory _scopeFactory;
     private (string AccountId, int Team)? _team;
+
+    /// <summary>The match as last shown, which a stale response mustn't take back in time.</summary>
+    private WvwMatch? _shown;
     private IReadOnlyDictionary<string, WvwObjective>? _objectives;
     private readonly Dictionary<string, WvwGuild?> _guilds = new();
     private IReadOnlyDictionary<int, WvwUpgrade>? _upgrades;
@@ -68,11 +71,14 @@ public sealed class WvwMatchupProvider
                 );
             }
 
-            WvwMatch? match = await client.V2.Wvw.Matches.GetById(overview.Id);
-            if (match is null)
+            WvwMatch? fetched = await client.V2.Wvw.Matches.GetById(overview.Id);
+            if (fetched is null)
             {
                 return WvwMatchupResult.Failed("Couldn't load the match. Try again shortly.");
             }
+
+            WvwMatch match = WvwMatchReconciler.Reconcile(_shown, fetched);
+            _shown = match;
 
             _objectives ??= await ObjectivesAsync(client);
             _upgrades ??= (await client.V2.Wvw.Upgrades.GetAll())?.Content?.ToDictionary(u => u.Id);

@@ -18,7 +18,7 @@ namespace Gw2Gizmos.Desktop.Core;
 public sealed class WvwViewModel : ViewModelBase, INavigationAware
 {
     /// <summary>How often the matchup is fetched again while the page is open.</summary>
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(15);
 
     /// <summary>The middle of the WvW maps on the Mists, at a zoom that fills a large window with them.</summary>
     private const double HomeX = 10500;
