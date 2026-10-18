@@ -56,22 +56,33 @@ public sealed record WvwMatchup(
     int Skirmish,
     DateTimeOffset SkirmishEndsAt,
     DateTimeOffset MatchEndsAt,
-    IReadOnlyList<WvwMatchMap> Maps
+    IReadOnlyList<WvwMatchMap> Maps,
+    IReadOnlyList<WvwObjectiveMarker> Objectives
 )
 {
+    /// <summary>The objectives drawn on the map: the ones the match scores.</summary>
+    private static readonly HashSet<string> ShownObjectiveTypes = ["Camp", "Tower", "Keep", "Castle"];
+
     private static readonly TimeSpan SkirmishLength = TimeSpan.FromHours(2);
 
     /// <summary>
     /// Builds the matchup from the API's match, for the team <paramref name="yourTeam"/>, as it stands at
     /// <paramref name="now"/>. A team is found by its team id among each side's worlds; <paramref name="mapRects"/>
     /// gives the maps' places on the Mists, by map id. The skirmish under way is worked out from the clock: the API
-    /// lists a skirmish late, so its last one may already be over.
+    /// lists a skirmish late, so its last one may already be over. <paramref name="objectives"/> are the objectives'
+    /// names and places by id (<c>/v2/wvw/objectives</c>), <paramref name="guilds"/> the claiming guilds by id,
+    /// <paramref name="upgrades"/> the yak upgrade tiers by upgrade id (<c>/v2/wvw/upgrades</c>), and
+    /// <paramref name="guildUpgrades"/> the guild upgrades' names by id.
     /// </summary>
     public static WvwMatchup From(
         WvwMatch match,
         int yourTeam,
         IReadOnlyDictionary<int, (double MinX, double MinY, double MaxX, double MaxY)> mapRects,
-        DateTimeOffset now
+        DateTimeOffset now,
+        IReadOnlyDictionary<string, WvwObjective>? objectives = null,
+        IReadOnlyDictionary<string, WvwGuild>? guilds = null,
+        IReadOnlyDictionary<int, WvwUpgrade>? upgrades = null,
+        IReadOnlyDictionary<int, string>? guildUpgrades = null
     )
     {
         int skirmishCount = (int)Math.Ceiling((match.EndTime - match.StartTime) / SkirmishLength);
@@ -124,14 +135,111 @@ public sealed record WvwMatchup(
         maps.Sort((a, b) => (a.Home is null ? -1 : (int)a.Home).CompareTo(b.Home is null ? -1 : (int)b.Home));
 
         DateTimeOffset skirmishEnd = match.StartTime + SkirmishLength * skirmishNumber;
+        WvwTeamStanding[] teams = [Standing(WvwColor.Red), Standing(WvwColor.Blue), Standing(WvwColor.Green)];
         return new WvwMatchup(
             match.Id,
-            [Standing(WvwColor.Red), Standing(WvwColor.Blue), Standing(WvwColor.Green)],
+            teams,
             skirmishNumber,
             skirmishEnd < match.EndTime ? skirmishEnd : match.EndTime,
             match.EndTime,
-            maps
+            maps,
+            ObjectivesOf(match, objectives, guilds, upgrades, guildUpgrades, teams)
         );
+    }
+
+    private static List<WvwObjectiveMarker> ObjectivesOf(
+        WvwMatch match,
+        IReadOnlyDictionary<string, WvwObjective>? objectives,
+        IReadOnlyDictionary<string, WvwGuild>? guilds,
+        IReadOnlyDictionary<int, WvwUpgrade>? upgrades,
+        IReadOnlyDictionary<int, string>? guildUpgrades,
+        IReadOnlyList<WvwTeamStanding> teams
+    )
+    {
+        var markers = new List<WvwObjectiveMarker>();
+        if (objectives is null)
+        {
+            return markers;
+        }
+
+        foreach (WvwMatchMapObjective state in match.Maps.SelectMany(m => m.Objectives))
+        {
+            if (
+                !objectives.TryGetValue(state.Id, out WvwObjective? objective)
+                || !ShownObjectiveTypes.Contains(objective.Type)
+                || objective.Coord.Length < 2
+            )
+            {
+                continue;
+            }
+
+            WvwColor? owner =
+                state.Owner == WvwOwner.Red ? WvwColor.Red
+                : state.Owner == WvwOwner.Blue ? WvwColor.Blue
+                : state.Owner == WvwOwner.Green ? WvwColor.Green
+                : null;
+            WvwGuild? guild =
+                state.ClaimedBy is { } guildId && guilds is not null && guilds.TryGetValue(guildId, out WvwGuild? found)
+                    ? found
+                    : null;
+            int yaks = state.YaksDelivered ?? 0;
+            (int tier, string? tierName, string? nextTierName, int? yaksToNext) =
+                objective.UpgradeId is { } upgradeId
+                && upgrades is not null
+                && upgrades.TryGetValue(upgradeId, out WvwUpgrade? upgrade)
+                    ? TierOf(upgrade, yaks)
+                    : (0, null, null, null);
+            List<string> slotted = guildUpgrades is null
+                ? []
+                : state
+                    .GuildUpgrades.Select(id => guildUpgrades.TryGetValue(id, out string? name) ? name : null)
+                    .OfType<string>()
+                    .ToList();
+            markers.Add(
+                new WvwObjectiveMarker(
+                    objective.Id,
+                    objective.Name,
+                    objective.Type.ToString(),
+                    objective.MapId,
+                    (double)objective.Coord[0],
+                    (double)objective.Coord[1],
+                    string.IsNullOrEmpty(objective.Marker) ? null : objective.Marker,
+                    objective.ChatLink,
+                    owner,
+                    owner is { } color ? teams.First(t => t.Color == color).Name : null,
+                    state.LastFlipped,
+                    guild,
+                    state.PointsTick,
+                    yaks,
+                    tier,
+                    tierName,
+                    nextTierName,
+                    yaksToNext,
+                    slotted
+                )
+            );
+        }
+
+        return markers;
+    }
+
+    /// <summary>
+    /// The tier an objective has reached with <paramref name="yaks"/> delivered. Each tier's yaks count on top of the
+    /// tiers before it (a tower's 15, 20 and 35 make 70 for the top), and the tiers come in order.
+    /// </summary>
+    internal static (int Tier, string? Name, string? NextName, int? YaksToNext) TierOf(WvwUpgrade upgrade, int yaks)
+    {
+        int needed = 0;
+        for (int i = 0; i < upgrade.Tiers.Length; i++)
+        {
+            needed += upgrade.Tiers[i].YaksRequired;
+            if (yaks < needed)
+            {
+                return (i, i > 0 ? upgrade.Tiers[i - 1].Name : null, upgrade.Tiers[i].Name, needed - yaks);
+            }
+        }
+
+        return (upgrade.Tiers.Length, upgrade.Tiers.LastOrDefault()?.Name, null, null);
     }
 
     private static T Pick<T>(WvwMatchTeamValues<T> values, WvwColor color)

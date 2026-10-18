@@ -126,10 +126,13 @@ public sealed partial class MapView
         : timing.SortKey - now <= SoonWindow ? SoonText
         : LaterText;
 
-    /// <summary>Keeps the timers ticking once a second while there are badges, and stops when there are none.</summary>
+    /// <summary>
+    /// Keeps the timers ticking once a second while there are badges or protected objectives, and stops when there are
+    /// none.
+    /// </summary>
     private void UpdateEventTick()
     {
-        bool wanted = EventSpots is { Count: > 0 } && Zoom >= EventSpotsFromZoom;
+        bool wanted = (EventSpots is { Count: > 0 } && Zoom >= EventSpotsFromZoom) || HasProtectedObjectives();
         if (wanted && _eventTick is null)
         {
             _eventTick = new DispatcherTimer(

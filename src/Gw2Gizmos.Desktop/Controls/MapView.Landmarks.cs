@@ -89,7 +89,7 @@ public sealed partial class MapView
 
     /// <summary>
     /// What the latest render drew that the pointer can hover, in drawing order: <see cref="MapMarker"/>s,
-    /// <see cref="MapEventSpot"/>s and the <see cref="MapPlayer"/>.
+    /// <see cref="MapEventSpot"/>s, <see cref="WvwObjectiveMarker"/>s and the <see cref="MapPlayer"/>.
     /// </summary>
     private readonly List<(Rect Area, object Target)> _hitTargets = new();
 
@@ -139,6 +139,7 @@ public sealed partial class MapView
         }
 
         DrawEventSpots(context, bounds, left, top, scale);
+        DrawObjectives(context, bounds, left, top, scale);
         DrawPlayer(context, left, top, scale);
         DrawTooltip(context, bounds);
     }
@@ -300,6 +301,12 @@ public sealed partial class MapView
             _ => LandmarkIcon,
         };
 
+        return Icon(url);
+    }
+
+    /// <summary>An icon by URL from the shared cache, loading it if it isn't in yet.</summary>
+    private Bitmap? Icon(string url)
+    {
         lock (LoadedIcons)
         {
             if (LoadedIcons.TryGetValue(url, out Bitmap? icon))
@@ -346,6 +353,7 @@ public sealed partial class MapView
             MapPlayer player => (player.Name, [], null),
             MapMarker marker => (marker.Name, [], marker.ChatLink),
             MapEventSpot spot => (spot.WaypointName, EventLines(spot), spot.ChatLink),
+            WvwObjectiveMarker objective => (objective.Name, ObjectiveLines(objective), objective.ChatLink),
             _ => ((string?)null, (IReadOnlyList<FormattedText>)[], (string?)null),
         };
         if (name is null)
@@ -435,6 +443,7 @@ public sealed partial class MapView
         {
             MapMarker marker => marker.ChatLink is not null,
             MapEventSpot => true,
+            WvwObjectiveMarker => true,
             _ => false,
         };
 

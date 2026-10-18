@@ -118,4 +118,96 @@ public sealed class WvwMatchupTests
             matchup.Maps.Select(m => m.Name)
         );
     }
+
+    [Fact]
+    public void Scored_objectives_get_their_place_holder_and_claiming_guild_but_ruins_are_left_out()
+    {
+        WvwMatchMapObjective castle = new()
+        {
+            Id = "38-9",
+            Owner = WvwOwner.Green,
+            LastFlipped = DuringSkirmish2.AddMinutes(-2),
+            ClaimedBy = "guild-1",
+            PointsTick = 12,
+        };
+        WvwMatchMapObjective ruin = new() { Id = "38-62", Owner = WvwOwner.Red };
+        WvwMatch match = new()
+        {
+            Id = Match.Id,
+            StartTime = Match.StartTime,
+            EndTime = Match.EndTime,
+            Scores = Match.Scores,
+            Worlds = Match.Worlds,
+            AllWorlds = Match.AllWorlds,
+            Kills = Match.Kills,
+            Deaths = Match.Deaths,
+            VictoryPoints = Match.VictoryPoints,
+            Skirmishes = Match.Skirmishes,
+            Maps = [Map(38, WvwMapType.Center, castle, ruin)],
+        };
+        Dictionary<string, WvwObjective> objectives = new()
+        {
+            ["38-9"] = new()
+            {
+                Id = "38-9",
+                Name = "Stonemist Castle",
+                Type = WvwObjectiveType.Castle,
+                MapId = 38,
+                Coord = [10606.3m, 14580.3m, -1536.9m],
+                ChatLink = "[&DAkAAAAmAAAA]",
+            },
+            ["38-62"] = new()
+            {
+                Id = "38-62",
+                Name = "Temple of Lost Prayers",
+                Type = "Ruins",
+                MapId = 38,
+                Coord = [1m, 2m],
+                ChatLink = "[&x]",
+            },
+        };
+        Dictionary<string, WvwGuild> guilds = new() { ["guild-1"] = new WvwGuild("Prôgrëss", "poG") };
+
+        WvwMatchup matchup = WvwMatchup.From(match, 12008, Rects, DuringSkirmish2, objectives, guilds);
+
+        WvwObjectiveMarker marker = Assert.Single(matchup.Objectives);
+        Assert.Equal(
+            ("Stonemist Castle", "Castle", WvwColor.Green, "Grenth's Door", 12),
+            (marker.Name, marker.Type, marker.Owner, marker.OwnerName, marker.PointsTick)
+        );
+        Assert.Equal((10606.3, 14580.3), (marker.X, marker.Y));
+        Assert.Equal("poG", marker.Guild?.Tag);
+        Assert.Equal(TimeSpan.FromMinutes(3), marker.ProtectedFor(DuringSkirmish2));
+    }
+
+    [Theory]
+    [InlineData(0, 0, null, "Secured", 15)]
+    [InlineData(14, 0, null, "Secured", 1)]
+    [InlineData(15, 1, "Secured", "Reinforced", 20)]
+    [InlineData(34, 1, "Secured", "Reinforced", 1)]
+    [InlineData(35, 2, "Reinforced", "Fortified", 35)]
+    [InlineData(70, 3, "Fortified", null, null)]
+    [InlineData(90, 3, "Fortified", null, null)]
+    public void An_objectives_tier_counts_each_tiers_yaks_on_top_of_the_ones_before(
+        int yaks,
+        int tier,
+        string? name,
+        string? next,
+        int? yaksToNext
+    )
+    {
+        // A tower's upgrade set: 15, 20 and 35 yaks, so 70 in all for the top tier.
+        WvwUpgrade tower = new()
+        {
+            Id = 35,
+            Tiers =
+            [
+                new() { Name = "Secured", YaksRequired = 15 },
+                new() { Name = "Reinforced", YaksRequired = 20 },
+                new() { Name = "Fortified", YaksRequired = 35 },
+            ],
+        };
+
+        Assert.Equal((tier, name, next, yaksToNext), WvwMatchup.TierOf(tower, yaks));
+    }
 }

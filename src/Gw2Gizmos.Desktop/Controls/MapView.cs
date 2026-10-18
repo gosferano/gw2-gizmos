@@ -74,7 +74,8 @@ public sealed partial class MapView : Control
             ZoomProperty,
             LandmarksProperty,
             PlayerProperty,
-            EventSpotsProperty
+            EventSpotsProperty,
+            ObjectivesProperty
         );
         FocusableProperty.OverrideDefaultValue<MapView>(true);
     }
@@ -188,7 +189,8 @@ public sealed partial class MapView : Control
                         continue;
                     }
 
-                    // A tile still loading, or one the server doesn't have, gets a lower-detail tile's part in its place.
+                    // A tile still loading, or one the server doesn't have, gets a lower-detail tile's part in its
+                    // place.
                     DrawStandIn(context, tiles, continent, key, destination);
                     if (!tiles.IsMissing(key))
                     {

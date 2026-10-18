@@ -19,7 +19,8 @@ public sealed record WvwMatchupResult(WvwMatchup? Matchup, string? Problem)
 
 /// <summary>
 /// Fetches the selected account's WvW matchup live from the API: the account's team (with its key, remembered per
-/// account) and the match that team is in. The maps' places on the Mists come from the Maps table the worker syncs.
+/// account) and the match that team is in. The maps' places on the Mists come from the Maps table the worker syncs;
+/// the objectives' names and places are fetched once, and the guilds claiming them once each.
 /// </summary>
 public sealed class WvwMatchupProvider
 {
@@ -28,6 +29,10 @@ public sealed class WvwMatchupProvider
     private readonly SelectedAccountService _account;
     private readonly IServiceScopeFactory _scopeFactory;
     private (string AccountId, int Team)? _team;
+    private IReadOnlyDictionary<string, WvwObjective>? _objectives;
+    private readonly Dictionary<string, WvwGuild?> _guilds = new();
+    private IReadOnlyDictionary<int, WvwUpgrade>? _upgrades;
+    private readonly Dictionary<int, string?> _guildUpgrades = new();
 
     /// <summary>Why the latest team lookup found no team, for the page to say.</summary>
     private string? _problem;
@@ -69,14 +74,85 @@ public sealed class WvwMatchupProvider
                 return WvwMatchupResult.Failed("Couldn't load the match. Try again shortly.");
             }
 
+            _objectives ??= await ObjectivesAsync(client);
+            _upgrades ??= (await client.V2.Wvw.Upgrades.GetAll())?.Content?.ToDictionary(u => u.Id);
+            await LookUpGuildsAsync(client, match);
+            await LookUpGuildUpgradesAsync(client, match);
             return new WvwMatchupResult(
-                WvwMatchup.From(match, team, await MapRectsAsync(match), DateTimeOffset.UtcNow),
+                WvwMatchup.From(
+                    match,
+                    team,
+                    await MapRectsAsync(match),
+                    DateTimeOffset.UtcNow,
+                    _objectives,
+                    _guilds.Where(g => g.Value is not null).ToDictionary(g => g.Key, g => g.Value!),
+                    _upgrades,
+                    _guildUpgrades.Where(g => g.Value is not null).ToDictionary(g => g.Key, g => g.Value!)
+                ),
                 null
             );
         }
         catch (Exception)
         {
             return WvwMatchupResult.Failed("Couldn't reach the GW2 API. Try again shortly.");
+        }
+    }
+
+    /// <summary>
+    /// The objectives' names, places and icons; null if they couldn't be fetched (retried next time).
+    /// </summary>
+    private static async Task<IReadOnlyDictionary<string, WvwObjective>?> ObjectivesAsync(Gw2ApiClient client)
+    {
+        WvwObjective[]? objectives = await client.V2.Wvw.Objectives.GetAll();
+        return objectives?.ToDictionary(o => o.Id);
+    }
+
+    /// <summary>
+    /// Looks up the guilds claiming objectives that aren't known yet (public guild details, no key needed). One that
+    /// can't be found is remembered as unknown rather than asked for again every refresh.
+    /// </summary>
+    private async Task LookUpGuildsAsync(Gw2ApiClient client, WvwMatch match)
+    {
+        string[] unknown = match
+            .Maps.SelectMany(m => m.Objectives)
+            .Select(o => o.ClaimedBy)
+            .OfType<string>()
+            .Distinct()
+            .Where(id => !_guilds.ContainsKey(id))
+            .ToArray();
+        Gw2Gizmos.Gw2Api.Contract.V2.Guild.Guild?[] found = await Task.WhenAll(
+            unknown.Select(async id =>
+            {
+                var result = await client.V2.Guild[id].GetBlob();
+                return result.Content;
+            })
+        );
+        for (int i = 0; i < unknown.Length; i++)
+        {
+            _guilds[unknown[i]] = found[i] is { } guild ? new WvwGuild(guild.Name, guild.Tag) : null;
+        }
+    }
+
+    /// <summary>
+    /// The names of the guild upgrades slotted in objectives that aren't known yet, each looked up once.
+    /// </summary>
+    private async Task LookUpGuildUpgradesAsync(Gw2ApiClient client, WvwMatch match)
+    {
+        int[] unknown = match
+            .Maps.SelectMany(m => m.Objectives)
+            .SelectMany(o => o.GuildUpgrades)
+            .Distinct()
+            .Where(id => !_guildUpgrades.ContainsKey(id))
+            .ToArray();
+        if (unknown.Length == 0)
+        {
+            return;
+        }
+
+        var found = (await client.V2.Guild.Upgrades.GetByIds(unknown)).Content ?? [];
+        foreach (int id in unknown)
+        {
+            _guildUpgrades[id] = found.FirstOrDefault(u => u.Id == id)?.Name;
         }
     }
 

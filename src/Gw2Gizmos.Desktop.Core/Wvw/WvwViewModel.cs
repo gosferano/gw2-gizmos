@@ -11,7 +11,8 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the WvW page: the selected account's matchup — the three teams' standings and the skirmish under way — over
-/// the Mists map, refreshed while the page is open. A singleton, so the map stays where it was left between visits.
+/// the Mists map with every objective in its holder's colour, refreshed while the page is open. Clicking an objective
+/// copies its chat link. A singleton, so the map stays where it was left between visits.
 /// </summary>
 public sealed class WvwViewModel : ViewModelBase, INavigationAware
 {
@@ -23,7 +24,12 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     private const double HomeY = 12200;
     private const double HomeZoom = 4.5;
 
+    private static readonly TimeSpan CopiedMessageDuration = TimeSpan.FromSeconds(3);
+
     private readonly WvwMatchupProvider _provider;
+    private readonly IClipboardService _clipboard;
+    private readonly IUiTimer _copiedTimer;
+    private string? _copiedMessage;
     private readonly IUiDispatcher _dispatcher;
     private readonly IUiTimer _refresh;
     private readonly IUiTimer _clock;
@@ -37,9 +43,12 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     private string _skirmishText = "";
     private MapLandmarks _landmarks = MapLandmarks.Empty;
 
-    public WvwViewModel(WvwMatchupProvider provider, IUiDispatcher dispatcher)
+    public WvwViewModel(WvwMatchupProvider provider, IClipboardService clipboard, IUiDispatcher dispatcher)
     {
         _provider = provider;
+        _clipboard = clipboard;
+        _copiedTimer = dispatcher.CreateTimer(CopiedMessageDuration, HideCopiedMessage);
+        CopyChatLinkCommand = new RelayCommand<object>(target => _ = CopyAsync(target));
         _dispatcher = dispatcher;
         _refresh = dispatcher.CreateTimer(RefreshInterval, () => _ = LoadAsync());
         _clock = dispatcher.CreateTimer(TimeSpan.FromSeconds(1), UpdateSkirmishText);
@@ -88,6 +97,7 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
             if (SetProperty(ref _matchup, value))
             {
                 OnPropertyChanged(nameof(Teams));
+                OnPropertyChanged(nameof(Objectives));
                 OnPropertyChanged(nameof(HasMatchup));
                 UpdateSkirmishText();
             }
@@ -95,6 +105,27 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     }
 
     public bool HasMatchup => Matchup is not null;
+
+    /// <summary>The match's objectives, each with its holder.</summary>
+    public IReadOnlyList<WvwObjectiveMarker> Objectives => Matchup?.Objectives ?? [];
+
+    /// <summary>What was just copied, shown for a few seconds after a click; null otherwise.</summary>
+    public string? CopiedMessage
+    {
+        get => _copiedMessage;
+        private set
+        {
+            if (SetProperty(ref _copiedMessage, value))
+            {
+                OnPropertyChanged(nameof(HasCopiedMessage));
+            }
+        }
+    }
+
+    public bool HasCopiedMessage => CopiedMessage is not null;
+
+    /// <summary>Copies a clicked objective's chat link.</summary>
+    public ICommand CopyChatLinkCommand { get; }
 
     /// <summary>The three teams, red, blue and green.</summary>
     public IReadOnlyList<WvwTeamStanding> Teams => Matchup?.Teams ?? [];
@@ -219,4 +250,32 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     }
 
     private void FlyTo(double x, double y, double zoom) => Flight = new MapFlight(x, y, zoom);
+
+    private async Task CopyAsync(object? target)
+    {
+        if (target is not WvwObjectiveMarker objective)
+        {
+            return;
+        }
+
+        try
+        {
+            await _clipboard.SetTextAsync(objective.ChatLink);
+        }
+        catch (Exception)
+        {
+            // The clipboard can be briefly unavailable; nothing copied, nothing to report.
+            return;
+        }
+
+        CopiedMessage = $"Copied {objective.Name} {objective.ChatLink}";
+        _copiedTimer.Stop();
+        _copiedTimer.Start();
+    }
+
+    private void HideCopiedMessage()
+    {
+        _copiedTimer.Stop();
+        CopiedMessage = null;
+    }
 }
