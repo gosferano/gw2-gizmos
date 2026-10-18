@@ -48,6 +48,7 @@ public sealed record WvwMatchMap(
 );
 
 /// <summary>A WvW match as the WvW page shows it.</summary>
+/// <param name="Teams">The three teams, in the order their borderlands lie on the map from left to right.</param>
 /// <param name="Skirmish">The skirmish under way, from 1.</param>
 /// <param name="SkirmishEndsAt">When the skirmish under way ends (skirmishes last two hours).</param>
 public sealed record WvwMatchup(
@@ -135,7 +136,19 @@ public sealed record WvwMatchup(
         maps.Sort((a, b) => (a.Home is null ? -1 : (int)a.Home).CompareTo(b.Home is null ? -1 : (int)b.Home));
 
         DateTimeOffset skirmishEnd = match.StartTime + SkirmishLength * skirmishNumber;
-        WvwTeamStanding[] teams = [Standing(WvwColor.Red), Standing(WvwColor.Blue), Standing(WvwColor.Green)];
+        // The teams in the order their borderlands lie on the map, left to right: green, red, blue as the Mists are
+        // laid out, kept as the order when a borderland's place isn't known.
+        WvwColor[] order = [WvwColor.Green, WvwColor.Red, WvwColor.Blue];
+        Dictionary<WvwColor, WvwMatchMap?> homes = order.ToDictionary(
+            color => color,
+            color => maps.FirstOrDefault(m => m.Home == color)
+        );
+        if (homes.Values.All(home => home is not null))
+        {
+            order = order.OrderBy(color => homes[color]!.MinX + homes[color]!.MaxX).ToArray();
+        }
+
+        WvwTeamStanding[] teams = order.Select(Standing).ToArray();
         return new WvwMatchup(
             match.Id,
             teams,

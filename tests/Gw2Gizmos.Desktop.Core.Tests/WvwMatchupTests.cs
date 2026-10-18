@@ -64,10 +64,11 @@ public sealed class WvwMatchupTests
 
     private static readonly Dictionary<int, (double, double, double, double)> Rects = new()
     {
-        [38] = (0, 0, 10, 10),
-        [95] = (0, 0, 10, 10),
-        [96] = (0, 0, 10, 10),
-        [1099] = (0, 0, 10, 10),
+        // The maps' places on the Mists: green's alpine borderland left, red's desert one top middle, blue's right.
+        [38] = (8958, 12798, 12030, 15870),
+        [95] = (5630, 11518, 8190, 15102),
+        [96] = (12798, 10878, 15358, 14462),
+        [1099] = (9214, 8958, 12286, 12030),
     };
 
     [Fact]
@@ -75,13 +76,13 @@ public sealed class WvwMatchupTests
     {
         WvwMatchup matchup = WvwMatchup.From(Match, yourTeam: 12008, Rects, DuringSkirmish2);
 
-        Assert.Equal([12003, 12008, 12010], matchup.Teams.Select(t => t.TeamId));
-        WvwTeamStanding red = matchup.Teams[0];
+        Assert.Equal([12010, 12003, 12008], matchup.Teams.Select(t => t.TeamId));
+        WvwTeamStanding red = matchup.Teams[1];
         Assert.Equal(
             ("Silent Woods", 100, 300, 17, 10, 1),
             (red.Name, red.VictoryPoints, red.SkirmishScore, red.PointsPerTick, red.Kills, red.Deaths)
         );
-        Assert.True(matchup.Teams[1].IsYours);
+        Assert.True(matchup.Teams[2].IsYours);
         Assert.False(red.IsYours);
     }
 
@@ -209,5 +210,16 @@ public sealed class WvwMatchupTests
         };
 
         Assert.Equal((tier, name, next, yaksToNext), WvwMatchup.TierOf(tower, yaks));
+    }
+
+    [Fact]
+    public void Teams_come_in_the_order_their_borderlands_lie_on_the_map_from_left_to_right()
+    {
+        WvwMatchup usual = WvwMatchup.From(Match, 12008, Rects, DuringSkirmish2);
+        Dictionary<int, (double, double, double, double)> swapped = new(Rects) { [95] = Rects[96], [96] = Rects[95] };
+        WvwMatchup moved = WvwMatchup.From(Match, 12008, swapped, DuringSkirmish2);
+
+        Assert.Equal([WvwColor.Green, WvwColor.Red, WvwColor.Blue], usual.Teams.Select(t => t.Color));
+        Assert.Equal([WvwColor.Blue, WvwColor.Red, WvwColor.Green], moved.Teams.Select(t => t.Color));
     }
 }
