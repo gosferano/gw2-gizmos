@@ -148,6 +148,13 @@ public partial class App : Application
             Log.Error(args.Exception, "Unobserved task exception.");
             args.SetObserved();
         };
+        // An error in a UI update (a binding, a list's change notification) would otherwise end the whole app — and
+        // this one lives in the tray all night. Log it and carry on.
+        Dispatcher.UIThread.UnhandledException += (_, args) =>
+        {
+            Log.Error(args.Exception, "Unhandled exception on the UI thread; carrying on.");
+            args.Handled = true;
+        };
     }
 
     /// <summary>Logs a fatal error and exits, so a failure is never silent.</summary>
