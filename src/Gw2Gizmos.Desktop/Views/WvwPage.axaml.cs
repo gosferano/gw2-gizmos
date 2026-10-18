@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Gw2Gizmos.Desktop.Core;
 
 namespace Gw2Gizmos.Desktop.Views;
@@ -16,5 +17,14 @@ public partial class WvwPage : UserControl
         : this()
     {
         DataContext = viewModel;
+    }
+
+    /// <summary>Filters the flip feed to the tapped map (the rows are borders, not buttons, to keep their look).</summary>
+    private void OnMapRowTapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is Control { DataContext: WvwMapStatsRow row } && DataContext is WvwViewModel viewModel)
+        {
+            viewModel.SelectMapCommand.Execute(row);
+        }
     }
 }

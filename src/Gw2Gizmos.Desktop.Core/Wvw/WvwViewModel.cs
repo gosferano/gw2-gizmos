@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -33,7 +34,12 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     /// <summary>Following the character from further out than this zooms in to it.</summary>
     private const double FollowMinZoom = 4.5;
 
+    /// <summary>The zoom a flip in the feed glides to, close enough to see the objective's surroundings.</summary>
+    private const double FlipZoom = 5.5;
+
     private readonly WvwMatchupProvider _provider;
+    private readonly WvwActivity _activity = new();
+    private int? _feedMapId;
     private readonly IClipboardService _clipboard;
     private readonly LiveGameMonitor _liveGame;
     private readonly IUiTimer _playerPoll;
@@ -70,7 +76,17 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         CopyChatLinkCommand = new RelayCommand<object>(target => _ = CopyAsync(target));
         _dispatcher = dispatcher;
         _refresh = dispatcher.CreateTimer(RefreshInterval, () => _ = LoadAsync());
-        _clock = dispatcher.CreateTimer(TimeSpan.FromSeconds(1), UpdateSkirmishText);
+        _clock = dispatcher.CreateTimer(
+            TimeSpan.FromSeconds(1),
+            () =>
+            {
+                UpdateSkirmishText();
+                RefreshPanel();
+            }
+        );
+        SelectMapCommand = new RelayCommand<WvwMapStatsRow>(SelectMap);
+        ShowAllMapsCommand = new RelayCommand(() => SelectMap(null));
+        FlyToFlipCommand = new RelayCommand<WvwFlipRow>(FlyToFlip);
         ZoomInCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Min(Zoom + 1, MaxZoom)));
         ZoomOutCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Max(Zoom - 1, MinZoom)));
         HomeCommand = new RelayCommand(() =>
@@ -176,6 +192,28 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     /// <summary>The three teams, red, blue and green.</summary>
     public IReadOnlyList<WvwTeamStanding> Teams => Matchup?.Teams ?? [];
 
+    /// <summary>Each map's activity: kills and deaths per minute, flips lately, objectives the team can take.</summary>
+    public ObservableCollection<WvwMapStatsRow> MapStats { get; } = [];
+
+    /// <summary>The flips seen, newest first, on the selected map or on all of them.</summary>
+    public ObservableCollection<WvwFlipRow> Feed { get; } = [];
+
+    /// <summary>E.g. "All maps" or "Red Borderlands": what the feed shows.</summary>
+    public string FeedScope =>
+        _feedMapId is { } mapId ? MapStats.FirstOrDefault(r => r.Map.MapId == mapId)?.Name ?? "" : "All maps";
+
+    public bool IsFeedFiltered => _feedMapId is not null;
+
+    public bool HasNoFlips => Feed.Count == 0;
+
+    /// <summary>Filters the feed to a map; selecting the selected map again shows all maps.</summary>
+    public ICommand SelectMapCommand { get; }
+
+    public ICommand ShowAllMapsCommand { get; }
+
+    /// <summary>Glides the map to a flipped objective.</summary>
+    public ICommand FlyToFlipCommand { get; }
+
     /// <summary>E.g. "Skirmish 12 · ends in 1h 05m".</summary>
     public string SkirmishText
     {
@@ -280,10 +318,14 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
                     Matchup is null
                     || !Matchup.Maps.Select(m => m.MapId).SequenceEqual(matchup.Maps.Select(m => m.MapId));
                 Matchup = matchup;
+                _activity.Add(matchup, DateTimeOffset.UtcNow);
                 if (mapsChanged)
                 {
                     ShowMaps(matchup.Maps);
                 }
+
+                RebuildFeed();
+                RefreshPanel();
             }
             else if (Matchup is null)
             {
@@ -294,6 +336,7 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
 
     private void ShowMaps(IReadOnlyList<WvwMatchMap> maps)
     {
+        MapStats.ReplaceWith(maps.Select(map => new WvwMapStatsRow(map) { IsSelected = map.MapId == _feedMapId }));
         Landmarks = new MapLandmarks(
             maps.Select(map => new MapAreaLabel(
                     MapAreaLabelKind.Map,
@@ -304,6 +347,65 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
                 .ToList(),
             []
         );
+    }
+
+    private void SelectMap(WvwMapStatsRow? row)
+    {
+        _feedMapId = row is null || row.Map.MapId == _feedMapId ? null : row.Map.MapId;
+        foreach (WvwMapStatsRow each in MapStats)
+        {
+            each.IsSelected = each.Map.MapId == _feedMapId;
+        }
+
+        OnPropertyChanged(nameof(FeedScope));
+        OnPropertyChanged(nameof(IsFeedFiltered));
+        RebuildFeed();
+    }
+
+    /// <summary>Shows the flips on the selected map (or all), keeping the rows already shown.</summary>
+    private void RebuildFeed()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        Feed.ReplaceWith(
+            _activity.Feed.Where(f => _feedMapId is null || f.MapId == _feedMapId).Select(f => new WvwFlipRow(f)),
+            row => row.Flip,
+            (_, _) => { }
+        );
+        foreach (WvwFlipRow row in Feed)
+        {
+            row.Refresh(now);
+        }
+
+        OnPropertyChanged(nameof(HasNoFlips));
+    }
+
+    /// <summary>Brings the maps' numbers and the feed's times up to date (each second: protection runs out).</summary>
+    private void RefreshPanel()
+    {
+        if (Matchup is not { } matchup)
+        {
+            return;
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        foreach (WvwMapStatsRow row in MapStats)
+        {
+            row.Refresh(matchup, _activity, now);
+        }
+
+        foreach (WvwFlipRow row in Feed)
+        {
+            row.Refresh(now);
+        }
+    }
+
+    private void FlyToFlip(WvwFlipRow? row)
+    {
+        if (row is not null && Matchup?.Objectives.FirstOrDefault(o => o.Id == row.Flip.ObjectiveId) is { } objective)
+        {
+            IsFollowing = false;
+            FlyTo(objective.X, objective.Y, Math.Max(Zoom, FlipZoom));
+        }
     }
 
     private void UpdateSkirmishText()

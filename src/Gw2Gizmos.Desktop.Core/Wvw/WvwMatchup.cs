@@ -35,7 +35,21 @@ public sealed record WvwTeamStanding(
     public bool IsGreen => Color == WvwColor.Green;
 }
 
-/// <summary>One of the match's maps, where it lies on the Mists.</summary>
+/// <summary>A number for each side.</summary>
+public sealed record WvwSideValues(int Red, int Blue, int Green)
+{
+    public static WvwSideValues Zero { get; } = new(0, 0, 0);
+
+    public int this[WvwColor side] =>
+        side switch
+        {
+            WvwColor.Red => Red,
+            WvwColor.Blue => Blue,
+            _ => Green,
+        };
+}
+
+/// <summary>One of the match's maps, where it lies on the Mists, and each side's kills and deaths on it.</summary>
 /// <param name="Home">Whose borderland it is; null for Eternal Battlegrounds.</param>
 public sealed record WvwMatchMap(
     int MapId,
@@ -45,7 +59,11 @@ public sealed record WvwMatchMap(
     double MinY,
     double MaxX,
     double MaxY
-);
+)
+{
+    public WvwSideValues Kills { get; init; } = WvwSideValues.Zero;
+    public WvwSideValues Deaths { get; init; } = WvwSideValues.Zero;
+}
 
 /// <summary>A WvW match as the WvW page shows it.</summary>
 /// <param name="Teams">The three teams, in the order their borderlands lie on the map from left to right.</param>
@@ -129,7 +147,17 @@ public sealed record WvwMatchup(
                 : map.Type == WvwMapType.GreenHome ? WvwColor.Green
                 : null;
             string name = home is { } color ? $"{color} Borderlands" : "Eternal Battlegrounds";
-            maps.Add(new WvwMatchMap(map.Id, home, name, rect.MinX, rect.MinY, rect.MaxX, rect.MaxY));
+            maps.Add(
+                new WvwMatchMap(map.Id, home, name, rect.MinX, rect.MinY, rect.MaxX, rect.MaxY)
+                {
+                    Kills = map.Kills is { } kills
+                        ? new WvwSideValues(kills.Red, kills.Blue, kills.Green)
+                        : WvwSideValues.Zero,
+                    Deaths = map.Deaths is { } deaths
+                        ? new WvwSideValues(deaths.Red, deaths.Blue, deaths.Green)
+                        : WvwSideValues.Zero,
+                }
+            );
         }
 
         // Eternal Battlegrounds first, then the borderlands in red, blue, green order.
