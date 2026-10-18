@@ -71,6 +71,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(AccountWizardsVaultCategory))]
 [JsonSerializable(typeof(AccountWizardsVaultListing[]))]
 [JsonSerializable(typeof(AccountWizardsVaultSpecial))]
+[JsonSerializable(typeof(AccountWvw))]
 [JsonSerializable(typeof(BuildStorageBuild[]))]
 // Achievements
 [JsonSerializable(typeof(Achievement[]))]

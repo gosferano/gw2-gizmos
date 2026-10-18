@@ -38,6 +38,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         Wallet = new AccountWalletClient(httpClient);
         WizardsVault = new AccountWizardsVaultClient(httpClient);
         WorldBosses = new AccountWorldBossesClient(httpClient);
+        Wvw = new AccountWvwClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -75,4 +76,5 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountWalletClient Wallet { get; }
     public IAccountWizardsVaultClient WizardsVault { get; }
     public IAccountWorldBossesClient WorldBosses { get; }
+    public IAccountWvwClient Wvw { get; }
 }
