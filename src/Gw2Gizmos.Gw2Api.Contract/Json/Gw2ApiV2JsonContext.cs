@@ -281,5 +281,6 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(WvwMatchStats[]))]
 [JsonSerializable(typeof(WvwObjective[]))]
 [JsonSerializable(typeof(WvwRank[]))]
+[JsonSerializable(typeof(WvwTimer))]
 [JsonSerializable(typeof(WvwUpgrade[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;

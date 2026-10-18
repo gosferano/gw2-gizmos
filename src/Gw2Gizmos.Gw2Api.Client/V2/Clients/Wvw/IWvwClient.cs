@@ -6,5 +6,6 @@ public interface IWvwClient : IBlobClient<string[]>
     public IWvwMatchesClient Matches { get; }
     public IWvwObjectivesClient Objectives { get; }
     public IWvwRanksClient Ranks { get; }
+    public IWvwTimersClient Timers { get; }
     public IWvwUpgradesClient Upgrades { get; }
 }

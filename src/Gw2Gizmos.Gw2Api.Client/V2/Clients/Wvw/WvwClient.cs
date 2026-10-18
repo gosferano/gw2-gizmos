@@ -9,6 +9,7 @@ public sealed class WvwClient : BaseBlobClient<string[]>, IWvwClient
         Matches = new WvwMatchesClient(httpClient);
         Objectives = new WvwObjectivesClient(httpClient);
         Ranks = new WvwRanksClient(httpClient);
+        Timers = new WvwTimersClient(httpClient);
         Upgrades = new WvwUpgradesClient(httpClient);
     }
 
@@ -18,5 +19,6 @@ public sealed class WvwClient : BaseBlobClient<string[]>, IWvwClient
     public IWvwMatchesClient Matches { get; }
     public IWvwObjectivesClient Objectives { get; }
     public IWvwRanksClient Ranks { get; }
+    public IWvwTimersClient Timers { get; }
     public IWvwUpgradesClient Upgrades { get; }
 }
