@@ -62,7 +62,7 @@ public sealed partial class MapView
             Zoom,
             x,
             y,
-            Math.Clamp(zoom, MinZoom, MaxZoom),
+            Math.Clamp(zoom, LowestZoom, MaxZoom),
             0,
             null,
             default
@@ -133,7 +133,7 @@ public sealed partial class MapView
             * Math.Pow(2, Math.Min(Zoom, path.ToZoom) - MapContinent.NativeZoom);
         double viewSize = Math.Max(Bounds.Width, Bounds.Height);
         double dip = Math.Clamp(Math.Log2(screenDistance / viewSize), 0, MaxFlightDip);
-        dip = Math.Min(dip, Math.Min(Zoom, path.ToZoom) - MinZoom);
+        dip = Math.Max(0, Math.Min(dip, Math.Min(Zoom, path.ToZoom) - LowestZoom));
         return path with
         {
             FromX = CenterX,
