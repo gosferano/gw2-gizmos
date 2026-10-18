@@ -39,6 +39,7 @@ public enum FluentSymbol
     Person24 = 0xF5BE,
     Search24 = 0xF690,
     Settings24 = 0xF6AA,
+    Shield24 = 0xF6BF,
     Star24 = 0xF710,
     Wallet24 = 0xEE2D,
     Warning24 = 0xF86A,
