@@ -275,6 +275,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(World[]))]
 // Wvw
 [JsonSerializable(typeof(WvwAbility[]))]
+[JsonSerializable(typeof(WvwGuildTeams))]
 [JsonSerializable(typeof(WvwMatch[]))]
 [JsonSerializable(typeof(WvwMatchOverview[]))]
 [JsonSerializable(typeof(WvwMatchScores[]))]
