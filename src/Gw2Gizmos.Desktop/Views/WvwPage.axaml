@@ -179,7 +179,7 @@
                                     <DataTemplate x:DataType="core:WvwMapStatsRow">
                                         <Border Classes="map-row" Classes.selected="{Binding IsSelected}" CornerRadius="6"
                                                 BorderThickness="1" BorderBrush="Transparent" Margin="0,0,0,6"
-                                                ClipToBounds="True" ToolTip.Tip="Show this map's flips; click again for all maps"
+                                                ClipToBounds="True" ToolTip.Tip="Go to this map and show its flips; click again for all maps"
                                                 Tapped="OnMapRowTapped">
                                             <DockPanel>
                                                 <Border DockPanel.Dock="Left" Width="4" Classes="team-strip"

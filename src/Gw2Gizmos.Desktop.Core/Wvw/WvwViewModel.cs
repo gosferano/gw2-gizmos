@@ -26,6 +26,9 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     private const double HomeY = 12200;
     private const double HomeZoom = 4.5;
 
+    /// <summary>The zoom selecting a map glides to: the one map filling the view.</summary>
+    private const double MapZoom = 5.5;
+
     private static readonly TimeSpan CopiedMessageDuration = TimeSpan.FromSeconds(3);
 
     /// <summary>
@@ -214,9 +217,12 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
 
     public bool HasNoFlips => Feed.Count == 0;
 
-    /// <summary>Filters the feed to a map; selecting the selected map again shows all maps.</summary>
+    /// <summary>
+    /// Selects a map: filters the feed to it and glides to it; selecting it again goes back to all maps.
+    /// </summary>
     public ICommand SelectMapCommand { get; }
 
+    /// <summary>Back to all maps, in the feed and on the map.</summary>
     public ICommand ShowAllMapsCommand { get; }
 
     /// <summary>Glides the map to a flipped objective.</summary>
@@ -388,9 +394,23 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         );
     }
 
+    /// <summary>
+    /// Selects a map (or all maps): the feed shows its flips and the view glides to it, or back to all of them.
+    /// </summary>
     private void SelectMap(WvwMapStatsRow? row)
     {
         _feedMapId = row is null || row.Map.MapId == _feedMapId ? null : row.Map.MapId;
+        IsFollowing = false;
+        if (_feedMapId is not null && row is not null)
+        {
+            WvwMatchMap map = row.Map;
+            FlyTo((map.MinX + map.MaxX) / 2, (map.MinY + map.MaxY) / 2, MapZoom);
+        }
+        else
+        {
+            FlyTo(HomeX, HomeY, HomeZoom);
+        }
+
         foreach (WvwMapStatsRow each in MapStats)
         {
             each.IsSelected = each.Map.MapId == _feedMapId;
