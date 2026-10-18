@@ -19,6 +19,27 @@
 
     <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
         <StackPanel>
+            <!-- Where it's all kept: the path (selectable, to copy) and a button that opens it in the file manager. -->
+            <c:Card Padding="16,12" Margin="0,0,0,16">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"
+                            Height="{StaticResource FormControlHeight}" Command="{Binding OpenDataFolderCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:FluentIcon Symbol="FolderOpen24" FontSize="16" />
+                            <TextBlock Text="Open data folder" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Data folder" FontWeight="SemiBold" />
+                        <SelectableTextBlock Text="{Binding DataDirectory}" FontSize="12" TextWrapping="Wrap"
+                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="Couldn't open a file manager. Copy the path above to open it yourself."
+                                   FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" IsVisible="{Binding OpenFailed}"
+                                   Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                    </StackPanel>
+                </DockPanel>
+            </c:Card>
+
             <TextBlock Margin="0,0,0,12" TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="Delete locally-stored data. This clears the stored rows; current data re-syncs on the next update (play sessions and price history don't come back)." />

@@ -84,6 +84,7 @@ internal static class AppHostFactory
         builder.Services.AddSingleton<IItemsViewFactory, AvaloniaItemsViewFactory>();
         builder.Services.AddSingleton<IDialogService, AvaloniaDialogService>();
         builder.Services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
+        builder.Services.AddSingleton<IFolderLauncher, AvaloniaFolderLauncher>();
         builder.Services.AddSingleton<AvaloniaNavigationService>();
         builder.Services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<AvaloniaNavigationService>());
 
