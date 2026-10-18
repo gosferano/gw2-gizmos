@@ -319,7 +319,15 @@ public sealed class MapLandmarkProvider
                 var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
                 List<int> ids = db.Maps.AsNoTracking().Where(m => m.Type == "Public").Select(m => m.Id).ToList();
                 string[] names = NotableInstances.Keys.ToArray();
-                var notableMaps = db.Maps.AsNoTracking().Where(m => names.Contains(m.Name)).OrderBy(m => m.Id).ToList();
+                // A map only on negative floors (Hall of Chains, Mythwright Gambit) sits in a space of its own, whose
+                // coordinates don't line up with the continent's.
+                var notableMaps = db
+                    .Maps.AsNoTracking()
+                    .Where(m => names.Contains(m.Name))
+                    .OrderBy(m => m.Id)
+                    .AsEnumerable()
+                    .Where(m => m.Floors.Any(floor => floor >= 0))
+                    .ToList();
                 ids.AddRange(notableMaps.Select(m => m.Id));
                 List<NotableMap> notable = notableMaps
                     .DistinctBy(m => m.Name)
