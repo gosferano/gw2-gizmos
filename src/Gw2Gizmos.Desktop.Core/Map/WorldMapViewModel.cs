@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Gw2Gizmos.Data.Static.Events;
 using Gw2Gizmos.Desktop.Core.Mvvm;
 using Gw2Gizmos.Desktop.Core.Navigation;
 using Gw2Gizmos.Desktop.Core.Ui;
@@ -10,8 +13,9 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Backs the World map page: Tyria's map, its labels and markers, where it's looking, and the character playing, live
 /// from MumbleLink while the page is open. Opening the page while in game follows the character until the map is
-/// dragged away. Clicking a landmark with a chat link copies it. A singleton, so the map stays where it was left when
-/// coming back to the page.
+/// dragged away. Every scheduled event is pinned at its waypoint with its timer, filtered by kind or to the Events
+/// page's favourites. Clicking a landmark or event with a chat link copies it. A singleton, so the map stays where it
+/// was left when coming back to the page.
 /// </summary>
 public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
 {
@@ -31,11 +35,20 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
 
     private readonly IClipboardService _clipboard;
     private readonly LiveGameMonitor _liveGame;
+    private readonly EventFavoritesStore _favorites;
+    private readonly ReminderSettingsStore _reminderSettings;
     private readonly IUiTimer _copiedTimer;
     private readonly IUiTimer _playerPoll;
     private MapPlayer? _player;
     private bool _isFollowing;
     private MapFlight? _flight;
+    private IReadOnlyList<MapEventSpot> _eventSpots = [];
+    private bool _showWorldBosses = true;
+    private bool _showMetaEvents = true;
+    private bool _showPublicInstances = true;
+    private bool _showInvasions = true;
+    private bool _showFestival = true;
+    private bool _onlyFavorites;
     private double _centerX = HomeX;
     private double _centerY = HomeY;
     private double _zoom = HomeZoom;
@@ -46,18 +59,22 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
         MapLandmarkProvider landmarks,
         IClipboardService clipboard,
         LiveGameMonitor liveGame,
+        EventFavoritesStore favorites,
+        ReminderSettingsStore reminderSettings,
         IUiDispatcher dispatcher
     )
     {
         _clipboard = clipboard;
         _liveGame = liveGame;
+        _favorites = favorites;
+        _reminderSettings = reminderSettings;
         _copiedTimer = dispatcher.CreateTimer(CopiedMessageDuration, HideCopiedMessage);
         _playerPoll = dispatcher.CreateTimer(PlayerPollInterval, PollPlayer);
         FollowPlayerCommand = new RelayCommand(StartFollowing, () => Player is not null);
         ZoomInCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Min(Zoom + 1, MaxZoom)));
         ZoomOutCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Max(Zoom - 1, MinZoom)));
         HomeCommand = new RelayCommand(GoHome);
-        CopyChatLinkCommand = new RelayCommand<MapMarker>(marker => _ = CopyAsync(marker));
+        CopyChatLinkCommand = new RelayCommand<object>(target => _ = CopyAsync(target));
         _ = LoadAsync(landmarks, dispatcher);
     }
 
@@ -93,7 +110,61 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     public MapLandmarks Landmarks
     {
         get => _landmarks;
-        private set => SetProperty(ref _landmarks, value);
+        private set
+        {
+            if (SetProperty(ref _landmarks, value))
+            {
+                RebuildEventSpots();
+            }
+        }
+    }
+
+    /// <summary>The scheduled events the filters let through, pinned at their waypoints.</summary>
+    public IReadOnlyList<MapEventSpot> EventSpots
+    {
+        get => _eventSpots;
+        private set => SetProperty(ref _eventSpots, value);
+    }
+
+    public bool ShowWorldBosses
+    {
+        get => _showWorldBosses;
+        set => SetFilter(ref _showWorldBosses, value);
+    }
+
+    public bool ShowMetaEvents
+    {
+        get => _showMetaEvents;
+        set => SetFilter(ref _showMetaEvents, value);
+    }
+
+    public bool ShowPublicInstances
+    {
+        get => _showPublicInstances;
+        set => SetFilter(ref _showPublicInstances, value);
+    }
+
+    public bool ShowInvasions
+    {
+        get => _showInvasions;
+        set => SetFilter(ref _showInvasions, value);
+    }
+
+    /// <summary>The activities of the festival picked on the Events page; none when no festival is picked.</summary>
+    public bool ShowFestival
+    {
+        get => _showFestival;
+        set => SetFilter(ref _showFestival, value);
+    }
+
+    /// <summary>Whether a festival is picked on the Events page, so there are festival activities to show.</summary>
+    public bool HasFestival => _reminderSettings.SelectedFestival is not null;
+
+    /// <summary>Only the events starred on the Events page.</summary>
+    public bool OnlyFavorites
+    {
+        get => _onlyFavorites;
+        set => SetFilter(ref _onlyFavorites, value);
     }
 
     /// <summary>What was just copied, shown for a few seconds after a click; null otherwise.</summary>
@@ -149,11 +220,15 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     /// <summary>Back to central Tyria.</summary>
     public ICommand HomeCommand { get; }
 
-    /// <summary>Copies a clicked <see cref="MapMarker"/>'s chat link.</summary>
+    /// <summary>Copies a clicked <see cref="MapMarker"/>'s or <see cref="MapEventSpot"/>'s chat link.</summary>
     public ICommand CopyChatLinkCommand { get; }
 
     public void OnNavigatedTo()
     {
+        // Favourites and the festival are picked on the Events page, which may have changed them since.
+        OnPropertyChanged(nameof(HasFestival));
+        RebuildEventSpots();
+
         PollPlayer();
         if (Player is not null)
         {
@@ -190,15 +265,50 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
 
     private void FlyTo(double x, double y, double zoom) => Flight = new MapFlight(x, y, zoom);
 
+    private void SetFilter(
+        ref bool field,
+        bool value,
+        [System.Runtime.CompilerServices.CallerMemberName] string? name = null
+    )
+    {
+        if (SetProperty(ref field, value, name))
+        {
+            RebuildEventSpots();
+        }
+    }
+
+    private void RebuildEventSpots()
+    {
+        Festival? festival = _reminderSettings.SelectedFestival;
+        IEnumerable<ScheduledEvent> shown = EventSchedule.All.Where(e =>
+            e.Kind switch
+            {
+                EventKind.WorldBoss => ShowWorldBosses,
+                EventKind.MetaEvent => ShowMetaEvents,
+                EventKind.PublicInstance => ShowPublicInstances,
+                EventKind.Invasion => ShowInvasions,
+                EventKind.Festival => ShowFestival && e.Festival == festival && festival is not null,
+                _ => false,
+            } && (!OnlyFavorites || _favorites.IsFavorite(e.Id))
+        );
+        EventSpots = MapEventSpots.Build(shown, Landmarks);
+    }
+
     private async Task LoadAsync(MapLandmarkProvider provider, IUiDispatcher dispatcher)
     {
         MapLandmarks landmarks = await provider.LoadAsync(Continent).ConfigureAwait(false);
         dispatcher.Post(() => Landmarks = landmarks);
     }
 
-    private async Task CopyAsync(MapMarker? marker)
+    private async Task CopyAsync(object? target)
     {
-        if (marker?.ChatLink is not { Length: > 0 } chatLink)
+        (string? chatLink, string? name) = target switch
+        {
+            MapMarker marker => (marker.ChatLink, marker.Name),
+            MapEventSpot spot => (spot.ChatLink, spot.WaypointName),
+            _ => (null, null),
+        };
+        if (string.IsNullOrEmpty(chatLink))
         {
             return;
         }
@@ -213,7 +323,7 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
             return;
         }
 
-        CopiedMessage = $"Copied {marker.Name} {chatLink}";
+        CopiedMessage = $"Copied {name} {chatLink}";
         _copiedTimer.Stop();
         _copiedTimer.Start();
     }

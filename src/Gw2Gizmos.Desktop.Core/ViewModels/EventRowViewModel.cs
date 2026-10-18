@@ -104,32 +104,9 @@ public sealed class EventRowViewModel : ViewModelBase
 
     public void Refresh(DateTimeOffset now)
     {
-        DateTimeOffset? activeUntil = _event.ActiveUntilUtc(now);
-        if (activeUntil is { } end)
-        {
-            IsActive = true;
-            SortKey = end;
-            Countdown = $"active · {Format(end - now)} left";
-        }
-        else
-        {
-            DateTimeOffset next = _event.NextStartUtc(now);
-            IsActive = false;
-            SortKey = next;
-            Countdown = $"in {Format(next - now)}";
-        }
-    }
-
-    // Hours+minutes when far out; minutes:seconds (ticking) when under an hour.
-    private static string Format(TimeSpan span)
-    {
-        if (span < TimeSpan.Zero)
-        {
-            span = TimeSpan.Zero;
-        }
-
-        return span.TotalHours >= 1
-            ? $"{(int)span.TotalHours}h {span.Minutes:00}m"
-            : $"{span.Minutes}:{span.Seconds:00}";
+        EventTiming timing = EventTiming.Of(_event, now);
+        IsActive = timing.IsActive;
+        SortKey = timing.SortKey;
+        Countdown = timing.Countdown;
     }
 }

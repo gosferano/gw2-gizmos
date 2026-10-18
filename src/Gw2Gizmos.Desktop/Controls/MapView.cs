@@ -15,7 +15,8 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// <see cref="CenterY"/> and <see cref="Zoom"/> are the view, in continent units and tile zoom levels; the zoom is
 /// fractional, drawn from the next tile level up scaled down. Tiles still loading, or missing from the server, are
 /// stood in for by a lower level's tile already in memory, scaled up. <see cref="Landmarks"/> are drawn over the tiles
-/// (see MapView.Landmarks.cs), and the view glides to a requested spot (see MapView.Flight.cs).
+/// (see MapView.Landmarks.cs) with event timers at their waypoints (MapView.Events.cs), and the view glides to a
+/// requested spot (MapView.Flight.cs).
 /// </summary>
 public sealed partial class MapView : Control
 {
@@ -72,7 +73,8 @@ public sealed partial class MapView : Control
             CenterYProperty,
             ZoomProperty,
             LandmarksProperty,
-            PlayerProperty
+            PlayerProperty,
+            EventSpotsProperty
         );
         FocusableProperty.OverrideDefaultValue<MapView>(true);
     }
@@ -193,7 +195,7 @@ public sealed partial class MapView : Control
             }
         }
 
-        DrawLandmarks(context, bounds, left, top, scale);
+        DrawOverlays(context, bounds, left, top, scale);
     }
 
     /// <summary>

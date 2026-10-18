@@ -87,12 +87,13 @@ public sealed partial class MapView
     /// <summary>Each label's outlined text, built once at the origin and moved into place when drawn.</summary>
     private readonly Dictionary<MapAreaLabel, LabelText> _labelTexts = new();
 
-    /// <summary>What the latest render drew that the pointer can hover, in drawing order.</summary>
-    private readonly List<(Rect Area, MapMarker Marker)> _hitTargets = new();
+    /// <summary>
+    /// What the latest render drew that the pointer can hover, in drawing order: <see cref="MapMarker"/>s,
+    /// <see cref="MapEventSpot"/>s and the <see cref="MapPlayer"/>.
+    /// </summary>
+    private readonly List<(Rect Area, object Target)> _hitTargets = new();
 
-    private MapMarker? _hovered;
-    private bool _playerHovered;
-    private Rect? _playerArea;
+    private object? _hovered;
     private Point _hoveredAt;
 
     public MapLandmarks? Landmarks
@@ -117,21 +118,40 @@ public sealed partial class MapView
         set => SetValue(IsFollowingProperty, value);
     }
 
-    /// <summary>Run with the clicked <see cref="MapMarker"/>, when it has a chat link.</summary>
+    /// <summary>
+    /// Run with the clicked <see cref="MapMarker"/> or <see cref="MapEventSpot"/>, when it has a chat link.
+    /// </summary>
     public ICommand? CopyChatLinkCommand
     {
         get => GetValue(CopyChatLinkCommandProperty);
         set => SetValue(CopyChatLinkCommandProperty, value);
     }
 
-    private void DrawLandmarks(DrawingContext context, Rect bounds, double left, double top, double scale)
+    /// <summary>
+    /// Everything over the tiles: labels, markers, event timers, the character, and the hovered tooltip.
+    /// </summary>
+    private void DrawOverlays(DrawingContext context, Rect bounds, double left, double top, double scale)
     {
         _hitTargets.Clear();
-        if (Landmarks is not { } landmarks)
+        if (Landmarks is { } landmarks)
         {
-            return;
+            DrawLandmarks(context, landmarks, bounds, left, top, scale);
         }
 
+        DrawEventSpots(context, bounds, left, top, scale);
+        DrawPlayer(context, left, top, scale);
+        DrawTooltip(context, bounds);
+    }
+
+    private void DrawLandmarks(
+        DrawingContext context,
+        MapLandmarks landmarks,
+        Rect bounds,
+        double left,
+        double top,
+        double scale
+    )
+    {
         double zoom = Zoom;
         var drawnLabels = new List<Rect>();
         Point ToScreen(double x, double y) => new((x - left) * scale, (y - top) * scale);
@@ -187,9 +207,6 @@ public sealed partial class MapView
 
             _hitTargets.Add((area, marker));
         }
-
-        DrawPlayer(context, left, top, scale);
-        DrawTooltip(context, bounds);
     }
 
     private static bool IsShown(MapAreaLabelKind kind, double zoom) =>
@@ -318,33 +335,42 @@ public sealed partial class MapView
         Dispatcher.UIThread.Post(InvalidateVisual);
     }
 
-    /// <summary>The name of what's under the pointer, and whether a click copies its chat link.</summary>
+    /// <summary>
+    /// What's under the pointer: its name, any lines about it (an event spot's timers), and whether a click copies its
+    /// chat link.
+    /// </summary>
     private void DrawTooltip(DrawingContext context, Rect bounds)
     {
-        (string? name, string? chatLink) =
-            _playerHovered && Player is { } player ? (player.Name, null)
-            : _hovered is { } marker ? (marker.Name, marker.ChatLink)
-            : (null, null);
+        (string? name, IReadOnlyList<FormattedText> lines, string? chatLink) = _hovered switch
+        {
+            MapPlayer player => (player.Name, [], null),
+            MapMarker marker => (marker.Name, [], marker.ChatLink),
+            MapEventSpot spot => (spot.WaypointName, EventLines(spot), spot.ChatLink),
+            _ => ((string?)null, (IReadOnlyList<FormattedText>)[], (string?)null),
+        };
         if (name is null)
         {
             return;
         }
 
-        FormattedText title = Text(name, 13, FontWeight.SemiBold, Brushes.White);
-        FormattedText? hint = chatLink is null
-            ? null
-            : Text($"Click to copy {chatLink}", 11, FontWeight.Normal, TooltipHint);
+        List<FormattedText> rows = [Text(name, 13, FontWeight.SemiBold, Brushes.White), .. lines];
+        if (chatLink is not null)
+        {
+            rows.Add(Text($"Click to copy {chatLink}", 11, FontWeight.Normal, TooltipHint));
+        }
+
         const double padding = 8;
-        double width = Math.Max(title.Width, hint?.Width ?? 0) + padding * 2;
-        double height = title.Height + (hint?.Height ?? 0) + padding * 2;
+        double width = rows.Max(row => row.Width) + padding * 2;
+        double height = rows.Sum(row => row.Height) + padding * 2;
         double x = Math.Min(_hoveredAt.X + 14, bounds.Width - width - 4);
         double y = _hoveredAt.Y + 18 + height > bounds.Height ? _hoveredAt.Y - height - 8 : _hoveredAt.Y + 18;
 
         context.DrawRectangle(TooltipBackground, null, new Rect(x, y, width, height), 4, 4);
-        context.DrawText(title, new Point(x + padding, y + padding));
-        if (hint is not null)
+        double rowY = y + padding;
+        foreach (FormattedText row in rows)
         {
-            context.DrawText(hint, new Point(x + padding, y + padding + title.Height));
+            context.DrawText(row, new Point(x + padding, rowY));
+            rowY += row.Height;
         }
     }
 
@@ -363,26 +389,12 @@ public sealed partial class MapView
     /// </summary>
     private void UpdateHover(Point point)
     {
-        bool playerHovered = _playerArea is { } playerArea && playerArea.Contains(point);
-        if (playerHovered || _playerHovered)
-        {
-            _playerHovered = playerHovered;
-            _hovered = null;
-            _hoveredAt = point;
-            Cursor = null;
-            InvalidateVisual();
-            if (playerHovered)
-            {
-                return;
-            }
-        }
-
-        MapMarker? hovered = null;
+        object? hovered = null;
         for (int i = _hitTargets.Count - 1; i >= 0; i--)
         {
             if (_hitTargets[i].Area.Contains(point))
             {
-                hovered = _hitTargets[i].Marker;
+                hovered = _hitTargets[i].Target;
                 break;
             }
         }
@@ -400,13 +412,12 @@ public sealed partial class MapView
 
     private void ClearHover()
     {
-        if (_hovered is null && !_playerHovered)
+        if (_hovered is null)
         {
             return;
         }
 
         _hovered = null;
-        _playerHovered = false;
         Cursor = null;
         InvalidateVisual();
     }
@@ -419,14 +430,19 @@ public sealed partial class MapView
         }
     }
 
-    private static bool HasChatLink(MapMarker? marker) => marker?.ChatLink is not null;
+    private static bool HasChatLink(object? target) =>
+        target switch
+        {
+            MapMarker marker => marker.ChatLink is not null,
+            MapEventSpot => true,
+            _ => false,
+        };
 
     /// <summary>
     /// The character as an arrow pointing the way they face, over a soft halo so it stands out on any art.
     /// </summary>
     private void DrawPlayer(DrawingContext context, double left, double top, double scale)
     {
-        _playerArea = null;
         if (Player is not { } player)
         {
             return;
@@ -439,7 +455,7 @@ public sealed partial class MapView
             context.DrawGeometry(PlayerFill, PlayerOutline, PlayerArrow);
         }
 
-        _playerArea = new Rect(at.X - 14, at.Y - 14, 28, 28);
+        _hitTargets.Add((new Rect(at.X - 14, at.Y - 14, 28, 28), player));
     }
 
     private sealed record OutlinedText(Geometry? Geometry, double Width, double Height);
