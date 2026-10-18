@@ -5,6 +5,8 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 public sealed class ProfessionTrainingTrackStepJsonConverter : PolymorphicJsonConverter<ProfessionTrainingTrackStep>
 {
     protected override string TypePropertyName { get; } = "type";
+    protected override Type? FallbackType => typeof(ProfessionTrainingTrackStepUnknown);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new()
         {

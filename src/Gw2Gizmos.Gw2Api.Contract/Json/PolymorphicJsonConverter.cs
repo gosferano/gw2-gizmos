@@ -13,7 +13,16 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
 
     protected abstract Dictionary<string, Type> TypeMap { get; }
 
+    /// <summary>
+    /// The type to read an object of a type missing from <see cref="TypeMap"/> as, so that one new type the API
+    /// introduces doesn't fail the whole response. Without it, such an object throws.
+    /// </summary>
     protected virtual Type? FallbackType { get; } = null;
+
+    /// <summary>
+    /// The type to read an object without the type property as, ahead of <see cref="FallbackType"/>.
+    /// </summary>
+    protected virtual Type? UntypedType { get; } = null;
 
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -26,6 +35,11 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
 
         if (!doc.RootElement.TryGetProperty(TypePropertyName, out JsonElement typeProperty))
         {
+            if (UntypedType != null)
+            {
+                return (doc.RootElement.Deserialize(UntypedType, options) as T)!;
+            }
+
             if (FallbackType != null)
             {
                 return (doc.RootElement.Deserialize(FallbackType, options) as T)!;

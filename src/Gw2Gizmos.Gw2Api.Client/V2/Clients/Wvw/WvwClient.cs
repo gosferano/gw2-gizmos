@@ -6,17 +6,21 @@ public sealed class WvwClient : BaseBlobClient<string[]>, IWvwClient
         : base(httpClient)
     {
         Abilities = new WvwAbilitiesClient(httpClient);
+        Guilds = new WvwGuildsClient(httpClient);
         Matches = new WvwMatchesClient(httpClient);
         Objectives = new WvwObjectivesClient(httpClient);
         Ranks = new WvwRanksClient(httpClient);
+        Timers = new WvwTimersClient(httpClient);
         Upgrades = new WvwUpgradesClient(httpClient);
     }
 
     protected override string UriPath => "/v2/wvw";
 
     public IWvwAbilitiesClient Abilities { get; }
+    public IWvwGuildsClient Guilds { get; }
     public IWvwMatchesClient Matches { get; }
     public IWvwObjectivesClient Objectives { get; }
     public IWvwRanksClient Ranks { get; }
+    public IWvwTimersClient Timers { get; }
     public IWvwUpgradesClient Upgrades { get; }
 }

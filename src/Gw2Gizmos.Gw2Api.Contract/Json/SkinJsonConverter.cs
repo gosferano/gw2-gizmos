@@ -6,6 +6,8 @@ public sealed class SkinJsonConverter : PolymorphicJsonConverter<Skin>
 {
     protected override string TypePropertyName => "type";
 
+    protected override Type? FallbackType => typeof(SkinUnknown);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new()
         {

@@ -29,17 +29,35 @@ public class ConverterTests
     }
 
     [Fact]
-    public void Item_throws_on_an_unknown_discriminator()
+    public void Item_reads_an_unknown_discriminator_as_ItemUnknown_keeping_the_type()
     {
-        Assert.Throws<JsonException>(
-            () => JsonSerializer.Deserialize<Item>("""{"id":1,"type":"Bogus","name":"X"}""", Options)
-        );
+        Item? item = JsonSerializer.Deserialize<Item>("""{"id":1,"type":"Bogus","name":"X"}""", Options);
+
+        ItemUnknown unknown = Assert.IsType<ItemUnknown>(item);
+        Assert.Equal("Bogus", unknown.Type.Value);
+        Assert.Equal("X", unknown.Name);
     }
 
     [Fact]
-    public void Item_throws_when_the_discriminator_is_missing()
+    public void Item_reads_a_missing_discriminator_as_ItemUnknown()
     {
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Item>("""{"id":1,"name":"X"}""", Options));
+        Item? item = JsonSerializer.Deserialize<Item>("""{"id":1,"name":"X"}""", Options);
+
+        Assert.IsType<ItemUnknown>(item);
+    }
+
+    [Fact]
+    public void Every_polymorphic_family_reads_an_unknown_discriminator_as_its_catch_all()
+    {
+        const string json = """{"type":"SomethingNew"}""";
+
+        Assert.IsType<SkinUnknown>(JsonSerializer.Deserialize<Skin>(json, Options));
+        Assert.IsType<GuildUpgradeUnknown>(JsonSerializer.Deserialize<GuildUpgrade>(json, Options));
+        Assert.IsType<ProfessionTrainingTrackStepUnknown>(
+            JsonSerializer.Deserialize<ProfessionTrainingTrackStep>(json, Options)
+        );
+        Assert.IsType<SkillFactUnknown>(JsonSerializer.Deserialize<SkillFact>(json, Options));
+        Assert.IsType<TraitFactUnknown>(JsonSerializer.Deserialize<TraitFact>(json, Options));
     }
 
     [Theory]
@@ -59,6 +77,7 @@ public class ConverterTests
     [InlineData("Range", typeof(SkillFactRange))]
     [InlineData("PrefixedBuff", typeof(SkillFactPrefixedBuff))]
     [InlineData("NoData", typeof(SkillFactNoData))] // "NoData" is a real GW2 fact type, mapped explicitly
+    [InlineData("BuffArray", typeof(SkillFactBuffArray))]
     public void SkillFact_dispatches_to_the_concrete_type(string type, Type expected)
     {
         SkillFact? fact = JsonSerializer.Deserialize<SkillFact>($$"""{"type":"{{type}}"}""", Options);
@@ -66,18 +85,23 @@ public class ConverterTests
     }
 
     [Fact]
-    public void SkillFact_throws_on_an_unknown_discriminator()
+    public void SkillFact_reads_a_missing_discriminator_as_a_percentage()
     {
-        // Strict like every other converter: an unrecognized fact type fails loudly rather than degrading.
-        Assert.Throws<JsonException>(
-            () => JsonSerializer.Deserialize<SkillFact>("""{"type":"SomeFutureFact"}""", Options)
+        // As the "Life Force Cost" facts of a few necromancer skills come.
+        SkillFact? fact = JsonSerializer.Deserialize<SkillFact>(
+            """{"text":"Life Force Cost","icon":"x.png","percent":21}""",
+            Options
         );
+
+        SkillFactPercent percent = Assert.IsType<SkillFactPercent>(fact);
+        Assert.Equal(21m, percent.Percent);
     }
 
     [Theory]
     [InlineData("Buff", typeof(TraitFactBuff))]
     [InlineData("Damage", typeof(TraitFactDamage))]
     [InlineData("BuffConversion", typeof(TraitFactBuffConversion))]
+    [InlineData("BuffArray", typeof(TraitFactBuffArray))]
     public void TraitFact_dispatches_to_the_concrete_type(string type, Type expected)
     {
         TraitFact? fact = JsonSerializer.Deserialize<TraitFact>($$"""{"type":"{{type}}"}""", Options);

@@ -15,6 +15,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         Finishers = new AccountFinishersClient(httpClient);
         Gliders = new AccountGlidersClient(httpClient);
         Home = new AccountHomeClient(httpClient);
+        Homestead = new AccountHomesteadClient(httpClient);
         Inventory = new AccountInventoryClient(httpClient);
         JadeBots = new AccountJadeBotsClient(httpClient);
         LegendaryArmory = new AccountLegendaryArmoryClient(httpClient);
@@ -22,6 +23,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         MailCarriers = new AccountMailCarriersClient(httpClient);
         MapChests = new AccountMapChestsClient(httpClient);
         Masteries = new AccountMasteriesClient(httpClient);
+        Mastery = new AccountMasteryClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
         Minis = new AccountMinisClient(httpClient);
         Mounts = new AccountMountsClient(httpClient);
@@ -37,6 +39,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         Wallet = new AccountWalletClient(httpClient);
         WizardsVault = new AccountWizardsVaultClient(httpClient);
         WorldBosses = new AccountWorldBossesClient(httpClient);
+        Wvw = new AccountWvwClient(httpClient);
     }
 
     protected override string UriPath => "/v2/account";
@@ -51,6 +54,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountFinishersClient Finishers { get; }
     public IAccountGlidersClient Gliders { get; }
     public IAccountHomeClient Home { get; }
+    public IAccountHomesteadClient Homestead { get; }
     public IAccountInventoryClient Inventory { get; }
     public IAccountJadeBotsClient JadeBots { get; }
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }
@@ -58,6 +62,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountMailCarriersClient MailCarriers { get; }
     public IAccountMapChestsClient MapChests { get; }
     public IAccountMasteriesClient Masteries { get; }
+    public IAccountMasteryClient Mastery { get; }
     public IAccountMinisClient Minis { get; }
     public IAccountMountsClient Mounts { get; }
     public IAccountMaterialsClient Materials { get; }
@@ -73,4 +78,5 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountWalletClient Wallet { get; }
     public IAccountWizardsVaultClient WizardsVault { get; }
     public IAccountWorldBossesClient WorldBosses { get; }
+    public IAccountWvwClient Wvw { get; }
 }

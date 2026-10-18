@@ -12,6 +12,7 @@ public interface IAccountClient : IBlobClient<Contract.V2.Account.Account>
     public IAccountFinishersClient Finishers { get; }
     public IAccountGlidersClient Gliders { get; }
     public IAccountHomeClient Home { get; }
+    public IAccountHomesteadClient Homestead { get; }
     public IAccountInventoryClient Inventory { get; }
     public IAccountJadeBotsClient JadeBots { get; }
     public IAccountLegendaryArmoryClient LegendaryArmory { get; }
@@ -19,6 +20,7 @@ public interface IAccountClient : IBlobClient<Contract.V2.Account.Account>
     public IAccountMailCarriersClient MailCarriers { get; }
     public IAccountMapChestsClient MapChests { get; }
     public IAccountMasteriesClient Masteries { get; }
+    public IAccountMasteryClient Mastery { get; }
     public IAccountMinisClient Minis { get; }
     public IAccountMountsClient Mounts { get; }
     public IAccountMaterialsClient Materials { get; }
@@ -34,4 +36,5 @@ public interface IAccountClient : IBlobClient<Contract.V2.Account.Account>
     public IAccountWalletClient Wallet { get; }
     public IAccountWizardsVaultClient WizardsVault { get; }
     public IAccountWorldBossesClient WorldBosses { get; }
+    public IAccountWvwClient Wvw { get; }
 }

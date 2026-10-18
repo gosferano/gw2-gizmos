@@ -18,6 +18,7 @@ using Gw2Gizmos.Gw2Api.Contract.V2.Finishers;
 using Gw2Gizmos.Gw2Api.Contract.V2.Gliders;
 using Gw2Gizmos.Gw2Api.Contract.V2.Guild;
 using Gw2Gizmos.Gw2Api.Contract.V2.Home;
+using Gw2Gizmos.Gw2Api.Contract.V2.Homestead;
 using Gw2Gizmos.Gw2Api.Contract.V2.Items;
 using Gw2Gizmos.Gw2Api.Contract.V2.ItemStats;
 using Gw2Gizmos.Gw2Api.Contract.V2.JadeBots;
@@ -60,16 +61,20 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Account
 [JsonSerializable(typeof(Account))]
 [JsonSerializable(typeof(AccountAchievement[]))]
+[JsonSerializable(typeof(AccountFinisher[]))]
+[JsonSerializable(typeof(AccountHomesteadDecoration[]))]
 [JsonSerializable(typeof(AccountItem?[]))]
 [JsonSerializable(typeof(AccountMaterial[]))]
 [JsonSerializable(typeof(AccountLegendaryArmoryItem[]))]
 [JsonSerializable(typeof(AccountLuck[]))]
 [JsonSerializable(typeof(AccountMastery[]))]
+[JsonSerializable(typeof(AccountMasteryPoints))]
 [JsonSerializable(typeof(AccountProgression[]))]
 [JsonSerializable(typeof(AccountWalletCurrency[]))]
 [JsonSerializable(typeof(AccountWizardsVaultCategory))]
 [JsonSerializable(typeof(AccountWizardsVaultListing[]))]
 [JsonSerializable(typeof(AccountWizardsVaultSpecial))]
+[JsonSerializable(typeof(AccountWvw))]
 [JsonSerializable(typeof(BuildStorageBuild[]))]
 // Achievements
 [JsonSerializable(typeof(Achievement[]))]
@@ -137,12 +142,18 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(GuildUpgrade[]))]
 [JsonSerializable(typeof(GuildUpgradeBankBag))]
 [JsonSerializable(typeof(GuildUpgradeSimple))]
+[JsonSerializable(typeof(GuildUpgradeUnknown))]
 // Home
 [JsonSerializable(typeof(HomeCat[]))]
 [JsonSerializable(typeof(HomeNode[]))]
+// Homestead
+[JsonSerializable(typeof(HomesteadDecoration[]))]
+[JsonSerializable(typeof(HomesteadDecorationCategory[]))]
+[JsonSerializable(typeof(HomesteadGlyph[]))]
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(ItemSimple))]
+[JsonSerializable(typeof(ItemUnknown))]
 [JsonSerializable(typeof(Item[]))]
 [JsonSerializable(typeof(Armor))]
 [JsonSerializable(typeof(BackItem))]
@@ -189,6 +200,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Profession[]))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStep))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStepSkill))]
+[JsonSerializable(typeof(ProfessionTrainingTrackStepUnknown))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStepTrait))]
 // Pvp
 [JsonSerializable(typeof(PvpAmulet[]))]
@@ -213,6 +225,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Skill[]))]
 [JsonSerializable(typeof(SkillFactAttributeAdjust))]
 [JsonSerializable(typeof(SkillFactBuff))]
+[JsonSerializable(typeof(SkillFactBuffArray))]
 [JsonSerializable(typeof(SkillFactComboField))]
 [JsonSerializable(typeof(SkillFactComboFinisher))]
 [JsonSerializable(typeof(SkillFactDamage))]
@@ -221,6 +234,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(SkillFactHeal))]
 [JsonSerializable(typeof(SkillFactHealingAdjust))]
 [JsonSerializable(typeof(SkillFactNoData))]
+[JsonSerializable(typeof(SkillFactUnknown))]
 [JsonSerializable(typeof(SkillFactNumber))]
 [JsonSerializable(typeof(SkillFactPercent))]
 [JsonSerializable(typeof(SkillFactPrefixedBuff))]
@@ -233,6 +247,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Skins
 [JsonSerializable(typeof(Skin[]))]
 [JsonSerializable(typeof(SkinArmor))]
+[JsonSerializable(typeof(SkinUnknown))]
 [JsonSerializable(typeof(SkinBack))]
 [JsonSerializable(typeof(SkinGathering))]
 [JsonSerializable(typeof(SkinWeapon))]
@@ -249,12 +264,14 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Trait[]))]
 [JsonSerializable(typeof(TraitFactAttributeAdjust))]
 [JsonSerializable(typeof(TraitFactBuff))]
+[JsonSerializable(typeof(TraitFactBuffArray))]
 [JsonSerializable(typeof(TraitFactBuffConversion))]
 [JsonSerializable(typeof(TraitFactComboField))]
 [JsonSerializable(typeof(TraitFactComboFinisher))]
 [JsonSerializable(typeof(TraitFactDamage))]
 [JsonSerializable(typeof(TraitFactDistance))]
 [JsonSerializable(typeof(TraitFactNoData))]
+[JsonSerializable(typeof(TraitFactUnknown))]
 [JsonSerializable(typeof(TraitFactNumber))]
 [JsonSerializable(typeof(TraitFactPercent))]
 [JsonSerializable(typeof(TraitFactPrefixedBuff))]
@@ -273,11 +290,13 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(World[]))]
 // Wvw
 [JsonSerializable(typeof(WvwAbility[]))]
+[JsonSerializable(typeof(WvwGuildTeams))]
 [JsonSerializable(typeof(WvwMatch[]))]
 [JsonSerializable(typeof(WvwMatchOverview[]))]
 [JsonSerializable(typeof(WvwMatchScores[]))]
 [JsonSerializable(typeof(WvwMatchStats[]))]
 [JsonSerializable(typeof(WvwObjective[]))]
 [JsonSerializable(typeof(WvwRank[]))]
+[JsonSerializable(typeof(WvwTimer))]
 [JsonSerializable(typeof(WvwUpgrade[]))]
 public partial class Gw2ApiV2JsonContext : JsonSerializerContext;
