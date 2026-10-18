@@ -6,6 +6,8 @@ public sealed class GuildUpgradeJsonConverter : PolymorphicJsonConverter<GuildUp
 {
     protected override string TypePropertyName { get; } = "type";
 
+    protected override Type? FallbackType => typeof(GuildUpgradeUnknown);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new()
         {

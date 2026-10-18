@@ -6,6 +6,8 @@ public sealed class ItemJsonConverter : PolymorphicJsonConverter<Item>
 {
     protected override string TypePropertyName { get; } = "type";
 
+    protected override Type? FallbackType => typeof(ItemUnknown);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new()
         {

@@ -13,6 +13,10 @@ public abstract class PolymorphicJsonConverter<T> : JsonConverter<T>
 
     protected abstract Dictionary<string, Type> TypeMap { get; }
 
+    /// <summary>
+    /// The type to read an object of a type missing from <see cref="TypeMap"/> as, so that one new type the API
+    /// introduces doesn't fail the whole response. Without it, such an object throws.
+    /// </summary>
     protected virtual Type? FallbackType { get; } = null;
 
     /// <summary>

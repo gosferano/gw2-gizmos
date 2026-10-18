@@ -107,6 +107,15 @@ public class ItemsMissingUpdater : BackgroundService
         var mapped = new List<Item>(apiItems.Length);
         foreach (Gw2Api.Contract.V2.Items.Item apiItem in apiItems)
         {
+            if (apiItem is Gw2Api.Contract.V2.Items.ItemUnknown)
+            {
+                _logger.LogWarning(
+                    "Item {ItemId} has type {Type}, which the API client doesn't know yet; storing only its common fields.",
+                    apiItem.Id,
+                    apiItem.Type
+                );
+            }
+
             try
             {
                 Item? entity = ItemEntityMapper.MapApiItem(apiItem);

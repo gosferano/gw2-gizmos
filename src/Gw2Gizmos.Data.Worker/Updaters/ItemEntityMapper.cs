@@ -1,4 +1,4 @@
-using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+﻿using Gw2Gizmos.Data.EntityFramework.Entities.Items;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
@@ -23,10 +23,12 @@ internal static class ItemEntityMapper
             Gw2Api.Contract.V2.Items.UpgradeComponent u => MapToUpgradeComponentEntity(u),
             Gw2Api.Contract.V2.Items.Weapon w => MapToWeaponEntity(w),
             Gw2Api.Contract.V2.Items.ItemSimple s => MapToItemEntity(s),
+            // A type the contract doesn't know yet: keep what every item has, so it still shows in search and prices.
+            Gw2Api.Contract.V2.Items.ItemUnknown u => MapToItemEntity(u),
             _ => null,
         };
 
-    private static Item MapToItemEntity(Gw2Api.Contract.V2.Items.ItemSimple apiItem)
+    private static Item MapToItemEntity(Gw2Api.Contract.V2.Items.Item apiItem)
     {
         return new Item
         {

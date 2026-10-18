@@ -142,6 +142,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(GuildUpgrade[]))]
 [JsonSerializable(typeof(GuildUpgradeBankBag))]
 [JsonSerializable(typeof(GuildUpgradeSimple))]
+[JsonSerializable(typeof(GuildUpgradeUnknown))]
 // Home
 [JsonSerializable(typeof(HomeCat[]))]
 [JsonSerializable(typeof(HomeNode[]))]
@@ -152,6 +153,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Items
 [JsonSerializable(typeof(Item))]
 [JsonSerializable(typeof(ItemSimple))]
+[JsonSerializable(typeof(ItemUnknown))]
 [JsonSerializable(typeof(Item[]))]
 [JsonSerializable(typeof(Armor))]
 [JsonSerializable(typeof(BackItem))]
@@ -198,6 +200,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Profession[]))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStep))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStepSkill))]
+[JsonSerializable(typeof(ProfessionTrainingTrackStepUnknown))]
 [JsonSerializable(typeof(ProfessionTrainingTrackStepTrait))]
 // Pvp
 [JsonSerializable(typeof(PvpAmulet[]))]
@@ -231,6 +234,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(SkillFactHeal))]
 [JsonSerializable(typeof(SkillFactHealingAdjust))]
 [JsonSerializable(typeof(SkillFactNoData))]
+[JsonSerializable(typeof(SkillFactUnknown))]
 [JsonSerializable(typeof(SkillFactNumber))]
 [JsonSerializable(typeof(SkillFactPercent))]
 [JsonSerializable(typeof(SkillFactPrefixedBuff))]
@@ -243,6 +247,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Skins
 [JsonSerializable(typeof(Skin[]))]
 [JsonSerializable(typeof(SkinArmor))]
+[JsonSerializable(typeof(SkinUnknown))]
 [JsonSerializable(typeof(SkinBack))]
 [JsonSerializable(typeof(SkinGathering))]
 [JsonSerializable(typeof(SkinWeapon))]
@@ -266,6 +271,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(TraitFactDamage))]
 [JsonSerializable(typeof(TraitFactDistance))]
 [JsonSerializable(typeof(TraitFactNoData))]
+[JsonSerializable(typeof(TraitFactUnknown))]
 [JsonSerializable(typeof(TraitFactNumber))]
 [JsonSerializable(typeof(TraitFactPercent))]
 [JsonSerializable(typeof(TraitFactPrefixedBuff))]

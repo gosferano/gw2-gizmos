@@ -6,6 +6,8 @@ public sealed class TraitFactJsonConverter : PolymorphicJsonConverter<TraitFact>
 {
     protected override string TypePropertyName => "type";
 
+    protected override Type? FallbackType => typeof(TraitFactUnknown);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new Dictionary<string, Type>()
         {
