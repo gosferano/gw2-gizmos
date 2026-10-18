@@ -13,7 +13,7 @@ public static class Invasions
     public static readonly IReadOnlyList<ScheduledEvent> All = new[]
     {
         Invasion("awakened-invasion", "Awakened Invasion", "Core Tyria", null, Schedule.Every(Hour, T("00:30")), 20),
-        Invasion("scarlets-minions", "Scarlet's Minions", "Core Tyria", "[&BOQAAAA=]", Schedule.Every(TwoHours, T("01:00")), 20),
+        Invasion("scarlets-minions", "Scarlet's Minions", "Core Tyria", "[&BOQAAAA=]", Schedule.Every(TwoHours, T("01:00")), 15),
     };
 
     private static TimeSpan T(string time) => TimeSpan.Parse(time);

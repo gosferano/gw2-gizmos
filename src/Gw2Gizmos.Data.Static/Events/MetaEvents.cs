@@ -45,7 +45,7 @@ public static class MetaEvents
         Meta("palawadan", "Palawadan", "Domain of Istan", "[&BAkLAAA=]", Schedule.Every(TwoHours, T("01:45")), 30, Expansion.LivingWorldSeason4),
         Meta("death-branded-shatterer", "Death-Branded Shatterer", "Jahai Bluffs", "[&BJMLAAA=]", Schedule.Every(TwoHours, T("01:15")), 15, Expansion.LivingWorldSeason4),
         Meta("oil-floes", "The Oil Floes", "Thunderhead Peaks", "[&BKYLAAA=]", Schedule.Every(TwoHours, T("00:45")), 15, Expansion.LivingWorldSeason4),
-        Meta("metal-concert", "Metal Concert", "Grothmar Valley", "[&BPgLAAA=]", Schedule.Every(TwoHours, T("01:40")), 20, Expansion.IcebroodSaga),
+        Meta("metal-concert", "Metal Concert", "Grothmar Valley", "[&BPgLAAA=]", Schedule.Every(TwoHours, T("01:40")), 15, Expansion.IcebroodSaga),
         Meta("drakkar", "Drakkar", "Bjora Marches", "[&BDkMAAA=]", Schedule.Every(TwoHours, T("01:05")), 35, Expansion.IcebroodSaga),
 
         // End of Dragons
@@ -56,7 +56,11 @@ public static class MetaEvents
 
         // Secrets of the Obscure
         Meta("skywatch", "Unlock the Wizard's Tower", "Skywatch Archipelago", "[&BL4NAAA=]", Schedule.Every(TwoHours, T("01:00")), 25, Expansion.SecretsOfTheObscure),
-        Meta("wizards-tower", "Wizard's Tower", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:40")), 25, Expansion.SecretsOfTheObscure),
+        // The Wizard's Tower has no meta of its own but two events (the wiki's timer): Target Practice from :00 of odd
+        // hours for 55 minutes, overlapping Fly by Night from :40 for 40. Fly by Night keeps the old entry's id, so
+        // favourites and reminders set on it carry over.
+        Meta("wizards-tower", "Fly by Night", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:40")), 40, Expansion.SecretsOfTheObscure),
+        Meta("wizards-tower-target-practice", "Skyscale Target Practice", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:00")), 55, Expansion.SecretsOfTheObscure),
         Meta("amnytas", "Defense of Amnytas", "Amnytas", "[&BDQOAAA=]", Schedule.Every(TwoHours, T("00:00")), 25, Expansion.SecretsOfTheObscure),
 
         // Janthir Wilds
