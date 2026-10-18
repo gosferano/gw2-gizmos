@@ -121,6 +121,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<NotificationsViewModel>();
         // Singleton so its one-second countdown clock keeps ticking and the event list is built once.
         services.AddSingleton<EventsViewModel>();
+        // Singleton so the map stays where it was left between visits.
+        services.AddSingleton<WorldMapViewModel>();
         services.AddSingleton<LogsViewModel>();
         // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         services.AddTransient<ApiKeysViewModel>();

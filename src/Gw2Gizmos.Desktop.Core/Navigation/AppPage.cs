@@ -21,6 +21,7 @@ public enum AppPage
     Session,
     SessionLoot,
     Events,
+    WorldMap,
     Items,
     TradingPost,
     PriceAlerts,

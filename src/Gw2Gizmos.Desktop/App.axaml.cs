@@ -69,6 +69,7 @@ public partial class App : Application
             AppServices.Rarities.StartLoading();
             AppServices.Icons = new IconProvider<Bitmap>(
                 _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
+            AppServices.Tiles = new MapTileCache<Bitmap>(dataDirectory, AvaloniaTileDecoder.Decode);
             // The host's console lifetime turns SIGTERM / Ctrl+C (e.g. a session logout) into a host stop; make that
             // shut down the whole app — window, tray and worker — not just the background services.
             _host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(

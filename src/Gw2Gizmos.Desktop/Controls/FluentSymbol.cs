@@ -41,4 +41,6 @@ public enum FluentSymbol
     Star24 = 0xF710,
     Wallet24 = 0xEE2D,
     Warning24 = 0xF86A,
+    ZoomIn24 = 0xF8C5,
+    ZoomOut24 = 0xF8C7,
 }
