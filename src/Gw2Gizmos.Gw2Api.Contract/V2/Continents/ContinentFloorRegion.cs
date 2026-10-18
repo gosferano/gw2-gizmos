@@ -2,6 +2,7 @@
 
 public sealed class ContinentFloorRegion
 {
+    public int Id { get; set; }
     public string Name { get; set; } = null!;
     public int[] LabelCoord { get; set; } = Array.Empty<int>();
     public int[][] ContinentRect { get; set; } = Array.Empty<int[]>();
