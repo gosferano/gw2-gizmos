@@ -195,4 +195,51 @@ public sealed class MapLandmarkProviderTests
         MapAreaLabel label = landmarks.Labels.Single(l => l.Kind == MapAreaLabelKind.Map);
         Assert.Equal((36864.0, 28996.0), (label.X, label.Y));
     }
+
+    [Fact]
+    public void Hearts_lose_their_chat_link_so_an_event_at_a_waypoint_with_the_same_link_finds_the_waypoint()
+    {
+        // The API gives Queensdale's heart 228 the link of point of interest 228, Gendarran Fields' Provern Shore
+        // Waypoint, where Scarlet's Minions and the Ley-Line Anomaly start.
+        ContinentFloorRegionMap queensdale = Map(15, "Queensdale");
+        queensdale.Tasks[228] = new ContinentFloorRegionMapTask
+        {
+            Id = 228,
+            Objective = "Assist Fisherman Will",
+            Coord = [1, 1],
+            ChatLink = "[&BOQAAAA=]",
+        };
+        ContinentFloorRegionMap gendarran = Map(24, "Gendarran Fields");
+        gendarran.PointsOfInterest[228] = new ContinentFloorRegionMapPoi
+        {
+            Id = 228,
+            Name = "Provern Shore Waypoint",
+            Type = ContinentFloorRegionMapPoiType.Waypoint,
+            Coord = [500, 500],
+            ChatLink = "[&BOQAAAA=]",
+        };
+        ContinentFloor floor = Floor(1, (4, "Kryta", [queensdale, gendarran]));
+
+        MapLandmarks landmarks = MapLandmarkProvider.Build([floor], explorable: null);
+
+        Assert.Null(landmarks.Markers.Single(m => m.Kind == MapMarkerKind.Heart).ChatLink);
+        MapEventSpot spot = Assert.Single(
+            MapEventSpots.Build(
+                [
+                    new Gw2Gizmos.Data.Static.Events.ScheduledEvent
+                    {
+                        Id = "scarlets-minions",
+                        Name = "Scarlet's Minions",
+                        Map = "Gendarran Fields",
+                        Kind = Gw2Gizmos.Data.Static.Events.EventKind.Invasion,
+                        Expansion = Gw2Gizmos.Data.Static.Events.Expansion.CoreTyria,
+                        ChatLink = "[&BOQAAAA=]",
+                        DailyTimesUtc = [TimeSpan.FromHours(1)],
+                    },
+                ],
+                landmarks
+            )
+        );
+        Assert.Equal(("Provern Shore Waypoint", 500.0, 500.0), (spot.WaypointName, spot.X, spot.Y));
+    }
 }

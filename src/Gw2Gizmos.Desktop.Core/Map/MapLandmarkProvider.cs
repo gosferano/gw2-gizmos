@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Gw2Api.Client;
+using Gw2Gizmos.Gw2Api.Contract;
 using Gw2Gizmos.Gw2Api.Contract.V2.Continents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,15 +14,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
-/// The labels and markers of a continent's map, from the API's continent floors, fetched by the desktop itself (public
-/// data, no key) and kept in a file in the data folder for a week. Only explorable maps count — the floors also hold
-/// every instance and story map drawn over them — and a landmark several maps share is kept once.
+/// The labels and markers of a continent's map, built from the API's continent floors, which the desktop fetches
+/// itself (public data, no key) and keeps in a file in the data folder for a week. Only explorable maps count — the
+/// floors also hold every instance and story map drawn over them — and a landmark several maps share is kept once.
 /// </summary>
 public sealed class MapLandmarkProvider
 {
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(7);
-
-    private static readonly JsonSerializerOptions FileOptions = new() { WriteIndented = false };
 
     private readonly IGw2ApiClientFactory _clients;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -40,8 +39,27 @@ public sealed class MapLandmarkProvider
     /// </summary>
     public async Task<MapLandmarks> LoadAsync(MapContinent continent)
     {
-        string path = _paths.File(Path.Combine("MapCache", $"landmarks-{continent.Id}-{continent.Floor}.json"));
-        MapLandmarks? cached = await ReadAsync(path);
+        RemoveOldFiles();
+        int[] floorIds = [continent.Floor, .. continent.ExtraDataFloors];
+        ContinentFloor[]? floors = await FloorsAsync(continent, floorIds);
+        if (floors is null)
+        {
+            return MapLandmarks.Empty;
+        }
+
+        (HashSet<int>? explorable, List<NotableMap> notable) = await ReadMapCatalogAsync();
+        return Build(floors.OrderBy(f => Array.IndexOf(floorIds, f.Id)), explorable, notable);
+    }
+
+    /// <summary>
+    /// The continent's floors as the API gives them: from the file while it's fresh, otherwise from the API (falling
+    /// back to an old file, or nothing, when the API can't be reached). The raw floors are kept rather than the
+    /// landmarks built from them, so a change to how landmarks are built applies straight away.
+    /// </summary>
+    private async Task<ContinentFloor[]?> FloorsAsync(MapContinent continent, int[] floorIds)
+    {
+        string path = _paths.File(Path.Combine("MapCache", $"floors-{continent.Id}-{string.Join("-", floorIds)}.json"));
+        ContinentFloor[]? cached = await ReadAsync(path);
         if (cached is not null && DateTime.UtcNow - File.GetLastWriteTimeUtc(path) < MaxAge)
         {
             return cached;
@@ -49,29 +67,43 @@ public sealed class MapLandmarkProvider
 
         try
         {
-            MapLandmarks fetched = await FetchAsync(continent);
+            ContinentFloor[]? fetched = await _clients
+                .Create(Locale.English)
+                .V2.Continents[continent.Id]
+                .Floors.GetByIds(floorIds);
+            if (fetched is null)
+            {
+                return cached;
+            }
+
             await WriteAsync(path, fetched);
             return fetched;
         }
         catch (Exception)
         {
-            // Offline or the API is down: an old file is better than an empty map.
-            return cached ?? MapLandmarks.Empty;
+            // Offline or the API is down: old floors are better than an empty map.
+            return cached;
         }
     }
 
-    private async Task<MapLandmarks> FetchAsync(MapContinent continent)
+    /// <summary>Removes the files earlier versions kept the built landmarks in.</summary>
+    private void RemoveOldFiles()
     {
-        Gw2ApiClient client = _clients.Create(Locale.English);
-        int[] floorIds = [continent.Floor, .. continent.ExtraDataFloors];
-        ContinentFloor[]? floors = await client.V2.Continents[continent.Id].Floors.GetByIds(floorIds);
-        if (floors is null)
+        try
         {
-            throw new InvalidOperationException("The continent floors couldn't be fetched.");
+            string directory = _paths.File("MapCache");
+            if (Directory.Exists(directory))
+            {
+                foreach (string file in Directory.EnumerateFiles(directory, "landmarks-*.json"))
+                {
+                    File.Delete(file);
+                }
+            }
         }
-
-        (HashSet<int>? explorable, List<NotableMap> notable) = await ReadMapCatalogAsync();
-        return Build(floors.OrderBy(f => Array.IndexOf(floorIds, f.Id)), explorable, notable);
+        catch (Exception)
+        {
+            // Left for next time.
+        }
     }
 
     /// <summary>
@@ -189,6 +221,9 @@ public sealed class MapLandmarkProvider
                 }
             }
 
+            // Hearts' chat links are left out, as sectors' are: the API makes them as point-of-interest links with the
+            // heart's id, so in game they name whichever point of interest has that id (Queensdale's heart 228 gives
+            // Provern Shore Waypoint in Gendarran Fields), and an event at that waypoint would be pinned to the heart.
             foreach (ContinentFloorRegionMapTask heart in map.Tasks.Values)
             {
                 if (heart.Coord.Length == 2 && seenHearts.Add(heart.Id))
@@ -198,8 +233,7 @@ public sealed class MapLandmarkProvider
                             MapMarkerKind.Heart,
                             heart.Objective,
                             (double)heart.Coord[0],
-                            (double)heart.Coord[1],
-                            heart.ChatLink
+                            (double)heart.Coord[1]
                         )
                     );
                 }
@@ -349,7 +383,7 @@ public sealed class MapLandmarkProvider
             }
         });
 
-    private static async Task<MapLandmarks?> ReadAsync(string path)
+    private static async Task<ContinentFloor[]?> ReadAsync(string path)
     {
         try
         {
@@ -359,7 +393,7 @@ public sealed class MapLandmarkProvider
             }
 
             await using FileStream stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<MapLandmarks>(stream, FileOptions);
+            return await JsonSerializer.DeserializeAsync<ContinentFloor[]>(stream, Gw2ApiContractJson.Options);
         }
         catch (Exception)
         {
@@ -367,7 +401,7 @@ public sealed class MapLandmarkProvider
         }
     }
 
-    private static async Task WriteAsync(string path, MapLandmarks landmarks)
+    private static async Task WriteAsync(string path, ContinentFloor[] floors)
     {
         try
         {
@@ -375,7 +409,7 @@ public sealed class MapLandmarkProvider
             string temporary = path + ".tmp";
             await using (FileStream stream = File.Create(temporary))
             {
-                await JsonSerializer.SerializeAsync(stream, landmarks, FileOptions);
+                await JsonSerializer.SerializeAsync(stream, floors, Gw2ApiContractJson.Options);
             }
 
             File.Move(temporary, path, overwrite: true);
