@@ -5,7 +5,7 @@
                     xmlns:core="using:Gw2Gizmos.Desktop.Core"
                     xmlns:conv="using:Gw2Gizmos.Desktop.Converters">
 
-    <!-- GW2's rarity colours, each in a shade readable on the theme's background
+    <!-- GW2's rarity colours, and green / red for gains and losses — each in a shade readable on the theme's background
          (the game's own colours are made for dark backgrounds; the light theme gets darker shades). -->
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
@@ -16,6 +16,8 @@
             <SolidColorBrush x:Key="RarityExoticBrush" Color="#FFA405" />
             <SolidColorBrush x:Key="RarityAscendedBrush" Color="#FB3E8D" />
             <SolidColorBrush x:Key="RarityLegendaryBrush" Color="#A665F7" />
+            <SolidColorBrush x:Key="GainBrush" Color="#6CCB5F" />
+            <SolidColorBrush x:Key="LossBrush" Color="#F1707B" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="RarityJunkBrush" Color="#7A7A7A" />
@@ -25,6 +27,8 @@
             <SolidColorBrush x:Key="RarityExoticBrush" Color="#D97E00" />
             <SolidColorBrush x:Key="RarityAscendedBrush" Color="#D62A72" />
             <SolidColorBrush x:Key="RarityLegendaryBrush" Color="#7B2FD0" />
+            <SolidColorBrush x:Key="GainBrush" Color="#0F7B0F" />
+            <SolidColorBrush x:Key="LossBrush" Color="#C42B1C" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

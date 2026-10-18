@@ -27,6 +27,10 @@
     <Style Selector="TextBlock.rarity-ascended"><Setter Property="Foreground" Value="{DynamicResource RarityAscendedBrush}" /></Style>
     <Style Selector="TextBlock.rarity-legendary"><Setter Property="Foreground" Value="{DynamicResource RarityLegendaryBrush}" /></Style>
 
+    <!-- Signed coin amounts: gains green, losses red (classes set by CoinDisplay). -->
+    <Style Selector="c|CoinDisplay.gain"><Setter Property="Foreground" Value="{DynamicResource GainBrush}" /></Style>
+    <Style Selector="c|CoinDisplay.loss"><Setter Property="Foreground" Value="{DynamicResource LossBrush}" /></Style>
+
     <!-- A list row with a subtle hover highlight, so it's clear which value belongs to which name (wallet, session
          loot). -->
     <Style Selector="Border.hover-row">
