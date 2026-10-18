@@ -13,17 +13,18 @@ public sealed record LiveGameState(bool IsRunning, string? Character, int MapId)
     public static LiveGameState NotRunning { get; } = new(false, null, 0);
 
     /// <summary>
-    /// Where the character is on Tyria's map, while in the world there; null at character select, while loading and in
-    /// the Mists (WvW and PvP maps are on a continent of their own).
+    /// Where the character is on a continent's map: Tyria's, or the Mists' on a WvW map. Null at character select,
+    /// while loading, and on maps on neither (PvP and the like).
     /// </summary>
     public LivePosition? Position { get; init; }
 }
 
-/// <summary>A character's spot on the continent map.</summary>
+/// <summary>A character's spot on a continent's map.</summary>
+/// <param name="ContinentId">The continent the position is on: 1 for Tyria, 2 for the Mists.</param>
 /// <param name="X">In continent units, as the API's map positions.</param>
 /// <param name="Y">In continent units, increasing southwards.</param>
 /// <param name="Heading">The way the character faces, in radians clockwise from north.</param>
-public sealed record LivePosition(double X, double Y, double Heading);
+public sealed record LivePosition(int ContinentId, double X, double Y, double Heading);
 
 /// <summary>
 /// Reads the game's MumbleLink directly (read-only) so the UI can show what's happening live — which character, on
@@ -37,14 +38,19 @@ public sealed class LiveGameMonitor : IDisposable
     private static readonly TimeSpan FreezeTimeout = TimeSpan.FromSeconds(30);
 
     private readonly IMumbleLinkReader? _reader;
+    private readonly MapGeometry? _geometry;
     private uint? _lastTick;
     private DateTimeOffset _lastTickChange;
     private bool _tickAdvanced;
 
     /// <param name="reader">The MumbleLink source; null where there is none (the state is then always "not running").</param>
-    public LiveGameMonitor(IMumbleLinkReader? reader)
+    /// <param name="geometry">
+    /// The maps' rectangles, to place the character where the game leaves its continent position out (WvW).
+    /// </param>
+    public LiveGameMonitor(IMumbleLinkReader? reader, MapGeometry? geometry = null)
     {
         _reader = reader;
+        _geometry = geometry;
     }
 
     public void Dispose() => _reader?.Dispose();
@@ -80,29 +86,50 @@ public sealed class LiveGameMonitor : IDisposable
         };
     }
 
-    private static LivePosition? PositionOf(MumbleLinkSnapshot snapshot)
+    private LivePosition? PositionOf(MumbleLinkSnapshot snapshot)
     {
-        if (snapshot.Context is not { } context || IsInTheMists(context.MapType))
-        {
-            return null;
-        }
-
-        if (context.PlayerX == 0 && context.PlayerY == 0)
+        if (snapshot.Context is not { } context || ContinentOf(context.MapType) is not { } continentId)
         {
             return null;
         }
 
         // The game's world has Z pointing north, while continent Y points south.
         Vector3F front = snapshot.Avatar.Front;
-        return new LivePosition(context.PlayerX, context.PlayerY, Math.Atan2(front.X, front.Z));
+        double heading = Math.Atan2(front.X, front.Z);
+        if (context.PlayerX != 0 || context.PlayerY != 0)
+        {
+            return new LivePosition(continentId, context.PlayerX, context.PlayerY, heading);
+        }
+
+        // In WvW the game zeroes the continent position (and the compass); place the avatar through the map's
+        // rectangles instead.
+        if (_geometry?.Get((int)context.MapId) is { } frames)
+        {
+            (double x, double y) = frames.ToContinent(snapshot.Avatar.Position.X, snapshot.Avatar.Position.Z);
+            return new LivePosition(continentId, x, y, heading);
+        }
+
+        return null;
     }
 
-    private static bool IsInTheMists(ContextMapType type) =>
-        type.IsWorldVsWorld
-        || type == ContextMapType.Pvp
-        || type == ContextMapType.Gvg
-        || type == ContextMapType.Tournament
-        || type == ContextMapType.UserTournament
-        || type == ContextMapType.ObsidianSanctum
-        || type == ContextMapType.WvwLounge;
+    /// <summary>
+    /// The continent a map type's positions are on: the Mists (2) for the WvW maps, Tyria (1) for the rest except the
+    /// PvP arenas, the WvW jumping puzzle and lounge, whose positions match neither map (null).
+    /// </summary>
+    private static int? ContinentOf(ContextMapType type)
+    {
+        if (type.IsWorldVsWorld)
+        {
+            return 2;
+        }
+
+        bool onNeither =
+            type == ContextMapType.Pvp
+            || type == ContextMapType.Gvg
+            || type == ContextMapType.Tournament
+            || type == ContextMapType.UserTournament
+            || type == ContextMapType.ObsidianSanctum
+            || type == ContextMapType.WvwLounge;
+        return onNeither ? null : 1;
+    }
 }

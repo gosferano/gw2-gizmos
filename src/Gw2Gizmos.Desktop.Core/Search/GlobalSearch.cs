@@ -32,6 +32,7 @@ public sealed class GlobalSearch
         new("Notifications", null, "Alert24", AppPage.Notifications, "alerts toasts"),
         new("Events", null, "Clock24", AppPage.Events, "timers world bosses metas"),
         new("World map", null, "Map24", AppPage.WorldMap, "tyria waypoints location"),
+        new("WvW", null, "Shield24", AppPage.Wvw, "world vs world matchup borderlands skirmish team"),
         new("Items", null, "BoxMultiple24", AppPage.Items, "market prices crafting"),
         new("Trading post", null, "BuildingShop24", AppPage.TradingPost, "orders buys sells undercut outbid tp"),
         new("Price alerts", null, "AlertOn24", AppPage.PriceAlerts, "notify tp trading post"),

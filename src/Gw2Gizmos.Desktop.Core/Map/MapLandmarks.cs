@@ -54,7 +54,14 @@ public sealed record MapLandmarks(IReadOnlyList<MapAreaLabel> Labels, IReadOnlyL
 
 /// <summary>The character playing, on the map.</summary>
 /// <param name="Heading">The way they face, in radians clockwise from north.</param>
-public sealed record MapPlayer(string Name, double X, double Y, double Heading);
+public sealed record MapPlayer(string Name, double X, double Y, double Heading)
+{
+    /// <summary>The character in <paramref name="game"/>, if they're on <paramref name="continent"/>'s map.</summary>
+    public static MapPlayer? On(MapContinent continent, LiveGameState game) =>
+        game.Position is { } at && at.ContinentId == continent.Id && game.Character is { } name
+            ? new MapPlayer(name, at.X, at.Y, at.Heading)
+            : null;
+}
 
 /// <summary>
 /// A spot for the map to glide to, rather than jump. A class, not a record: asking for the same spot twice is two

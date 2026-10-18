@@ -238,13 +238,17 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
         _playerPoll.Start();
     }
 
-    public void OnNavigatedFrom() => _playerPoll.Stop();
+    public void OnNavigatedFrom()
+    {
+        _playerPoll.Stop();
+        // The page's next map mustn't be sent the last glide again when it's bound.
+        Flight = null;
+    }
 
     private void PollPlayer()
     {
         LiveGameState game = _liveGame.Read();
-        Player =
-            game.Position is { } at && game.Character is { } name ? new MapPlayer(name, at.X, at.Y, at.Heading) : null;
+        Player = MapPlayer.On(Continent, game);
         if (Player is null)
         {
             IsFollowing = false;

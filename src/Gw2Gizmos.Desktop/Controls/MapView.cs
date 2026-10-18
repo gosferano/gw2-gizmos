@@ -74,7 +74,8 @@ public sealed partial class MapView : Control
             ZoomProperty,
             LandmarksProperty,
             PlayerProperty,
-            EventSpotsProperty
+            EventSpotsProperty,
+            ObjectivesProperty
         );
         FocusableProperty.OverrideDefaultValue<MapView>(true);
     }
@@ -162,35 +163,45 @@ public sealed partial class MapView : Control
 
         _visible = new VisibleTiles(tileZoom, firstColumn, firstRow, lastColumn, lastRow);
 
-        for (int row = firstRow; row <= lastRow; row++)
+        // Only the area worth showing is drawn: outside it the tiles hold nothing (black, or bare white on the Mists).
+        Rect drawnArea = new Rect(
+            new Point((continent.ViewMinX - left) * scale, (continent.ViewMinY - top) * scale),
+            new Point((continent.ViewMaxX - left) * scale, (continent.ViewMaxY - top) * scale)
+        );
+        using (context.PushClip(drawnArea))
         {
-            for (int column = firstColumn; column <= lastColumn; column++)
+            for (int row = firstRow; row <= lastRow; row++)
             {
-                // Edges rounded to whole pixels from each tile's own corner, so neighbouring tiles meet without seams.
-                double x0 = Math.Floor((column * unitsPerTile - left) * scale);
-                double y0 = Math.Floor((row * unitsPerTile - top) * scale);
-                double x1 = Math.Floor(((column + 1) * unitsPerTile - left) * scale);
-                double y1 = Math.Floor(((row + 1) * unitsPerTile - top) * scale);
-                Rect destination = new(x0, y0, x1 - x0, y1 - y0);
+                for (int column = firstColumn; column <= lastColumn; column++)
+                {
+                    // Edges rounded to whole pixels from each tile's own corner, so neighbouring tiles meet
+                    // without seams.
+                    double x0 = Math.Floor((column * unitsPerTile - left) * scale);
+                    double y0 = Math.Floor((row * unitsPerTile - top) * scale);
+                    double x1 = Math.Floor(((column + 1) * unitsPerTile - left) * scale);
+                    double y1 = Math.Floor(((row + 1) * unitsPerTile - top) * scale);
+                    Rect destination = new(x0, y0, x1 - x0, y1 - y0);
 
-                MapTileKey key = new(continent.Id, continent.Floor, tileZoom, column, row);
-                if (tiles.TryGet(key) is { } tile)
-                {
-                    context.DrawImage(tile, new Rect(tile.Size), destination);
-                    continue;
-                }
+                    MapTileKey key = new(continent.Id, continent.Floor, tileZoom, column, row);
+                    if (tiles.TryGet(key) is { } tile)
+                    {
+                        context.DrawImage(tile, new Rect(tile.Size), destination);
+                        continue;
+                    }
 
-                // A tile still loading, or one the server doesn't have, gets a lower-detail tile's part in its place.
-                DrawStandIn(context, tiles, continent, key, destination);
-                if (!tiles.IsMissing(key))
-                {
-                    RequestTile(tiles, continent, key);
-                }
-                else if (SharpestStandIn(tiles, key) is { } standIn && tiles.TryGet(standIn) is null)
-                {
-                    // The server doesn't have this tile: load the most detailed one above it that it has, so the
-                    // stand-in is as sharp as can be rather than whatever lower level happens to be in memory.
-                    RequestTile(tiles, continent, standIn, wanted: true);
+                    // A tile still loading, or one the server doesn't have, gets a lower-detail tile's part in its
+                    // place.
+                    DrawStandIn(context, tiles, continent, key, destination);
+                    if (!tiles.IsMissing(key))
+                    {
+                        RequestTile(tiles, continent, key);
+                    }
+                    else if (SharpestStandIn(tiles, key) is { } standIn && tiles.TryGet(standIn) is null)
+                    {
+                        // The server doesn't have this tile: load the most detailed one above it that it has, so the
+                        // stand-in is as sharp as can be rather than whatever lower level happens to be in memory.
+                        RequestTile(tiles, continent, standIn, wanted: true);
+                    }
                 }
             }
         }

@@ -1,0 +1,299 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.WvwPage"
+             x:DataType="core:WvwViewModel">
+    <UserControl.Styles>
+        <!-- The three sides' colours: strips on the team cards and map rows, numbers and dots in the side panel. -->
+        <!-- Grey for Eternal Battlegrounds and neutral, ahead of the sides so they override it. -->
+        <Style Selector="Border.team-strip">
+            <Setter Property="Background" Value="#9E9E9E" />
+        </Style>
+        <Style Selector="Ellipse.side">
+            <Setter Property="Fill" Value="#9E9E9E" />
+        </Style>
+        <Style Selector="Border.team-strip.red">
+            <Setter Property="Background" Value="#D9534F" />
+        </Style>
+        <Style Selector="Ellipse.side.red">
+            <Setter Property="Fill" Value="#D9534F" />
+        </Style>
+        <Style Selector="Border.team-strip.blue">
+            <Setter Property="Background" Value="#4A90D9" />
+        </Style>
+        <Style Selector="Ellipse.side.blue">
+            <Setter Property="Fill" Value="#4A90D9" />
+        </Style>
+        <Style Selector="Border.team-strip.green">
+            <Setter Property="Background" Value="#5CB85C" />
+        </Style>
+        <Style Selector="Ellipse.side.green">
+            <Setter Property="Fill" Value="#5CB85C" />
+        </Style>
+        <!-- Each side's number in its colour, then the total, in four columns lined up from line to line. -->
+        <Style Selector="ItemsControl.side-numbers">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </Setter>
+            <Setter Property="ItemTemplate">
+                <DataTemplate x:DataType="core:WvwSideNumber">
+                    <TextBlock Text="{Binding Text}" FontSize="12" Classes="side" Classes.red="{Binding IsRed}"
+                               Classes.blue="{Binding IsBlue}" Classes.green="{Binding IsGreen}"
+                               Classes.total="{Binding IsTotal}" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.side.total">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.side.red">
+            <Setter Property="Foreground" Value="#E5736F" />
+        </Style>
+        <Style Selector="TextBlock.side.blue">
+            <Setter Property="Foreground" Value="#6AA8E8" />
+        </Style>
+        <Style Selector="TextBlock.side.green">
+            <Setter Property="Foreground" Value="#7ACC7A" />
+        </Style>
+        <Style Selector="TextBlock.data-age">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.data-age.stale">
+            <Setter Property="Foreground" Value="#F5A142" />
+        </Style>
+        <Style Selector="Border.map-row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.map-row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.map-row.selected">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Title="WvW" Scrollable="False" MaxContentWidth="100000">
+        <Grid RowDefinitions="Auto,*">
+            <!-- What stands in for the matchup until there is one. -->
+            <TextBlock Grid.Row="0" Margin="0,0,0,10" TextWrapping="Wrap" IsVisible="{Binding HasProblem}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Problem}" />
+            <TextBlock Grid.Row="0" Margin="0,0,0,10" Text="Loading the matchup…" IsVisible="{Binding IsLoading}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+            <!-- The scoreboard: one card per team, splitting the width in three. -->
+            <ItemsControl Grid.Row="0" Margin="0,0,0,10" IsVisible="{Binding HasMatchup}" ItemsSource="{Binding Teams}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" ColumnSpacing="8" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:WvwTeamStanding">
+                        <Border CornerRadius="6" ClipToBounds="True"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <DockPanel>
+                                <Border DockPanel.Dock="Left" Width="4" Classes="team-strip"
+                                        Classes.red="{Binding IsRed}" Classes.blue="{Binding IsBlue}"
+                                        Classes.green="{Binding IsGreen}" />
+                                <StackPanel Margin="12,8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Text="Your team" IsVisible="{Binding IsYours}" FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <TextBlock FontSize="22" FontWeight="SemiBold" Margin="0,2,0,0">
+                                        <Run Text="{Binding VictoryPoints}" />
+                                        <Run Text="VP" FontSize="12" FontWeight="Normal" />
+                                    </TextBlock>
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                        <Run Text="{Binding SkirmishScore}" />
+                                        <Run Text="skirmish ·" />
+                                        <Run Text="{Binding PointsPerTick, StringFormat='+{0}'}" />
+                                        <Run Text="per tick" />
+                                    </TextBlock>
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                        <Run Text="{Binding Kills}" />
+                                        <Run Text="kills ·" />
+                                        <Run Text="{Binding Deaths}" />
+                                        <Run Text="deaths" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                <Border Grid.Column="0" CornerRadius="8" ClipToBounds="True">
+                    <Panel>
+                        <c:MapView Continent="{Binding Continent}" CenterX="{Binding CenterX}" CenterY="{Binding CenterY}"
+                                   Zoom="{Binding Zoom}" MinZoom="{Binding MinZoom}" MaxZoom="{Binding MaxZoom}"
+                                   Landmarks="{Binding Landmarks}" Flight="{Binding Flight}"
+                                   Objectives="{Binding Objectives}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}"
+                                   Player="{Binding Player}" IsFollowing="{Binding IsFollowing}" />
+
+                        <!-- The skirmish under way and how fresh the data is, over the map's top-left corner. -->
+                        <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" Padding="10,6"
+                                CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                IsVisible="{Binding HasMatchup}" IsHitTestVisible="False">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SkirmishText}" />
+                                <TextBlock Text="{Binding DataAgeText}" FontSize="12" Classes="data-age"
+                                           Classes.stale="{Binding IsDataStale}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- What a click just copied, for a few seconds. -->
+                        <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12" Padding="12,8"
+                                CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                IsVisible="{Binding HasCopiedMessage}" IsHitTestVisible="False">
+                            <TextBlock Text="{Binding CopiedMessage}" />
+                        </Border>
+
+                        <!-- Following the character, zoom and home, over the map's bottom-right corner. -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12" Padding="4"
+                                CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <StackPanel Spacing="2">
+                                <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Centre on your character"
+                                        Command="{Binding FollowPlayerCommand}">
+                                    <c:FluentIcon Symbol="MyLocation24" FontSize="16" />
+                                </Button>
+                                <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Zoom in"
+                                        Command="{Binding ZoomInCommand}">
+                                    <c:FluentIcon Symbol="ZoomIn24" FontSize="16" />
+                                </Button>
+                                <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Zoom out"
+                                        Command="{Binding ZoomOutCommand}">
+                                    <c:FluentIcon Symbol="ZoomOut24" FontSize="16" />
+                                </Button>
+                                <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Back to all maps"
+                                        Command="{Binding HomeCommand}">
+                                    <c:FluentIcon Symbol="Home24" FontSize="16" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Panel>
+                </Border>
+
+                <!-- The side panel: a card with each map's activity, then a card with the flips seen. -->
+                <Grid Grid.Column="1" Width="330" Margin="10,0,0,0" RowDefinitions="Auto,*"
+                      IsVisible="{Binding HasMatchup}">
+                    <c:Card Grid.Row="0" Padding="10,10,10,4">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,6">
+                            <ComboBox DockPanel.Dock="Right" VerticalAlignment="Center" MinWidth="120"
+                                      Height="{StaticResource FormControlHeight}"
+                                      ItemsSource="{Binding ActivityWindowChoices}"
+                                      SelectedItem="{Binding ActivityWindowMinutes}"
+                                      ToolTip.Tip="The span kills, deaths and flips are counted over">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="x:Int32">
+                                        <TextBlock Text="{Binding StringFormat='Last {0} min'}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="Maps" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                            <ItemsControl ItemsSource="{Binding MapStats}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="core:WvwMapStatsRow">
+                                        <Border Classes="map-row" Classes.selected="{Binding IsSelected}" CornerRadius="6"
+                                                BorderThickness="1" BorderBrush="Transparent" Margin="0,0,0,6"
+                                                ClipToBounds="True" ToolTip.Tip="Go to this map and show its flips; click again for all maps"
+                                                Tapped="OnMapRowTapped">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Left" Width="4" Classes="team-strip"
+                                                        Classes.red="{Binding IsRed}" Classes.blue="{Binding IsBlue}"
+                                                        Classes.green="{Binding IsGreen}" />
+                                                <Grid Margin="10,6" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                                    <TextBlock Grid.ColumnSpan="2" Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <TextBlock Grid.Row="1" Text="Kills" FontSize="12" Margin="0,2,12,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <ItemsControl Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentKills}" />
+                                                    <TextBlock Grid.Row="2" Text="Deaths" FontSize="12" Margin="0,2,12,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <ItemsControl Grid.Row="2" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentDeaths}" />
+                                                    <TextBlock Grid.Row="3" Text="Flips" FontSize="12" Margin="0,2,12,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <ItemsControl Grid.Row="3" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentFlips}" />
+                                                    <TextBlock Grid.Row="4" Grid.ColumnSpan="2" FontSize="12" Margin="0,2,0,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                        <Run Text="{Binding Capturable}" />
+                                                        <Run Text="capturable" />
+                                                    </TextBlock>
+                                                </Grid>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </c:Card>
+
+                    <c:Card Grid.Row="1" Margin="0,10,0,0" Padding="10">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right" Content="All maps" Padding="8,2" FontSize="12"
+                                        IsVisible="{Binding IsFeedFiltered}" Command="{Binding ShowAllMapsCommand}" />
+                                <TextBlock VerticalAlignment="Center">
+                                    <Run Text="Flips" FontWeight="SemiBold" />
+                                    <Run Text="·" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <Run Text="{Binding FeedScope}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </TextBlock>
+                            </DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="No flips seen yet." FontSize="12"
+                                       IsVisible="{Binding HasNoFlips}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding Feed}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="core:WvwFlipRow">
+                                            <Button Theme="{StaticResource TransparentButton}" HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch" Padding="6,4"
+                                                    ToolTip.Tip="Show it on the map"
+                                                    Command="{Binding $parent[UserControl].((core:WvwViewModel)DataContext).FlyToFlipCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Ago}" FontSize="12"
+                                                               VerticalAlignment="Top"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <Ellipse DockPanel.Dock="Left" Width="8" Height="8" Margin="0,5,8,0"
+                                                             VerticalAlignment="Top" Classes="side"
+                                                             Classes.red="{Binding ToRed}" Classes.blue="{Binding ToBlue}"
+                                                             Classes.green="{Binding ToGreen}" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding ObjectiveName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="12" TextTrimming="CharacterEllipsis"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                            <Run Text="{Binding Change}" />
+                                                            <Run Text="·" />
+                                                            <Run Text="{Binding MapName}" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </c:Card>
+                </Grid>
+            </Grid>
+        </Grid>
+    </c:PageShell>
+</UserControl>

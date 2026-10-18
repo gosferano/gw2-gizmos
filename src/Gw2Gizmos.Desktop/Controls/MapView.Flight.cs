@@ -54,35 +54,37 @@ public sealed partial class MapView
 
     private void StartFlight(double x, double y, double zoom)
     {
-        zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
-
-        // How far the glide goes on screen, at the farther-out of its two zooms: a jump beyond the view dips out.
-        double screenDistance =
-            Math.Sqrt(Math.Pow(x - CenterX, 2) + Math.Pow(y - CenterY, 2))
-            * Math.Pow(2, Math.Min(Zoom, zoom) - MapContinent.NativeZoom);
-        double viewSize = Math.Max(1, Math.Max(Bounds.Width, Bounds.Height));
-        double dip = Math.Clamp(Math.Log2(screenDistance / viewSize), 0, MaxFlightDip);
-        dip = Math.Min(dip, Math.Min(Zoom, zoom) - MinZoom);
-
-        TimeSpan duration = BaseFlightDuration + FlightDurationPerDip * dip;
+        // Not begun yet: it begins at its first frame, from wherever the view is then, once the map is on screen.
         bool alreadyFlying = _flightPath is not null;
-        _flightPath = new FlightPath(CenterX, CenterY, Zoom, x, y, zoom, dip, DateTime.UtcNow, duration);
+        _flightPath = new FlightPath(
+            CenterX,
+            CenterY,
+            Zoom,
+            x,
+            y,
+            Math.Clamp(zoom, MinZoom, MaxZoom),
+            0,
+            null,
+            default
+        );
         if (!alreadyFlying)
         {
             RequestFlightFrame();
         }
     }
 
-    private void RequestFlightFrame()
+    /// <summary>
+    /// Asks for the next frame. A map not on screen yet (its page just opened) gets none until it's shown: its glide
+    /// waits, rather than landing at once.
+    /// </summary>
+    private void RequestFlightFrame() => TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => FlightFrame());
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (TopLevel.GetTopLevel(this) is { } topLevel)
+        base.OnAttachedToVisualTree(e);
+        if (_flightPath is not null)
         {
-            topLevel.RequestAnimationFrame(_ => FlightFrame());
-        }
-        else
-        {
-            // Not shown: land straight away.
-            Land();
+            RequestFlightFrame();
         }
     }
 
@@ -93,7 +95,21 @@ public sealed partial class MapView
             return;
         }
 
-        double progress = Math.Clamp((DateTime.UtcNow - path.Start) / path.Duration, 0, 1);
+        if (path.Start is not { } start)
+        {
+            // The glide's first frame: once the map has its size, plan the glide from where the view is.
+            if (Bounds.Width <= 0 || Bounds.Height <= 0)
+            {
+                RequestFlightFrame();
+                return;
+            }
+
+            _flightPath = Begin(path);
+            RequestFlightFrame();
+            return;
+        }
+
+        double progress = Math.Clamp((DateTime.UtcNow - start) / path.Duration, 0, 1);
         if (progress >= 1)
         {
             Land();
@@ -104,6 +120,29 @@ public sealed partial class MapView
         Zoom = Lerp(path.FromZoom, path.ToZoom, eased) - path.Dip * Math.Sin(Math.PI * eased);
         MoveCenterTo(Lerp(path.FromX, path.ToX, eased), Lerp(path.FromY, path.ToY, eased));
         RequestFlightFrame();
+    }
+
+    /// <summary>
+    /// Starts a glide from the view as it is now. One going further than the view is wide (at the farther-out of its
+    /// two zooms) dips out on the way, and takes longer for it.
+    /// </summary>
+    private FlightPath Begin(FlightPath path)
+    {
+        double screenDistance =
+            Math.Sqrt(Math.Pow(path.ToX - CenterX, 2) + Math.Pow(path.ToY - CenterY, 2))
+            * Math.Pow(2, Math.Min(Zoom, path.ToZoom) - MapContinent.NativeZoom);
+        double viewSize = Math.Max(Bounds.Width, Bounds.Height);
+        double dip = Math.Clamp(Math.Log2(screenDistance / viewSize), 0, MaxFlightDip);
+        dip = Math.Min(dip, Math.Min(Zoom, path.ToZoom) - MinZoom);
+        return path with
+        {
+            FromX = CenterX,
+            FromY = CenterY,
+            FromZoom = Zoom,
+            Dip = dip,
+            Start = DateTime.UtcNow,
+            Duration = BaseFlightDuration + FlightDurationPerDip * dip,
+        };
     }
 
     private void Land()
@@ -126,6 +165,7 @@ public sealed partial class MapView
     private static double EaseInOut(double t) => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2;
 
     /// <param name="Dip">How many zoom levels the glide dips out at its middle.</param>
+    /// <param name="Start">When the glide began; null until its first frame.</param>
     private sealed record FlightPath(
         double FromX,
         double FromY,
@@ -134,7 +174,7 @@ public sealed partial class MapView
         double ToY,
         double ToZoom,
         double Dip,
-        DateTime Start,
+        DateTime? Start,
         TimeSpan Duration
     );
 }
