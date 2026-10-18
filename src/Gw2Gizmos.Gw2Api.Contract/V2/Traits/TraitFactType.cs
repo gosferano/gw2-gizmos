@@ -4,6 +4,7 @@ public readonly struct TraitFactType : IEquatable<TraitFactType>
 {
     public static readonly TraitFactType AttributeAdjust = new("AttributeAdjust");
     public static readonly TraitFactType Buff = new("Buff");
+    public static readonly TraitFactType BuffArray = new("BuffArray");
     public static readonly TraitFactType BuffConversion = new("BuffConversion");
     public static readonly TraitFactType ComboField = new("ComboField");
     public static readonly TraitFactType ComboFinisher = new("ComboFinisher");

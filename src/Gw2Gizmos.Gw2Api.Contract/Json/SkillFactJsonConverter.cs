@@ -6,10 +6,14 @@ public sealed class SkillFactJsonConverter : PolymorphicJsonConverter<SkillFact>
 {
     protected override string TypePropertyName => "type";
 
+    // A few necromancer skills leave the type out of their "Life Force Cost" fact, which is a percentage.
+    protected override Type? UntypedType => typeof(SkillFactPercent);
+
     protected override Dictionary<string, Type> TypeMap { get; } =
         new()
         {
             { SkillFactType.Buff, typeof(SkillFactBuff) },
+            { SkillFactType.BuffArray, typeof(SkillFactBuffArray) },
             { SkillFactType.AttributeAdjust, typeof(SkillFactAttributeAdjust) },
             { SkillFactType.ComboField, typeof(SkillFactComboField) },
             { SkillFactType.ComboFinisher, typeof(SkillFactComboFinisher) },

@@ -4,6 +4,7 @@ public readonly struct SkillFactType : IEquatable<SkillFactType>
 {
     public static readonly SkillFactType AttributeAdjust = new("AttributeAdjust");
     public static readonly SkillFactType Buff = new("Buff");
+    public static readonly SkillFactType BuffArray = new("BuffArray");
     public static readonly SkillFactType ComboField = new("ComboField");
     public static readonly SkillFactType ComboFinisher = new("ComboFinisher");
     public static readonly SkillFactType Damage = new("Damage");

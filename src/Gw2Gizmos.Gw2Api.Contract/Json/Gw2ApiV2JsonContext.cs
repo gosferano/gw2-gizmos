@@ -61,6 +61,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 // Account
 [JsonSerializable(typeof(Account))]
 [JsonSerializable(typeof(AccountAchievement[]))]
+[JsonSerializable(typeof(AccountFinisher[]))]
 [JsonSerializable(typeof(AccountHomesteadDecoration[]))]
 [JsonSerializable(typeof(AccountItem?[]))]
 [JsonSerializable(typeof(AccountMaterial[]))]
@@ -221,6 +222,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Skill[]))]
 [JsonSerializable(typeof(SkillFactAttributeAdjust))]
 [JsonSerializable(typeof(SkillFactBuff))]
+[JsonSerializable(typeof(SkillFactBuffArray))]
 [JsonSerializable(typeof(SkillFactComboField))]
 [JsonSerializable(typeof(SkillFactComboFinisher))]
 [JsonSerializable(typeof(SkillFactDamage))]
@@ -257,6 +259,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(Trait[]))]
 [JsonSerializable(typeof(TraitFactAttributeAdjust))]
 [JsonSerializable(typeof(TraitFactBuff))]
+[JsonSerializable(typeof(TraitFactBuffArray))]
 [JsonSerializable(typeof(TraitFactBuffConversion))]
 [JsonSerializable(typeof(TraitFactComboField))]
 [JsonSerializable(typeof(TraitFactComboFinisher))]
