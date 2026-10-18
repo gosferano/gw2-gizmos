@@ -128,6 +128,27 @@ public sealed partial class MapView : Control
         set => SetValue(MaxZoomProperty, value);
     }
 
+    /// <summary>
+    /// The furthest out the view may zoom: <see cref="MinZoom"/>, or where the whole area worth showing fits the view
+    /// if that's closer (a small area such as the WvW maps would otherwise shrink to a speck in the background).
+    /// </summary>
+    private double LowestZoom
+    {
+        get
+        {
+            if (Continent is not { } continent || Bounds.Width <= 0 || Bounds.Height <= 0)
+            {
+                return MinZoom;
+            }
+
+            double fit = Math.Min(
+                Bounds.Width / (continent.ViewMaxX - continent.ViewMinX),
+                Bounds.Height / (continent.ViewMaxY - continent.ViewMinY)
+            );
+            return Math.Clamp(MapContinent.NativeZoom + Math.Log2(fit), MinZoom, MaxZoom);
+        }
+    }
+
     /// <summary>Screen pixels per continent unit at the current zoom.</summary>
     private double Scale => Math.Pow(2, Zoom - MapContinent.NativeZoom);
 
@@ -355,11 +376,18 @@ public sealed partial class MapView : Control
         OnFlightPropertyChanged(change);
         if (change.Property == ZoomProperty)
         {
-            double clamped = Math.Clamp(Zoom, MinZoom, MaxZoom);
+            double clamped = Math.Clamp(Zoom, LowestZoom, MaxZoom);
             if (clamped != Zoom)
             {
                 Zoom = clamped;
             }
+
+            // Zooming out near an edge widens the view past it; pull the view back in.
+            MoveCenterTo(CenterX, CenterY);
+        }
+        else if (change.Property == ContinentProperty)
+        {
+            MoveCenterTo(CenterX, CenterY);
         }
     }
 
@@ -375,7 +403,7 @@ public sealed partial class MapView : Control
         }
 
         double before = Scale;
-        double zoom = Math.Clamp(Zoom + delta, MinZoom, MaxZoom);
+        double zoom = Math.Clamp(Zoom + delta, LowestZoom, MaxZoom);
         if (zoom == Zoom)
         {
             return;
@@ -391,17 +419,40 @@ public sealed partial class MapView : Control
         MoveCenterTo(anchorX - offsetX / after, anchorY - offsetY / after);
     }
 
-    /// <summary>Moves the view, keeping its centre within the area of the continent worth showing.</summary>
+    /// <summary>
+    /// Moves the view, keeping it on the area of the continent worth showing: while the area is wider (or taller) than
+    /// the view, the view's edges stay within it, so nothing beyond the drawn area shows; once it all fits, it's
+    /// centred.
+    /// </summary>
     private void MoveCenterTo(double x, double y)
     {
         if (Continent is { } continent)
         {
-            x = Math.Clamp(x, continent.ViewMinX, continent.ViewMaxX);
-            y = Math.Clamp(y, continent.ViewMinY, continent.ViewMaxY);
+            double scale = Scale;
+            x = Fit(x, continent.ViewMinX, continent.ViewMaxX, Bounds.Width / 2 / scale);
+            y = Fit(y, continent.ViewMinY, continent.ViewMaxY, Bounds.Height / 2 / scale);
         }
 
         CenterX = x;
         CenterY = y;
+    }
+
+    /// <summary>
+    /// A centre along one axis that keeps a view <paramref name="halfSpan"/> either side within the area.
+    /// </summary>
+    private static double Fit(double centre, double min, double max, double halfSpan) =>
+        max - min >= halfSpan * 2 ? Math.Clamp(centre, min + halfSpan, max - halfSpan) : (min + max) / 2;
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        // A smaller view may now zoom out less far, and a bigger one may reach past the area's edge.
+        if (Zoom < LowestZoom)
+        {
+            Zoom = LowestZoom;
+        }
+
+        MoveCenterTo(CenterX, CenterY);
     }
 
     /// <summary>A zoom level's range of tile columns and rows.</summary>
