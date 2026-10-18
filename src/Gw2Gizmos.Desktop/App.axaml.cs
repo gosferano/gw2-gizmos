@@ -65,6 +65,8 @@ public partial class App : Application
             _host = AppHostFactory.Build(dataDirectory, args, workerConfigPipeName);
             AppServices.Navigation = _host.Services.GetRequiredService<AvaloniaNavigationService>();
             FollowSystemAccentColor(_host.Services.GetRequiredService<ISystemAccentColor>());
+            AppServices.Rarities = _host.Services.GetRequiredService<ItemRarities>();
+            AppServices.Rarities.StartLoading();
             AppServices.Icons = new IconProvider<Bitmap>(
                 _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
             // The host's console lifetime turns SIGTERM / Ctrl+C (e.g. a session logout) into a host stop; make that

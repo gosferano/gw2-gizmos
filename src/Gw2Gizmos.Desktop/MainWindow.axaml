@@ -68,7 +68,9 @@
                                     <c:ItemImage ItemId="{Binding ItemId, TargetNullValue=0}" IsVisible="{Binding HasItem}" />
                                 </Panel>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <!-- Items in their rarity colour (other kinds have no item id: normal text). -->
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
+                                               c:ItemRarity.ItemId="{Binding ItemId, TargetNullValue=0}" />
                                     <TextBlock Text="{Binding Subtitle}" FontSize="12" TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                IsVisible="{Binding HasSubtitle}" />

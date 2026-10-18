@@ -51,7 +51,7 @@
                                             <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                                                          VerticalAlignment="Center" />
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Name}" c:ItemRarity.ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding Details}" FontSize="12"
                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
@@ -88,7 +88,7 @@
                                             <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                                                          VerticalAlignment="Center" />
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Name}" c:ItemRarity.ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis" />
                                                 <!-- E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05", the unit price with coin icons. -->
                                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                                     <StackPanel.Styles>
