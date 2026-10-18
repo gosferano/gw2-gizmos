@@ -22,6 +22,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
         MailCarriers = new AccountMailCarriersClient(httpClient);
         MapChests = new AccountMapChestsClient(httpClient);
         Masteries = new AccountMasteriesClient(httpClient);
+        Mastery = new AccountMasteryClient(httpClient);
         Materials = new AccountMaterialsClient(httpClient);
         Minis = new AccountMinisClient(httpClient);
         Mounts = new AccountMountsClient(httpClient);
@@ -58,6 +59,7 @@ public sealed class AccountClient : BaseBlobClient<Contract.V2.Account.Account>,
     public IAccountMailCarriersClient MailCarriers { get; }
     public IAccountMapChestsClient MapChests { get; }
     public IAccountMasteriesClient Masteries { get; }
+    public IAccountMasteryClient Mastery { get; }
     public IAccountMinisClient Minis { get; }
     public IAccountMountsClient Mounts { get; }
     public IAccountMaterialsClient Materials { get; }

@@ -8,6 +8,8 @@ public readonly struct MasteryPointRegion : IEquatable<MasteryPointRegion>
     public static readonly MasteryPointRegion Tundra = new MasteryPointRegion("Tundra");
     public static readonly MasteryPointRegion Jade = new MasteryPointRegion("Jade");
     public static readonly MasteryPointRegion Sky = new MasteryPointRegion("Sky");
+    public static readonly MasteryPointRegion Wild = new MasteryPointRegion("Wild");
+    public static readonly MasteryPointRegion Magic = new MasteryPointRegion("Magic");
 
     public string Value { get; }
 

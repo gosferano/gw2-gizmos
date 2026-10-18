@@ -65,6 +65,7 @@ namespace Gw2Gizmos.Gw2Api.Contract.Json;
 [JsonSerializable(typeof(AccountLegendaryArmoryItem[]))]
 [JsonSerializable(typeof(AccountLuck[]))]
 [JsonSerializable(typeof(AccountMastery[]))]
+[JsonSerializable(typeof(AccountMasteryPoints))]
 [JsonSerializable(typeof(AccountProgression[]))]
 [JsonSerializable(typeof(AccountWalletCurrency[]))]
 [JsonSerializable(typeof(AccountWizardsVaultCategory))]
