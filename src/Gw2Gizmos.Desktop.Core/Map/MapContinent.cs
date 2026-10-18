@@ -11,7 +11,10 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <param name="ViewMinY">The top edge of the area worth showing; above it the tiles are empty.</param>
 /// <param name="ViewMaxX">The right edge of the area worth showing.</param>
 /// <param name="ViewMaxY">The bottom edge of the area worth showing.</param>
-/// <param name="MaxTileZoom">The highest zoom the tile server has tiles for.</param>
+/// <param name="MaxTileZoom">
+/// The highest zoom the API says the tile server has (<c>max_zoom</c>). For Tyria that's 8, though every zoom 8 tile
+/// is currently a 404; the map then shows the zoom 7 tiles in their place.
+/// </param>
 public sealed record MapContinent(
     int Id,
     int Floor,
@@ -29,8 +32,18 @@ public sealed record MapContinent(
 
     public const int TileSize = 256;
 
-    /// <summary>Tyria's ground floor, from <c>/v2/continents/1</c> and <c>/v2/continents/1/floors/1</c>.</summary>
-    public static MapContinent Tyria { get; } = new(1, 1, 81920, 114688, 0, 9000, 81920, 111000, 8);
+    /// <summary>
+    /// Tyria's ground floor, from <c>/v2/continents/1</c> and <c>/v2/continents/1/floors/1</c>. The API lists Elona's
+    /// maps only on floor 49, though the floor 1 tiles draw them.
+    /// </summary>
+    public static MapContinent Tyria { get; } =
+        new(1, 1, 81920, 114688, 0, 9000, 81920, 111000, 8) { ExtraDataFloors = [49] };
+
+    /// <summary>
+    /// Further floors whose maps the tiles of <see cref="Floor"/> draw but the API lists elsewhere; their maps count
+    /// where <see cref="Floor"/> lacks them.
+    /// </summary>
+    public IReadOnlyList<int> ExtraDataFloors { get; init; } = [];
 
     /// <summary>Continent units covered by one tile at <paramref name="zoom"/>.</summary>
     public static double UnitsPerTile(int zoom) => TileSize * Math.Pow(2, NativeZoom - zoom);

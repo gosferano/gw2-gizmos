@@ -123,6 +123,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<EventsViewModel>();
         // Singleton so the map stays where it was left between visits.
         services.AddSingleton<WorldMapViewModel>();
+        services.AddSingleton<MapLandmarkProvider>();
         services.AddSingleton<LogsViewModel>();
         // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         services.AddTransient<ApiKeysViewModel>();

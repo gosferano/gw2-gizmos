@@ -8,7 +8,16 @@
         <Border CornerRadius="8" ClipToBounds="True">
             <Panel>
                 <c:MapView Continent="{Binding Continent}" CenterX="{Binding CenterX}" CenterY="{Binding CenterY}"
-                           Zoom="{Binding Zoom}" MinZoom="{Binding MinZoom}" MaxZoom="{Binding MaxZoom}" />
+                           Zoom="{Binding Zoom}" MinZoom="{Binding MinZoom}" MaxZoom="{Binding MaxZoom}"
+                           Landmarks="{Binding Landmarks}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}" />
+
+                <!-- What a click just copied, for a few seconds. -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12" Padding="12,8"
+                        CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                        IsVisible="{Binding HasCopiedMessage}" IsHitTestVisible="False">
+                    <TextBlock Text="{Binding CopiedMessage}" />
+                </Border>
 
                 <!-- Zoom and home, over the map's bottom-right corner. -->
                 <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12" Padding="4"

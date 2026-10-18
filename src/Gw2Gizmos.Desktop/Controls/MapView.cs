@@ -13,13 +13,16 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// A pannable, zoomable map of a continent drawn from the official tiles (through <see cref="AppServices.Tiles"/>).
 /// Drag to pan, scroll to zoom around the pointer, double-click to zoom in. <see cref="CenterX"/>,
 /// <see cref="CenterY"/> and <see cref="Zoom"/> are the view, in continent units and tile zoom levels; the zoom is
-/// fractional, drawn from the next tile level up scaled down. Tiles still loading are stood in for by a lower level's
-/// tile already in memory, scaled up.
+/// fractional, drawn from the next tile level up scaled down. Tiles still loading, or missing from the server, are
+/// stood in for by a lower level's tile already in memory, scaled up. <see cref="Landmarks"/> are drawn over the tiles
+/// (see MapView.Landmarks.cs).
 /// </summary>
-public sealed class MapView : Control
+public sealed partial class MapView : Control
 {
-    public static readonly StyledProperty<MapContinent?> ContinentProperty =
-        AvaloniaProperty.Register<MapView, MapContinent?>(nameof(Continent));
+    public static readonly StyledProperty<MapContinent?> ContinentProperty = AvaloniaProperty.Register<
+        MapView,
+        MapContinent?
+    >(nameof(Continent));
 
     public static readonly StyledProperty<double> CenterXProperty = AvaloniaProperty.Register<MapView, double>(
         nameof(CenterX),
@@ -55,12 +58,15 @@ public sealed class MapView : Control
 
     private Point? _dragFrom;
 
+    /// <summary>Where the left button went down, to tell a click from a drag.</summary>
+    private Point? _pressedAt;
+
     /// <summary>The tiles the latest render drew (read from download threads, so swapped whole).</summary>
     private volatile VisibleTiles? _visible;
 
     static MapView()
     {
-        AffectsRender<MapView>(ContinentProperty, CenterXProperty, CenterYProperty, ZoomProperty);
+        AffectsRender<MapView>(ContinentProperty, CenterXProperty, CenterYProperty, ZoomProperty, LandmarksProperty);
         FocusableProperty.OverrideDefaultValue<MapView>(true);
     }
 
@@ -161,18 +167,32 @@ public sealed class MapView : Control
                     continue;
                 }
 
-                if (tiles.IsMissing(key))
-                {
-                    continue;
-                }
-
+                // A tile still loading, or one the server doesn't have, gets a lower-detail tile's part in its place.
                 DrawStandIn(context, tiles, continent, key, destination);
-                RequestTile(tiles, continent, key);
+                if (!tiles.IsMissing(key))
+                {
+                    RequestTile(tiles, continent, key);
+                }
+                else if (key.Zoom > 0 && !HasAncestorInMemory(tiles, key))
+                {
+                    // Nothing to stand in yet: load the tile a level up, which will.
+                    MapTileKey parent = key with
+                    {
+                        Zoom = key.Zoom - 1,
+                        X = key.X / 2,
+                        Y = key.Y / 2,
+                    };
+                    RequestTile(tiles, continent, parent, wanted: true);
+                }
             }
         }
+
+        DrawLandmarks(context, bounds, left, top, scale);
     }
 
-    /// <summary>Fills a tile still loading with the part of the nearest lower-zoom tile that's already in memory.</summary>
+    /// <summary>
+    /// Fills a tile still loading (or missing) with the part of the nearest lower-zoom tile that's already in memory.
+    /// </summary>
     private static void DrawStandIn(
         DrawingContext context,
         MapTileCache<Bitmap> tiles,
@@ -197,15 +217,33 @@ public sealed class MapView : Control
         }
     }
 
+    private static bool HasAncestorInMemory(MapTileCache<Bitmap> tiles, MapTileKey key)
+    {
+        for (int levelsUp = 1; levelsUp <= key.Zoom; levelsUp++)
+        {
+            int factor = 1 << levelsUp;
+            if (
+                tiles.TryGet(key with { Zoom = key.Zoom - levelsUp, X = key.X / factor, Y = key.Y / factor })
+                is not null
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Loads a tile and redraws once it's in. A tile the map has panned or zoomed away from by the time a download
     /// slot frees up is skipped.
     /// </summary>
-    private void RequestTile(MapTileCache<Bitmap> tiles, MapContinent continent, MapTileKey key)
+    /// <param name="wanted">Always load it, as a stand-in a level up is: it's never among the visible tiles.</param>
+    private void RequestTile(MapTileCache<Bitmap> tiles, MapContinent continent, MapTileKey key, bool wanted = false)
     {
         string url = continent.TileUrl(key.Zoom, key.X, key.Y);
         _ = tiles
-            .LoadAsync(key, url, () => _visible?.Contains(key) == true)
+            .LoadAsync(key, url, () => wanted || _visible?.Contains(key) == true)
             .ContinueWith(
                 task =>
                 {
@@ -224,6 +262,7 @@ public sealed class MapView : Control
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             _dragFrom = e.GetPosition(this);
+            _pressedAt = _dragFrom;
             e.Pointer.Capture(this);
             e.Handled = true;
         }
@@ -234,6 +273,7 @@ public sealed class MapView : Control
         base.OnPointerMoved(e);
         if (_dragFrom is not { } from)
         {
+            UpdateHover(e.GetPosition(this));
             return;
         }
 
@@ -246,15 +286,32 @@ public sealed class MapView : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        Point releasedAt = e.GetPosition(this);
+        bool clicked = _pressedAt is { } pressedAt && Distance(pressedAt, releasedAt) < ClickTolerance;
         _dragFrom = null;
+        _pressedAt = null;
         e.Pointer.Capture(null);
+        UpdateHover(releasedAt);
+        if (clicked)
+        {
+            ActivateHovered();
+        }
     }
 
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
         _dragFrom = null;
+        _pressedAt = null;
     }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        ClearHover();
+    }
+
+    private static double Distance(Point a, Point b) => Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
@@ -276,7 +333,9 @@ public sealed class MapView : Control
         }
     }
 
-    /// <summary>Zooms by <paramref name="delta"/> levels, keeping the continent point under <paramref name="anchor"/> still.</summary>
+    /// <summary>
+    /// Zooms by <paramref name="delta"/> levels, keeping the continent point under <paramref name="anchor"/> still.
+    /// </summary>
     private void ZoomAround(Point anchor, double delta)
     {
         double before = Scale;
