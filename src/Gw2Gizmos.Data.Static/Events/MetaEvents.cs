@@ -45,7 +45,7 @@ public static class MetaEvents
         Meta("palawadan", "Palawadan", "Domain of Istan", "[&BAkLAAA=]", Schedule.Every(TwoHours, T("01:45")), 30, Expansion.LivingWorldSeason4),
         Meta("death-branded-shatterer", "Death-Branded Shatterer", "Jahai Bluffs", "[&BJMLAAA=]", Schedule.Every(TwoHours, T("01:15")), 15, Expansion.LivingWorldSeason4),
         Meta("oil-floes", "The Oil Floes", "Thunderhead Peaks", "[&BKYLAAA=]", Schedule.Every(TwoHours, T("00:45")), 15, Expansion.LivingWorldSeason4),
-        Meta("metal-concert", "Metal Concert", "Grothmar Valley", "[&BPgLAAA=]", Schedule.Every(TwoHours, T("01:40")), 20, Expansion.IcebroodSaga),
+        Meta("metal-concert", "Metal Concert", "Grothmar Valley", "[&BPgLAAA=]", Schedule.Every(TwoHours, T("01:40")), 15, Expansion.IcebroodSaga),
         Meta("drakkar", "Drakkar", "Bjora Marches", "[&BDkMAAA=]", Schedule.Every(TwoHours, T("01:05")), 35, Expansion.IcebroodSaga),
 
         // End of Dragons
