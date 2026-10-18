@@ -13,7 +13,7 @@ public enum MapMarkerKind
     /// <summary>A point of interest with its own icon, such as a dungeon or raid entrance.</summary>
     Unlock,
 
-    /// <summary>A renown heart.</summary>
+    /// <summary>A renown heart; it has no chat link (the API's are another point of interest's).</summary>
     Heart,
 
     /// <summary>A hero challenge; it has no chat link.</summary>

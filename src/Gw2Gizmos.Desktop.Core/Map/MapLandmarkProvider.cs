@@ -189,6 +189,9 @@ public sealed class MapLandmarkProvider
                 }
             }
 
+            // Hearts' chat links are left out, as sectors' are: the API makes them as point-of-interest links with the
+            // heart's id, so in game they name whichever point of interest has that id (Queensdale's heart 228 gives
+            // Provern Shore Waypoint in Gendarran Fields), and an event at that waypoint would be pinned to the heart.
             foreach (ContinentFloorRegionMapTask heart in map.Tasks.Values)
             {
                 if (heart.Coord.Length == 2 && seenHearts.Add(heart.Id))
@@ -198,8 +201,7 @@ public sealed class MapLandmarkProvider
                             MapMarkerKind.Heart,
                             heart.Objective,
                             (double)heart.Coord[0],
-                            (double)heart.Coord[1],
-                            heart.ChatLink
+                            (double)heart.Coord[1]
                         )
                     );
                 }
