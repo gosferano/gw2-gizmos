@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Gw2Gizmos.Desktop.Controls">
     <!-- App-wide style classes on top of FluentAvalonia's control themes. -->
 
     <Styles.Resources>
@@ -16,6 +17,19 @@
     <Style Selector="ComboBox">
         <Setter Property="Padding" Value="12,8,0,8" />
     </Style>
+
+    <!-- Item names in their rarity colour (classes set by c:ItemRarity.ItemId). -->
+    <Style Selector="TextBlock.rarity-junk"><Setter Property="Foreground" Value="{DynamicResource RarityJunkBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-fine"><Setter Property="Foreground" Value="{DynamicResource RarityFineBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-masterwork"><Setter Property="Foreground" Value="{DynamicResource RarityMasterworkBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-rare"><Setter Property="Foreground" Value="{DynamicResource RarityRareBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-exotic"><Setter Property="Foreground" Value="{DynamicResource RarityExoticBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-ascended"><Setter Property="Foreground" Value="{DynamicResource RarityAscendedBrush}" /></Style>
+    <Style Selector="TextBlock.rarity-legendary"><Setter Property="Foreground" Value="{DynamicResource RarityLegendaryBrush}" /></Style>
+
+    <!-- Signed coin amounts: gains green, losses red (classes set by CoinDisplay). -->
+    <Style Selector="c|CoinDisplay.gain"><Setter Property="Foreground" Value="{DynamicResource GainBrush}" /></Style>
+    <Style Selector="c|CoinDisplay.loss"><Setter Property="Foreground" Value="{DynamicResource LossBrush}" /></Style>
 
     <!-- A list row with a subtle hover highlight, so it's clear which value belongs to which name (wallet, session
          loot). -->

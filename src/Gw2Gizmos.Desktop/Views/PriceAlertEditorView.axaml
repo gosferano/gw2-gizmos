@@ -8,7 +8,7 @@
     <StackPanel Width="400" Spacing="14">
         <StackPanel Orientation="Horizontal" Spacing="10">
             <c:ItemImage ItemId="{Binding ItemId}" Width="32" Height="32" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding ItemName}" FontWeight="SemiBold" VerticalAlignment="Center"
+            <TextBlock Text="{Binding ItemName}" c:ItemRarity.ItemId="{Binding ItemId}" FontWeight="SemiBold" VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis" />
         </StackPanel>
 

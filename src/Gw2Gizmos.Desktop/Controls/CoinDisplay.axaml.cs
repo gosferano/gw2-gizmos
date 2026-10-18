@@ -7,7 +7,8 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// <summary>
 /// Shows a copper amount (the unit GW2 prices are stored in) as gold/silver/copper numbers with their coin icons.
 /// Drops leading-zero denominations like the text <c>Coin</c> formatter; <see cref="Signed"/> prefixes +/− for
-/// gains/losses. Bind <see cref="Copper"/> to the raw value.
+/// gains/losses, and colours them (green gain, red loss) through the <c>gain</c> / <c>loss</c> style classes — an
+/// explicitly set Foreground still wins. Bind <see cref="Copper"/> to the raw value.
 /// </summary>
 public partial class CoinDisplay : UserControl
 {
@@ -62,6 +63,8 @@ public partial class CoinDisplay : UserControl
         if (!TryGetCopper(out long value))
         {
             // No value (null / non-numeric) — render nothing, like the text converter's empty string.
+            Classes.Set("gain", false);
+            Classes.Set("loss", false);
             Sign.IsVisible = GoldNum.IsVisible = GoldIcon.IsVisible =
                 SilverNum.IsVisible = SilverIcon.IsVisible = CopperNum.IsVisible = CopperIcon.IsVisible = false;
             return;
@@ -74,6 +77,9 @@ public partial class CoinDisplay : UserControl
 
         bool hasGold = gold > 0;
         bool hasSilver = hasGold || silver > 0;
+
+        Classes.Set("gain", Signed && value > 0);
+        Classes.Set("loss", Signed && value < 0);
 
         Sign.Text = value < 0 ? "−" : Signed ? "+" : "";
         Sign.IsVisible = !string.IsNullOrEmpty(Sign.Text);

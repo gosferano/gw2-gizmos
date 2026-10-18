@@ -145,6 +145,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<SelectedCharacterService>();
         // What the Items / Events pages open on when navigated to from elsewhere (the global search).
         services.AddSingleton<PageTargets>();
+        // Item rarities, for colouring item names and icons like the game does.
+        services.AddSingleton<ItemRarities>();
         // The global search (Ctrl+K): one overlay for the app's lifetime.
         services.AddSingleton<GlobalSearch>();
         services.AddSingleton<GlobalSearchViewModel>();

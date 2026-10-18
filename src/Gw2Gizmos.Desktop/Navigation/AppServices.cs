@@ -13,4 +13,7 @@ public static class AppServices
 
     /// <summary>The item/currency icon cache behind <c>ItemImage</c> and <c>IconImage</c>.</summary>
     public static IconProvider<Bitmap>? Icons { get; internal set; }
+
+    /// <summary>Item rarities, behind the rarity colours of item names and <c>ItemImage</c> borders.</summary>
+    public static ItemRarities? Rarities { get; internal set; }
 }

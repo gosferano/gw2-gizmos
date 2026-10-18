@@ -5,6 +5,33 @@
                     xmlns:core="using:Gw2Gizmos.Desktop.Core"
                     xmlns:conv="using:Gw2Gizmos.Desktop.Converters">
 
+    <!-- GW2's rarity colours, and green / red for gains and losses — each in a shade readable on the theme's background
+         (the game's own colours are made for dark backgrounds; the light theme gets darker shades). -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="RarityJunkBrush" Color="#AAAAAA" />
+            <SolidColorBrush x:Key="RarityFineBrush" Color="#62A4DA" />
+            <SolidColorBrush x:Key="RarityMasterworkBrush" Color="#3DB54A" />
+            <SolidColorBrush x:Key="RarityRareBrush" Color="#FCD00B" />
+            <SolidColorBrush x:Key="RarityExoticBrush" Color="#FFA405" />
+            <SolidColorBrush x:Key="RarityAscendedBrush" Color="#FB3E8D" />
+            <SolidColorBrush x:Key="RarityLegendaryBrush" Color="#A665F7" />
+            <SolidColorBrush x:Key="GainBrush" Color="#6CCB5F" />
+            <SolidColorBrush x:Key="LossBrush" Color="#F1707B" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="RarityJunkBrush" Color="#7A7A7A" />
+            <SolidColorBrush x:Key="RarityFineBrush" Color="#2E78B7" />
+            <SolidColorBrush x:Key="RarityMasterworkBrush" Color="#1A8A1A" />
+            <SolidColorBrush x:Key="RarityRareBrush" Color="#A88700" />
+            <SolidColorBrush x:Key="RarityExoticBrush" Color="#D97E00" />
+            <SolidColorBrush x:Key="RarityAscendedBrush" Color="#D62A72" />
+            <SolidColorBrush x:Key="RarityLegendaryBrush" Color="#7B2FD0" />
+            <SolidColorBrush x:Key="GainBrush" Color="#0F7B0F" />
+            <SolidColorBrush x:Key="LossBrush" Color="#C42B1C" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
     <!-- Shared height for form controls (inputs + buttons) so they line up on a row. -->
     <x:Double x:Key="FormControlHeight">38</x:Double>
 
@@ -195,8 +222,9 @@
                 </StackPanel>
                 <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                              CornerRadius="4" Stretch="Uniform" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <!-- In its rarity colour (no fixed Foreground here, which would override it). -->
+                <TextBlock Text="{Binding Name}" c:ItemRarity.ItemId="{Binding ItemId}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
             </DockPanel>
         </Border>
     </DataTemplate>
