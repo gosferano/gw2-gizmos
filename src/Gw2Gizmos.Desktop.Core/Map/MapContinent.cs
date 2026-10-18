@@ -40,10 +40,10 @@ public sealed record MapContinent(
         new(1, 1, 81920, 114688, 0, 9000, 81920, 111000, 8) { ExtraDataFloors = [49] };
 
     /// <summary>
-    /// The Mists' floor the WvW maps are on, from <c>/v2/continents/2</c> and <c>/v2/continents/2/floors/3</c>. The area
-    /// worth showing is the WvW maps (Eternal Battlegrounds, the borderlands and Edge of the Mists, from
-    /// <c>/v2/maps</c>: x 5630–15358, y 8446–15870) with a margin of 1024 around them: the floor's own clamped view also
-    /// takes in bare tiles. The API says its tiles go to zoom 6, but zoom 7 tiles exist.
+    /// The Mists' floor the WvW maps are on, from <c>/v2/continents/2</c> and <c>/v2/continents/2/floors/3</c>. The
+    /// area worth showing is the WvW maps (Eternal Battlegrounds, the borderlands and Edge of the Mists, from
+    /// <c>/v2/maps</c>: x 5630–15358, y 8446–15870) with a margin of 1024 around them: the floor's own clamped view
+    /// also takes in bare tiles. The API says its tiles go to zoom 6, but zoom 7 tiles exist.
     /// </summary>
     public static MapContinent Mists { get; } = new(2, 3, 16384, 16384, 4606, 7422, 16382, 16382, 7);
 

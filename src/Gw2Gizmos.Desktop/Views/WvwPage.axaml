@@ -76,7 +76,8 @@
                     <c:MapView Continent="{Binding Continent}" CenterX="{Binding CenterX}" CenterY="{Binding CenterY}"
                                Zoom="{Binding Zoom}" MinZoom="{Binding MinZoom}" MaxZoom="{Binding MaxZoom}"
                                Landmarks="{Binding Landmarks}" Flight="{Binding Flight}"
-                               Objectives="{Binding Objectives}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}" />
+                               Objectives="{Binding Objectives}" CopyChatLinkCommand="{Binding CopyChatLinkCommand}"
+                               Player="{Binding Player}" IsFollowing="{Binding IsFollowing}" />
 
                     <!-- The skirmish under way, over the map's top-left corner. -->
                     <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" Padding="10,6"
@@ -94,11 +95,15 @@
                         <TextBlock Text="{Binding CopiedMessage}" />
                     </Border>
 
-                    <!-- Zoom and home, over the map's bottom-right corner. -->
+                    <!-- Following the character, zoom and home, over the map's bottom-right corner. -->
                     <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12" Padding="4"
                             CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                         <StackPanel Spacing="2">
+                            <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Centre on your character"
+                                    Command="{Binding FollowPlayerCommand}">
+                                <c:FluentIcon Symbol="MyLocation24" FontSize="16" />
+                            </Button>
                             <Button Theme="{StaticResource TransparentButton}" Padding="8" ToolTip.Tip="Zoom in"
                                     Command="{Binding ZoomInCommand}">
                                 <c:FluentIcon Symbol="ZoomIn24" FontSize="16" />

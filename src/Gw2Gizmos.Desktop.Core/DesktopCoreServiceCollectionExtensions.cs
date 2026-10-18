@@ -82,10 +82,12 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<WorkerSupervisor>();
         // What the game is doing right now, read straight from MumbleLink (the bridge's file on Linux, the game's
         // shared memory on Windows) for the Dashboard's live session card; plus map names for it.
-        services.AddSingleton(_ => new LiveGameMonitor(
+        services.AddSingleton<MapGeometry>();
+        services.AddSingleton(provider => new LiveGameMonitor(
             mumbleLinkFilePath is not null ? MumbleLinkReader.CreateForFile(mumbleLinkFilePath)
             : OperatingSystem.IsWindows() ? MumbleLinkReader.Create()
-            : null));
+            : null,
+            provider.GetRequiredService<MapGeometry>()));
         services.AddSingleton<MapNames>();
         // The in-process delivery poller persists its baseline to a file rather than the worker-owned DB.
         services.AddSingleton<IDeliveryBaselineStore, FileDeliveryBaselineStore>();

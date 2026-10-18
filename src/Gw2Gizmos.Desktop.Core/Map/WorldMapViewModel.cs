@@ -248,8 +248,7 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     private void PollPlayer()
     {
         LiveGameState game = _liveGame.Read();
-        Player =
-            game.Position is { } at && game.Character is { } name ? new MapPlayer(name, at.X, at.Y, at.Heading) : null;
+        Player = MapPlayer.On(Continent, game);
         if (Player is null)
         {
             IsFollowing = false;

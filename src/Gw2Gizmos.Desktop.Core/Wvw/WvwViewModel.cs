@@ -11,8 +11,9 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the WvW page: the selected account's matchup — the three teams' standings and the skirmish under way — over
-/// the Mists map with every objective in its holder's colour, refreshed while the page is open. Clicking an objective
-/// copies its chat link. A singleton, so the map stays where it was left between visits.
+/// the Mists map with every objective in its holder's colour, refreshed while the page is open, and the character
+/// playing when they're on a WvW map. Opening the page there glides to the character and follows them until the map is
+/// dragged. Clicking an objective copies its chat link. A singleton, so the map stays where it was left between visits.
 /// </summary>
 public sealed class WvwViewModel : ViewModelBase, INavigationAware
 {
@@ -26,8 +27,18 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
 
     private static readonly TimeSpan CopiedMessageDuration = TimeSpan.FromSeconds(3);
 
+    /// <summary>How often the character's position is read while the page is open.</summary>
+    private static readonly TimeSpan PlayerPollInterval = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>Following the character from further out than this zooms in to it.</summary>
+    private const double FollowMinZoom = 4.5;
+
     private readonly WvwMatchupProvider _provider;
     private readonly IClipboardService _clipboard;
+    private readonly LiveGameMonitor _liveGame;
+    private readonly IUiTimer _playerPoll;
+    private MapPlayer? _player;
+    private bool _isFollowing;
     private readonly IUiTimer _copiedTimer;
     private string? _copiedMessage;
     private readonly IUiDispatcher _dispatcher;
@@ -43,10 +54,18 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     private string _skirmishText = "";
     private MapLandmarks _landmarks = MapLandmarks.Empty;
 
-    public WvwViewModel(WvwMatchupProvider provider, IClipboardService clipboard, IUiDispatcher dispatcher)
+    public WvwViewModel(
+        WvwMatchupProvider provider,
+        IClipboardService clipboard,
+        LiveGameMonitor liveGame,
+        IUiDispatcher dispatcher
+    )
     {
         _provider = provider;
         _clipboard = clipboard;
+        _liveGame = liveGame;
+        _playerPoll = dispatcher.CreateTimer(PlayerPollInterval, PollPlayer);
+        FollowPlayerCommand = new RelayCommand(StartFollowing, () => Player is not null);
         _copiedTimer = dispatcher.CreateTimer(CopiedMessageDuration, HideCopiedMessage);
         CopyChatLinkCommand = new RelayCommand<object>(target => _ = CopyAsync(target));
         _dispatcher = dispatcher;
@@ -54,7 +73,11 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         _clock = dispatcher.CreateTimer(TimeSpan.FromSeconds(1), UpdateSkirmishText);
         ZoomInCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Min(Zoom + 1, MaxZoom)));
         ZoomOutCommand = new RelayCommand(() => FlyTo(CenterX, CenterY, Math.Max(Zoom - 1, MinZoom)));
-        HomeCommand = new RelayCommand(() => FlyTo(HomeX, HomeY, HomeZoom));
+        HomeCommand = new RelayCommand(() =>
+        {
+            IsFollowing = false;
+            FlyTo(HomeX, HomeY, HomeZoom);
+        });
     }
 
     public MapContinent Continent { get; } = MapContinent.Mists;
@@ -105,6 +128,29 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     }
 
     public bool HasMatchup => Matchup is not null;
+
+    /// <summary>The character in game, when they're on a WvW map; null otherwise.</summary>
+    public MapPlayer? Player
+    {
+        get => _player;
+        private set
+        {
+            if (SetProperty(ref _player, value))
+            {
+                ((RelayCommand)FollowPlayerCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>The map keeps the character in the middle; dragging the map turns this off.</summary>
+    public bool IsFollowing
+    {
+        get => _isFollowing;
+        set => SetProperty(ref _isFollowing, value);
+    }
+
+    /// <summary>Glides to the character and follows them.</summary>
+    public ICommand FollowPlayerCommand { get; }
 
     /// <summary>The match's objectives, each with its holder.</summary>
     public IReadOnlyList<WvwObjectiveMarker> Objectives => Matchup?.Objectives ?? [];
@@ -176,12 +222,42 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         _ = LoadAsync();
         _refresh.Start();
         _clock.Start();
+        PollPlayer();
+        if (Player is not null)
+        {
+            StartFollowing();
+        }
+
+        _playerPoll.Start();
     }
 
     public void OnNavigatedFrom()
     {
         _refresh.Stop();
         _clock.Stop();
+        _playerPoll.Stop();
+        // The page's next map mustn't be sent the last glide again when it's bound.
+        Flight = null;
+    }
+
+    private void PollPlayer()
+    {
+        Player = MapPlayer.On(Continent, _liveGame.Read());
+        if (Player is null)
+        {
+            IsFollowing = false;
+        }
+    }
+
+    private void StartFollowing()
+    {
+        if (Player is not { } player)
+        {
+            return;
+        }
+
+        IsFollowing = true;
+        FlyTo(player.X, player.Y, Math.Max(Zoom, FollowMinZoom));
     }
 
     private async Task LoadAsync()
