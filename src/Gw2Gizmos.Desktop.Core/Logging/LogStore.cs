@@ -54,27 +54,27 @@ public sealed class LogStore
         }
     }
 
-    private void AddCore(LogEntry entry)
-    {
-        // Newest first (top of the list); the oldest drops off the end.
-        Entries.Insert(0, entry);
-        if (Entries.Count > Capacity)
-        {
-            Entries.RemoveAt(Entries.Count - 1);
-        }
-    }
+    private void AddCore(LogEntry entry) => AddRangeCore([entry]);
 
     private void AddRangeCore(IReadOnlyList<LogEntry> entries)
     {
-        // Insert each at the front so the batch's last (newest) line ends up on top.
-        foreach (LogEntry entry in entries)
+        // Keeping a log must never take the app down: a failure here (in whatever follows the list) is dropped — it
+        // can't be logged, since this is the log.
+        try
         {
-            Entries.Insert(0, entry);
-        }
+            // Insert each at the front so the batch's last (newest) line ends up on top; the oldest drop off the end.
+            foreach (LogEntry entry in entries)
+            {
+                Entries.Insert(0, entry);
+            }
 
-        while (Entries.Count > Capacity)
+            while (Entries.Count > Capacity)
+            {
+                Entries.RemoveAt(Entries.Count - 1);
+            }
+        }
+        catch (Exception)
         {
-            Entries.RemoveAt(Entries.Count - 1);
         }
     }
 }
