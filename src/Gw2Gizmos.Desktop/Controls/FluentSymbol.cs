@@ -32,6 +32,7 @@ public enum FluentSymbol
     Home24 = 0xF481,
     Key24 = 0xF4B7,
     Map24 = 0xF52E,
+    MyLocation24 = 0xF55F,
     Open24 = 0xF583,
     Options24 = 0xF588,
     People24 = 0xF5A9,

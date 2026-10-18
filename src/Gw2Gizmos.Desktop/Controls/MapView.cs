@@ -15,7 +15,7 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// <see cref="CenterY"/> and <see cref="Zoom"/> are the view, in continent units and tile zoom levels; the zoom is
 /// fractional, drawn from the next tile level up scaled down. Tiles still loading, or missing from the server, are
 /// stood in for by a lower level's tile already in memory, scaled up. <see cref="Landmarks"/> are drawn over the tiles
-/// (see MapView.Landmarks.cs).
+/// (see MapView.Landmarks.cs), and the view glides to a requested spot (see MapView.Flight.cs).
 /// </summary>
 public sealed partial class MapView : Control
 {
@@ -66,7 +66,14 @@ public sealed partial class MapView : Control
 
     static MapView()
     {
-        AffectsRender<MapView>(ContinentProperty, CenterXProperty, CenterYProperty, ZoomProperty, LandmarksProperty);
+        AffectsRender<MapView>(
+            ContinentProperty,
+            CenterXProperty,
+            CenterYProperty,
+            ZoomProperty,
+            LandmarksProperty,
+            PlayerProperty
+        );
         FocusableProperty.OverrideDefaultValue<MapView>(true);
     }
 
@@ -74,7 +81,11 @@ public sealed partial class MapView : Control
     {
         ClipToBounds = true;
         RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
-        DoubleTapped += (_, e) => ZoomAround(e.GetPosition(this), 1);
+        DoubleTapped += (_, e) =>
+        {
+            CancelFlight();
+            ZoomAround(e.GetPosition(this), 1);
+        };
     }
 
     public MapContinent? Continent
@@ -278,6 +289,14 @@ public sealed partial class MapView : Control
         }
 
         Point to = e.GetPosition(this);
+        if (IsFollowing && _pressedAt is { } pressedAt && Distance(pressedAt, to) < ClickTolerance)
+        {
+            // Not a drag yet: a click shouldn't stop following.
+            return;
+        }
+
+        IsFollowing = false;
+        CancelFlight();
         double scale = Scale;
         MoveCenterTo(CenterX - (to.X - from.X) / scale, CenterY - (to.Y - from.Y) / scale);
         _dragFrom = to;
@@ -316,6 +335,7 @@ public sealed partial class MapView : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        CancelFlight();
         ZoomAround(e.GetPosition(this), e.Delta.Y * WheelZoomStep);
         e.Handled = true;
     }
@@ -323,6 +343,7 @@ public sealed partial class MapView : Control
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        OnFlightPropertyChanged(change);
         if (change.Property == ZoomProperty)
         {
             double clamped = Math.Clamp(Zoom, MinZoom, MaxZoom);
@@ -338,6 +359,12 @@ public sealed partial class MapView : Control
     /// </summary>
     private void ZoomAround(Point anchor, double delta)
     {
+        if (IsFollowing)
+        {
+            // Zoom around the character being followed, which stays in the middle.
+            anchor = new Point(Bounds.Width / 2, Bounds.Height / 2);
+        }
+
         double before = Scale;
         double zoom = Math.Clamp(Zoom + delta, MinZoom, MaxZoom);
         if (zoom == Zoom)

@@ -23,6 +23,15 @@ public sealed partial class MapView
         MapLandmarks?
     >(nameof(Landmarks));
 
+    public static readonly StyledProperty<MapPlayer?> PlayerProperty = AvaloniaProperty.Register<MapView, MapPlayer?>(
+        nameof(Player)
+    );
+
+    public static readonly StyledProperty<bool> IsFollowingProperty = AvaloniaProperty.Register<MapView, bool>(
+        nameof(IsFollowing),
+        defaultBindingMode: Avalonia.Data.BindingMode.TwoWay
+    );
+
     public static readonly StyledProperty<ICommand?> CopyChatLinkCommandProperty = AvaloniaProperty.Register<
         MapView,
         ICommand?
@@ -64,6 +73,13 @@ public sealed partial class MapView
     private static readonly IBrush PendingIcon = new SolidColorBrush(Color.FromArgb(0xC0, 0xF2, 0xE4, 0xB8));
     private static readonly Cursor HandCursor = new(StandardCursorType.Hand);
 
+    private static readonly IBrush PlayerFill = new SolidColorBrush(Color.FromRgb(0xF5, 0xC5, 0x42));
+    private static readonly IBrush PlayerHalo = new SolidColorBrush(Color.FromArgb(0x55, 0xF5, 0xC5, 0x42));
+    private static readonly IPen PlayerOutline = new Pen(Brushes.Black, 1.5, lineJoin: PenLineJoin.Round);
+
+    /// <summary>An arrowhead pointing up (north) around the origin, its tip ahead of the character.</summary>
+    private static readonly Geometry PlayerArrow = Geometry.Parse("M 0,-11 L 7,8 L 0,4 L -7,8 Z");
+
     /// <summary>Icons by URL, shared by every map; loaded once through <see cref="AppServices.Icons"/>.</summary>
     private static readonly Dictionary<string, Bitmap> LoadedIcons = new();
     private static readonly HashSet<string> RequestedIcons = new();
@@ -75,12 +91,30 @@ public sealed partial class MapView
     private readonly List<(Rect Area, MapMarker Marker)> _hitTargets = new();
 
     private MapMarker? _hovered;
+    private bool _playerHovered;
+    private Rect? _playerArea;
     private Point _hoveredAt;
 
     public MapLandmarks? Landmarks
     {
         get => GetValue(LandmarksProperty);
         set => SetValue(LandmarksProperty, value);
+    }
+
+    /// <summary>The character playing, drawn as an arrow the way they face.</summary>
+    public MapPlayer? Player
+    {
+        get => GetValue(PlayerProperty);
+        set => SetValue(PlayerProperty, value);
+    }
+
+    /// <summary>
+    /// The view follows <see cref="Player"/>; dragging the map turns it off, zooming keeps it in the middle.
+    /// </summary>
+    public bool IsFollowing
+    {
+        get => GetValue(IsFollowingProperty);
+        set => SetValue(IsFollowingProperty, value);
     }
 
     /// <summary>Run with the clicked <see cref="MapMarker"/>, when it has a chat link.</summary>
@@ -154,6 +188,7 @@ public sealed partial class MapView
             _hitTargets.Add((area, marker));
         }
 
+        DrawPlayer(context, left, top, scale);
         DrawTooltip(context, bounds);
     }
 
@@ -286,12 +321,14 @@ public sealed partial class MapView
     /// <summary>The name of what's under the pointer, and whether a click copies its chat link.</summary>
     private void DrawTooltip(DrawingContext context, Rect bounds)
     {
-        if (_hovered is not { } marker)
+        (string? name, string? chatLink) =
+            _playerHovered && Player is { } player ? (player.Name, null)
+            : _hovered is { } marker ? (marker.Name, marker.ChatLink)
+            : (null, null);
+        if (name is null)
         {
             return;
         }
-
-        (string name, string? chatLink) = (marker.Name, marker.ChatLink);
 
         FormattedText title = Text(name, 13, FontWeight.SemiBold, Brushes.White);
         FormattedText? hint = chatLink is null
@@ -326,6 +363,20 @@ public sealed partial class MapView
     /// </summary>
     private void UpdateHover(Point point)
     {
+        bool playerHovered = _playerArea is { } playerArea && playerArea.Contains(point);
+        if (playerHovered || _playerHovered)
+        {
+            _playerHovered = playerHovered;
+            _hovered = null;
+            _hoveredAt = point;
+            Cursor = null;
+            InvalidateVisual();
+            if (playerHovered)
+            {
+                return;
+            }
+        }
+
         MapMarker? hovered = null;
         for (int i = _hitTargets.Count - 1; i >= 0; i--)
         {
@@ -349,12 +400,13 @@ public sealed partial class MapView
 
     private void ClearHover()
     {
-        if (_hovered is null)
+        if (_hovered is null && !_playerHovered)
         {
             return;
         }
 
         _hovered = null;
+        _playerHovered = false;
         Cursor = null;
         InvalidateVisual();
     }
@@ -368,6 +420,27 @@ public sealed partial class MapView
     }
 
     private static bool HasChatLink(MapMarker? marker) => marker?.ChatLink is not null;
+
+    /// <summary>
+    /// The character as an arrow pointing the way they face, over a soft halo so it stands out on any art.
+    /// </summary>
+    private void DrawPlayer(DrawingContext context, double left, double top, double scale)
+    {
+        _playerArea = null;
+        if (Player is not { } player)
+        {
+            return;
+        }
+
+        Point at = new((player.X - left) * scale, (player.Y - top) * scale);
+        context.DrawEllipse(PlayerHalo, null, at, 16, 16);
+        using (context.PushTransform(Matrix.CreateRotation(player.Heading) * Matrix.CreateTranslation(at.X, at.Y)))
+        {
+            context.DrawGeometry(PlayerFill, PlayerOutline, PlayerArrow);
+        }
+
+        _playerArea = new Rect(at.X - 14, at.Y - 14, 28, 28);
+    }
 
     private sealed record OutlinedText(Geometry? Geometry, double Width, double Height);
 

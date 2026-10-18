@@ -11,7 +11,19 @@ namespace Gw2Gizmos.Desktop.Core;
 public sealed record LiveGameState(bool IsRunning, string? Character, int MapId)
 {
     public static LiveGameState NotRunning { get; } = new(false, null, 0);
+
+    /// <summary>
+    /// Where the character is on Tyria's map, while in the world there; null at character select, while loading and in
+    /// the Mists (WvW and PvP maps are on a continent of their own).
+    /// </summary>
+    public LivePosition? Position { get; init; }
 }
+
+/// <summary>A character's spot on the continent map.</summary>
+/// <param name="X">In continent units, as the API's map positions.</param>
+/// <param name="Y">In continent units, increasing southwards.</param>
+/// <param name="Heading">The way the character faces, in radians clockwise from north.</param>
+public sealed record LivePosition(double X, double Y, double Heading);
 
 /// <summary>
 /// Reads the game's MumbleLink directly (read-only) so the UI can show what's happening live — which character, on
@@ -62,6 +74,35 @@ public sealed class LiveGameMonitor : IDisposable
         }
 
         string? character = string.IsNullOrEmpty(snapshot.Identity?.Name) ? null : snapshot.Identity!.Name;
-        return new LiveGameState(true, character, (int)(snapshot.Context?.MapId ?? 0));
+        return new LiveGameState(true, character, (int)(snapshot.Context?.MapId ?? 0))
+        {
+            Position = character is null ? null : PositionOf(snapshot),
+        };
     }
+
+    private static LivePosition? PositionOf(MumbleLinkSnapshot snapshot)
+    {
+        if (snapshot.Context is not { } context || IsInTheMists(context.MapType))
+        {
+            return null;
+        }
+
+        if (context.PlayerX == 0 && context.PlayerY == 0)
+        {
+            return null;
+        }
+
+        // The game's world has Z pointing north, while continent Y points south.
+        Vector3F front = snapshot.Avatar.Front;
+        return new LivePosition(context.PlayerX, context.PlayerY, Math.Atan2(front.X, front.Z));
+    }
+
+    private static bool IsInTheMists(ContextMapType type) =>
+        type.IsWorldVsWorld
+        || type == ContextMapType.Pvp
+        || type == ContextMapType.Gvg
+        || type == ContextMapType.Tournament
+        || type == ContextMapType.UserTournament
+        || type == ContextMapType.ObsidianSanctum
+        || type == ContextMapType.WvwLounge;
 }

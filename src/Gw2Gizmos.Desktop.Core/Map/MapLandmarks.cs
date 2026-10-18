@@ -51,3 +51,18 @@ public sealed record MapLandmarks(IReadOnlyList<MapAreaLabel> Labels, IReadOnlyL
 {
     public static MapLandmarks Empty { get; } = new(Array.Empty<MapAreaLabel>(), Array.Empty<MapMarker>());
 }
+
+/// <summary>The character playing, on the map.</summary>
+/// <param name="Heading">The way they face, in radians clockwise from north.</param>
+public sealed record MapPlayer(string Name, double X, double Y, double Heading);
+
+/// <summary>
+/// A spot for the map to glide to, rather than jump. A class, not a record: asking for the same spot twice is two
+/// requests, so each must differ from the last.
+/// </summary>
+public sealed class MapFlight(double x, double y, double zoom)
+{
+    public double X { get; } = x;
+    public double Y { get; } = y;
+    public double Zoom { get; } = zoom;
+}
