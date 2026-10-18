@@ -238,7 +238,12 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
         _playerPoll.Start();
     }
 
-    public void OnNavigatedFrom() => _playerPoll.Stop();
+    public void OnNavigatedFrom()
+    {
+        _playerPoll.Stop();
+        // The page's next map mustn't be sent the last glide again when it's bound.
+        Flight = null;
+    }
 
     private void PollPlayer()
     {
