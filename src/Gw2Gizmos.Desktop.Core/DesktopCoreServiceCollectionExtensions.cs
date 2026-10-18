@@ -129,6 +129,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // Singleton so the map stays where it was left between visits; the provider remembers the account's team.
         services.AddSingleton<WvwViewModel>();
         services.AddSingleton<WvwMatchupProvider>();
+        services.AddSingleton<WvwSettingsStore>();
         services.AddSingleton<LogsViewModel>();
         // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         services.AddTransient<ApiKeysViewModel>();

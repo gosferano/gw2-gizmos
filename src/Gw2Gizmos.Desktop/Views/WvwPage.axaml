@@ -31,6 +31,24 @@
         <Style Selector="Ellipse.side.green">
             <Setter Property="Fill" Value="#5CB85C" />
         </Style>
+        <!-- Each side's number in its colour, then the total, in four columns lined up from line to line. -->
+        <Style Selector="ItemsControl.side-numbers">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </Setter>
+            <Setter Property="ItemTemplate">
+                <DataTemplate x:DataType="core:WvwSideNumber">
+                    <TextBlock Text="{Binding Text}" FontSize="12" Classes="side" Classes.red="{Binding IsRed}"
+                               Classes.blue="{Binding IsBlue}" Classes.green="{Binding IsGreen}"
+                               Classes.total="{Binding IsTotal}" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.side.total">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
         <Style Selector="TextBlock.side.red">
             <Setter Property="Foreground" Value="#E5736F" />
         </Style>
@@ -173,7 +191,20 @@
                       IsVisible="{Binding HasMatchup}">
                     <c:Card Grid.Row="0" Padding="10,10,10,4">
                         <StackPanel>
-                            <TextBlock Text="Maps" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <DockPanel Margin="0,0,0,6">
+                            <ComboBox DockPanel.Dock="Right" VerticalAlignment="Center" MinWidth="120"
+                                      Height="{StaticResource FormControlHeight}"
+                                      ItemsSource="{Binding ActivityWindowChoices}"
+                                      SelectedItem="{Binding ActivityWindowMinutes}"
+                                      ToolTip.Tip="The span kills, deaths and flips are counted over">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="x:Int32">
+                                        <TextBlock Text="{Binding StringFormat='Last {0} min'}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="Maps" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
                             <ItemsControl ItemsSource="{Binding MapStats}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="core:WvwMapStatsRow">
@@ -185,48 +216,22 @@
                                                 <Border DockPanel.Dock="Left" Width="4" Classes="team-strip"
                                                         Classes.red="{Binding IsRed}" Classes.blue="{Binding IsBlue}"
                                                         Classes.green="{Binding IsGreen}" />
-                                                <Grid Margin="10,6" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                                                <Grid Margin="10,6" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                                                     <TextBlock Grid.ColumnSpan="2" Text="{Binding Name}" FontWeight="SemiBold" />
-                                                    <TextBlock Grid.Row="1" Text="Kills / min" FontSize="12" Margin="0,2,12,0"
+                                                    <TextBlock Grid.Row="1" Text="Kills" FontSize="12" Margin="0,2,12,0"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                    <ItemsControl Grid.Row="1" Grid.Column="1" Margin="0,2,0,0"
-                                                                  ItemsSource="{Binding KillsPerMinute}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <StackPanel Orientation="Horizontal" Spacing="10" />
-                                                            </ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="core:WvwSideNumber">
-                                                                <TextBlock Text="{Binding Text}" FontSize="12" MinWidth="28"
-                                                                           Classes="side" Classes.red="{Binding IsRed}"
-                                                                           Classes.blue="{Binding IsBlue}"
-                                                                           Classes.green="{Binding IsGreen}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    <TextBlock Grid.Row="2" Text="Deaths / min" FontSize="12" Margin="0,2,12,0"
+                                                    <ItemsControl Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentKills}" />
+                                                    <TextBlock Grid.Row="2" Text="Deaths" FontSize="12" Margin="0,2,12,0"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                    <ItemsControl Grid.Row="2" Grid.Column="1" Margin="0,2,0,0"
-                                                                  ItemsSource="{Binding DeathsPerMinute}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <StackPanel Orientation="Horizontal" Spacing="10" />
-                                                            </ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="core:WvwSideNumber">
-                                                                <TextBlock Text="{Binding Text}" FontSize="12" MinWidth="28"
-                                                                           Classes="side" Classes.red="{Binding IsRed}"
-                                                                           Classes.blue="{Binding IsBlue}"
-                                                                           Classes.green="{Binding IsGreen}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                    <TextBlock Grid.Row="3" Grid.ColumnSpan="2" FontSize="12" Margin="0,2,0,0"
+                                                    <ItemsControl Grid.Row="2" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentDeaths}" />
+                                                    <TextBlock Grid.Row="3" Text="Flips" FontSize="12" Margin="0,2,12,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                    <ItemsControl Grid.Row="3" Grid.Column="1" Margin="0,2,0,0" Classes="side-numbers"
+                                                                  ItemsSource="{Binding RecentFlips}" />
+                                                    <TextBlock Grid.Row="4" Grid.ColumnSpan="2" FontSize="12" Margin="0,2,0,0"
                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                                        <Run Text="{Binding FlippedLately}" />
-                                                        <Run Text="flipped in 10 min ·" />
                                                         <Run Text="{Binding Capturable}" />
                                                         <Run Text="capturable" />
                                                     </TextBlock>

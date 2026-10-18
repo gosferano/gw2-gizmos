@@ -23,18 +23,15 @@ public sealed record WvwFlip(
 
 /// <summary>
 /// What's happening on the WvW maps, worked out from the matchups refreshed over time: each side's kills and deaths
-/// per minute on each map, objectives flipped lately, objectives a team can take, and the flips seen.
+/// on each map lately, objectives flipped lately, objectives a team can take, and the flips seen.
 /// </summary>
 public sealed class WvwActivity
 {
-    /// <summary>The span kills and deaths per minute are measured over.</summary>
-    public static readonly TimeSpan RateWindow = TimeSpan.FromMinutes(5);
+    /// <summary>The longest span the counts can cover; history is kept for it.</summary>
+    private static readonly TimeSpan LongestWindow = TimeSpan.FromMinutes(30);
 
-    /// <summary>A rate needs at least this much history to mean anything.</summary>
-    public static readonly TimeSpan MinimumRateSpan = TimeSpan.FromMinutes(1);
-
-    /// <summary>The span "flipped lately" counts over.</summary>
-    public static readonly TimeSpan FlipWindow = TimeSpan.FromMinutes(10);
+    /// <summary>Recent kills and deaths need at least this much history to mean anything.</summary>
+    public static readonly TimeSpan MinimumActivitySpan = TimeSpan.FromMinutes(1);
 
     /// <summary>How far back the feed starts when the page first sees a match.</summary>
     public static readonly TimeSpan FeedSeedWindow = TimeSpan.FromMinutes(30);
@@ -44,6 +41,9 @@ public sealed class WvwActivity
     private readonly List<(DateTimeOffset At, WvwMatchup Matchup)> _samples = [];
     private readonly List<WvwFlip> _feed = [];
     private WvwMatchup? _last;
+
+    /// <summary>The span the counts cover: kills, deaths and flips "lately".</summary>
+    public TimeSpan Window { get; set; } = TimeSpan.FromMinutes(WvwSettingsStore.DefaultActivityWindowMinutes);
 
     /// <summary>The flips seen, newest first.</summary>
     public IReadOnlyList<WvwFlip> Feed => _feed;
@@ -68,14 +68,15 @@ public sealed class WvwActivity
         }
 
         _samples.Add((now, matchup));
-        _samples.RemoveAll(s => now - s.At > RateWindow + MinimumRateSpan);
+        _samples.RemoveAll(s => now - s.At > LongestWindow + MinimumActivitySpan);
         _last = matchup;
     }
 
     /// <summary>
-    /// A side's kills and deaths per minute on a map over the last few minutes; null until there's enough history.
+    /// A side's kills and deaths on a map over the last <see cref="Window"/> (or the history there is, once
+    /// there's at least <see cref="MinimumActivitySpan"/> of it); null until then.
     /// </summary>
-    public (double Kills, double Deaths)? PerMinute(int mapId, WvwColor side, DateTimeOffset now)
+    public (int Kills, int Deaths)? Recent(int mapId, WvwColor side)
     {
         if (_samples.Count < 2)
         {
@@ -83,9 +84,8 @@ public sealed class WvwActivity
         }
 
         (DateTimeOffset at, WvwMatchup matchup) latest = _samples[^1];
-        (DateTimeOffset at, WvwMatchup matchup) from = _samples.FirstOrDefault(s => latest.at - s.At <= RateWindow);
-        TimeSpan span = latest.at - from.at;
-        if (span < MinimumRateSpan)
+        (DateTimeOffset at, WvwMatchup matchup) from = _samples.FirstOrDefault(s => latest.at - s.At <= Window);
+        if (latest.at - from.at < MinimumActivitySpan)
         {
             return null;
         }
@@ -97,16 +97,20 @@ public sealed class WvwActivity
             return null;
         }
 
-        double minutes = span.TotalMinutes;
         return (
-            Math.Max(0, after.Kills[side] - before.Kills[side]) / minutes,
-            Math.Max(0, after.Deaths[side] - before.Deaths[side]) / minutes
+            Math.Max(0, after.Kills[side] - before.Kills[side]),
+            Math.Max(0, after.Deaths[side] - before.Deaths[side])
         );
     }
 
-    /// <summary>How many of a map's objectives flipped within <see cref="FlipWindow"/>.</summary>
-    public static int FlippedLately(WvwMatchup matchup, int mapId, DateTimeOffset now) =>
-        matchup.Objectives.Count(o => o.MapId == mapId && now - o.LastFlipped <= FlipWindow);
+    /// <summary>
+    /// How many of a map's objectives flipped within <see cref="Window"/>; given <paramref name="to"/>, only those that
+    /// side took. An objective counts once, for its latest flip.
+    /// </summary>
+    public int FlippedLately(WvwMatchup matchup, int mapId, DateTimeOffset now, WvwColor? to = null) =>
+        matchup.Objectives.Count(o =>
+            o.MapId == mapId && now - o.LastFlipped <= Window && (to is null || o.Owner == to)
+        );
 
     /// <summary>
     /// How many of a map's objectives <paramref name="team"/> can take now: held by another side or neutral, and not

@@ -47,6 +47,7 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
 
     private readonly WvwMatchupProvider _provider;
     private readonly WvwActivity _activity = new();
+    private readonly WvwSettingsStore _settings;
     private int? _feedMapId;
     private readonly IClipboardService _clipboard;
     private readonly LiveGameMonitor _liveGame;
@@ -75,9 +76,12 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
         WvwMatchupProvider provider,
         IClipboardService clipboard,
         LiveGameMonitor liveGame,
+        WvwSettingsStore settings,
         IUiDispatcher dispatcher
     )
     {
+        _settings = settings;
+        _activity.Window = TimeSpan.FromMinutes(settings.ActivityWindowMinutes);
         _provider = provider;
         _clipboard = clipboard;
         _liveGame = liveGame;
@@ -203,8 +207,29 @@ public sealed class WvwViewModel : ViewModelBase, INavigationAware
     /// <summary>The three teams, red, blue and green.</summary>
     public IReadOnlyList<WvwTeamStanding> Teams => Matchup?.Teams ?? [];
 
-    /// <summary>Each map's activity: kills and deaths per minute, flips lately, objectives the team can take.</summary>
+    /// <summary>Each map's activity: kills, deaths and flips lately, and objectives the team can take.</summary>
     public ObservableCollection<WvwMapStatsRow> MapStats { get; } = [];
+
+    /// <summary>The spans the activity counts can cover, in minutes.</summary>
+    public IReadOnlyList<int> ActivityWindowChoices => WvwSettingsStore.ActivityWindowChoices;
+
+    /// <summary>The span the maps' kills, deaths and flips cover, in minutes; remembered between runs.</summary>
+    public int ActivityWindowMinutes
+    {
+        get => _settings.ActivityWindowMinutes;
+        set
+        {
+            if (value == _settings.ActivityWindowMinutes)
+            {
+                return;
+            }
+
+            _settings.ActivityWindowMinutes = value;
+            _activity.Window = TimeSpan.FromMinutes(_settings.ActivityWindowMinutes);
+            OnPropertyChanged();
+            RefreshPanel();
+        }
+    }
 
     /// <summary>The flips seen, newest first, on the selected map or on all of them.</summary>
     public ObservableCollection<WvwFlipRow> Feed { get; } = [];

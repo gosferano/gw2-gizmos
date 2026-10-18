@@ -6,23 +6,26 @@ using Gw2Gizmos.Desktop.Core.Mvvm;
 
 namespace Gw2Gizmos.Desktop.Core;
 
-/// <summary>One side's number, coloured as the side.</summary>
-public sealed record WvwSideNumber(WvwColor Side, string Text)
+/// <summary>
+/// One side's number, coloured as the side; a total of all three when <paramref name="Side"/> is null.
+/// </summary>
+public sealed record WvwSideNumber(WvwColor? Side, string Text)
 {
     public bool IsRed => Side == WvwColor.Red;
     public bool IsBlue => Side == WvwColor.Blue;
     public bool IsGreen => Side == WvwColor.Green;
+    public bool IsTotal => Side is null;
 }
 
 /// <summary>
-/// A map's line in the WvW side panel: each side's kills and deaths per minute, objectives flipped lately, and how many
+/// A map's line in the WvW side panel: each side's kills, deaths and captures lately with their totals, and how many
 /// the account's team can take. Selecting it filters the flip feed to the map.
 /// </summary>
 public sealed class WvwMapStatsRow : ViewModelBase
 {
-    private IReadOnlyList<WvwSideNumber> _killsPerMinute = [];
-    private IReadOnlyList<WvwSideNumber> _deathsPerMinute = [];
-    private int _flippedLately;
+    private IReadOnlyList<WvwSideNumber> _recentKills = [];
+    private IReadOnlyList<WvwSideNumber> _recentDeaths = [];
+    private IReadOnlyList<WvwSideNumber> _recentFlips = [];
     private int _capturable;
     private bool _isSelected;
 
@@ -38,23 +41,23 @@ public sealed class WvwMapStatsRow : ViewModelBase
     public bool IsBlue => Map.Home == WvwColor.Blue;
     public bool IsGreen => Map.Home == WvwColor.Green;
 
-    public IReadOnlyList<WvwSideNumber> KillsPerMinute
+    public IReadOnlyList<WvwSideNumber> RecentKills
     {
-        get => _killsPerMinute;
-        private set => SetProperty(ref _killsPerMinute, value);
+        get => _recentKills;
+        private set => SetProperty(ref _recentKills, value);
     }
 
-    public IReadOnlyList<WvwSideNumber> DeathsPerMinute
+    public IReadOnlyList<WvwSideNumber> RecentDeaths
     {
-        get => _deathsPerMinute;
-        private set => SetProperty(ref _deathsPerMinute, value);
+        get => _recentDeaths;
+        private set => SetProperty(ref _recentDeaths, value);
     }
 
-    /// <summary>Objectives flipped within the last ten minutes.</summary>
-    public int FlippedLately
+    /// <summary>Objectives each side took within the activity window, then all flips.</summary>
+    public IReadOnlyList<WvwSideNumber> RecentFlips
     {
-        get => _flippedLately;
-        private set => SetProperty(ref _flippedLately, value);
+        get => _recentFlips;
+        private set => SetProperty(ref _recentFlips, value);
     }
 
     /// <summary>Objectives the account's team can take now.</summary>
@@ -74,17 +77,29 @@ public sealed class WvwMapStatsRow : ViewModelBase
     {
         Map = matchup.Maps.FirstOrDefault(m => m.MapId == Map.MapId) ?? Map;
         IReadOnlyList<WvwColor> sides = matchup.Teams.Select(t => t.Color).ToList();
-        var rates = sides.Select(side => (Side: side, Rate: activity.PerMinute(Map.MapId, side, now))).ToList();
-        KillsPerMinute = rates.Select(r => new WvwSideNumber(r.Side, Rate(r.Rate?.Kills))).ToList();
-        DeathsPerMinute = rates.Select(r => new WvwSideNumber(r.Side, Rate(r.Rate?.Deaths))).ToList();
-        FlippedLately = WvwActivity.FlippedLately(matchup, Map.MapId, now);
+        var recent = sides.Select(side => (Side: side, Counts: activity.Recent(Map.MapId, side))).ToList();
+        RecentKills = WithTotal(recent.Select(r => (r.Side, r.Counts?.Kills)));
+        RecentDeaths = WithTotal(recent.Select(r => (r.Side, r.Counts?.Deaths)));
+        RecentFlips = WithTotal(
+            sides.Select(side => (side, (int?)activity.FlippedLately(matchup, Map.MapId, now, side))),
+            activity.FlippedLately(matchup, Map.MapId, now)
+        );
         WvwColor? yours = matchup.Teams.FirstOrDefault(t => t.IsYours)?.Color;
         Capturable = yours is { } team ? WvwActivity.Capturable(matchup, Map.MapId, team, now) : 0;
     }
 
-    /// <summary>"3.2", or "–" while there isn't enough history for a rate.</summary>
-    private static string Rate(double? perMinute) =>
-        perMinute is { } rate ? rate.ToString("0.0", CultureInfo.CurrentCulture) : "–";
+    /// <summary>
+    /// Each side's count, then the total: <paramref name="total"/>, or the sides' sum (unknown while any side's is).
+    /// </summary>
+    private static List<WvwSideNumber> WithTotal(IEnumerable<(WvwColor Side, int? Count)> counts, int? total = null)
+    {
+        var bySide = counts.ToList();
+        int? sum = total ?? (bySide.All(c => c.Count is not null) ? bySide.Sum(c => c.Count!.Value) : null);
+        return [.. bySide.Select(c => new WvwSideNumber(c.Side, Count(c.Count))), new WvwSideNumber(null, Count(sum))];
+    }
+
+    /// <summary>The count, or "–" while there isn't enough history for one.</summary>
+    private static string Count(int? count) => count?.ToString(CultureInfo.CurrentCulture) ?? "–";
 }
 
 /// <summary>A flip in the WvW side panel's feed, with how long ago it was.</summary>

@@ -30,28 +30,28 @@ public sealed class WvwActivityTests
         );
 
     [Fact]
-    public void Kills_and_deaths_per_minute_come_from_the_change_over_the_last_minutes()
+    public void Recent_kills_and_deaths_are_the_change_over_the_last_minutes()
     {
         var activity = new WvwActivity();
         activity.Add(Matchup(100), Now.AddMinutes(-4));
         activity.Add(Matchup(120), Now.AddMinutes(-2));
         activity.Add(Matchup(140), Now);
 
-        (double kills, double deaths)? red = activity.PerMinute(38, WvwColor.Red, Now);
-        (double kills, double deaths)? blue = activity.PerMinute(38, WvwColor.Blue, Now);
+        (int kills, int deaths)? red = activity.Recent(38, WvwColor.Red);
+        (int kills, int deaths)? blue = activity.Recent(38, WvwColor.Blue);
 
-        Assert.Equal(10, red?.kills);
-        Assert.Equal(5, blue?.deaths);
+        Assert.Equal(40, red?.kills);
+        Assert.Equal(20, blue?.deaths);
     }
 
     [Fact]
-    public void There_is_no_rate_until_there_is_a_minute_of_history()
+    public void There_is_no_count_until_there_is_a_minute_of_history()
     {
         var activity = new WvwActivity();
         activity.Add(Matchup(100), Now.AddSeconds(-30));
         activity.Add(Matchup(110), Now);
 
-        Assert.Null(activity.PerMinute(38, WvwColor.Red, Now));
+        Assert.Null(activity.Recent(38, WvwColor.Red));
     }
 
     [Fact]
@@ -67,7 +67,9 @@ public sealed class WvwActivityTests
         );
 
         Assert.Equal(2, WvwActivity.Capturable(matchup, 38, WvwColor.Red, Now));
-        Assert.Equal(1, WvwActivity.FlippedLately(matchup, 38, Now));
+        Assert.Equal(1, new WvwActivity().FlippedLately(matchup, 38, Now));
+        Assert.Equal(1, new WvwActivity().FlippedLately(matchup, 38, Now, to: WvwColor.Green));
+        Assert.Equal(0, new WvwActivity().FlippedLately(matchup, 38, Now, to: WvwColor.Blue));
     }
 
     [Fact]
