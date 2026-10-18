@@ -14,5 +14,5 @@ public sealed class Account
     public int FractalLevel { get; set; }
     public int DailyAp { get; set; }
     public int MonthlyAp { get; set; }
-    public int WvwRank { get; set; }
+    public AccountWvwProgress Wvw { get; set; } = null!;
 }

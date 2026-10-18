@@ -41,7 +41,7 @@ public class Gw2ApiClientTests
 
         HttpRequestMessage request = Assert.Single(handler.Requests);
         Assert.Equal("/v2/items?ids=1,2", request.RequestUri!.PathAndQuery);
-        Assert.Equal("2022-03-23T19:00:00.000Z", Assert.Single(request.Headers.GetValues("X-Schema-Version")));
+        Assert.Equal("2025-08-29T01:00:00.000Z", Assert.Single(request.Headers.GetValues("X-Schema-Version")));
         Assert.Contains("Gw2Gizmos", request.Headers.UserAgent.ToString());
     }
 

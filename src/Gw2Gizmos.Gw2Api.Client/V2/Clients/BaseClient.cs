@@ -10,7 +10,7 @@ public abstract class BaseClient
     private readonly string _idsParameterName;
 
     private const string SchemaVersionHeaderName = "X-Schema-Version";
-    protected const string SchemaVersion = "2022-03-23T19:00:00.000Z";
+    protected const string SchemaVersion = "2025-08-29T01:00:00.000Z";
 
     internal BaseClient(HttpClient httpClient, string idsParameterName = "ids")
     {
