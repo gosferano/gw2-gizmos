@@ -56,7 +56,11 @@ public static class MetaEvents
 
         // Secrets of the Obscure
         Meta("skywatch", "Unlock the Wizard's Tower", "Skywatch Archipelago", "[&BL4NAAA=]", Schedule.Every(TwoHours, T("01:00")), 25, Expansion.SecretsOfTheObscure),
-        Meta("wizards-tower", "Wizard's Tower", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:40")), 25, Expansion.SecretsOfTheObscure),
+        // The Wizard's Tower has no meta of its own but two events (the wiki's timer): Target Practice from :00 of odd
+        // hours for 55 minutes, overlapping Fly by Night from :40 for 40. Fly by Night keeps the old entry's id, so
+        // favourites and reminders set on it carry over.
+        Meta("wizards-tower", "Fly by Night", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:40")), 40, Expansion.SecretsOfTheObscure),
+        Meta("wizards-tower-target-practice", "Skyscale Target Practice", "Wizard's Tower", "[&BB8OAAA=]", Schedule.Every(TwoHours, T("01:00")), 55, Expansion.SecretsOfTheObscure),
         Meta("amnytas", "Defense of Amnytas", "Amnytas", "[&BDQOAAA=]", Schedule.Every(TwoHours, T("00:00")), 25, Expansion.SecretsOfTheObscure),
 
         // Janthir Wilds
