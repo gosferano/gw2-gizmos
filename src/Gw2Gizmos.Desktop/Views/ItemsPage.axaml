@@ -156,6 +156,10 @@
                                             <TextBlock FontWeight="Medium" VerticalAlignment="Center" c:ItemRarity.ItemId="{Binding ItemId}">
                                                 <Run Text="{Binding Count}" /><Run Text="x " /><Run Text="{Binding ItemName}" />
                                             </TextBlock>
+                                            <!-- How it's acquired when that isn't a craft, e.g. "(from the legendary armory)". -->
+                                            <TextBlock Text="{Binding AcquiredVia, StringFormat=' (from {0})'}" Opacity="0.6"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding AcquiredVia, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             <!-- Craft-vs-buy economics: meaningful only with price history on; hidden (so
                                                  the tree reads as a plain ingredient breakdown) when it's off. -->
                                             <StackPanel Orientation="Horizontal" Classes="economics" VerticalAlignment="Center"

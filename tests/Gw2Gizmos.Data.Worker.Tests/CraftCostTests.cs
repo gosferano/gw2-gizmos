@@ -17,6 +17,7 @@ public sealed class CraftCostTests : IDisposable
     private const int Twilight = 30704;
     private const int CrystallineDust = 24277;
     private const int PhilosophersStone = 20796;
+    private const int MemoryOfSunrise = 95081;
 
     private readonly WorkerDbFixture _fixture = new();
 
@@ -58,5 +59,17 @@ public sealed class CraftCostTests : IDisposable
         Assert.Contains(eternity.Ingredients, ingredient => ingredient.ItemId == Twilight);
         Assert.True(eternity.CraftCostKnown);
         Assert.True(eternity.CraftingCost >= 45_000_000);
+    }
+
+    [Fact]
+    public async Task A_memory_from_the_legendary_armory_costs_what_its_legendary_does()
+    {
+        Seed((Sunrise, 20_000_000));
+
+        RecipeNode memory = await TreeOf(MemoryOfSunrise);
+
+        Assert.Equal("the legendary armory", memory.AcquiredVia);
+        Assert.Equal(Sunrise, Assert.Single(memory.Ingredients).ItemId);
+        Assert.Equal(20_000_000m, memory.EffectiveCostOrNull);
     }
 }

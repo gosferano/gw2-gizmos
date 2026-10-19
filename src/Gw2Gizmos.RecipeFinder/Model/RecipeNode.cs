@@ -27,6 +27,10 @@ public class RecipeNode
     public bool AutoExpand => Depth < 2;
     public bool IsCurrency { get; set; }
 
+    /// <summary>How this item is acquired from its ingredients when that isn't crafting or the Mystic Forge, e.g.
+    /// "the legendary armory" for a Memory of Sunrise made from Sunrise; null otherwise.</summary>
+    public string? AcquiredVia { get; set; }
+
     /// <summary>Whether some NPC vendor sells this item for <em>any</em> currency (coin, karma, laurels, …), set
     /// by the builder from the vendor catalog. An uncraftable, untradeable item that's still vendor-acquirable is
     /// obtainable (just not coin-priced), so it counts as known-cost rather than genuinely unpriceable.</summary>

@@ -185,6 +185,7 @@ public class RecipeTreeBuilder
                 currentNode.BuyPricePerUnit = scaledNode.BuyPricePerUnit;
                 currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
+                currentNode.AcquiredVia = scaledNode.AcquiredVia;
                 currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
                 currentNode.VendorOffers = scaledNode.VendorOffers;
                 currentNode.VendorCoinCostPerUnit = scaledNode.VendorCoinCostPerUnit;
@@ -270,6 +271,7 @@ public class RecipeTreeBuilder
                     {
                         currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
                         currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                        currentNode.AcquiredVia = bestRecipeTree.AcquiredVia;
                         currentNode.Ingredients = bestRecipeTree.Ingredients;
                         _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                     }
@@ -343,6 +345,7 @@ public class RecipeTreeBuilder
             CraftingCostPerUnit = node.CraftingCostPerUnit,
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
+            AcquiredVia = node.AcquiredVia,
             IsVendorAcquirable = node.IsVendorAcquirable,
             VendorOffers = node.VendorOffers,
             VendorCoinCostPerUnit = node.VendorCoinCostPerUnit,
@@ -420,7 +423,8 @@ public class RecipeTreeBuilder
         {
             ItemId = recipe.OutputItemId,
             Count = targetCount,
-            OutputItemCount = recipe.OutputItemCount
+            OutputItemCount = recipe.OutputItemCount,
+            AcquiredVia = recipe.Method
         };
 
         // Whole forges to cover the target (yield may be fractional for random/promotion recipes).
