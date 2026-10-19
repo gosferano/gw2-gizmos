@@ -3,7 +3,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>Gw2Gizmos.Gw2Api.Contract</PackageId>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <Description>Request/response contract types (DTOs) for the Guild Wars 2 API (v2).</Description>
     <PackageTags>guildwars2;gw2;api;contract;dto</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
