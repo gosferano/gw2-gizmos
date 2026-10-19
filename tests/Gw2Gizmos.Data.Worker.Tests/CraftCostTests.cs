@@ -1,6 +1,10 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.Worker.Updaters;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
 
@@ -72,4 +76,48 @@ public sealed class CraftCostTests : IDisposable
         Assert.Equal(Sunrise, Assert.Single(memory.Ingredients).ItemId);
         Assert.Equal(20_000_000m, memory.EffectiveCostOrNull);
     }
+
+    [Fact]
+    public async Task The_cached_craft_cost_is_left_out_when_a_direct_ingredient_cannot_be_acquired()
+    {
+        // Made-up ids no vendor sells: 9_000_001 and 9_000_002 are crafted from a priced material, the second also
+        // from one that can't be acquired (no price, recipe or vendor).
+        const int Priced = 9_000_010, Unobtainable = 9_000_011;
+        Seed((Priced, 500));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.AddRange(
+                CraftOf(9_000_001, (Priced, 2)),
+                CraftOf(9_000_002, (Priced, 2), (Unobtainable, 1))
+            );
+            db.SaveChanges();
+        }
+
+        await using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            var updater = new ItemCraftCostUpdater(db, NullLogger<ItemCraftCostUpdater>.Instance);
+            await updater.UpdateCraftCosts(CancellationToken.None);
+        }
+
+        Dictionary<int, double> cached = _fixture
+            .NewContext()
+            .ItemCraftCosts.AsNoTracking()
+            .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
+        Assert.Equal(1_000, cached[9_000_001]);
+        Assert.False(cached.ContainsKey(9_000_002));
+    }
+
+    private static Recipe CraftOf(int output, params (int ItemId, int Count)[] ingredients) =>
+        new()
+        {
+            Type = "Refinement",
+            OutputItemId = output,
+            OutputItemCount = 1,
+            ChatLink = "",
+            Ingredients = ingredients
+                .Select(ingredient =>
+                    new RecipeIngredient { Id = ingredient.ItemId, Count = ingredient.Count, Type = "Item" }
+                )
+                .ToList(),
+        };
 }
