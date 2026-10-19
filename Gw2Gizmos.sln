@@ -76,6 +76,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Platform.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Platform.Windows", "src\Gw2Gizmos.Desktop.Platform.Windows\Gw2Gizmos.Desktop.Platform.Windows.csproj", "{76603DA3-FB58-4C53-848B-4D058849873B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gw2Gizmos.Desktop.Tests", "tests\Gw2Gizmos.Desktop.Tests\Gw2Gizmos.Desktop.Tests.csproj", "{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -398,6 +400,18 @@ Global
 		{76603DA3-FB58-4C53-848B-4D058849873B}.Release|x64.Build.0 = Release|Any CPU
 		{76603DA3-FB58-4C53-848B-4D058849873B}.Release|x86.ActiveCfg = Release|Any CPU
 		{76603DA3-FB58-4C53-848B-4D058849873B}.Release|x86.Build.0 = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|x64.Build.0 = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Debug|x86.Build.0 = Debug|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|x64.ActiveCfg = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|x64.Build.0 = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|x86.ActiveCfg = Release|Any CPU
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -429,5 +443,6 @@ Global
 		{3AE0EA2B-B9EE-4ADF-96B1-5AFD8EF32A3D} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
 		{A6A32F7E-5923-4CEA-AF23-7E2DCD07BDFC} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
 		{76603DA3-FB58-4C53-848B-4D058849873B} = {A1B2C3D4-E5F6-4789-ABCD-1234567890AB}
+		{0ED4A272-324E-4ED4-A6D2-B4AAF0DA81D5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
