@@ -82,6 +82,21 @@ public sealed class LogsViewModelTests
         }
     }
 
+    [Fact]
+    public void Coming_back_to_the_page_catches_up_and_follows_the_log_again()
+    {
+        var store = new LogStore(new InlineDispatcher());
+        var views = new CapturingViewFactory();
+        var logs = new LogsViewModel(store, views);
+        logs.OnNavigatedFrom();
+        store.Add(Line(1));
+
+        logs.OnNavigatedTo();
+        store.Add(Line(2));
+
+        Assert.Equal(["line 2", "line 1"], views.Source!.Cast<LogEntry>().Select(entry => entry.Message));
+    }
+
     private sealed class InlineDispatcher : IUiDispatcher
     {
         public bool CheckAccess() => true;

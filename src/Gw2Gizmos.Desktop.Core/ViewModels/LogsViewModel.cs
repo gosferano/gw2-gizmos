@@ -9,8 +9,9 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the Logs page: the recent log lines, filterable by text, level and process. The page shows its own copy of
-/// the app-wide <see cref="LogStore"/>, kept in step while the page is open and let go when it closes — a view left
-/// following the shared, ever-changing list after its page was gone once crashed the app overnight.
+/// the app-wide <see cref="LogStore"/>, kept in step while the page is open, let go when it closes — a view left
+/// following the shared, ever-changing list after its page was gone once crashed the app overnight — and caught up
+/// when it opens again.
 /// </summary>
 public sealed class LogsViewModel : ViewModelBase, INavigationAware
 {
@@ -30,6 +31,14 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
         _view = views.Create(_entries);
         _view.Filter = Matches;
         store.Entries.CollectionChanged += OnStoreChanged;
+    }
+
+    /// <summary>Back on the page: catch up on what was logged while away and follow the log again.</summary>
+    public void OnNavigatedTo()
+    {
+        _store.Entries.CollectionChanged -= OnStoreChanged;
+        Resync();
+        _store.Entries.CollectionChanged += OnStoreChanged;
     }
 
     public void OnNavigatedFrom() => _store.Entries.CollectionChanged -= OnStoreChanged;
