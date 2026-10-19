@@ -65,6 +65,9 @@ public static class WorkerFeatures
         "Your open buy and sell orders (flagged when undercut or outbid) and a log of completed trades.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.TradingPost) });
 
+    public static readonly WorkerFeature Achievements = new(
+        "Achievements", "Achievements", "Your progress on each achievement.",
+        new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Progression) });
     public static readonly WorkerFeature PlaySessions = new(
         "PlaySessions", "Play sessions",
         "Tracks play sessions and per-character switches from MumbleLink; loot deltas use the "
@@ -73,7 +76,11 @@ public static class WorkerFeatures
 
     /// <summary>All worker features, in display order (public data first, then account-bound).</summary>
     public static IReadOnlyList<WorkerFeature> All { get; } =
-        new[] { ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory, TradingPost, PlaySessions };
+        new[]
+        {
+            ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory,
+            TradingPost, Achievements, PlaySessions,
+        };
 
     /// <summary>
     /// Every GW2 permission that can appear on a key — shown in full on the API Keys page. Sourced from

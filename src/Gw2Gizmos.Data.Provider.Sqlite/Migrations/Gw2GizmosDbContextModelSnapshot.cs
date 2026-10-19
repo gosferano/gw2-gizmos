@@ -349,6 +349,42 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("MapSegments");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AccountAchievement", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AchievementId")
+                        .HasColumnType("INTEGER");
+
+                    b.PrimitiveCollection<string>("Bits")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Current")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Done")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Max")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("Repeated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SyncedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("Unlocked")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "AchievementId");
+
+                    b.ToTable("AccountAchievements");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.Achievement", b =>
                 {
                     b.Property<int>("Id")

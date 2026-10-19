@@ -88,6 +88,9 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<TradingPostOrder> TradingPostOrders { get; set; }
     public DbSet<TradingPostTransaction> TradingPostTransactions { get; set; }
 
+    // The account's achievement progress (replaced each sync).
+    public DbSet<AccountAchievement> AccountAchievements { get; set; }
+
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
 

@@ -1,5 +1,6 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
@@ -168,6 +169,13 @@ public class AccountSyncUpdater
         {
             // The trading post doesn't change what a session earned in-game, so a boundary sync leaves it.
             await RunSection(WorkerFeatures.TradingPost, account, permissions, () => SyncTradingPostAsync(client, account.Id, now, stoppingToken));
+            // Nor achievement progress.
+            await RunSection(
+                WorkerFeatures.Achievements,
+                account,
+                permissions,
+                () => SyncAchievementsAsync(client, account.Id, now, stoppingToken)
+            );
         }
 
         return account.Name;
@@ -326,6 +334,37 @@ public class AccountSyncUpdater
     /// so after the first sync (which reads all of the API's 90 days) paging stops at the first trade already
     /// stored — normally a single page. Returns the open orders plus the new trades.
     /// </summary>
+    private async Task<int> SyncAchievementsAsync(
+        Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        // Replaced wholesale: the API lists every achievement with progress, so what's stored is exactly that list.
+        Api.AccountAchievement[]? progress = await client.V2.Account.Achievements.GetBlob(stoppingToken);
+        if (progress is null)
+        {
+            return 0;
+        }
+
+        await _dbContext.AccountAchievements.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        foreach (Api.AccountAchievement achievement in progress.DistinctBy(a => a.Id))
+        {
+            _dbContext.AccountAchievements.Add(new AccountAchievement
+            {
+                AccountId = accountId,
+                AchievementId = achievement.Id,
+                Current = achievement.Current,
+                Max = achievement.Max,
+                Done = achievement.Done,
+                Bits = achievement.Bits,
+                Repeated = achievement.Repeated,
+                Unlocked = achievement.Unlocked,
+                SyncedAtUtc = now,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return progress.Length;
+    }
+
     private async Task<int> SyncTradingPostAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
     {
         // Open orders, replaced wholesale.
