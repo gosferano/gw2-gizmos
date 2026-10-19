@@ -186,6 +186,7 @@ public class RecipeTreeBuilder
                 currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
                 currentNode.AcquiredVia = scaledNode.AcquiredVia;
+                currentNode.IsEarned = scaledNode.IsEarned;
                 currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
                 currentNode.VendorOffers = scaledNode.VendorOffers;
                 currentNode.VendorCoinCostPerUnit = scaledNode.VendorCoinCostPerUnit;
@@ -208,6 +209,13 @@ public class RecipeTreeBuilder
             // acquirable rather than genuinely unpriceable. CopperPriceFor already folded coin vendors into price.
             currentNode.IsVendorAcquirable = VendorItems.IsAcquirable(currentNode.ItemId);
             AttachVendorCost(currentNode);
+
+            // Earned by playing (e.g. Gift of Exploration from world completion): obtainable for no coin.
+            if (EarnedItems.ByItemId.TryGetValue(currentNode.ItemId, out string? earnedBy))
+            {
+                currentNode.IsEarned = true;
+                currentNode.AcquiredVia = earnedBy;
+            }
 
             // Fetch item name with fallback
             currentNode.ItemName = GetItemName(currentNode.ItemId);
@@ -346,6 +354,7 @@ public class RecipeTreeBuilder
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
             AcquiredVia = node.AcquiredVia,
+            IsEarned = node.IsEarned,
             IsVendorAcquirable = node.IsVendorAcquirable,
             VendorOffers = node.VendorOffers,
             VendorCoinCostPerUnit = node.VendorCoinCostPerUnit,

@@ -27,9 +27,15 @@ public class RecipeNode
     public bool AutoExpand => Depth < 2;
     public bool IsCurrency { get; set; }
 
-    /// <summary>How this item is acquired from its ingredients when that isn't crafting or the Mystic Forge, e.g.
-    /// "the legendary armory" for a Memory of Sunrise made from Sunrise; null otherwise.</summary>
+    /// <summary>How this item is acquired when that isn't crafting, the Mystic Forge or buying it: from its
+    /// ingredients (e.g. "the legendary armory" for a Memory of Sunrise made from Sunrise) or by playing (e.g.
+    /// "world completion", see <see cref="IsEarned"/>); null otherwise.</summary>
     public string? AcquiredVia { get; set; }
+
+    /// <summary>Whether this item is earned by playing (world completion, a reward track, …), set by the builder.
+    /// Like a vendor item sold for a currency, it's obtainable without coin, so it counts as 0 rather than as an
+    /// unknown that leaves its parent's craft cost incomplete.</summary>
+    public bool IsEarned { get; set; }
 
     /// <summary>Whether some NPC vendor sells this item for <em>any</em> currency (coin, karma, laurels, …), set
     /// by the builder from the vendor catalog. An uncraftable, untradeable item that's still vendor-acquirable is
@@ -151,7 +157,7 @@ public class RecipeNode
             {
                 // Cheapest buy/vendor coin-equivalent; else 0 when a vendor sells it for a currency we couldn't
                 // value (obtainable, just uncosted); else genuinely unknown (account-bound, no acquisition path).
-                return acquire ?? (IsVendorAcquirable ? 0m : null);
+                return acquire ?? (IsVendorAcquirable || IsEarned ? 0m : null);
             }
 
             decimal craftSum = 0m;

@@ -78,6 +78,21 @@ public sealed class CraftCostTests : IDisposable
     }
 
     [Fact]
+    public async Task Items_earned_by_playing_count_as_obtainable_for_no_coin()
+    {
+        const int GiftOfMastery = 19674, GiftOfExploration = 19677, GiftOfBattle = 19678;
+
+        RecipeNode gift = await TreeOf(GiftOfMastery);
+
+        RecipeNode exploration = gift.Ingredients.Single(ingredient => ingredient.ItemId == GiftOfExploration);
+        RecipeNode battle = gift.Ingredients.Single(ingredient => ingredient.ItemId == GiftOfBattle);
+        Assert.Equal("world completion", exploration.AcquiredVia);
+        Assert.Equal("a WvW reward track", battle.AcquiredVia);
+        Assert.Equal(0m, exploration.EffectiveCostOrNull);
+        Assert.Equal(0m, battle.EffectiveCostOrNull);
+    }
+
+    [Fact]
     public async Task The_cached_craft_cost_is_left_out_when_a_direct_ingredient_cannot_be_acquired()
     {
         // Made-up ids no vendor sells: 9_000_001 and 9_000_002 are crafted from a priced material, the second also
