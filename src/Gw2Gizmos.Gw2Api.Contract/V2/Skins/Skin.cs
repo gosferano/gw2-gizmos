@@ -9,7 +9,7 @@ public class Skin
     public SkinType Type { get; set; }
     public SkinFlag[] Flags { get; set; } = Array.Empty<SkinFlag>();
     public ItemRestriction[] Restrictions { get; set; } = Array.Empty<ItemRestriction>();
-    public string Icon { get; set; } = null!;
+    public string? Icon { get; set; }
     public ItemRarity Rarity { get; set; }
-    public string Description { get; set; } = null!;
+    public string? Description { get; set; }
 }
