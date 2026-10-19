@@ -22,7 +22,16 @@ dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper
 
 # 2. Vendor prices for those recipes' ingredients  ->  vendor-items.json   (run after step 1)
 dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper -- vendors
+
+# 3. Names of achievement objective items /v2/items doesn't list  ->  unlisted-items.json
+dotnet run --project tools/Gw2Gizmos.Wiki.DataScraper -- unlisted-items
 ```
+
+The third mode reads every achievement from the GW2 API, keeps the objective items `/v2/items` doesn't return (a
+legendary collection's journals and relics, for example) and names them from the wiki's SMW `Has game id`, using
+`Has canonical name` (the in-game name) over the page title, which can carry a disambiguation. The wiki caps a query's
+size, so it asks 15 ids at a time. Gzip the result into
+`src/Gw2Gizmos.Data.Static/Achievements/Data/unlisted-items.json.gz`. As of 2026-10: **1,298 of 1,300** named.
 
 Both artifacts land in the build output directory (`bin/Debug/net10.0/`). As of 2026-06: **2,159 recipes**
 and **488 vendor-sold ingredients**.

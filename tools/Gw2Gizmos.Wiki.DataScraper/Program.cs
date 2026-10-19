@@ -31,6 +31,13 @@ if (args.Length > 0 && args[0].Equals("vendors", StringComparison.OrdinalIgnoreC
     return;
 }
 
+// Unlisted-items mode: names for the achievement objective items the API's /v2/items doesn't list.
+if (args.Length > 0 && args[0].Equals("unlisted-items", StringComparison.OrdinalIgnoreCase))
+{
+    await ScrapeUnlistedItemsAsync();
+    return;
+}
+
 // 1. Enumerate every page in the Mystic Forge recipes category.
 List<string> titles = await ListCategoryPagesAsync(Category);
 Console.Error.WriteLine($"{titles.Count} page(s) in {Category}.");
@@ -118,6 +125,122 @@ Console.Error.WriteLine($"Wrote {recipesWithIds.Count} recipe(s) to {outPath}");
 Console.Error.WriteLine("Next: 'dotnet run -- vendors' to scrape vendor prices for these recipes' ingredients.");
 
 // --- helpers ---
+
+// Unlisted-items mode entry point. Achievement objectives (e.g. a legendary collection's pieces) often refer to items
+// /v2/items doesn't list, so the app has no name for them. Collect every objective item id from /v2/achievements, keep
+// the ones /v2/items doesn't return, and name them from the wiki's SMW [[Has game id::…]].
+async Task ScrapeUnlistedItemsAsync()
+{
+    const string Gw2Api = "https://api.guildwars2.com/v2";
+    using var api = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+    api.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
+
+    int[] achievementIds = JsonSerializer.Deserialize<int[]>(await api.GetStringAsync($"{Gw2Api}/achievements"))!;
+    var objectiveItemIds = new SortedSet<int>();
+    foreach (int[] chunk in achievementIds.Chunk(200))
+    {
+        using JsonDocument page = JsonDocument.Parse(
+            await api.GetStringAsync($"{Gw2Api}/achievements?ids={string.Join(',', chunk)}"));
+        foreach (JsonElement achievement in page.RootElement.EnumerateArray())
+        {
+            if (!achievement.TryGetProperty("bits", out JsonElement bits))
+            {
+                continue;
+            }
+
+            foreach (JsonElement bit in bits.EnumerateArray())
+            {
+                if (bit.TryGetProperty("type", out JsonElement type) && type.GetString() == "Item"
+                    && bit.TryGetProperty("id", out JsonElement id))
+                {
+                    objectiveItemIds.Add(id.GetInt32());
+                }
+            }
+        }
+    }
+
+    // Which the API lists: an ids query returns those it knows (an error object when it knows none).
+    var listed = new HashSet<int>();
+    foreach (int[] chunk in objectiveItemIds.Chunk(200))
+    {
+        using HttpResponseMessage response = await api.GetAsync($"{Gw2Api}/items?ids={string.Join(',', chunk)}");
+        using JsonDocument page = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        if (page.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in page.RootElement.EnumerateArray())
+            {
+                listed.Add(item.GetProperty("id").GetInt32());
+            }
+        }
+    }
+
+    List<int> unlisted = objectiveItemIds.Where(id => !listed.Contains(id)).ToList();
+    Console.Error.WriteLine(
+        $"{achievementIds.Length} achievements, {objectiveItemIds.Count} objective item(s), "
+        + $"{unlisted.Count} unlisted.");
+
+    // The wiki page of each, by its game id; a page can carry several ids, so only the asked-for ones are kept. The
+    // wiki caps a query's size, so a few ids per request, and a [[Has context::Item]] condition on top gets dropped:
+    // the context is printed instead and pages of another context sharing the number (skills, effects) skipped.
+    var names = new SortedDictionary<int, string>();
+    foreach (int[] chunk in unlisted.Chunk(15))
+    {
+        var wanted = chunk.ToHashSet();
+        string query =
+            $"[[Has game id::{string.Join("||", chunk)}]]|?Has game id|?Has context|?Has canonical name|limit=500";
+        string url = $"{ApiUrl}?action=ask&format=json&query={Uri.EscapeDataString(query)}";
+        string body = await GetWithRetryAsync(url);
+        if (body.Contains("\"error\"", StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine(
+                $"  The wiki refused the query for {chunk[0]}…: {body[..Math.Min(200, body.Length)]}");
+        }
+
+        using JsonDocument doc = JsonDocument.Parse(body);
+        if (doc.RootElement.TryGetProperty("query", out JsonElement q)
+            && q.TryGetProperty("results", out JsonElement results)
+            && results.ValueKind == JsonValueKind.Object)
+        {
+            foreach (JsonProperty page in results.EnumerateObject())
+            {
+                JsonElement printouts = page.Value.GetProperty("printouts");
+                if (!AllValues(printouts, "Has context").Contains("Item")
+                    || !printouts.TryGetProperty("Has game id", out JsonElement ids))
+                {
+                    continue;
+                }
+
+                foreach (JsonElement value in ids.EnumerateArray())
+                {
+                    if (value.ValueKind == JsonValueKind.Number && wanted.Contains(value.GetInt32()))
+                    {
+                        // The in-game name; the page title can carry a disambiguation, e.g. "Karka Hatchling
+                        // (trophy 38)".
+                        string name = AllValues(printouts, "Has canonical name").FirstOrDefault() ?? page.Name;
+                        names.TryAdd(value.GetInt32(), name);
+                    }
+                }
+            }
+        }
+
+        Console.Error.WriteLine($"  {names.Count}/{unlisted.Count} named…");
+        await Task.Delay(600);
+    }
+
+    string path = Path.Combine(AppContext.BaseDirectory, "unlisted-items.json");
+    string json = JsonSerializer.Serialize(
+        new
+        {
+            source = "https://wiki.guildwars2.com",
+            count = names.Count,
+            items = names.Select(pair => new { Id = pair.Key, Name = pair.Value }),
+        },
+        new JsonSerializerOptions { WriteIndented = true });
+    await File.WriteAllTextAsync(path, json);
+    Console.Error.WriteLine(
+        $"Wrote {names.Count} of {unlisted.Count} unlisted item name(s) to {path}; "
+        + $"{unlisted.Count - names.Count} not on the wiki.");
+}
 
 // Vendor mode entry point: read the recipe artifact's ingredients and write their vendor offers.
 // Pull the entire vendor catalog from SMW, keyed by GW2 item id (what Data.Static needs). We keep ALL items,
