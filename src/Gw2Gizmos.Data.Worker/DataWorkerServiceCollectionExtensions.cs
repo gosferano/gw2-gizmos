@@ -41,6 +41,7 @@ public static class DataWorkerServiceCollectionExtensions
         services.AddScoped<MapsUpdater>();
         services.AddScoped<ProfessionsUpdater>();
         services.AddScoped<AchievementsUpdater>();
+        services.AddScoped<WardrobeUpdater>();
         services.AddScoped<AccountValueUpdater>();
         services.AddScoped<RecipesUpdater>();
         services.AddScoped<ItemCraftCostUpdater>();

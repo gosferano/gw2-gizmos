@@ -7,6 +7,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -103,6 +104,10 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<AchievementGroup> AchievementGroups { get; set; }
     public DbSet<AchievementCategory> AchievementCategories { get; set; }
     public DbSet<Achievement> Achievements { get; set; }
+
+    // The wardrobe (master data): skins with their type-specific details, and miniatures.
+    public DbSet<Skin> Skins { get; set; }
+    public DbSet<Mini> Minis { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

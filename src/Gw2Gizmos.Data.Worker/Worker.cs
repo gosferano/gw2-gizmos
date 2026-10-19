@@ -43,6 +43,7 @@ public class Worker : BackgroundService
         using var mapsTimer = new PeriodicTimer(WorkerSyncs.Maps.Default);
         using var professionsTimer = new PeriodicTimer(WorkerSyncs.Professions.Default);
         using var achievementsTimer = new PeriodicTimer(WorkerSyncs.Achievements.Default);
+        using var wardrobeTimer = new PeriodicTimer(WorkerSyncs.Wardrobe.Default);
         using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
         using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
         // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
@@ -61,6 +62,7 @@ public class Worker : BackgroundService
             RunMapsUpdater(mapsTimer, stoppingToken),
             RunProfessionsUpdater(professionsTimer, stoppingToken),
             RunAchievementsUpdater(achievementsTimer, stoppingToken),
+            RunWardrobeUpdater(wardrobeTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
@@ -119,6 +121,23 @@ public class Worker : BackgroundService
                 {
                     var updater = scope.ServiceProvider.GetRequiredService<MapsUpdater>();
                     await updater.UpdateMaps(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    private async Task RunWardrobeUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Wardrobe.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Wardrobe.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<WardrobeUpdater>();
+                    await updater.UpdateWardrobe(stoppingToken);
                 },
                 stoppingToken
             );
