@@ -1,4 +1,5 @@
 ﻿using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
@@ -6,6 +7,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -87,12 +89,25 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<TradingPostOrder> TradingPostOrders { get; set; }
     public DbSet<TradingPostTransaction> TradingPostTransactions { get; set; }
 
+    // The account's achievement progress (replaced each sync).
+    public DbSet<AccountAchievement> AccountAchievements { get; set; }
+
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }
 
     // Professions and their specializations (master data): names and icons for the character cards.
     public DbSet<Profession> Professions { get; set; }
     public DbSet<Specialization> Specializations { get; set; }
+
+    // Achievements (master data): the game's groups and categories, and each achievement's tiers, objectives and
+    // rewards.
+    public DbSet<AchievementGroup> AchievementGroups { get; set; }
+    public DbSet<AchievementCategory> AchievementCategories { get; set; }
+    public DbSet<Achievement> Achievements { get; set; }
+
+    // The wardrobe (master data): skins with their type-specific details, and miniatures.
+    public DbSet<Skin> Skins { get; set; }
+    public DbSet<Mini> Minis { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,6 +122,14 @@ public class Gw2GizmosDbContext : DbContext
 
         // A character's few crafting disciplines are one JSON column rather than a table of their own.
         modelBuilder.Entity<Character>().OwnsMany(c => c.Crafting, crafting => crafting.ToJson());
+
+        // An achievement's few tiers, objectives and rewards are JSON columns too.
+        modelBuilder.Entity<Achievement>(achievement =>
+        {
+            achievement.OwnsMany(a => a.Tiers, tiers => tiers.ToJson());
+            achievement.OwnsMany(a => a.Bits, bits => bits.ToJson());
+            achievement.OwnsMany(a => a.Rewards, rewards => rewards.ToJson());
+        });
     }
 
     private static void MapRectAsJson<TOwner>(OwnedNavigationBuilder<TOwner, MapRect> rect)

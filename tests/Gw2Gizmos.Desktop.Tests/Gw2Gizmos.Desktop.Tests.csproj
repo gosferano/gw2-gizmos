@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- UI tests of the real Avalonia views, run headless (no screen): layout, scrolling and interaction measured in
+       code. Test SDK + xunit packages and the Xunit using come from tests/Directory.Build.props. -->
+  <!-- On Windows the desktop app targets net10.0-windows (for the WinRT toast API), so its tests must too. -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Desktop\Gw2Gizmos.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\Gw2Gizmos.Data.Provider.Sqlite\Gw2Gizmos.Data.Provider.Sqlite.csproj" />
+  </ItemGroup>
+
+</Project>

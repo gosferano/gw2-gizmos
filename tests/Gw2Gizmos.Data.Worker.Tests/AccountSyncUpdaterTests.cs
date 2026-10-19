@@ -1,5 +1,6 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Microsoft.EntityFrameworkCore;
@@ -435,5 +436,44 @@ public sealed class AccountSyncUpdaterTests : IDisposable
 
         Assert.Equal(0, await Db.TradingPostOrders.CountAsync());
         Assert.Equal(0, await Db.TradingPostTransactions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Achievements_StoresProgress_AndALaterSyncReplacesIt()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        _stub.SetJson(
+            "/v2/account/achievements",
+            """
+            [{"id": 1, "current": 120, "max": 1000, "done": false},
+             {"id": 2258, "bits": [0, 4], "current": 2, "max": 7, "done": false, "unlocked": true}]
+            """
+        );
+        await Sync();
+
+        AccountAchievement collection = await Db.AccountAchievements.SingleAsync(a => a.AchievementId == 2258);
+        Assert.Equal((state.Id, 2, 7, false, true), (collection.AccountId, collection.Current, collection.Max,
+            collection.Done, collection.Unlocked));
+        Assert.Equal([0, 4], collection.Bits);
+
+        _stub.SetJson("/v2/account/achievements", """[{"id": 1, "current": 1000, "max": 1000, "done": true}]""");
+        await Sync();
+
+        AccountAchievement slayer = await Db.AccountAchievements.SingleAsync();
+        Assert.Equal((1, 1000, true), (slayer.AchievementId, slayer.Current, slayer.Done));
+    }
+
+    [Fact]
+    public async Task Achievements_WithoutThePermission_AreSkipped()
+    {
+        AccountStateBuilder state = SmallAccount(); // no "progression" permission
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/achievements", """[{"id": 1, "current": 120, "max": 1000, "done": false}]""");
+
+        await Sync();
+
+        Assert.Equal(0, await Db.AccountAchievements.CountAsync());
     }
 }

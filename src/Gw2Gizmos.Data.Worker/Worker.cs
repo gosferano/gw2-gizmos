@@ -1,3 +1,4 @@
+using Gw2Gizmos.Data.Static;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Data.Worker.Updaters;
@@ -12,6 +13,11 @@ public class Worker : BackgroundService
     private readonly SyncTriggers _triggers;
     private readonly AccountSyncGate _accountSyncGate;
     private readonly ILogger<Worker> _logger;
+    private readonly TimeProvider _time;
+
+    // How long after a game reset the achievements and account syncs are woken: soon after, then once more in case
+    // the API was slow to change over.
+    private static readonly TimeSpan[] ResetSyncDelays = [TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(15)];
 
     // Serializes craft-cost refreshes so the 15-minute timer and the after-price trigger can never run
     // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
@@ -23,8 +29,10 @@ public class Worker : BackgroundService
         IIntervalGate intervalGate,
         SyncTriggers triggers,
         AccountSyncGate accountSyncGate,
+        TimeProvider time,
         ILogger<Worker> logger)
     {
+        _time = time;
         _scopeFactory = scopeFactory;
         _featureGate = featureGate;
         _intervalGate = intervalGate;
@@ -42,6 +50,8 @@ public class Worker : BackgroundService
         using var materialCategoriesTimer = new PeriodicTimer(WorkerSyncs.MaterialCategories.Default);
         using var mapsTimer = new PeriodicTimer(WorkerSyncs.Maps.Default);
         using var professionsTimer = new PeriodicTimer(WorkerSyncs.Professions.Default);
+        using var achievementsTimer = new PeriodicTimer(WorkerSyncs.Achievements.Default);
+        using var wardrobeTimer = new PeriodicTimer(WorkerSyncs.Wardrobe.Default);
         using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
         using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
         // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
@@ -59,6 +69,9 @@ public class Worker : BackgroundService
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunMapsUpdater(mapsTimer, stoppingToken),
             RunProfessionsUpdater(professionsTimer, stoppingToken),
+            RunAchievementsUpdater(achievementsTimer, stoppingToken),
+            RunResetSyncs(stoppingToken),
+            RunWardrobeUpdater(wardrobeTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
@@ -117,6 +130,70 @@ public class Worker : BackgroundService
                 {
                     var updater = scope.ServiceProvider.GetRequiredService<MapsUpdater>();
                     await updater.UpdateMaps(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    /// <summary>
+    /// Wakes the achievements and account syncs after each daily and weekly reset, so the rotating categories (which
+    /// achievements a daily or weekly category holds) and their progress update then, not at the next tick.
+    /// </summary>
+    private async Task RunResetSyncs(CancellationToken stoppingToken)
+    {
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                DateTimeOffset reset = GameResets.Next(_time.GetUtcNow());
+                foreach (TimeSpan after in ResetSyncDelays)
+                {
+                    TimeSpan wait = reset + after - _time.GetUtcNow();
+                    if (wait > TimeSpan.Zero)
+                    {
+                        await Task.Delay(wait, _time, stoppingToken);
+                    }
+
+                    _logger.LogInformation("Game reset at {Reset:u}: refreshing achievements and account data.", reset);
+                    _triggers.Get(WorkerSyncs.Achievements.Key).Signal();
+                    _triggers.Get(WorkerSyncs.Account.Key).Signal();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task RunWardrobeUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Wardrobe.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Wardrobe.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<WardrobeUpdater>();
+                    await updater.UpdateWardrobe(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    private async Task RunAchievementsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Achievements.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Achievements.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<AchievementsUpdater>();
+                    await updater.UpdateAchievements(stoppingToken);
                 },
                 stoppingToken
             );

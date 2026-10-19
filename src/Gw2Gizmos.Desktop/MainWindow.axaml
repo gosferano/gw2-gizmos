@@ -27,6 +27,7 @@
             <ui:FANavigationViewItem Content="Events" IconSource="{c:FluentIconSource Clock24}" Tag="{x:Static nav:AppPage.Events}" />
             <ui:FANavigationViewItem Content="World map" IconSource="{c:FluentIconSource Map24}" Tag="{x:Static nav:AppPage.WorldMap}" />
             <ui:FANavigationViewItem Content="WvW" IconSource="{c:FluentIconSource Shield24}" Tag="{x:Static nav:AppPage.Wvw}" />
+            <ui:FANavigationViewItem Content="Achievements" IconSource="{c:FluentIconSource Trophy24}" Tag="{x:Static nav:AppPage.Achievements}" />
             <ui:FANavigationViewItem Content="Items" IconSource="{c:FluentIconSource BoxMultiple24}" Tag="{x:Static nav:AppPage.Items}" />
             <ui:FANavigationViewItem Content="Trading post" IconSource="{c:FluentIconSource BuildingShop24}" Tag="{x:Static nav:AppPage.TradingPost}" />
             <ui:FANavigationViewItem Content="Price alerts" IconSource="{c:FluentIconSource AlertOn24}" Tag="{x:Static nav:AppPage.PriceAlerts}" />
