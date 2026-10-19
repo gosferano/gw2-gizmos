@@ -90,13 +90,14 @@ public partial class PriceHistoryChart : UserControl
         IReadOnlyList<HistoryPoint> points = _history.Points;
         _times = points.Select(p => p.Time.ToOADate()).ToArray();
 
-        // Volume bars on the right axis, each a little narrower than the typical spacing between polls.
-        double barWidth = TypicalStep(_times) * 0.8;
+        // Volume bars on the right axis, each a little narrower than the gap to its nearest neighbour: the history is
+        // sparse further back and dense lately, so one width for all would overlap where polls are close.
         BarPlot volume = detail.Add.Bars(_times, points.Select(p => (double)p.Volume));
         volume.Axes.YAxis = detail.Axes.Right;
-        foreach (Bar bar in volume.Bars)
+        for (int i = 0; i < volume.Bars.Count; i++)
         {
-            bar.Size = barWidth;
+            Bar bar = volume.Bars[i];
+            bar.Size = NearestGap(_times, i) * 0.8;
             bar.FillColor = VolumeColor;
             bar.LineWidth = 0;
         }
@@ -354,22 +355,18 @@ public partial class PriceHistoryChart : UserControl
         plot.Axes.Margins(0, 0.1);
     }
 
-    /// <summary>The median gap between consecutive points (OA days), for bar widths.</summary>
-    private static double TypicalStep(double[] times)
+    /// <summary>The gap (OA days) from point <paramref name="i"/> to the closer of its neighbours, for its bar's
+    /// width.</summary>
+    private static double NearestGap(double[] times, int i)
     {
         if (times.Length < 2)
         {
             return 1.0 / 24;
         }
 
-        double[] steps = new double[times.Length - 1];
-        for (int i = 1; i < times.Length; i++)
-        {
-            steps[i - 1] = times[i] - times[i - 1];
-        }
-
-        Array.Sort(steps);
-        return Math.Max(steps[steps.Length / 2], 1.0 / (24 * 60));
+        double before = i > 0 ? times[i] - times[i - 1] : double.MaxValue;
+        double after = i < times.Length - 1 ? times[i + 1] - times[i] : double.MaxValue;
+        return Math.Max(Math.Min(before, after), 1.0 / (24 * 60));
     }
 
     /// <summary>Shows a price with coin icons, or the dash when that side of the book was empty.</summary>
