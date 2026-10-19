@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.AchievementsPage"
+             x:DataType="core:AchievementsViewModel">
+    <UserControl.Styles>
+        <!-- "All achievements" starts expanded, showing the groups; a group opens to its categories. The state lives on
+             the node, so a rebuild (after a sync, or toggling hidden ones) keeps what's open. -->
+        <Style Selector="TreeViewItem" x:DataType="core:AchievementScope">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.done">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Title="Achievements" Scrollable="False" MaxContentWidth="100000">
+        <Grid ColumnDefinitions="360,*" ColumnSpacing="12">
+            <!-- The game's groups and categories as the list's scope, each with how many are done. -->
+            <Border Grid.Column="0" CornerRadius="8" Padding="4"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <!-- No sideways scrolling: a long name wraps within the panel instead. -->
+                <TreeView ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate x:DataType="core:AchievementScope" ItemsSource="{Binding Children}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" FontSize="12"
+                                           Classes="secondary" Margin="8,0,4,0" VerticalAlignment="Center" />
+                                <c:IconImage DockPanel.Dock="Left" IconUrl="{Binding Icon}" Width="20" Height="20"
+                                             Margin="0,0,8,0" VerticalAlignment="Center" IsVisible="{Binding HasIcon}" />
+                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Border>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+                <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" Classes="secondary"
+                               VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox ItemsSource="{Binding Filters}" SelectedItem="{Binding Filter}" MinWidth="130"
+                                  Height="{StaticResource FormControlHeight}" VerticalAlignment="Center">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="core:AchievementFilterOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <ComboBox ItemsSource="{Binding Sorts}" SelectedItem="{Binding Sort}" MinWidth="190"
+                                  Height="{StaticResource FormControlHeight}" VerticalAlignment="Center">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="core:AchievementSortOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBox Text="{Binding Search}" PlaceholderText="Search by name" Width="220"
+                                 Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" />
+                        <CheckBox Content="Show hidden" IsChecked="{Binding ShowHidden}" VerticalAlignment="Center"
+                                  ToolTip.Tip="Also list achievements the game hides until they're started" />
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Notes standing in for the list or the progress. -->
+                <StackPanel Grid.Row="1">
+                    <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Classes="secondary"
+                               IsVisible="{Binding !HasAchievements}"
+                               Text="No achievements synced yet. They sync shortly after the app starts." />
+                    <TextBlock Margin="0,0,0,10" TextWrapping="Wrap" Classes="secondary"
+                               IsVisible="{Binding !HasAccount}"
+                               Text="Add an API key with the progression permission to see your progress." />
+                </StackPanel>
+
+                <!-- One row per achievement, opening in place to its details (like Material storage). An ItemsRepeater,
+                     not a ListBox: it places rows relative to those already built, so a row changing height as it opens
+                     or closes leaves the others where they are. The ListBox's panel re-placed every row from an average
+                     row height whenever one changed size, so rows jumped. A gutter on the right for the scrollbar. -->
+                <ScrollViewer Grid.Row="2" Name="AchievementScroller" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsRepeater Name="AchievementList" ItemsSource="{Binding Rows}" Margin="0,0,16,0">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="4" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="core:AchievementRow">
+                            <Expander IsExpanded="{Binding IsExpanded}" HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="44,*,Auto" Margin="0,8">
+                                        <c:IconImage Grid.Column="0" IconUrl="{Binding Icon}" Width="32" Height="32"
+                                                     HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding CategoryName}"
+                                                           FontSize="12" Classes="secondary" Margin="12,0,0,0"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock DockPanel.Dock="Right" Text="Hidden" FontSize="12"
+                                                           Classes="secondary" Margin="12,0,0,0" FontStyle="Italic"
+                                                           VerticalAlignment="Center" IsVisible="{Binding IsHidden}" />
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding Requirement}" FontSize="12" Classes="secondary"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       IsVisible="{Binding HasRequirement}" />
+                                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                                <c:TierBar Grid.Column="0" Height="6" VerticalAlignment="Center"
+                                                           Value="{Binding TotalFraction}" Marks="{Binding TierMarks}"
+                                                           Track="{DynamicResource ControlStrongFillColorDisabledBrush}"
+                                                           Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                                                           Mark="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontSize="12"
+                                                           Margin="12,0,0,0" MinWidth="170" Classes="secondary"
+                                                           Classes.done="{Binding IsDone}" />
+                                            </Grid>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding PointsText}" FontWeight="SemiBold"
+                                                   Margin="16,0,0,0" MinWidth="80" TextAlignment="Right"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </Expander.Header>
+
+                                <!-- The details: description, why it's locked, tiers, objectives and rewards. -->
+                                <StackPanel Spacing="8" Margin="44,0,0,0">
+                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
+                                               IsVisible="{Binding HasDescription}" />
+                                    <TextBlock Text="{Binding Requirement}" TextWrapping="Wrap" Classes="secondary"
+                                               IsVisible="{Binding HasRequirement}" />
+                                    <TextBlock Text="{Binding LockedText}" TextWrapping="Wrap" Foreground="#F5A142"
+                                               IsVisible="{Binding IsLocked}" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="32">
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <TextBlock Text="Tiers" FontWeight="SemiBold" />
+                                            <ItemsControl ItemsSource="{Binding TierLines}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="core:AchievementTierLine">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
+                                                            <TextBlock Text="✓" Classes="done" IsVisible="{Binding Reached}" />
+                                                            <TextBlock Text="○" Classes="secondary" IsVisible="{Binding !Reached}" />
+                                                            <TextBlock Text="{Binding Text}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Rewards" FontWeight="SemiBold" Margin="0,8,0,0"
+                                                       IsVisible="{Binding HasRewards}" />
+                                            <ItemsControl ItemsSource="{Binding Rewards}" IsVisible="{Binding HasRewards}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="x:String">
+                                                        <TextBlock Text="{Binding}" Margin="0,1" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2" IsVisible="{Binding HasObjectives}">
+                                            <TextBlock Text="Objectives" FontWeight="SemiBold" />
+                                            <ItemsControl ItemsSource="{Binding Objectives}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="core:AchievementObjective">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1,20,1"
+                                                                    Width="260">
+                                                            <TextBlock Text="✓" Classes="done" IsVisible="{Binding Done}" />
+                                                            <TextBlock Text="○" Classes="secondary" IsVisible="{Binding !Done}" />
+                                                            <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis"
+                                                                       ToolTip.Tip="{Binding Text}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
+                        </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </c:PageShell>
+</UserControl>

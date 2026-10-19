@@ -23,6 +23,7 @@ public enum AppPage
     Events,
     WorldMap,
     Wvw,
+    Achievements,
     Items,
     TradingPost,
     PriceAlerts,

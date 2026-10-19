@@ -29,6 +29,7 @@ public sealed class PageFactory
         [AppPage.Events] = typeof(EventsPage),
         [AppPage.WorldMap] = typeof(WorldMapPage),
         [AppPage.Wvw] = typeof(WvwPage),
+        [AppPage.Achievements] = typeof(AchievementsPage),
         [AppPage.Items] = typeof(ItemsPage),
         [AppPage.AccountValue] = typeof(AccountValuePage),
         [AppPage.TradingPost] = typeof(TradingPostPage),
