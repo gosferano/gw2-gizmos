@@ -3,7 +3,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>Gw2Gizmos.Gw2Api.Client</PackageId>
-    <Version>0.2.2</Version>
+    <Version>0.2.3</Version>
     <Description>A typed HTTP client for the Guild Wars 2 API (v2). Depends on the contract package for its DTOs.</Description>
     <PackageTags>guildwars2;gw2;api;client</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
