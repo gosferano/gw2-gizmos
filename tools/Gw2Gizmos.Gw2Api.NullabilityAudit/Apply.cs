@@ -182,9 +182,11 @@ internal static class Apply
         string pascal = SnakeToPascal(name);
         foreach (Type t in TypesToSearch(type, all))
         {
+            // Inherited properties too: a subtype path ("[Armor].description") names a property declared on the base
+            // (Skin.Description), which a declared-only lookup on SkinArmor would never find.
             PropertyInfo? prop = t.GetProperty(
                 pascal,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.DeclaredOnly
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase
             );
             if (prop is null)
             {

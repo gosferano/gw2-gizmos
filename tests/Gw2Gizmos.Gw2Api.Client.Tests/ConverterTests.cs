@@ -47,6 +47,21 @@ public class ConverterTests
     }
 
     [Fact]
+    public void A_skin_without_a_description_or_icon_reads_them_as_null()
+    {
+        // As the API returns most skins: no description, and a few gathering tools have no icon either.
+        const string json = """
+            {"id": 5810, "name": "Sickle", "type": "Gathering", "rarity": "Rare", "details": {"type": "Foraging"}}
+            """;
+        Skin? skin = JsonSerializer.Deserialize<Skin>(json, Options);
+
+        SkinGathering gathering = Assert.IsType<SkinGathering>(skin);
+        Assert.Null(gathering.Description);
+        Assert.Null(gathering.Icon);
+        Assert.Equal("Sickle", gathering.Name);
+    }
+
+    [Fact]
     public void Every_polymorphic_family_reads_an_unknown_discriminator_as_its_catch_all()
     {
         const string json = """{"type":"SomethingNew"}""";
