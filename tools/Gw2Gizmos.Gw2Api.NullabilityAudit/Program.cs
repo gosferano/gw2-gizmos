@@ -15,8 +15,16 @@ if (args.Length > 0 && args[0] == "apply")
     return;
 }
 
+// Third mode: report the JSON keys the contract never binds (the client's naming rule matches no property).
+if (args.Length > 0 && args[0] == "keys")
+{
+    Gw2Gizmos.Gw2Api.NullabilityAudit.Keys.Run();
+    return;
+}
+
 const string BaseUrl = "https://api.guildwars2.com";
-const string SchemaVersion = "2022-03-23T19:00:00.000Z";
+// The schema version the client asks for (Gw2Gizmos.Gw2Api.Client's base client), so the audit sees what it sees.
+const string SchemaVersion = "2025-08-29T01:00:00.000Z";
 const int MaxObjectsPerEndpoint = 4000; // strided sample cap, for speed + polymorphic coverage
 const int ChunkSize = 200; // GW2 bulk-expansion limit
 
@@ -181,7 +189,8 @@ static void Walk(JsonElement element, string prefix, EndpointStats stats)
     }
 }
 
-// Emits, per field path, the fields that are EVER null or EVER absent (relative to their parent).
+// Emits, per field path, the fields that are EVER null or EVER absent (relative to their parent), and every field
+// path seen (for the keys mode).
 static object Summarize(EndpointStats stats, int rootObjects)
 {
     var optional = new List<object>();
@@ -208,7 +217,7 @@ static object Summarize(EndpointStats stats, int rootObjects)
         }
     }
 
-    return new { rootObjects, optionalFields = optional };
+    return new { rootObjects, optionalFields = optional, allFields = stats.Present.Keys.Order().ToList() };
 }
 
 // Evenly samples up to `max` items across the list (covers id range + polymorphic variety).

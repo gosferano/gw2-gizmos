@@ -2,6 +2,7 @@
 
 public sealed class SkinArmorDetailsDyeSlots
 {
-    public SkinDyeSlot[] Default { get; set; } = Array.Empty<SkinDyeSlot>();
+    /// <summary>The skin's dye slots, a slot null where it can't be dyed.</summary>
+    public SkinDyeSlot?[] Default { get; set; } = Array.Empty<SkinDyeSlot?>();
     public SkinArmorDetailsDyeSlotsOverrides Overrides { get; set; } = null!;
 }
