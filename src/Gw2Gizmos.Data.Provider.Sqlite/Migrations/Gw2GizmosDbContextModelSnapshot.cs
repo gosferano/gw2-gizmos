@@ -349,6 +349,113 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("MapSegments");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.Achievement", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.PrimitiveCollection<string>("Flags")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LockedText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PointCap")
+                        .HasColumnType("INTEGER");
+
+                    b.PrimitiveCollection<string>("Prerequisites")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Requirement")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Achievements");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.PrimitiveCollection<string>("AchievementIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AchievementCategories");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.PrimitiveCollection<string>("CategoryIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AchievementGroups");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Commerce.PriceSnapshot", b =>
                 {
                     b.Property<long>("Id")
@@ -1543,6 +1650,104 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         });
 
                     b.Navigation("Crafting");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.Achievement", b =>
+                {
+                    b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementBit", "Bits", b1 =>
+                        {
+                            b1.Property<int>("AchievementId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("Id")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Text")
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Type")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("AchievementId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Achievements");
+
+                            b1.ToJson("Bits");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AchievementId");
+                        });
+
+                    b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementReward", "Rewards", b1 =>
+                        {
+                            b1.Property<int>("AchievementId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int?>("Count")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int?>("Id")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Region")
+                                .HasMaxLength(32)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Type")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("AchievementId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Achievements");
+
+                            b1.ToJson("Rewards");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AchievementId");
+                        });
+
+                    b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementTier", "Tiers", b1 =>
+                        {
+                            b1.Property<int>("AchievementId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("Count")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<int>("Points")
+                                .HasColumnType("INTEGER");
+
+                            b1.HasKey("AchievementId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Achievements");
+
+                            b1.ToJson("Tiers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AchievementId");
+                        });
+
+                    b.Navigation("Bits");
+
+                    b.Navigation("Rewards");
+
+                    b.Navigation("Tiers");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorDetails", b =>

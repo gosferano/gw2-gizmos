@@ -42,6 +42,7 @@ public class Worker : BackgroundService
         using var materialCategoriesTimer = new PeriodicTimer(WorkerSyncs.MaterialCategories.Default);
         using var mapsTimer = new PeriodicTimer(WorkerSyncs.Maps.Default);
         using var professionsTimer = new PeriodicTimer(WorkerSyncs.Professions.Default);
+        using var achievementsTimer = new PeriodicTimer(WorkerSyncs.Achievements.Default);
         using var itemsTimer = new PeriodicTimer(WorkerSyncs.Items.Default);
         using var recipesTimer = new PeriodicTimer(WorkerSyncs.Recipes.Default);
         // Recompute craft costs every 15 minutes (also refreshed right after each price poll, since they
@@ -59,6 +60,7 @@ public class Worker : BackgroundService
             RunMaterialCategoriesUpdater(materialCategoriesTimer, stoppingToken),
             RunMapsUpdater(mapsTimer, stoppingToken),
             RunProfessionsUpdater(professionsTimer, stoppingToken),
+            RunAchievementsUpdater(achievementsTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
             RunCraftCostUpdater(craftCostTimer, stoppingToken),
@@ -117,6 +119,23 @@ public class Worker : BackgroundService
                 {
                     var updater = scope.ServiceProvider.GetRequiredService<MapsUpdater>();
                     await updater.UpdateMaps(stoppingToken);
+                },
+                stoppingToken
+            );
+        } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    private async Task RunAchievementsUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+        SyncTrigger trigger = _triggers.Get(WorkerSyncs.Achievements.Key);
+        do
+        {
+            timer.Period = _intervalGate.GetInterval(WorkerSyncs.Achievements.Key);
+            await RunUpdateSafely(
+                async scope =>
+                {
+                    var updater = scope.ServiceProvider.GetRequiredService<AchievementsUpdater>();
+                    await updater.UpdateAchievements(stoppingToken);
                 },
                 stoppingToken
             );

@@ -1,4 +1,5 @@
 ﻿using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
@@ -94,6 +95,12 @@ public class Gw2GizmosDbContext : DbContext
     public DbSet<Profession> Professions { get; set; }
     public DbSet<Specialization> Specializations { get; set; }
 
+    // Achievements (master data): the game's groups and categories, and each achievement's tiers, objectives and
+    // rewards.
+    public DbSet<AchievementGroup> AchievementGroups { get; set; }
+    public DbSet<AchievementCategory> AchievementCategories { get; set; }
+    public DbSet<Achievement> Achievements { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -107,6 +114,14 @@ public class Gw2GizmosDbContext : DbContext
 
         // A character's few crafting disciplines are one JSON column rather than a table of their own.
         modelBuilder.Entity<Character>().OwnsMany(c => c.Crafting, crafting => crafting.ToJson());
+
+        // An achievement's few tiers, objectives and rewards are JSON columns too.
+        modelBuilder.Entity<Achievement>(achievement =>
+        {
+            achievement.OwnsMany(a => a.Tiers, tiers => tiers.ToJson());
+            achievement.OwnsMany(a => a.Bits, bits => bits.ToJson());
+            achievement.OwnsMany(a => a.Rewards, rewards => rewards.ToJson());
+        });
     }
 
     private static void MapRectAsJson<TOwner>(OwnedNavigationBuilder<TOwner, MapRect> rect)
