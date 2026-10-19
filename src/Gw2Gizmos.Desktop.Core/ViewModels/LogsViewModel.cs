@@ -21,6 +21,7 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
     private string _levelFilter = "All";
     private bool _showDesktop = true;
     private bool _showWorker = true;
+    private LogEntry? _selectedEntry;
 
     public LogsViewModel(LogStore store, IItemsViewFactory views)
     {
@@ -36,6 +37,13 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
     public IItemsView Entries => _view;
 
     public string[] Levels { get; } = ["All", "WRN+", "ERR"];
+
+    /// <summary>The entry whose full text (with its stack trace, if any) shows below the list.</summary>
+    public LogEntry? SelectedEntry
+    {
+        get => _selectedEntry;
+        set => SetProperty(ref _selectedEntry, value);
+    }
 
     public string FilterText
     {
@@ -153,7 +161,7 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
 
         if (
             !string.IsNullOrWhiteSpace(_filterText)
-            && !entry.Message.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+            && !entry.FullText.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
         )
         {
             return false;

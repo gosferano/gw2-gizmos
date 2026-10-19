@@ -3,7 +3,8 @@ using Serilog.Events;
 
 namespace Gw2Gizmos.Desktop.Core;
 
-/// <summary>Serilog sink that pushes the desktop app's own log events into the in-app <see cref="LogStore"/>.</summary>
+/// <summary>Serilog sink that pushes the desktop app's own log events into the in-app <see cref="LogStore"/>, an
+/// event's exception (or any further lines of its message) as the entry's details.</summary>
 public sealed class InMemoryLogSink : ILogEventSink
 {
     private readonly LogStore _store;
@@ -15,7 +16,15 @@ public sealed class InMemoryLogSink : ILogEventSink
 
     public void Emit(LogEvent logEvent)
     {
-        _store.Add(new LogEntry(logEvent.Timestamp, Abbreviate(logEvent.Level), "Desktop", logEvent.RenderMessage()));
+        string text = logEvent.RenderMessage();
+        if (logEvent.Exception is not null)
+        {
+            text = $"{text}\n{logEvent.Exception}";
+        }
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n', 2);
+        string? details = lines.Length > 1 ? lines[1] : null;
+        _store.Add(new LogEntry(logEvent.Timestamp, Abbreviate(logEvent.Level), "Desktop", lines[0], details));
     }
 
     private static string Abbreviate(LogEventLevel level) =>
