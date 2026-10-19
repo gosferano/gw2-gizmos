@@ -9,8 +9,9 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// Backs the Logs page: the recent log lines, filterable by text, level and process. The page shows its own copy of
-/// the app-wide <see cref="LogStore"/>, kept in step while the page is open and let go when it closes — a view left
-/// following the shared, ever-changing list after its page was gone once crashed the app overnight.
+/// the app-wide <see cref="LogStore"/>, kept in step while the page is open, let go when it closes — a view left
+/// following the shared, ever-changing list after its page was gone once crashed the app overnight — and caught up
+/// when it opens again.
 /// </summary>
 public sealed class LogsViewModel : ViewModelBase, INavigationAware
 {
@@ -21,6 +22,7 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
     private string _levelFilter = "All";
     private bool _showDesktop = true;
     private bool _showWorker = true;
+    private LogEntry? _selectedEntry;
 
     public LogsViewModel(LogStore store, IItemsViewFactory views)
     {
@@ -31,11 +33,26 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
         store.Entries.CollectionChanged += OnStoreChanged;
     }
 
+    /// <summary>Back on the page: catch up on what was logged while away and follow the log again.</summary>
+    public void OnNavigatedTo()
+    {
+        _store.Entries.CollectionChanged -= OnStoreChanged;
+        Resync();
+        _store.Entries.CollectionChanged += OnStoreChanged;
+    }
+
     public void OnNavigatedFrom() => _store.Entries.CollectionChanged -= OnStoreChanged;
 
     public IItemsView Entries => _view;
 
     public string[] Levels { get; } = ["All", "WRN+", "ERR"];
+
+    /// <summary>The entry whose full text (with its stack trace, if any) shows below the list.</summary>
+    public LogEntry? SelectedEntry
+    {
+        get => _selectedEntry;
+        set => SetProperty(ref _selectedEntry, value);
+    }
 
     public string FilterText
     {
@@ -153,7 +170,7 @@ public sealed class LogsViewModel : ViewModelBase, INavigationAware
 
         if (
             !string.IsNullOrWhiteSpace(_filterText)
-            && !entry.Message.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+            && !entry.FullText.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
         )
         {
             return false;

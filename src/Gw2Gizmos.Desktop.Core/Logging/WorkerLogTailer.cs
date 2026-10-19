@@ -13,7 +13,8 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Tails the worker process's current rolling Serilog file and merges its lines into the shared
 /// <see cref="LogStore"/> (tagged <c>Source = Worker</c>), so the in-app viewer shows both processes.
-/// Starts at the current end of the file (no history replay) and follows daily rollover.
+/// Starts at the current end of the file (no history replay) and follows daily rollover. Lines that don't start an
+/// entry (an exception's stack trace) are kept with the entry they follow, as its details.
 /// </summary>
 public sealed class WorkerLogTailer : BackgroundService
 {
@@ -98,25 +99,57 @@ public sealed class WorkerLogTailer : BackgroundService
         string complete = chunk.Substring(0, lastNewline + 1);
         _offset += Encoding.UTF8.GetByteCount(complete);
 
-        var batch = new List<LogEntry>();
-        foreach (string raw in complete.Split('\n'))
-        {
-            string line = raw.TrimEnd('\r');
-            if (line.Length != 0)
-            {
-                batch.Add(ParseLine(line));
-            }
-        }
-
         // One UI-thread hop for the whole poll's worth of lines.
-        _store.AddRange(batch);
+        _store.AddRange(Parse(complete.Split('\n')));
     }
 
-    private LogEntry ParseLine(string line)
+    /// <summary>
+    /// The entries in a run of lines: each line that starts an entry (time, level, source) begins one, and the lines
+    /// after it that don't (an exception's stack trace) become its details. Continuation lines at the very start of a
+    /// run, whose entry came in an earlier read, form an entry of their own with the previous level and time.
+    /// </summary>
+    internal List<LogEntry> Parse(IEnumerable<string> lines)
     {
-        Match match = LineRegex.Match(line);
-        if (match.Success)
+        var entries = new List<LogEntry>();
+        string? message = null;
+        var details = new List<string>();
+
+        void Flush()
         {
+            if (message is not null)
+            {
+                string? text = details.Count > 0 ? string.Join('\n', details) : null;
+                entries.Add(new LogEntry(_lastTimestamp, _lastLevel, "Worker", message, text));
+            }
+
+            message = null;
+            details.Clear();
+        }
+
+        foreach (string raw in lines)
+        {
+            string line = raw.TrimEnd('\r');
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            Match match = LineRegex.Match(line);
+            if (!match.Success)
+            {
+                if (message is null)
+                {
+                    message = line;
+                }
+                else
+                {
+                    details.Add(line);
+                }
+
+                continue;
+            }
+
+            Flush();
             _lastLevel = match.Groups[2].Value.ToUpperInvariant();
             if (
                 DateTime.TryParseExact(
@@ -131,11 +164,11 @@ public sealed class WorkerLogTailer : BackgroundService
                 _lastTimestamp = new DateTimeOffset(DateTime.Today.Add(parsed.TimeOfDay));
             }
 
-            return new LogEntry(_lastTimestamp, _lastLevel, "Worker", match.Groups[3].Value);
+            message = match.Groups[3].Value;
         }
 
-        // Continuation line (e.g. an exception stack trace) — carry the previous level/time.
-        return new LogEntry(_lastTimestamp, _lastLevel, "Worker", line);
+        Flush();
+        return entries;
     }
 
     private string? GetCurrentLogPath()

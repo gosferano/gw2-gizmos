@@ -5,7 +5,7 @@
              x:Class="Gw2Gizmos.Desktop.Views.LogsPage"
              x:DataType="core:LogsViewModel">
     <c:PageShell Title="Logs" Scrollable="False">
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,*,Auto">
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                 <ComboBox ItemsSource="{Binding Levels}" SelectedItem="{Binding LevelFilter}" Width="90"
                           Height="{StaticResource FormControlHeight}" />
@@ -15,8 +15,9 @@
                          Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" Margin="12,0,0,0" />
             </StackPanel>
 
-            <!-- Newest lines on top (the log store prepends). -->
+            <!-- Newest entries on top (the log store prepends); a multi-line entry is one row, its first line. -->
             <DataGrid Grid.Row="1" Name="LogList" ItemsSource="{Binding Entries}" AutoGenerateColumns="False"
+                      SelectedItem="{Binding SelectedEntry}"
                       IsReadOnly="True" CanUserResizeColumns="True" SelectionMode="Single"
                       GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent" RowHeight="24"
                       FontFamily="{StaticResource MonospaceFontFamily}" FontSize="12"
@@ -26,9 +27,27 @@
                                         Binding="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss.fff}'}" />
                     <DataGridTextColumn Header="Lvl" Width="64" x:DataType="core:LogEntry" Binding="{Binding Level}" />
                     <DataGridTextColumn Header="Source" Width="92" x:DataType="core:LogEntry" Binding="{Binding Source}" />
-                    <DataGridTextColumn Header="Message" Width="*" x:DataType="core:LogEntry" Binding="{Binding Message}" />
+                    <DataGridTemplateColumn Header="Message" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="core:LogEntry">
+                                <!-- The first line, and how many more there are (shown in full when selected). -->
+                                <DockPanel Margin="12,0" VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding DetailsSummary}" Opacity="0.6"
+                                               Margin="8,0,0,0" IsVisible="{Binding HasDetails}" />
+                                    <TextBlock Text="{Binding Message}" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <!-- The selected entry in full, top to bottom (an exception's stack trace included), selectable to copy. -->
+            <TextBox Grid.Row="2" Text="{Binding SelectedEntry.FullText, FallbackValue=''}" IsReadOnly="True"
+                     TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="260" Margin="0,10,0,0"
+                     FontFamily="{StaticResource MonospaceFontFamily}" FontSize="12"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     IsVisible="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </Grid>
     </c:PageShell>
 </UserControl>
