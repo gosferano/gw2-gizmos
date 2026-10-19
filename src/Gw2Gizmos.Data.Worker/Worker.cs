@@ -1,3 +1,4 @@
+using Gw2Gizmos.Data.Static;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Data.Worker.Updaters;
@@ -12,6 +13,11 @@ public class Worker : BackgroundService
     private readonly SyncTriggers _triggers;
     private readonly AccountSyncGate _accountSyncGate;
     private readonly ILogger<Worker> _logger;
+    private readonly TimeProvider _time;
+
+    // How long after a game reset the achievements and account syncs are woken: soon after, then once more in case
+    // the API was slow to change over.
+    private static readonly TimeSpan[] ResetSyncDelays = [TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(15)];
 
     // Serializes craft-cost refreshes so the 15-minute timer and the after-price trigger can never run
     // two wholesale table replaces at once (which would race on the ItemCraftCosts table).
@@ -23,8 +29,10 @@ public class Worker : BackgroundService
         IIntervalGate intervalGate,
         SyncTriggers triggers,
         AccountSyncGate accountSyncGate,
+        TimeProvider time,
         ILogger<Worker> logger)
     {
+        _time = time;
         _scopeFactory = scopeFactory;
         _featureGate = featureGate;
         _intervalGate = intervalGate;
@@ -62,6 +70,7 @@ public class Worker : BackgroundService
             RunMapsUpdater(mapsTimer, stoppingToken),
             RunProfessionsUpdater(professionsTimer, stoppingToken),
             RunAchievementsUpdater(achievementsTimer, stoppingToken),
+            RunResetSyncs(stoppingToken),
             RunWardrobeUpdater(wardrobeTimer, stoppingToken),
             RunItemsUpdater(itemsTimer, stoppingToken),
             RunRecipesUpdater(recipesTimer, stoppingToken),
@@ -125,6 +134,36 @@ public class Worker : BackgroundService
                 stoppingToken
             );
         } while (await trigger.WaitForNextRunAsync(timer, stoppingToken));
+    }
+
+    /// <summary>
+    /// Wakes the achievements and account syncs after each daily and weekly reset, so the rotating categories (which
+    /// achievements a daily or weekly category holds) and their progress update then, not at the next tick.
+    /// </summary>
+    private async Task RunResetSyncs(CancellationToken stoppingToken)
+    {
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                DateTimeOffset reset = GameResets.Next(_time.GetUtcNow());
+                foreach (TimeSpan after in ResetSyncDelays)
+                {
+                    TimeSpan wait = reset + after - _time.GetUtcNow();
+                    if (wait > TimeSpan.Zero)
+                    {
+                        await Task.Delay(wait, _time, stoppingToken);
+                    }
+
+                    _logger.LogInformation("Game reset at {Reset:u}: refreshing achievements and account data.", reset);
+                    _triggers.Get(WorkerSyncs.Achievements.Key).Signal();
+                    _triggers.Get(WorkerSyncs.Account.Key).Signal();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
     }
 
     private async Task RunWardrobeUpdater(PeriodicTimer timer, CancellationToken stoppingToken)
