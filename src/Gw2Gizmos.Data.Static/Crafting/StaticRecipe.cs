@@ -16,6 +16,10 @@ public sealed record StaticRecipe
     /// range). Kept as a real number, not rounded, so the per-output cost is exact.</summary>
     public decimal OutputItemCount { get; init; } = 1;
 
+    /// <summary>How the output is acquired when that isn't crafting or the Mystic Forge, e.g. "the legendary armory";
+    /// null for an ordinary craft.</summary>
+    public string? Method { get; init; }
+
     /// <summary>What the craft consumes. Reference tradeable items where possible so the cost is priceable.</summary>
     public required IReadOnlyList<StaticIngredient> Ingredients { get; init; }
 }

@@ -185,6 +185,8 @@ public class RecipeTreeBuilder
                 currentNode.BuyPricePerUnit = scaledNode.BuyPricePerUnit;
                 currentNode.CraftingCostPerUnit = scaledNode.CraftingCostPerUnit;
                 currentNode.OutputItemCount = scaledNode.OutputItemCount;
+                currentNode.AcquiredVia = scaledNode.AcquiredVia;
+                currentNode.IsEarned = scaledNode.IsEarned;
                 currentNode.IsVendorAcquirable = scaledNode.IsVendorAcquirable;
                 currentNode.VendorOffers = scaledNode.VendorOffers;
                 currentNode.VendorCoinCostPerUnit = scaledNode.VendorCoinCostPerUnit;
@@ -208,6 +210,13 @@ public class RecipeTreeBuilder
             currentNode.IsVendorAcquirable = VendorItems.IsAcquirable(currentNode.ItemId);
             AttachVendorCost(currentNode);
 
+            // Earned by playing (e.g. Gift of Exploration from world completion): obtainable for no coin.
+            if (EarnedItems.ByItemId.TryGetValue(currentNode.ItemId, out string? earnedBy))
+            {
+                currentNode.IsEarned = true;
+                currentNode.AcquiredVia = earnedBy;
+            }
+
             // Fetch item name with fallback
             currentNode.ItemName = GetItemName(currentNode.ItemId);
 
@@ -228,16 +237,14 @@ public class RecipeTreeBuilder
                 if (recipes is { Count: > 0 })
                 {
                     RecipeNode? bestRecipeTree = null;
-                    var lowestCraftingCost = decimal.MaxValue;
 
                     foreach (Recipe recipe in recipes)
                     {
                         // Build a separate tree for each recipe
                         RecipeNode recipeTree = await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct, path);
 
-                        if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                        if (IsBetterVariant(recipeTree, bestRecipeTree))
                         {
-                            lowestCraftingCost = recipeTree.CraftingCostPerUnit;
                             bestRecipeTree = recipeTree;
                         }
                     }
@@ -259,13 +266,11 @@ public class RecipeTreeBuilder
                     // and keep the cheapest, so a forge-only intermediate isn't a 0-cost leaf and we don't have to
                     // guess which forge variant is best (e.g. the 1- vs 10-forge Mystic Clover).
                     RecipeNode? bestRecipeTree = null;
-                    var lowestCraftingCost = decimal.MaxValue;
                     foreach (StaticRecipe staticRecipe in staticRecipes)
                     {
                         RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, path);
-                        if (recipeTree.CraftingCostPerUnit < lowestCraftingCost)
+                        if (IsBetterVariant(recipeTree, bestRecipeTree))
                         {
-                            lowestCraftingCost = recipeTree.CraftingCostPerUnit;
                             bestRecipeTree = recipeTree;
                         }
                     }
@@ -274,6 +279,7 @@ public class RecipeTreeBuilder
                     {
                         currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
                         currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                        currentNode.AcquiredVia = bestRecipeTree.AcquiredVia;
                         currentNode.Ingredients = bestRecipeTree.Ingredients;
                         _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                     }
@@ -298,6 +304,26 @@ public class RecipeTreeBuilder
         }
 
         return rootNode;
+    }
+
+    /// <summary>
+    /// Whether a recipe variant beats the best so far: one whose cost is fully known always beats one with an
+    /// unobtainable ingredient (priced as 0, so its cost is only a lower bound and would otherwise look cheapest —
+    /// e.g. Eternity's Memory of Sunrise/Twilight recipe); between two of the same kind, the cheaper wins.
+    /// </summary>
+    private static bool IsBetterVariant(RecipeNode candidate, RecipeNode? best)
+    {
+        if (best is null)
+        {
+            return true;
+        }
+
+        if (candidate.CraftCostKnown != best.CraftCostKnown)
+        {
+            return candidate.CraftCostKnown;
+        }
+
+        return candidate.CraftingCostPerUnit < best.CraftingCostPerUnit;
     }
 
     private static void SetDepth(RecipeNode node, int depth)
@@ -327,6 +353,8 @@ public class RecipeTreeBuilder
             CraftingCostPerUnit = node.CraftingCostPerUnit,
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
+            AcquiredVia = node.AcquiredVia,
+            IsEarned = node.IsEarned,
             IsVendorAcquirable = node.IsVendorAcquirable,
             VendorOffers = node.VendorOffers,
             VendorCoinCostPerUnit = node.VendorCoinCostPerUnit,
@@ -404,7 +432,8 @@ public class RecipeTreeBuilder
         {
             ItemId = recipe.OutputItemId,
             Count = targetCount,
-            OutputItemCount = recipe.OutputItemCount
+            OutputItemCount = recipe.OutputItemCount,
+            AcquiredVia = recipe.Method
         };
 
         // Whole forges to cover the target (yield may be fractional for random/promotion recipes).

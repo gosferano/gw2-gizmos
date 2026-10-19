@@ -1,8 +1,9 @@
 namespace Gw2Gizmos.Data.Static.Crafting;
 
 /// <summary>
-/// Crafting recipes the GW2 API (<c>/v2/recipes</c>) genuinely doesn't expose — the "Place of Power" combine
-/// (hand-written below; verified absent from the API) and the Mystic Forge recipes scraped from the wiki
+/// Crafting recipes the GW2 API (<c>/v2/recipes</c>) genuinely doesn't expose — the "Place of Power" combine and
+/// the legendary armory's Memories (hand-written below; verified absent from the API) and the Mystic Forge recipes
+/// scraped from the wiki
 /// (<see cref="MysticForgeRecipes"/>). The engine consults these only when an item has no API recipe, so a
 /// forge-only intermediate is priced from its tradeable inputs instead of dropping to 0. (Time-gated ascended
 /// mats like Lump of Mithrillium are <em>in</em> the API, so they're not duplicated here.)
@@ -25,6 +26,10 @@ public static class StaticRecipes
         var byOutput = new Dictionary<int, IReadOnlyList<StaticRecipe>>
         {
             [43772] = [Recipe(43772, Ingredient(43773, 25))], // Charged Quartz Crystal — 25 Quartz Crystal
+            // Adding a legendary to the legendary armory grants its Memory, which Eternity's second forge recipe
+            // takes in place of the legendary itself: a Memory costs what its legendary does.
+            [95081] = [ArmoryMemory(95081, 30703)], // Memory of Sunrise — Sunrise
+            [95086] = [ArmoryMemory(95086, 30704)], // Memory of Twilight — Twilight
         };
 
         // Mystic Forge recipes from the embedded wiki scrape: keep every usable variant per output (see IsUsable),
@@ -92,6 +97,9 @@ public static class StaticRecipes
 
     private static StaticRecipe Recipe(int output, params StaticIngredient[] ingredients) =>
         new() { OutputItemId = output, Ingredients = ingredients };
+
+    private static StaticRecipe ArmoryMemory(int memory, int legendary) =>
+        new() { OutputItemId = memory, Ingredients = [Ingredient(legendary, 1)], Method = "the legendary armory" };
 
     private static StaticIngredient Ingredient(int itemId, int count) =>
         new() { ItemId = itemId, Count = count };
