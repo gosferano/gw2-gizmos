@@ -40,6 +40,20 @@ After `--write`, build the solution — `WarningsAsErrors=Nullable` will surface
 dereferences a newly-nullable field without a guard (that's the audit working: those are real
 unchecked nulls).
 
+### 3. Keys
+
+```bash
+dotnet run --project tools/Gw2Gizmos.Gw2Api.NullabilityAudit -- keys
+```
+
+Reads the report and lists every JSON key no Contract property binds to, by the client's own rule: a property's
+`[JsonPropertyName]`, else its snake_case name, matched case-insensitively. That finds both fields the Contract doesn't
+model and keys the API spells differently (it uses PascalCase for some, e.g. a skin's `"AsuraMale"` dye slots or an
+amulet's `"CritDamage"`), which the client would otherwise drop without a word. A dictionary property's keys are data
+and are skipped.
+
+The sampler asks for the same schema version as the client, so the report reflects what the client receives.
+
 ## How it handles polymorphism
 
 Many GW2 hierarchies are polymorphic (`Item`/`Skin` subtypes, `SkillFact`/`TraitFact` in `facts[]`,

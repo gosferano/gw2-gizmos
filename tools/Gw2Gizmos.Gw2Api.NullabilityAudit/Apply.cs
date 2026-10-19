@@ -11,7 +11,7 @@ namespace Gw2Gizmos.Gw2Api.NullabilityAudit;
 internal static class Apply
 {
     // endpoint -> root DTO type (relative to the Contract namespace).
-    private static readonly Dictionary<string, string> EndpointType = new()
+    internal static readonly Dictionary<string, string> EndpointType = new()
     {
         ["items"] = "V2.Items.Item",
         ["skills"] = "V2.Skills.Skill",
@@ -209,7 +209,7 @@ internal static class Apply
         }
     }
 
-    private static (string name, string? disc) ParseSeg(string seg)
+    internal static (string name, string? disc) ParseSeg(string seg)
     {
         int b = seg.IndexOf('[');
         if (b < 0)
@@ -226,7 +226,7 @@ internal static class Apply
     // name match (Item subtypes: "Armor" -> Armor); else the shortest EndsWith match (SkillFact subtypes:
     // "Buff" -> SkillFactBuff, not SkillFactPrefixedBuff). No match -> the discriminator is value-level
     // (e.g. an armor slot on ArmorDetails), so the type is kept as-is.
-    private static IEnumerable<Type> NarrowByDisc(Type type, string? disc, Type[] all)
+    internal static IEnumerable<Type> NarrowByDisc(Type type, string? disc, Type[] all)
     {
         if (string.IsNullOrEmpty(disc))
         {
@@ -275,7 +275,7 @@ internal static class Apply
         }
     }
 
-    private static Type ElementType(Type t)
+    internal static Type ElementType(Type t)
     {
         if (t.IsArray)
         {
