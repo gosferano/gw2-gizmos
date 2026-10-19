@@ -19,7 +19,9 @@ internal sealed class RoutingHttpStub : HttpMessageHandler
     /// <summary>Every absolute path requested, in order — for diagnostics in tests.</summary>
     public List<string> RequestedPaths { get; } = new();
 
-    /// <summary>Maps an absolute path (e.g. <c>/v2/account/bank</c>) to the JSON its endpoint should return.</summary>
+    /// <summary>Maps an absolute path (e.g. <c>/v2/account/bank</c>) to the JSON its endpoint should return. A path
+    /// with its query (e.g. <c>/v2/recipes?ids=1</c>) takes precedence over the bare path, for endpoints that list ids
+    /// and return details from the same path.</summary>
     public void SetJson(string path, string json) => _byPath[path] = json;
 
     /// <summary>Called with each requested path before it's answered — e.g. to cancel a sync partway through.</summary>
@@ -32,7 +34,11 @@ internal sealed class RoutingHttpStub : HttpMessageHandler
         string path = Uri.UnescapeDataString(request.RequestUri!.AbsolutePath);
         RequestedPaths.Add(path);
         OnRequest?.Invoke(path);
-        string body = _byPath.TryGetValue(path, out string? json) ? json : "[]";
+        string withQuery = path + Uri.UnescapeDataString(request.RequestUri.Query);
+        string body =
+            _byPath.TryGetValue(withQuery, out string? exact) ? exact
+            : _byPath.TryGetValue(path, out string? json) ? json
+            : "[]";
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),

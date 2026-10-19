@@ -73,7 +73,9 @@ public class RecipesUpdater
                     continue;
                 }
 
-                List<Recipe> mapped = apiRecipes.Select(MapToRecipeEntity).ToList();
+                // Each recipe once, even if a response lists it twice: a second pass over the same recipe would
+                // track a second copy of its ingredients under the same keys.
+                List<Recipe> mapped = apiRecipes.DistinctBy(r => r.Id).Select(MapToRecipeEntity).ToList();
                 List<int> ids = mapped.Select(r => r.Id).ToList();
 
                 // Fresh scope (and DbContext) per page, disposed at the end of the iteration — bounds
@@ -98,8 +100,9 @@ public class RecipesUpdater
                         dbContext.Entry(existing).CurrentValues.SetValues(recipe);
 
                         // SetValues copies scalars only, so the child collections are reconciled
-                        // explicitly to match the API snapshot (full clear-and-re-add).
-                        ReplaceCollection(existing.Ingredients, recipe.Ingredients);
+                        // explicitly to match the API snapshot. Ingredients are keyed by item and recipe, so
+                        // they're matched by key and updated in place rather than cleared and re-added.
+                        ReconcileIngredients(existing.Ingredients, recipe.Ingredients);
                         ReplaceCollection(existing.Disciplines, recipe.Disciplines);
                         ReplaceCollection(existing.Flags, recipe.Flags);
                     }
@@ -141,8 +144,10 @@ public class RecipesUpdater
                 .ToList(),
             MinRating = apiRecipe.MinRating,
             Flags = apiRecipe.Flags.Select(f => new RecipeFlag { Value = f.Value, RecipeId = apiRecipe.Id }).ToList(),
+            // One row per ingredient id: the table's key is (id, recipe), so a repeat can't be stored.
             Ingredients = apiRecipe
-                .Ingredients.Select(i => new RecipeIngredient
+                .Ingredients.DistinctBy(i => i.Id)
+                .Select(i => new RecipeIngredient
                 {
                     Id = i.Id,
                     Count = i.Count,
@@ -153,6 +158,28 @@ public class RecipesUpdater
             OutputUpgradeId = apiRecipe.OutputUpgradeId,
             ChatLink = apiRecipe.ChatLink
         };
+    }
+
+    // Brings a recipe's tracked ingredients in line with the incoming snapshot by key: ones still listed are
+    // updated in place, ones no longer listed are removed (cascade-deleted via their required FK) and new ones
+    // added. Clearing and re-adding instead would track a new instance under the key of one being deleted.
+    private static void ReconcileIngredients(List<RecipeIngredient> existing, List<RecipeIngredient> incoming)
+    {
+        Dictionary<int, RecipeIngredient> incomingById = incoming.ToDictionary(i => i.Id);
+        existing.RemoveAll(ingredient => !incomingById.ContainsKey(ingredient.Id));
+        var kept = existing.ToDictionary(i => i.Id);
+        foreach (RecipeIngredient ingredient in incoming)
+        {
+            if (kept.TryGetValue(ingredient.Id, out RecipeIngredient? row))
+            {
+                row.Count = ingredient.Count;
+                row.Type = ingredient.Type;
+            }
+            else
+            {
+                existing.Add(ingredient);
+            }
+        }
     }
 
     // Replaces a tracked child collection with the incoming snapshot: clearing orphans the old
