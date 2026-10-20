@@ -9,7 +9,6 @@ public sealed class Skill
     public string ChatLink { get; set; } = null!;
     public SkillType Type { get; set; }
     public WeaponType? WeaponType { get; set; }
-    public ProfessionName Profession { get; set; }
     public SkillSlot? Slot { get; set; }
     public SkillFact[] Facts { get; set; } = Array.Empty<SkillFact>();
     public SkillFact[] TraitedFacts { get; set; } = Array.Empty<SkillFact>();
@@ -25,4 +24,25 @@ public sealed class Skill
     public int[] BundleSkills { get; set; } = Array.Empty<int>();
     public int? ToolbeltSkill { get; set; }
     public SkillFlag[] Flags { get; set; } = Array.Empty<SkillFlag>();
+
+    /// <summary>The professions that can use the skill (none for monster and other non-profession skills).</summary>
+    public ProfessionName[] Professions { get; set; } = Array.Empty<ProfessionName>();
+
+    /// <summary>The specialization the skill belongs to, if any.</summary>
+    public int? Specialization { get; set; }
+
+    /// <summary>The skill's variants, e.g. an elementalist skill's version for each attunement.</summary>
+    public SkillSubskill[] Subskills { get; set; } = Array.Empty<SkillSubskill>();
+
+    /// <summary>The second attunement a weaver's dual-attunement weapon skill needs.</summary>
+    public string? DualAttunement { get; set; }
+}
+
+public sealed class SkillSubskill
+{
+    public int Id { get; set; }
+    public string? Attunement { get; set; }
+
+    /// <summary>The form the variant is used in, e.g. "CelestialAvatar".</summary>
+    public string? Form { get; set; }
 }

@@ -6,4 +6,7 @@ public sealed class ProfessionSkill
     public SkillSlot Slot { get; set; }
     public SkillType Type { get; set; }
     public string? Source { get; set; }
+
+    /// <summary>The attunement the skill is for (elementalist profession skills).</summary>
+    public string? Attunement { get; set; }
 }

@@ -11,6 +11,9 @@ public sealed class Specialization
     public string Icon { get; set; } = null!;
     public string Background { get; set; } = null!;
 
+    /// <summary>The trait that unlocks an elite specialization's weapon (null for core specializations).</summary>
+    public int? WeaponTrait { get; set; }
+
     /// <summary>The profession icon shown for this elite specialization (null for core specializations).</summary>
     public string? ProfessionIcon { get; set; }
 

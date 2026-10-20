@@ -12,4 +12,6 @@ public sealed class SkillFactAttributeAdjust : SkillFact
     /// How much it's adjusted by. Missing on a broken record or two, e.g. the monster skill Blood Frenzy's.
     /// </summary>
     public int? Value { get; set; }
+
+    public int? HitCount { get; set; }
 }
