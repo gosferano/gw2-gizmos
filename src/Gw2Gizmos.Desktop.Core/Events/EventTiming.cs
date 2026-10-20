@@ -9,6 +9,14 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <param name="ShortCountdown">E.g. "12:34", "1h 05m" or "now", for tight spots.</param>
 public sealed record EventTiming(bool IsActive, DateTimeOffset SortKey, string Countdown, string ShortCountdown)
 {
+    /// <summary>
+    /// How close a start counts as soon: such an event's timer is highlighted (yellow; active ones are green).
+    /// </summary>
+    public static readonly TimeSpan SoonWindow = TimeSpan.FromMinutes(15);
+
+    /// <summary>Not active, and starting within <see cref="SoonWindow"/>.</summary>
+    public bool IsSoon { get; init; }
+
     public static EventTiming Of(ScheduledEvent scheduled, DateTimeOffset now)
     {
         if (scheduled.ActiveUntilUtc(now) is { } end)
@@ -18,7 +26,7 @@ public sealed record EventTiming(bool IsActive, DateTimeOffset SortKey, string C
 
         DateTimeOffset next = scheduled.NextStartUtc(now);
         string untilNext = Format(next - now);
-        return new EventTiming(false, next, $"in {untilNext}", untilNext);
+        return new EventTiming(false, next, $"in {untilNext}", untilNext) { IsSoon = next - now <= SoonWindow };
     }
 
     // Hours+minutes when far out; minutes:seconds (ticking) when under an hour.
