@@ -39,10 +39,12 @@
         </ui:FANavigationView.FooterMenuItems>
     </ui:FANavigationView>
 
-    <!-- The global search (Ctrl+K): a dimmed backdrop (click to close) under a search card near the top. -->
+    <!-- The global search (Ctrl+K): a dimmed backdrop (click to close) under a search card in the middle, like a
+         dialog. Its top is placed in code (PlaceSearchCard). -->
     <Grid Name="SearchOverlay" x:DataType="core:GlobalSearchViewModel" IsVisible="{Binding IsOpen}">
         <Border Background="#80000000" PointerPressed="OnSearchBackdropPressed" />
-        <Border Width="640" Margin="16,64,16,16" VerticalAlignment="Top" CornerRadius="8" Padding="8"
+        <Border Name="SearchCard" Width="640" Margin="16,64,16,16" VerticalAlignment="Top" CornerRadius="8"
+                Padding="8"
                 Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
             <StackPanel>
