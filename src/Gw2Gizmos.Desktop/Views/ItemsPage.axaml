@@ -54,6 +54,8 @@
             </StackPanel>
 
             <c:Card Grid.Row="1" Padding="0" VerticalContentAlignment="Stretch">
+                <!-- Coin columns fit 9,999g 99s 99c, and a minus sign in the profit columns, with room to spare for
+                     wider fonts (checked by ItemsPageTests with real fonts). -->
                 <DataGrid ItemsSource="{Binding View}" SelectedItem="{Binding SelectedItem}" AutoGenerateColumns="False"
                           IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True" SelectionMode="Single"
                           GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="Transparent"
@@ -71,7 +73,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Buy" Width="105" SortMemberPath="Buy">
+                        <DataGridTemplateColumn Header="Buy" Width="145" SortMemberPath="Buy">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="core:ItemRow">
                                     <c:CoinDisplay Copper="{Binding Buy}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -80,7 +82,7 @@
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Demand" Width="100" x:DataType="core:ItemRow"
                                             Binding="{Binding Demand, StringFormat='{}{0:N0}', TargetNullValue=''}" />
-                        <DataGridTemplateColumn Header="Sell" Width="105" SortMemberPath="Sell">
+                        <DataGridTemplateColumn Header="Sell" Width="145" SortMemberPath="Sell">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="core:ItemRow">
                                     <c:CoinDisplay Copper="{Binding Sell}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -89,7 +91,7 @@
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Supply" Width="95" x:DataType="core:ItemRow"
                                             Binding="{Binding Supply, StringFormat='{}{0:N0}', TargetNullValue=''}" />
-                        <DataGridTemplateColumn Header="Craft cost" Width="125" SortMemberPath="CraftingCost">
+                        <DataGridTemplateColumn Header="Craft cost" Width="145" SortMemberPath="CraftingCost">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="core:ItemRow">
                                     <c:CoinDisplay Copper="{Binding CraftingCost}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -98,7 +100,7 @@
                         </DataGridTemplateColumn>
                         <!-- Profit/margin selling instantly into buy orders, and listing at the sell price; both net the
                              15% trading-post fee. -->
-                        <DataGridTemplateColumn Header="Buy profit" Width="125" SortMemberPath="BuyProfit">
+                        <DataGridTemplateColumn Header="Buy profit" Width="155" SortMemberPath="BuyProfit">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="core:ItemRow">
                                     <c:CoinDisplay Copper="{Binding BuyProfit}" Signed="True" VerticalAlignment="Center"
@@ -108,7 +110,7 @@
                         </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Buy margin" Width="120" x:DataType="core:ItemRow"
                                             Binding="{Binding BuyMargin, StringFormat='{}{0:F0}%', TargetNullValue=''}" />
-                        <DataGridTemplateColumn Header="Sell profit" Width="125" SortMemberPath="SellProfit">
+                        <DataGridTemplateColumn Header="Sell profit" Width="155" SortMemberPath="SellProfit">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="core:ItemRow">
                                     <c:CoinDisplay Copper="{Binding SellProfit}" Signed="True" VerticalAlignment="Center"
