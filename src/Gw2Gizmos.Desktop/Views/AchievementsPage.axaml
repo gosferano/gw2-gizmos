@@ -153,8 +153,9 @@
                                                        IsVisible="{Binding HasRewards}" />
                                             <ItemsControl ItemsSource="{Binding Rewards}" IsVisible="{Binding HasRewards}">
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="x:String">
-                                                        <TextBlock Text="{Binding}" Margin="0,1" />
+                                                    <DataTemplate x:DataType="core:AchievementRewardLine">
+                                                        <c:ItemName Text="{Binding Text}" ItemId="{Binding ItemId}" Margin="0,1"
+                                                                    HorizontalAlignment="Left" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
@@ -173,8 +174,8 @@
                                                                     Width="260">
                                                             <TextBlock Text="✓" Classes="done" IsVisible="{Binding Done}" />
                                                             <TextBlock Text="○" Classes="secondary" IsVisible="{Binding !Done}" />
-                                                            <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis"
-                                                                       ToolTip.Tip="{Binding Text}" />
+                                                            <c:ItemName Text="{Binding Text}" ItemId="{Binding ItemId}"
+                                                                        TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Text}" />
                                                         </StackPanel>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

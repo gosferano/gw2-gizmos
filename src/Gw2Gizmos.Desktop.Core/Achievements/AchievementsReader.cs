@@ -24,6 +24,9 @@ public sealed record AchievementsData(
     public IReadOnlyDictionary<int, string> SkinNames { get; init; } = new Dictionary<int, string>();
     public IReadOnlyDictionary<int, string> MiniNames { get; init; } = new Dictionary<int, string>();
 
+    /// <summary>The item each mini comes from, by mini id.</summary>
+    public IReadOnlyDictionary<int, int> MiniItemIds { get; init; } = new Dictionary<int, int>();
+
     public static AchievementsData Empty { get; } =
         new([], new Dictionary<int, AchievementCategory>(), new Dictionary<int, Achievement>(),
             new Dictionary<int, AccountAchievement>(), new Dictionary<int, string>());
@@ -84,14 +87,16 @@ public sealed class AchievementsReader
             Dictionary<int, string> skinNames = db.Skins.AsNoTracking()
                 .Where(skin => skinIds.Contains(skin.Id))
                 .ToDictionary(skin => skin.Id, skin => skin.Name);
-            Dictionary<int, string> miniNames = db.Minis.AsNoTracking()
+            var minis = db.Minis.AsNoTracking()
                 .Where(mini => miniIds.Contains(mini.Id))
-                .ToDictionary(mini => mini.Id, mini => mini.Name);
+                .Select(mini => new { mini.Id, mini.Name, mini.ItemId })
+                .ToList();
 
             return new AchievementsData(groups, categories, achievements, progress, itemNames)
             {
                 SkinNames = skinNames,
-                MiniNames = miniNames,
+                MiniNames = minis.ToDictionary(mini => mini.Id, mini => mini.Name),
+                MiniItemIds = minis.ToDictionary(mini => mini.Id, mini => mini.ItemId),
             };
         }
         catch (Exception)

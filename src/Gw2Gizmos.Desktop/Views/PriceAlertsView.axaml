@@ -48,7 +48,8 @@
                             <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                                          VerticalAlignment="Center" />
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ItemName}" c:ItemRarity.ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis" />
+                                <c:ItemName Text="{Binding ItemName}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
+                                            HorizontalAlignment="Left" />
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <StackPanel.Styles>
                                         <Style Selector="TextBlock">

@@ -190,22 +190,7 @@ public sealed class GlobalSearch
             using IServiceScope scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
-            var listed = new Dictionary<int, bool>();
-            foreach (int id in db.Recipes.AsNoTracking().Select(r => r.OutputItemId).Distinct())
-            {
-                listed[id] = false;
-            }
-
-            foreach (int id in Gw2Gizmos.Data.Static.Crafting.StaticRecipes.ByOutputItemId.Keys)
-            {
-                listed[id] = false;
-            }
-
-            foreach (int id in db.PriceSnapshots.AsNoTracking().Select(s => s.ItemId).Distinct())
-            {
-                listed[id] = true;
-            }
-
+            Dictionary<int, bool> listed = ItemLinks.ReadListed(db);
             return db.Items.AsNoTracking()
                 .Select(i => new { i.Id, i.Name, i.Rarity })
                 .AsEnumerable()

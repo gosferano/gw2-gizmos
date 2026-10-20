@@ -27,6 +27,13 @@
     <Style Selector="TextBlock.rarity-ascended"><Setter Property="Foreground" Value="{DynamicResource RarityAscendedBrush}" /></Style>
     <Style Selector="TextBlock.rarity-legendary"><Setter Property="Foreground" Value="{DynamicResource RarityLegendaryBrush}" /></Style>
 
+    <!-- Item names and slots that open the item on the Items page (class set by c:ItemLink.ItemId): a hand cursor,
+         and an underline on hover for names, so lists of names don't read as a wall of links. The transparent
+         background lets the whole name take the pointer, not just its glyphs. -->
+    <Style Selector=":is(InputElement).item-link"><Setter Property="Cursor" Value="Hand" /></Style>
+    <Style Selector="TextBlock.item-link"><Setter Property="Background" Value="Transparent" /></Style>
+    <Style Selector="TextBlock.item-link:pointerover"><Setter Property="TextDecorations" Value="Underline" /></Style>
+
     <!-- Signed coin amounts: gains green, losses red (classes set by CoinDisplay). -->
     <Style Selector="c|CoinDisplay.gain"><Setter Property="Foreground" Value="{DynamicResource GainBrush}" /></Style>
     <Style Selector="c|CoinDisplay.loss"><Setter Property="Foreground" Value="{DynamicResource LossBrush}" /></Style>

@@ -139,7 +139,8 @@
          UniformGrid → exactly 10 per row with equal spacing on both axes. -->
     <DataTemplate x:Key="SlotTemplate" x:DataType="core:SlotRow">
         <!-- Empty slots have no name, so their (otherwise blank) tooltip is disabled. -->
-        <c:SquareCell ToolTip.Tip="{Binding Name}" ToolTip.ServiceEnabled="{Binding !IsEmpty}">
+        <c:SquareCell ToolTip.Tip="{Binding Name}" ToolTip.ServiceEnabled="{Binding !IsEmpty}"
+                      c:ItemLink.ItemId="{Binding ItemId}">
             <Panel>
                 <!-- Placeholder tile, always drawn: an empty slot shows it alone, and a filled slot whose item hasn't
                      synced yet (icon not downloaded) still reads as occupied — with its known count — instead of a
@@ -160,7 +161,7 @@
     <!-- A material-storage cell: like a slot, but the count is always shown (0 included) and a held-none material
          is greyed out. -->
     <DataTemplate x:Key="MaterialCellTemplate" x:DataType="core:SlotRow">
-        <c:SquareCell ToolTip.Tip="{Binding Name}">
+        <c:SquareCell ToolTip.Tip="{Binding Name}" c:ItemLink.ItemId="{Binding ItemId}">
             <Panel>
                 <Border Margin="5" CornerRadius="6" BorderThickness="1"
                         Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -223,8 +224,8 @@
                 <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
                              CornerRadius="4" Stretch="Uniform" VerticalAlignment="Center" />
                 <!-- In its rarity colour (no fixed Foreground here, which would override it). -->
-                <TextBlock Text="{Binding Name}" c:ItemRarity.ItemId="{Binding ItemId}" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" />
+                <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" VerticalAlignment="Center"
+                            HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" />
             </DockPanel>
         </Border>
     </DataTemplate>

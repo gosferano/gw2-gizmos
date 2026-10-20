@@ -14,8 +14,14 @@ public enum AchievementStatus
     Done,
 }
 
-/// <summary>One objective of an achievement, e.g. a collection's item, and whether the account has done it.</summary>
-public sealed record AchievementObjective(string Text, bool Done);
+/// <summary>
+/// One objective of an achievement, e.g. a collection's item, and whether the account has done it. The item it's for
+/// (a mini's item too), or 0, so its name can link to the Items page.
+/// </summary>
+public sealed record AchievementObjective(string Text, bool Done, int ItemId = 0);
+
+/// <summary>One reward of an achievement, e.g. "1× Mistward Legguards", and the item it is, or 0.</summary>
+public sealed record AchievementRewardLine(string Text, int ItemId = 0);
 
 /// <summary>One tier of an achievement: the count it needs, the points it gives, and whether it's reached.</summary>
 public sealed record AchievementTierLine(int Number, int Count, int Points, bool Reached)
@@ -94,10 +100,13 @@ public sealed class AchievementRow : ViewModelBase
         HashSet<int> bitsDone = progress?.Bits.ToHashSet() ?? [];
         Objectives = achievement.Bits
             .Select((bit, index) =>
-                new AchievementObjective(ObjectiveText(bit, data), done || bitsDone.Contains(index))
+                new AchievementObjective(ObjectiveText(bit, data), done || bitsDone.Contains(index), ItemId(bit, data))
             )
             .ToList();
-        Rewards = achievement.Rewards.Select(reward => RewardText(reward, data.ItemNames)).ToList();
+        Rewards = achievement.Rewards
+            .Select(reward => new AchievementRewardLine(
+                RewardText(reward, data.ItemNames), reward.Type == "Item" ? reward.Id ?? 0 : 0))
+            .ToList();
         TierLines = achievement
             .Tiers.Select((tier, index) =>
                 new AchievementTierLine(index + 1, tier.Count, tier.Points, done || Current >= tier.Count)
@@ -167,7 +176,7 @@ public sealed class AchievementRow : ViewModelBase
     public bool HasRequirement => Requirement.Length > 0;
 
     public IReadOnlyList<AchievementObjective> Objectives { get; }
-    public IReadOnlyList<string> Rewards { get; }
+    public IReadOnlyList<AchievementRewardLine> Rewards { get; }
     public bool HasObjectives => Objectives.Count > 0;
     public bool HasRewards => Rewards.Count > 0;
 
@@ -204,6 +213,15 @@ public sealed class AchievementRow : ViewModelBase
             : bit.Type == "Text" && !string.IsNullOrWhiteSpace(bit.Text) ? bit.Text
             : $"{bit.Type} {bit.Id}";
     }
+
+    /// <summary>The item an objective is for: an item's own id, or a mini's item; 0 for others.</summary>
+    private static int ItemId(AchievementBit bit, AchievementsData data) =>
+        bit.Type switch
+        {
+            "Item" => bit.Id,
+            "Minipet" => data.MiniItemIds.GetValueOrDefault(bit.Id),
+            _ => 0,
+        };
 
     private static string RewardText(AchievementReward reward, IReadOnlyDictionary<int, string> itemNames) =>
         reward.Type switch
