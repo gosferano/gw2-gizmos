@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.Static.Achievements;
 using Gw2Gizmos.Data.Static.Crafting;
 using Gw2Gizmos.RecipeFinder.Model;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +14,13 @@ public class RecipeTreeBuilder
     private readonly Gw2GizmosDbContext _dbContext;
     private readonly Configuration _priceConfiguration;
 
-    public RecipeTreeBuilder(Gw2GizmosDbContext dbContext, Configuration priceConfiguration)
+    /// <param name="accountId">The account whose completed collections are marked as such in the label; null for
+    /// none.</param>
+    public RecipeTreeBuilder(Gw2GizmosDbContext dbContext, Configuration priceConfiguration, string? accountId = null)
     {
         _dbContext = dbContext;
         _priceConfiguration = priceConfiguration;
+        _accountId = accountId;
     }
 
     // Everything a tree walk needs, pulled into memory once. Tree building otherwise does ~3 DB round-trips per
@@ -29,6 +34,8 @@ public class RecipeTreeBuilder
     private Dictionary<string, string>? _currencyIconByName; // keyed by normalized name (singular/plural tolerant)
     private Dictionary<int, (int Buy, int Sell)>? _latestPrices;
     private Dictionary<string, decimal>? _currencyWeights;   // account currency name -> derived copper-per-unit
+    private Dictionary<int, List<StaticRecipe>>? _achievementSources; // reward item id -> achievements giving it
+    private readonly string? _accountId;
 
     /// <summary>Supply the latest (buy, sell) prices the caller has already computed (the Items grid does this
     /// once), so the builder skips re-running the heavy latest-price aggregation over the snapshot table.</summary>
@@ -91,6 +98,8 @@ public class RecipeTreeBuilder
         // initializes lazily on first access, which would otherwise land on the first BuildTree (a UI click)
         // and stall it ~0.5s. Doing it here keeps that cost in the background warm-up.
         _ = VendorItems.ByItemId.Count + StaticRecipes.ByOutputItemId.Count;
+
+        _achievementSources ??= await LoadAchievementSourcesAsync(ct);
     }
 
     public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
@@ -284,6 +293,33 @@ public class RecipeTreeBuilder
                         _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
                     }
                 }
+                else if (currentNode.BuyPricePerUnit == 0
+                         && !currentNode.IsVendorAcquirable
+                         && !currentNode.IsEarned
+                         && _achievementSources!.TryGetValue(currentNode.ItemId, out List<StaticRecipe>? achievements))
+                {
+                    // No way to buy, craft, forge or earn it: an achievement that rewards it is the source, priced as
+                    // the items its objectives take. Only now, so an item normally crafted (that an achievement also
+                    // gives once) is never priced from it. The cheapest achievement with a known cost wins.
+                    RecipeNode? bestRecipeTree = null;
+                    foreach (StaticRecipe achievement in achievements)
+                    {
+                        RecipeNode recipeTree = await BuildStaticRecipeTree(achievement, currentNode.Count, ct, path);
+                        if (IsBetterVariant(recipeTree, bestRecipeTree))
+                        {
+                            bestRecipeTree = recipeTree;
+                        }
+                    }
+
+                    if (bestRecipeTree != null)
+                    {
+                        currentNode.OutputItemCount = bestRecipeTree.OutputItemCount;
+                        currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
+                        currentNode.AcquiredVia = bestRecipeTree.AcquiredVia;
+                        currentNode.Ingredients = bestRecipeTree.Ingredients;
+                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                    }
+                }
                 else
                 {
                     // Leaf node - no recipe, mark as processed
@@ -324,6 +360,57 @@ public class RecipeTreeBuilder
         }
 
         return candidate.CraftingCostPerUnit < best.CraftingCostPerUnit;
+    }
+
+    /// <summary>
+    /// The collections that reward each item, as recipes: the reward made from one of each item the collection's
+    /// objectives take (skin and mini objectives aren't items, so they don't count), labelled with the collection.
+    /// Only collections: other achievements also give items now and then that are normally gathered (a story's Pile
+    /// of Silky Sand), which "from the achievement" would misstate. A collection the
+    /// account has completed stays a source, so its recipe still shows, but its label says it's completed: most rewards
+    /// come once per account.
+    /// </summary>
+    private async Task<Dictionary<int, List<StaticRecipe>>> LoadAchievementSourcesAsync(CancellationToken ct)
+    {
+        HashSet<int> completed = _accountId is null
+            ? []
+            : (await _dbContext.AccountAchievements.AsNoTracking()
+                .Where(a => a.AccountId == _accountId && a.Done)
+                .Select(a => a.AchievementId)
+                .ToListAsync(ct)).ToHashSet();
+
+        var sources = new Dictionary<int, List<StaticRecipe>>();
+        foreach (Achievement achievement in await _dbContext.Achievements.AsNoTracking().ToListAsync(ct))
+        {
+            if (achievement.Type != "ItemSet")
+            {
+                continue;
+            }
+
+            foreach (AchievementReward reward in achievement.Rewards.Where(r => r.Type == "Item" && r.Id is not null))
+            {
+                var recipe = new StaticRecipe
+                {
+                    OutputItemId = reward.Id!.Value,
+                    OutputItemCount = Math.Max(1, reward.Count ?? 1),
+                    Ingredients = achievement.Bits
+                        .Where(bit => bit.Type == "Item" && bit.Id != reward.Id)
+                        .Select(bit => new StaticIngredient { ItemId = bit.Id, Count = 1 })
+                        .ToList(),
+                    Method = completed.Contains(achievement.Id)
+                        ? $"the {achievement.Name} achievement, completed"
+                        : $"the {achievement.Name} achievement",
+                };
+                if (!sources.TryGetValue(recipe.OutputItemId, out List<StaticRecipe>? list))
+                {
+                    sources[recipe.OutputItemId] = list = [];
+                }
+
+                list.Add(recipe);
+            }
+        }
+
+        return sources;
     }
 
     private static void SetDepth(RecipeNode node, int depth)
@@ -548,8 +635,11 @@ public class RecipeTreeBuilder
         string.Join(' ', name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(word => word.EndsWith('s') ? word[..^1] : word));
 
+    // An item the API doesn't list (e.g. a collection's journal) has no row: the app ships its name.
     private string GetItemName(int itemId) =>
-        _itemNames!.GetValueOrDefault(itemId) ?? $"Unknown Item ({itemId})";
+        _itemNames!.GetValueOrDefault(itemId)
+        ?? UnlistedItems.NamesById.GetValueOrDefault(itemId)
+        ?? $"Unknown Item ({itemId})";
 
     private string GetCurrencyName(int currencyId) =>
         _currencyNames!.GetValueOrDefault(currencyId) ?? $"Unknown Currency ({currencyId})";

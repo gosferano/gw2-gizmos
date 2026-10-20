@@ -29,8 +29,14 @@ public class ItemCraftCostUpdater
     {
         _logger.LogInformation("Starting craft-cost computation...");
 
-        // Craft cost for every craftable item: walk all recipe trees once (memoized in the builder).
-        var builder = new RecipeTreeBuilder(_dbContext, RecipeFinder.Configuration.Default);
+        // Craft cost for every craftable item: walk all recipe trees once (memoized in the builder). The account only
+        // marks completed collections in labels, not in costs; the worker doesn't know which account the desktop shows,
+        // so it takes the most recently synced one (with one account, the same).
+        string? accountId = await _dbContext.Accounts.AsNoTracking()
+            .OrderByDescending(a => a.LastSyncedUtc)
+            .Select(a => a.AccountId)
+            .FirstOrDefaultAsync(stoppingToken);
+        var builder = new RecipeTreeBuilder(_dbContext, RecipeFinder.Configuration.Default, accountId);
         List<RecipeNode> trees = await builder.GetRecipeTrees(stoppingToken);
         if (stoppingToken.IsCancellationRequested)
         {

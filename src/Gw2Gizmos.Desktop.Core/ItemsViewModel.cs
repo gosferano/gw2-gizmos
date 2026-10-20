@@ -34,6 +34,7 @@ public sealed class ItemsViewModel : ViewModelBase
     private readonly IItemsViewFactory _views;
     private readonly PageTargets _targets;
     private readonly PriceAlertEditing _alerts;
+    private readonly string? _accountId;
     private ItemRow? _selectedItem;
     private IReadOnlyList<RecipeNode> _selectedTree = Array.Empty<RecipeNode>();
     private string _filterText = "";
@@ -53,9 +54,11 @@ public sealed class ItemsViewModel : ViewModelBase
         IItemsViewFactory views,
         IUiDispatcher dispatcher,
         PageTargets targets,
-        PriceAlertEditing alerts
+        PriceAlertEditing alerts,
+        SelectedAccountService account
     )
     {
+        _accountId = string.IsNullOrEmpty(account.AccountId) ? null : account.AccountId;
         _alerts = alerts;
         AddAlertCommand = new RelayCommand(
             () => _ = SelectedItem is { } item ? _alerts.AddAsync(item.ItemId, item.Name) : null,
@@ -407,7 +410,8 @@ public sealed class ItemsViewModel : ViewModelBase
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
-            var builder = new RecipeTreeBuilder(dbContext, RecipeFinder.Configuration.Default);
+            // The selected account's completed collections are labelled as such in the tree.
+            var builder = new RecipeTreeBuilder(dbContext, RecipeFinder.Configuration.Default, _accountId);
             builder.UseLatestPrices(prices);
             await builder.EnsureLoadedAsync(CancellationToken.None);
             return builder;
