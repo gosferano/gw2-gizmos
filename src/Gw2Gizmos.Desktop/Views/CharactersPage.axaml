@@ -5,7 +5,7 @@
              xmlns:core="using:Gw2Gizmos.Desktop.Core"
              x:Class="Gw2Gizmos.Desktop.Views.CharactersPage"
              x:DataType="core:CharactersViewModel">
-    <c:PageShell Title="Characters">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
         <StackPanel>
             <!-- No account picked yet -->
             <c:Card Margin="0,4,0,0" Padding="20" IsVisible="{Binding !HasAccount}">

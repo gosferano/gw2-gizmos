@@ -33,4 +33,8 @@ public partial class AccountPage : UserControl
 
     private void OnOpenSharedInventory(object? sender, RoutedEventArgs e) =>
         _navigation?.NavigateTo(AppPage.SharedInventory);
+
+    private void OnOpenCharacters(object? sender, RoutedEventArgs e) => _navigation?.NavigateTo(AppPage.Characters);
+
+    private void OnOpenAchievements(object? sender, RoutedEventArgs e) => _navigation?.NavigateTo(AppPage.Achievements);
 }
