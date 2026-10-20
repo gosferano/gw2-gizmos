@@ -68,6 +68,12 @@ public static class WorkerFeatures
     public static readonly WorkerFeature Achievements = new(
         "Achievements", "Achievements", "Your progress on each achievement.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Progression) });
+
+    public static readonly WorkerFeature ResetProgress = new(
+        "ResetProgress", "Daily and weekly progress",
+        "Wizard's Vault objectives, world bosses, map chests, daily crafting and raid clears for the current reset.",
+        new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Progression) });
+
     public static readonly WorkerFeature PlaySessions = new(
         "PlaySessions", "Play sessions",
         "Tracks play sessions and per-character switches from MumbleLink; loot deltas use the "
@@ -79,7 +85,7 @@ public static class WorkerFeatures
         new[]
         {
             ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory,
-            TradingPost, Achievements, PlaySessions,
+            TradingPost, Achievements, ResetProgress, PlaySessions,
         };
 
     /// <summary>

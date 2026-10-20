@@ -27,6 +27,7 @@ public static class DeletableData
     public const string TradingPost = "TradingPost";
     public const string ValueHistory = "ValueHistory";
     public const string Achievements = "Achievements";
+    public const string ResetProgress = "ResetProgress";
 
     // Targeted account-scoped deletes that act on a single row by its id (DeleteRequest.TargetId), raised from the
     // sessions UI rather than the Settings → Stored data bulk list, so they're deliberately not in AccountTypes.
@@ -51,6 +52,7 @@ public static class DeletableData
         new DeletableDataType(TradingPost, "Trading post", true),
         new DeletableDataType(ValueHistory, "Account value history", true),
         new DeletableDataType(Achievements, "Achievement progress", true),
+        new DeletableDataType(ResetProgress, "Daily and weekly progress", true),
     };
 
     /// <summary>The global (non-account) categories.</summary>

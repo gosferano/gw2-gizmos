@@ -15,6 +15,7 @@ namespace Gw2Gizmos.Data.Worker.Tests;
 internal sealed class RoutingHttpStub : HttpMessageHandler
 {
     private readonly Dictionary<string, string> _byPath = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HttpStatusCode> _statusByPath = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Every absolute path requested, in order — for diagnostics in tests.</summary>
     public List<string> RequestedPaths { get; } = new();
@@ -23,6 +24,10 @@ internal sealed class RoutingHttpStub : HttpMessageHandler
     /// with its query (e.g. <c>/v2/recipes?ids=1</c>) takes precedence over the bare path, for endpoints that list ids
     /// and return details from the same path.</summary>
     public void SetJson(string path, string json) => _byPath[path] = json;
+
+    /// <summary>Makes a path (as for <see cref="SetJson"/>, without its query) fail with <paramref name="status"/>,
+    /// e.g. a 404, which the client maps to a null result.</summary>
+    public void SetStatus(string path, HttpStatusCode status) => _statusByPath[path] = status;
 
     /// <summary>Called with each requested path before it's answered — e.g. to cancel a sync partway through.</summary>
     public Action<string>? OnRequest { get; set; }
@@ -34,6 +39,11 @@ internal sealed class RoutingHttpStub : HttpMessageHandler
         string path = Uri.UnescapeDataString(request.RequestUri!.AbsolutePath);
         RequestedPaths.Add(path);
         OnRequest?.Invoke(path);
+        if (_statusByPath.TryGetValue(path, out HttpStatusCode status))
+        {
+            return Task.FromResult(new HttpResponseMessage(status));
+        }
+
         string withQuery = path + Uri.UnescapeDataString(request.RequestUri.Query);
         string body =
             _byPath.TryGetValue(withQuery, out string? exact) ? exact
