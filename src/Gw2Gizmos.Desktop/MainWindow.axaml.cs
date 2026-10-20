@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
         RootNavigation.SelectionChanged += OnSelectionChanged;
         RootNavigation.ItemInvoked += OnItemInvoked;
         SearchOverlay.DataContext = search;
+        SearchOverlay.SizeChanged += (_, _) => PlaceSearchCard();
         // Ctrl+K from anywhere in the window, even while a text box has focus.
         AddHandler(KeyDownEvent, OnWindowKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
@@ -136,6 +138,26 @@ public partial class MainWindow : Window
         _ = _search.OpenAsync();
         // Focus once the overlay is visible.
         Dispatcher.UIThread.Post(() => SearchBox.Focus(), DispatcherPriority.Input);
+        Dispatcher.UIThread.Post(PlaceSearchCard, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// Places the search card so it's centred at its full height (as it opens, listing the pages), then leaves its top
+    /// there: as the matches narrow the card shrinks from the bottom, so the box being typed in stays put.
+    /// </summary>
+    private void PlaceSearchCard()
+    {
+        if (!SearchOverlay.IsVisible)
+        {
+            return;
+        }
+
+        double fullHeight = SearchCard.Padding.Top + SearchCard.Padding.Bottom
+            + SearchCard.BorderThickness.Top + SearchCard.BorderThickness.Bottom
+            + SearchBox.Height + SearchResults.Margin.Top + SearchResults.MaxHeight;
+        double top = Math.Max(16, (SearchOverlay.Bounds.Height - fullHeight) / 2);
+        Thickness margin = SearchCard.Margin;
+        SearchCard.Margin = new Thickness(margin.Left, top, margin.Right, margin.Bottom);
     }
 
     /// <summary>Arrow keys move through the results and Enter opens one, while typing stays in the box.</summary>
