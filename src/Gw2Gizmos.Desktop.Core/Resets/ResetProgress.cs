@@ -57,7 +57,8 @@ public sealed record WizardsVaultObjectiveLine(
 
 /// <summary>
 /// One of the Wizard's Vault's objective sets (daily, weekly or special) and its meta reward (none for the special
-/// one). <see cref="IsStale"/> when it was synced before the reset that replaced it: its objectives are gone then.
+/// one). <see cref="IsStale"/> when it's the previous reset's set: the API keeps returning that one until the account
+/// logs in after the reset.
 /// </summary>
 public sealed record WizardsVaultSet(
     string Period,
@@ -183,10 +184,12 @@ public static class ResetProgress
             WizardsVaultPeriod.Weekly => GameResets.LastWeekly(now),
             _ => null,
         };
-        DateTimeOffset synced = meta?.SyncedAtUtc ?? objectives.Min(o => o.SyncedAtUtc);
+        // Since when the set has been the API's (not when it was last synced), so yesterday's set synced again this
+        // morning still reads as yesterday's.
+        DateTimeOffset current = meta?.CurrentSinceUtc ?? objectives.Min(o => o.SyncedAtUtc);
         return new WizardsVaultSet(
             period,
-            since is { } reset && synced < reset,
+            since is { } reset && current < reset,
             objectives.Select(o => new WizardsVaultObjectiveLine(
                     o.Title, o.Track, o.Acclaim, o.ProgressCurrent, o.ProgressComplete, o.Claimed))
                 .ToList(),

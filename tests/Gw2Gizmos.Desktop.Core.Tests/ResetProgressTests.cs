@@ -163,18 +163,20 @@ public sealed class ResetProgressTests
     }
 
     [Fact]
-    public void A_wizards_vault_set_synced_before_its_reset_is_stale_and_gives_no_acclaim()
+    public void A_wizards_vault_set_current_since_before_its_reset_is_stale_however_recently_synced()
     {
         _metas.Add(new AccountWizardsVaultMeta
         {
-            Period = WizardsVaultPeriod.Daily, ProgressComplete = 4, RewardAstral = 20, SyncedAtUtc = Yesterday,
+            Period = WizardsVaultPeriod.Daily, ProgressComplete = 4, RewardAstral = 20, SyncedAtUtc = Today,
+            CurrentSinceUtc = Yesterday,
         });
         _objectives.Add(new AccountWizardsVaultObjective
         {
             Period = WizardsVaultPeriod.Daily, Title = "Complete 3 Events", Acclaim = 10, ProgressComplete = 3,
-            SyncedAtUtc = Yesterday,
+            SyncedAtUtc = Today,
         });
 
+        // Synced this morning, but the same set as yesterday's: the account hasn't logged in since the reset.
         WizardsVaultSet daily = ResetProgress.WizardsVault(Data(), WizardsVaultPeriod.Daily, Now)!;
 
         Assert.True(daily.IsStale);
@@ -187,6 +189,7 @@ public sealed class ResetProgressTests
         _metas.Add(new AccountWizardsVaultMeta
         {
             Period = WizardsVaultPeriod.Weekly, ProgressComplete = 6, RewardAstral = 50, SyncedAtUtc = Today,
+            CurrentSinceUtc = Today,
         });
         _objectives.AddRange(
         [

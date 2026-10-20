@@ -433,6 +433,16 @@ public class AccountSyncUpdater
             return 0;
         }
 
+        AccountWizardsVaultMeta? stored = await _dbContext.AccountWizardsVaultMetas.AsNoTracking()
+            .FirstOrDefaultAsync(m => m.AccountId == accountId && m.Period == period, stoppingToken);
+        Dictionary<int, AccountWizardsVaultObjective> storedObjectives = await _dbContext.AccountWizardsVaultObjectives
+            .AsNoTracking()
+            .Where(o => o.AccountId == accountId && o.Period == period)
+            .ToDictionaryAsync(o => o.ObjectiveId, stoppingToken);
+        DateTimeOffset currentSince = stored is not null && IsSameSet(stored, storedObjectives, category)
+            ? stored.CurrentSinceUtc
+            : now;
+
         await _dbContext.AccountWizardsVaultMetas.Where(m => m.AccountId == accountId && m.Period == period)
             .ExecuteDeleteAsync(stoppingToken);
         _dbContext.AccountWizardsVaultMetas.Add(new AccountWizardsVaultMeta
@@ -445,9 +455,23 @@ public class AccountSyncUpdater
             RewardAstral = category.MetaRewardAstral,
             RewardClaimed = category.MetaRewardClaimed,
             SyncedAtUtc = now,
+            CurrentSinceUtc = currentSince,
         });
         return 1 + await StoreWizardsVaultObjectivesAsync(accountId, period, category.Objectives, now, stoppingToken);
     }
+
+    /// <summary>
+    /// Whether the API's set is the one stored: the same objectives, with nothing gone back down (progress, a claim,
+    /// the meta reward) — which only a new set does, even one that happens to repeat the same objectives.
+    /// </summary>
+    private static bool IsSameSet(
+        AccountWizardsVaultMeta stored, IReadOnlyDictionary<int, AccountWizardsVaultObjective> storedObjectives,
+        Api.AccountWizardsVaultCategory category) =>
+        category.Objectives.Length == storedObjectives.Count
+        && category.Objectives.All(o => storedObjectives.TryGetValue(o.Id, out AccountWizardsVaultObjective? was)
+            && o.ProgressCurrent >= was.ProgressCurrent && (o.Claimed || !was.Claimed))
+        && category.MetaProgressCurrent >= stored.ProgressCurrent
+        && (category.MetaRewardClaimed || !stored.RewardClaimed);
 
     private async Task<int> StoreWizardsVaultObjectivesAsync(
         string accountId, string period, Api.AccountWizardsVaultObjective[] objectives, DateTimeOffset now,

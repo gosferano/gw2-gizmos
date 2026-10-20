@@ -70,6 +70,13 @@ public class AccountWizardsVaultMeta
     public bool RewardClaimed { get; set; }
 
     public DateTimeOffset SyncedAtUtc { get; set; }
+
+    /// <summary>
+    /// When this set of objectives was first synced. The API keeps returning the previous reset's set until the
+    /// account logs in after the reset (the game hands out the new set then), so a set current since before the
+    /// reset is the old one, however recently it was synced.
+    /// </summary>
+    public DateTimeOffset CurrentSinceUtc { get; set; }
 }
 
 /// <summary>The Wizard's Vault's objective sets.</summary>

@@ -630,4 +630,54 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         Assert.Equal(0, await Db.AccountResetActivities.CountAsync());
         Assert.Equal(0, await Db.AccountWizardsVaultMetas.CountAsync());
     }
+
+    private static string DailyObjective(int id, int current, bool claimed) =>
+        $$"""
+        {"id": {{id}}, "title": "Objective {{id}}", "track": "PvE", "acclaim": 10,
+         "progress_current": {{current}}, "progress_complete": 3, "claimed": {{(claimed ? "true" : "false")}}}
+        """;
+
+    // Untracked: the read context would otherwise hand back the row as it first read it.
+    private async Task<DateTimeOffset> DailyCurrentSince() =>
+        (await Db.AccountWizardsVaultMetas.AsNoTracking().SingleAsync(m => m.Period == "Daily")).CurrentSinceUtc;
+
+    [Fact]
+    public async Task WizardsVault_KeepsWhenASetFirstAppeared_UntilANewSetComes()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        StubResetProgress("[]", $"[{DailyObjective(1, 1, false)}]");
+        await Sync();
+        DateTimeOffset first = await DailyCurrentSince();
+
+        // The same set, further along (as the API keeps returning it until the account logs in after the reset).
+        _time.Advance(TimeSpan.FromHours(5));
+        StubResetProgress("[]", $"[{DailyObjective(1, 3, true)}]");
+        await Sync();
+        Assert.Equal(first, await DailyCurrentSince());
+
+        // A new set: different objectives.
+        _time.Advance(TimeSpan.FromHours(1));
+        StubResetProgress("[]", $"[{DailyObjective(2, 0, false)}]");
+        await Sync();
+        Assert.Equal(_time.GetUtcNow(), await DailyCurrentSince());
+    }
+
+    [Fact]
+    public async Task WizardsVault_ASetWhoseProgressWentBackDownIsNew()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        StubResetProgress("[]", $"[{DailyObjective(1, 3, true)}]");
+        await Sync();
+
+        // The same objective again, unclaimed and back at 0: a new day's set that repeats yesterday's.
+        _time.Advance(TimeSpan.FromHours(20));
+        StubResetProgress("[]", $"[{DailyObjective(1, 0, false)}]");
+        await Sync();
+
+        Assert.Equal(_time.GetUtcNow(), await DailyCurrentSince());
+    }
 }
