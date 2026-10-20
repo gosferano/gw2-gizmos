@@ -496,6 +496,14 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         );
         _stub.SetJson("/v2/account/raids", """["vale_guardian"]""");
         _stub.SetJson(
+            "/v2/dungeons?ids=all",
+            """
+            [{"id": "ascalonian_catacombs", "paths": [{"id": "ac_story", "type": "Story"},
+              {"id": "hodgins", "type": "Explorable"}]}]
+            """
+        );
+        _stub.SetJson("/v2/account/dungeons", """["hodgins"]""");
+        _stub.SetJson(
             "/v2/account/wizardsvault/daily",
             $$"""
             {"meta_progress_current": 1, "meta_progress_complete": 4, "meta_reward_item_id": 99961,
@@ -546,6 +554,13 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         Assert.Equal(
             [("vale_guardian", "spirit_vale", false, true), ("spirit_woods", "spirit_vale", true, false)],
             raid.Select(e => (e.ActivityId, e.Group, e.IsCheckpoint, e.Done))
+        );
+
+        List<AccountResetActivity> dungeon = await Db.AccountResetActivities
+            .Where(a => a.Kind == ResetActivityKind.Dungeon).OrderBy(a => a.Order).ToListAsync();
+        Assert.Equal(
+            [("ac_story", "ascalonian_catacombs", false), ("hodgins", "ascalonian_catacombs", true)],
+            dungeon.Select(p => (p.ActivityId, p.Group, p.Done))
         );
 
         AccountWizardsVaultMeta daily = await Db.AccountWizardsVaultMetas.SingleAsync(m => m.Period == "Daily");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Static;
 using Gw2Gizmos.Data.Static.Events;
@@ -9,21 +10,41 @@ using Gw2Gizmos.Data.Static.Resets;
 namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
-/// A once-per-reset activity as the page shows it: its name, the item it is (a daily craft) or 0, the event on the
-/// Events page's schedule it is (a world boss or map meta) when known, and whether it's done this reset.
+/// A once-per-reset activity as the page shows it: its name, the item it is (a daily craft) or 0, the events on the
+/// Events page's schedule it is (a world boss or map meta; several for the Convergences' shared chest), and whether
+/// it's done this reset.
 /// </summary>
-public sealed record ResetActivity(string Id, string Name, int ItemId, ScheduledEvent? Event, bool Done)
+public sealed record ResetActivity(
+    string Id, string Name, int ItemId, IReadOnlyList<ScheduledEvent> Events, bool Done)
 {
+    /// <summary>Its event that's on or starts next, and when; null without a scheduled event.</summary>
+    public (ScheduledEvent Event, EventTiming Timing)? Next(DateTimeOffset now) =>
+        Events.Count == 0
+            ? null
+            : Events.Select(e => (e, EventTiming.Of(e, now))).MinBy(pair => pair.Item2.SortKey);
+
     /// <summary>Not on a timer: a map meta that runs whenever players start it.</summary>
     public bool AnyTime { get; init; }
 }
 
-/// <summary>A raid wing and its bosses this week (checkpoints aren't clears, so they're left out).</summary>
-public sealed record RaidWing(string Name, IReadOnlyList<ResetActivity> Bosses)
+/// <summary>
+/// Activities done together in one place: a raid wing and its bosses this week (checkpoints aren't clears, so they're
+/// left out), or a dungeon and its paths today.
+/// </summary>
+public sealed record ResetActivityGroup(string Name, IReadOnlyList<ResetActivity> Activities)
 {
-    public int Cleared => Bosses.Count(b => b.Done);
+    public int Cleared => Activities.Count(a => a.Done);
 
-    public bool Done => Bosses.Count > 0 && Cleared == Bosses.Count;
+    public bool Done => Activities.Count > 0 && Cleared == Activities.Count;
+}
+
+/// <summary>An achievement of a rotating category this reset, and the account's progress on it.</summary>
+public sealed record RotatingAchievement(int Id, string Name, bool Done, int Current, int Max);
+
+/// <summary>A rotating achievement category (e.g. Daily Fractals), its icon, and its achievements this reset.</summary>
+public sealed record RotatingCategory(string Name, string Icon, IReadOnlyList<RotatingAchievement> Achievements)
+{
+    public int Done => Achievements.Count(a => a.Done);
 }
 
 /// <summary>A Wizard's Vault objective and its progress.</summary>
@@ -75,7 +96,7 @@ public static class ResetProgress
                 kind == ResetActivityKind.DailyCrafting
                     ? ResetActivities.DailyCraftingItems.GetValueOrDefault(a.ActivityId)
                     : 0,
-                Event(a),
+                Events(a),
                 a.Done && a.SyncedAtUtc >= since)
             {
                 AnyTime = kind == ResetActivityKind.MapChest && ResetActivities.UntimedMapChests.Contains(a.ActivityId),
@@ -84,23 +105,66 @@ public static class ResetProgress
     }
 
     /// <summary>The raid wings and their bosses cleared this week, in the API's order.</summary>
-    public static IReadOnlyList<RaidWing> Raids(ResetProgressData data, DateTimeOffset now)
+    public static IReadOnlyList<ResetActivityGroup> Raids(ResetProgressData data, DateTimeOffset now) =>
+        Groups(
+            data.Activities.Where(a => a.Kind == ResetActivityKind.Raid && !a.IsCheckpoint),
+            GameResets.LastWeekly(now),
+            ResetActivities.RaidName,
+            ResetActivities.RaidName);
+
+    /// <summary>The dungeons and their paths completed today, in the API's order.</summary>
+    public static IReadOnlyList<ResetActivityGroup> Dungeons(ResetProgressData data, DateTimeOffset now) =>
+        Groups(
+            data.Activities.Where(a => a.Kind == ResetActivityKind.Dungeon),
+            GameResets.LastDaily(now),
+            ResetActivities.DungeonName,
+            ResetActivities.DungeonPathName);
+
+    /// <summary>
+    /// The rotating achievement categories to show, in the page's order: the ones always shown, and a festival's
+    /// dailies while <paramref name="festival"/> is it. Progress synced before the achievement's reset (weekly for
+    /// one flagged weekly, otherwise daily) is from the previous reset, so it reads as not started.
+    /// </summary>
+    public static IReadOnlyList<RotatingCategory> RotatingAchievements(
+        ResetProgressData data, Festival? festival, DateTimeOffset now)
     {
-        DateTimeOffset since = GameResets.LastWeekly(now);
-        return data.Activities
-            .Where(a => a.Kind == ResetActivityKind.Raid && !a.IsCheckpoint && a.Group is not null)
-            .GroupBy(a => a.Group!)
-            .Select(wing => new RaidWing(
-                ResetActivities.RaidName(wing.Key),
-                wing.Select(a => new ResetActivity(
-                        a.ActivityId,
-                        ResetActivities.RaidName(a.ActivityId),
-                        0,
-                        null,
-                        a.Done && a.SyncedAtUtc >= since))
+        DateTimeOffset daily = GameResets.LastDaily(now);
+        DateTimeOffset weekly = GameResets.LastWeekly(now);
+        return data.RotatingCategories
+            .Where(c => !ResetActivities.FestivalCategories.TryGetValue(c.Id, out Festival of) || of == festival)
+            .Select(c => new RotatingCategory(
+                ResetActivities.RotatingCategoryNames.GetValueOrDefault(c.Id) ?? c.Name,
+                c.Icon,
+                c.AchievementIds
+                    .Where(data.Achievements.ContainsKey)
+                    .Select(id => Rotating(data.Achievements[id], data.AchievementProgress.GetValueOrDefault(id),
+                        data.Achievements[id].Flags.Contains("Weekly") ? weekly : daily))
                     .ToList()))
+            .Where(c => c.Achievements.Count > 0)
             .ToList();
     }
+
+    private static RotatingAchievement Rotating(
+        Achievement achievement, AccountAchievement? progress, DateTimeOffset since)
+    {
+        AccountAchievement? current = progress is not null && progress.SyncedAtUtc >= since ? progress : null;
+        int max = current?.Max ?? achievement.Tiers.LastOrDefault()?.Count ?? 0;
+        return new RotatingAchievement(
+            achievement.Id, achievement.Name, current?.Done == true, current?.Current ?? 0, max);
+    }
+
+    private static IReadOnlyList<ResetActivityGroup> Groups(
+        IEnumerable<AccountResetActivity> activities, DateTimeOffset since, Func<string, string> groupName,
+        Func<string, string> activityName) =>
+        activities
+            .Where(a => a.Group is not null)
+            .GroupBy(a => a.Group!)
+            .Select(group => new ResetActivityGroup(
+                groupName(group.Key),
+                group.Select(a => new ResetActivity(
+                        a.ActivityId, activityName(a.ActivityId), 0, [], a.Done && a.SyncedAtUtc >= since))
+                    .ToList()))
+            .ToList();
 
     /// <summary>The Wizard's Vault's set for a period; null when it hasn't synced.</summary>
     public static WizardsVaultSet? WizardsVault(ResetProgressData data, string period, DateTimeOffset now)
@@ -132,7 +196,7 @@ public static class ResetProgress
     private static string Name(AccountResetActivity activity, IReadOnlyDictionary<int, string> itemNames) =>
         activity.Kind switch
         {
-            ResetActivityKind.WorldBoss when Event(activity) is { } boss => boss.Name,
+            ResetActivityKind.WorldBoss when Events(activity) is [var boss] => boss.Name,
             ResetActivityKind.MapChest
                 when ResetActivities.MapChestMaps.TryGetValue(activity.ActivityId, out string? map) => map,
             ResetActivityKind.DailyCrafting
@@ -141,16 +205,16 @@ public static class ResetProgress
             _ => ResetActivities.NameFromId(activity.ActivityId),
         };
 
-    private static ScheduledEvent? Event(AccountResetActivity activity)
+    private static IReadOnlyList<ScheduledEvent> Events(AccountResetActivity activity)
     {
-        IReadOnlyDictionary<string, string>? events = activity.Kind switch
+        IReadOnlyList<string> eventIds = activity.Kind switch
         {
-            ResetActivityKind.WorldBoss => ResetActivities.WorldBossEvents,
-            ResetActivityKind.MapChest => ResetActivities.MapChestEvents,
-            _ => null,
+            ResetActivityKind.WorldBoss when ResetActivities.WorldBossEvents.TryGetValue(activity.ActivityId,
+                out string? boss) => [boss],
+            ResetActivityKind.MapChest when ResetActivities.MapChestEvents.TryGetValue(activity.ActivityId,
+                out IReadOnlyList<string>? metas) => metas,
+            _ => [],
         };
-        return events is not null && events.TryGetValue(activity.ActivityId, out string? eventId)
-            ? EventSchedule.All.FirstOrDefault(e => e.Id == eventId)
-            : null;
+        return EventSchedule.All.Where(e => eventIds.Contains(e.Id)).ToList();
     }
 }

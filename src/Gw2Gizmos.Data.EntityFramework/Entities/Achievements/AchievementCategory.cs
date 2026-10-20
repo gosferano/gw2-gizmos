@@ -28,4 +28,10 @@ public class AchievementCategory
 
     /// <summary>The category's achievements, in the API's order (stored as a JSON array).</summary>
     public int[] AchievementIds { get; set; } = [];
+
+    /// <summary>
+    /// For a category whose achievements rotate (e.g. Daily Fractals), the ones it has after the next reset; empty
+    /// for the others (stored as a JSON array). <see cref="AchievementIds"/> are then the current ones.
+    /// </summary>
+    public int[] TomorrowAchievementIds { get; set; } = [];
 }

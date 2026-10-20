@@ -15,7 +15,10 @@ public enum DataChanges
 {
     None = 0,
 
-    /// <summary>An account sync finished (its "synced …" time moved), whether or not anything changed.</summary>
+    /// <summary>
+    /// An account sync ran (its "synced …" time moved, as it starts) or its achievements and reset progress landed (at
+    /// its end), whether or not anything changed.
+    /// </summary>
     AccountSync = 1,
 
     /// <summary>Wallet or item holdings changed (new observations) — balances and session loot.</summary>
@@ -160,6 +163,17 @@ public sealed class DataChangeMonitor
             // A handful of accounts at most; the max is taken here so it doesn't depend on the provider's date support.
             DateTimeOffset lastSync = db.Accounts.AsNoTracking().Select(a => a.LastSyncedUtc).AsEnumerable()
                 .DefaultIfEmpty().Max();
+            // The account's "synced" time is stamped as a sync starts, but achievements and the reset's progress are
+            // synced last, so their own sync times tell when those land.
+            DateTimeOffset lastProgress = new[]
+            {
+                db.AccountAchievements.AsNoTracking().OrderByDescending(a => a.SyncedAtUtc)
+                    .Select(a => a.SyncedAtUtc).FirstOrDefault(),
+                db.AccountResetActivities.AsNoTracking().OrderByDescending(a => a.SyncedAtUtc)
+                    .Select(a => a.SyncedAtUtc).FirstOrDefault(),
+                db.AccountWizardsVaultMetas.AsNoTracking().OrderByDescending(m => m.SyncedAtUtc)
+                    .Select(m => m.SyncedAtUtc).FirstOrDefault(),
+            }.Max();
             // The newest point is re-stamped when a sync in the same hour updates it, so its time changes too.
             var lastValue = db.AccountValueSnapshots.AsNoTracking()
                 .OrderByDescending(s => s.Id)
@@ -167,6 +181,7 @@ public sealed class DataChangeMonitor
                 .FirstOrDefault();
             return new DataStamp(
                 lastSync,
+                lastProgress,
                 db.AccountWalletObservations.Max(o => (long?)o.Id) ?? 0,
                 db.AccountItemObservations.Max(o => (long?)o.Id) ?? 0,
                 db.GameSessions.Count(),
@@ -189,6 +204,7 @@ public sealed class DataChangeMonitor
 
     private sealed record DataStamp(
         DateTimeOffset LastSync,
+        DateTimeOffset LastProgressSync,
         long LastWalletObservation,
         long LastItemObservation,
         int Sessions,
@@ -205,7 +221,7 @@ public sealed class DataChangeMonitor
         public DataChanges Compare(DataStamp before)
         {
             DataChanges changes = DataChanges.None;
-            if (LastSync != before.LastSync)
+            if (LastSync != before.LastSync || LastProgressSync != before.LastProgressSync)
             {
                 changes |= DataChanges.AccountSync;
             }

@@ -459,6 +459,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
+                    b.PrimitiveCollection<string>("TomorrowAchievementIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("AchievementCategories");

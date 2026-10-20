@@ -11,6 +11,12 @@
         <Style Selector="TextBlock.label">
             <Setter Property="Opacity" Value="0.7" />
         </Style>
+        <!-- A heading over a group of cards: Daily, Weekly, Rotating achievements. -->
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,18,0,4" />
+        </Style>
         <Style Selector="TextBlock.heading">
             <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -27,7 +33,62 @@
         </Style>
     </UserControl.Styles>
 
+    <UserControl.Resources>
+        <!-- A raid wing or dungeon: how much of it is done, each boss or path in the tooltip. -->
+        <DataTemplate x:Key="GroupRowTemplate" DataType="core:ResetActivityGroupRow">
+            <DockPanel Margin="0,3" Classes.done="{Binding IsDone}" Background="Transparent"
+                       ToolTip.Tip="{Binding Tooltip}">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" Classes="secondary" FontSize="12"
+                           VerticalAlignment="Center" />
+                <Panel DockPanel.Dock="Left" Width="18" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16" Classes="check" IsVisible="{Binding IsDone}" />
+                    <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open" IsVisible="{Binding !IsDone}" />
+                </Panel>
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            </DockPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <UserControl.DataTemplates>
+        <!-- A rotating achievement category's card: what's left first, then what's done, the first few until
+             expanded. -->
+        <DataTemplate DataType="core:RotatingCategoryGroup">
+            <c:Card Margin="6" Padding="16,12">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" Classes="secondary" FontSize="12"
+                                   VerticalAlignment="Center" />
+                        <c:IconImage DockPanel.Dock="Left" IconUrl="{Binding Icon}" Width="24" Height="24"
+                                     Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Title}" Classes="heading" TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="core:RotatingAchievementRow">
+                                <DockPanel Margin="0,3" Classes.done="{Binding IsDone}">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}" Classes="secondary"
+                                               FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    <Panel DockPanel.Dock="Left" Width="18" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16" Classes="check"
+                                                      IsVisible="{Binding IsDone}" />
+                                        <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open"
+                                                      IsVisible="{Binding !IsDone}" />
+                                    </Panel>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding Name}" VerticalAlignment="Center" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="{Binding ToggleText}" Command="{Binding ToggleCommand}"
+                            IsVisible="{Binding HasMore}" Theme="{StaticResource TransparentButton}"
+                            Padding="0,4" Margin="0,4,0,0" HorizontalAlignment="Left"
+                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                </StackPanel>
+            </c:Card>
+        </DataTemplate>
+
         <!-- A card of once-per-reset activities: what's left first, then what's done, the first few until expanded. -->
         <DataTemplate DataType="core:ResetActivitySection">
             <c:Card Margin="6" Padding="16,12" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
@@ -167,8 +228,9 @@
                     </StackPanel>
                 </c:Card>
 
-                <!-- Once-per-reset rewards, two cards a row. Each row is as tall as its taller card (a Grid rather than a
+                <!-- Each section's cards sit two a row. Each row is as tall as its taller card (a Grid rather than a
                      UniformGrid, whose rows are all the same height), so expanding a list only grows its own row. -->
+                <TextBlock Text="Daily" Classes="section" />
                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="-6,0">
                     <ContentControl Grid.Row="0" Grid.Column="0" Content="{Binding WorldBosses}" />
                     <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding MapChests}" />
@@ -177,35 +239,42 @@
                             VerticalContentAlignment="Top">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,6">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding DungeonSummary}" Classes="secondary"
+                                           FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Dungeons" Classes="heading" />
+                            </DockPanel>
+                            <ItemsControl ItemsSource="{Binding Dungeons}"
+                                          ItemTemplate="{StaticResource GroupRowTemplate}" />
+                        </StackPanel>
+                    </c:Card>
+                </Grid>
+
+                <TextBlock Text="Weekly" Classes="section" />
+                <Grid ColumnDefinitions="*,*" Margin="-6,0">
+                    <c:Card Grid.Column="0" Margin="6" Padding="16,12" VerticalContentAlignment="Top">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,6">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding RaidSummary}" Classes="secondary"
                                            FontSize="12" VerticalAlignment="Center" />
                                 <TextBlock Text="Raids" Classes="heading" />
                             </DockPanel>
-                            <ItemsControl ItemsSource="{Binding RaidWings}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="core:RaidWingRow">
-                                        <DockPanel Margin="0,3" Classes.done="{Binding IsDone}" Background="Transparent"
-                                                   ToolTip.Tip="{Binding Tooltip}">
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}"
-                                                       Classes="secondary" FontSize="12" VerticalAlignment="Center" />
-                                            <Panel DockPanel.Dock="Left" Width="18" Margin="0,0,8,0"
-                                                   VerticalAlignment="Center">
-                                                <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16" Classes="check"
-                                                              IsVisible="{Binding IsDone}" />
-                                                <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open"
-                                                              IsVisible="{Binding !IsDone}" />
-                                            </Panel>
-                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"
-                                                       VerticalAlignment="Center" />
-                                        </DockPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding RaidWings}"
+                                          ItemTemplate="{StaticResource GroupRowTemplate}" />
                             <TextBlock Text="Strike missions aren't in the API." Classes="secondary" FontSize="12"
                                        Margin="0,6,0,0" />
                         </StackPanel>
                     </c:Card>
                 </Grid>
+
+                <!-- Rotating achievement categories (Daily Fractals, rift hunts, …), a card each: this reset's
+                     achievements, in two columns that each grow on their own. -->
+                <StackPanel IsVisible="{Binding HasRotatingAchievements}">
+                    <TextBlock Text="Rotating achievements" Classes="section" />
+                    <Grid ColumnDefinitions="*,*" Margin="-6,0">
+                        <ItemsControl Grid.Column="0" ItemsSource="{Binding RotatingLeft}" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding RotatingRight}" />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
     </c:PageShell>

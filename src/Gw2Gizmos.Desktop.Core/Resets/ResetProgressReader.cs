@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Static.Resets;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,8 @@ namespace Gw2Gizmos.Desktop.Core;
 
 /// <summary>
 /// The account's stored progress for the current reset: its once-per-reset activities and its Wizard's Vault, with
-/// the names of the items they refer to (daily crafts, meta rewards).
+/// the names of the items they refer to (daily crafts, meta rewards), and the rotating achievement categories the
+/// page shows with their achievements and the account's progress on them.
 /// </summary>
 public sealed record ResetProgressData(
     IReadOnlyList<AccountResetActivity> Activities,
@@ -21,6 +23,16 @@ public sealed record ResetProgressData(
 )
 {
     public static ResetProgressData Empty { get; } = new([], [], [], new Dictionary<int, string>());
+
+    /// <summary>The rotating achievement categories the page shows (always and festival ones), as synced.</summary>
+    public IReadOnlyList<AchievementCategory> RotatingCategories { get; init; } = [];
+
+    /// <summary>The achievements of <see cref="RotatingCategories"/>, by id.</summary>
+    public IReadOnlyDictionary<int, Achievement> Achievements { get; init; } = new Dictionary<int, Achievement>();
+
+    /// <summary>The account's progress on those achievements, by achievement id.</summary>
+    public IReadOnlyDictionary<int, AccountAchievement> AchievementProgress { get; init; } =
+        new Dictionary<int, AccountAchievement>();
 
     /// <summary>Nothing synced yet (the feature is off, the key lacks the permission, or no sync has run).</summary>
     public bool IsEmpty => Activities.Count == 0 && Objectives.Count == 0 && Metas.Count == 0;
@@ -72,7 +84,31 @@ public sealed class ResetProgressReader
                 .Select(item => new { item.Id, item.Name })
                 .ToDictionary(item => item.Id, item => item.Name);
 
-            return new ResetProgressData(activities, objectives, metas, itemNames);
+            // The rotating categories the page can show, in its order, with their current achievements.
+            List<int> categoryIds = ResetActivities.RotatingCategories
+                .Concat(ResetActivities.FestivalCategories.Keys)
+                .ToList();
+            Dictionary<int, AchievementCategory> stored = db.AchievementCategories.AsNoTracking()
+                .Where(c => categoryIds.Contains(c.Id))
+                .ToDictionary(c => c.Id);
+            List<AchievementCategory> categories = categoryIds
+                .Where(stored.ContainsKey)
+                .Select(id => stored[id])
+                .ToList();
+            HashSet<int> achievementIds = categories.SelectMany(c => c.AchievementIds).ToHashSet();
+            Dictionary<int, Achievement> achievements = db.Achievements.AsNoTracking()
+                .Where(a => achievementIds.Contains(a.Id))
+                .ToDictionary(a => a.Id);
+            Dictionary<int, AccountAchievement> progress = db.AccountAchievements.AsNoTracking()
+                .Where(a => a.AccountId == accountId && achievementIds.Contains(a.AchievementId))
+                .ToDictionary(a => a.AchievementId);
+
+            return new ResetProgressData(activities, objectives, metas, itemNames)
+            {
+                RotatingCategories = categories,
+                Achievements = achievements,
+                AchievementProgress = progress,
+            };
         }
         catch (Exception)
         {
