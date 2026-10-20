@@ -96,15 +96,15 @@ public sealed class AchievementsCatalogTests
 
         Assert.Equal(("Done", 2, 2), (row.ProgressText, row.PointsEarned, row.PointsTotal));
         Assert.Equal(
-            [new AchievementObjective("Svanir Legguard Remnant", true), new("Defeat the Mark II golem.", true)],
+            [new AchievementObjective("Svanir Legguard Remnant", true, 70502), new("Defeat the Mark II golem.", true)],
             row.Objectives
         );
-        Assert.Equal(["1× Mistward Legguards"], row.Rewards);
+        Assert.Equal([new AchievementRewardLine("1× Mistward Legguards", 70598)], row.Rewards);
         Assert.False(row.IsQuickWinCandidate);
     }
 
     [Fact]
-    public void Skin_and_mini_objectives_show_their_names()
+    public void Skin_and_mini_objectives_show_their_names_and_a_mini_its_item()
     {
         Achievement collection = Add(1, "Wardrobe", (2, 1));
         collection.Bits =
@@ -118,11 +118,13 @@ public sealed class AchievementsCatalogTests
         {
             SkinNames = new Dictionary<int, string> { [208] = "Scale Legs" },
             MiniNames = new Dictionary<int, string> { [1] = "Mini Rytlock" },
+            MiniItemIds = new Dictionary<int, int> { [1] = 21047 },
         };
 
         AchievementRow row = Assert.Single(AchievementsCatalog.Build(data).Rows);
 
         Assert.Equal(["Scale Legs", "Mini Rytlock", "Skin 999"], row.Objectives.Select(o => o.Text));
+        Assert.Equal([0, 21047, 0], row.Objectives.Select(o => o.ItemId));
     }
 
     [Fact]

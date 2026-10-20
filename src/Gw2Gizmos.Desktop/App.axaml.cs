@@ -67,6 +67,8 @@ public partial class App : Application
             FollowSystemAccentColor(_host.Services.GetRequiredService<ISystemAccentColor>());
             AppServices.Rarities = _host.Services.GetRequiredService<ItemRarities>();
             AppServices.Rarities.StartLoading();
+            AppServices.ItemLinks = _host.Services.GetRequiredService<ItemLinks>();
+            AppServices.ItemLinks.StartLoading();
             AppServices.Icons = new IconProvider<Bitmap>(
                 _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
             AppServices.Tiles = new MapTileCache<Bitmap>(dataDirectory, AvaloniaTileDecoder.Decode);

@@ -19,4 +19,7 @@ public static class AppServices
 
     /// <summary>Item rarities, behind the rarity colours of item names and <c>ItemImage</c> borders.</summary>
     public static ItemRarities? Rarities { get; internal set; }
+
+    /// <summary>Which items the Items page lists, behind item names that link to it.</summary>
+    public static ItemLinks? ItemLinks { get; internal set; }
 }
