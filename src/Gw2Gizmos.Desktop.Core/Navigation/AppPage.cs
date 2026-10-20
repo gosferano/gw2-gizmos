@@ -26,7 +26,6 @@ public enum AppPage
     Achievements,
     Items,
     TradingPost,
-    PriceAlerts,
     Notifications,
     Logs,
     ApiKeys,

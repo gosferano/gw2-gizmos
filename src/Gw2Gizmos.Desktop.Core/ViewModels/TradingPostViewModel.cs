@@ -25,9 +25,15 @@ public sealed class TradingPostViewModel : ViewModelBase, INavigationAware
     private int _tradesShown = TradesPageSize;
     private bool _loaded;
 
-    public TradingPostViewModel(AccountReader reader, SelectedAccountService selected, DataChangeMonitor dataChanges)
+    public TradingPostViewModel(
+        AccountReader reader,
+        SelectedAccountService selected,
+        DataChangeMonitor dataChanges,
+        PriceAlertsViewModel priceAlerts
+    )
     {
         _reader = reader;
+        PriceAlerts = priceAlerts;
         _accountId = selected.AccountId;
         HasAccount = !string.IsNullOrEmpty(selected.AccountId);
         ShowMoreTradesCommand = new RelayCommand(() =>
@@ -40,7 +46,14 @@ public sealed class TradingPostViewModel : ViewModelBase, INavigationAware
         _dataChanges = dataChanges.Subscribe(AccountPageRefresh.When(() => _ = LoadAsync()));
     }
 
-    public void OnNavigatedFrom() => _dataChanges.Dispose();
+    public void OnNavigatedFrom()
+    {
+        _dataChanges.Dispose();
+        PriceAlerts.OnNavigatedFrom();
+    }
+
+    /// <summary>The Price alerts tab. Alerts are about trading post prices but need no account.</summary>
+    public PriceAlertsViewModel PriceAlerts { get; }
 
     public bool HasAccount { get; }
 
