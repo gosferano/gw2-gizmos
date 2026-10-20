@@ -36,7 +36,6 @@ public sealed class GlobalSearch
         new("Achievements", "Account", "Trophy24", AppPage.Achievements, "ap points collections progress quick wins"),
         new("Items", null, "BoxMultiple24", AppPage.Items, "market prices crafting"),
         new("Trading post", null, "BuildingShop24", AppPage.TradingPost, "orders buys sells undercut outbid tp"),
-        new("Price alerts", null, "AlertOn24", AppPage.PriceAlerts, "notify tp trading post"),
         new("Account", null, "Person24", AppPage.Account, ""),
         new("Value", "Account", "DataTrending24", AppPage.AccountValue, "account value worth net gold"),
         new("Wallet", "Account", "Wallet24", AppPage.Wallet, "currencies coin karma"),

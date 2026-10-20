@@ -33,7 +33,6 @@ public sealed class PageFactory
         [AppPage.Items] = typeof(ItemsPage),
         [AppPage.AccountValue] = typeof(AccountValuePage),
         [AppPage.TradingPost] = typeof(TradingPostPage),
-        [AppPage.PriceAlerts] = typeof(PriceAlertsPage),
         [AppPage.Notifications] = typeof(NotificationsPage),
         [AppPage.Logs] = typeof(LogsPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),

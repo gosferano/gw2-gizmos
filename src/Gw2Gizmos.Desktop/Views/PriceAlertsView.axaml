@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.PriceAlertsView"
+             x:DataType="core:PriceAlertsViewModel">
+    <!-- The user's price alerts, shown as the Trading post page's Price alerts tab. -->
+    <StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" IsVisible="{Binding NoAlerts}"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="No price alerts yet. Select an item on the Items page and choose “Price alert” to get notified when its price crosses an amount." />
+
+        <!-- One row per alert: the item and its condition, the current price and how far it is from triggering. -->
+        <ItemsControl ItemsSource="{Binding Alerts}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="core:PriceAlertRow">
+                    <Border Classes="hover-row">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Theme="{StaticResource TransparentButton}" Padding="8"
+                                    Margin="4,0,0,0" ToolTip.Tip="Remove"
+                                    Command="{Binding $parent[UserControl].((core:PriceAlertsViewModel)DataContext).RemoveCommand}"
+                                    CommandParameter="{Binding}">
+                                <c:FluentIcon Symbol="Delete24" FontSize="16" />
+                            </Button>
+                            <Button DockPanel.Dock="Right" Theme="{StaticResource TransparentButton}" Padding="8"
+                                    Margin="12,0,0,0" ToolTip.Tip="Edit"
+                                    Command="{Binding $parent[UserControl].((core:PriceAlertsViewModel)DataContext).EditCommand}"
+                                    CommandParameter="{Binding}">
+                                <c:FluentIcon Symbol="Edit24" FontSize="16" />
+                            </Button>
+
+                            <!-- The current price, and how far from triggering (or when it triggered). -->
+                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Width="170">
+                                <c:CoinDisplay Copper="{Binding CurrentPrice}" FontWeight="Medium" HorizontalAlignment="Right"
+                                               IsVisible="{Binding HasCurrentPrice}" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4"
+                                            IsVisible="{Binding HasDistance}">
+                                    <c:CoinDisplay Copper="{Binding Distance}" FontSize="12" IconSize="11"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="to go" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding Status}" FontSize="12" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           IsVisible="{Binding HasStatus}" />
+                            </StackPanel>
+
+                            <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                         VerticalAlignment="Center" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ItemName}" c:ItemRarity.ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <StackPanel.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="FontSize" Value="12" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </Style>
+                                    </StackPanel.Styles>
+                                    <TextBlock Text="{Binding Condition}" />
+                                    <c:CoinDisplay Copper="{Binding PriceCopper}" FontSize="12" IconSize="11" />
+                                    <TextBlock Text="·" />
+                                    <TextBlock Text="{Binding RepeatText}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>
