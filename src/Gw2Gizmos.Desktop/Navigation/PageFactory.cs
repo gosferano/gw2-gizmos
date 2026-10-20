@@ -27,6 +27,7 @@ public sealed class PageFactory
         [AppPage.Session] = typeof(SessionPage),
         [AppPage.SessionLoot] = typeof(SessionLootPage),
         [AppPage.Events] = typeof(EventsPage),
+        [AppPage.ResetProgress] = typeof(ResetProgressPage),
         [AppPage.WorldMap] = typeof(WorldMapPage),
         [AppPage.Wvw] = typeof(WvwPage),
         [AppPage.Achievements] = typeof(AchievementsPage),
