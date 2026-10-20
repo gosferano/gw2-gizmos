@@ -21,8 +21,11 @@ public sealed class HeadlessApp : Application
         Resources.MergedDictionaries.Add(new ResourceInclude(app) { Source = new Uri(app, "Themes/Controls.axaml") });
     }
 
+    // Skia rather than the headless stub drawing, so text is measured with real fonts (widths can be checked).
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<HeadlessApp>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<HeadlessApp>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }
 
 /// <summary>
