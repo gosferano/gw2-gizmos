@@ -48,6 +48,7 @@ public sealed class AchievementsViewModel : ViewModelBase, INavigationAware
         _reader = reader;
         _accountId = string.IsNullOrEmpty(account.AccountId) ? null : account.AccountId;
         _filter = Filters[0];
+        Breadcrumbs = AccountBreadcrumbs.Section("Achievements");
         _sort = Sorts[0];
 
         _ = LoadAsync();
@@ -150,6 +151,9 @@ public sealed class AchievementsViewModel : ViewModelBase, INavigationAware
 
     /// <summary>False when no account is selected: the achievements still show, without progress.</summary>
     public bool HasAccount => _accountId is not null;
+
+    /// <summary>Account › Achievements: achievements are a section of the account.</summary>
+    public BreadcrumbEntry[] Breadcrumbs { get; }
 
     /// <summary>True once achievements have synced; until then the page shows a note.</summary>
     public bool HasAchievements => _catalog.Rows.Count > 0;

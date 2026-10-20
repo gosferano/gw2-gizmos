@@ -14,18 +14,20 @@ public sealed class SelectedCharacterService
     public void Select(string characterName) => CharacterName = characterName;
 }
 
-/// <summary>Builds the Characters breadcrumb trails: <c>Characters › ‹name›</c> and
-/// <c>Characters › ‹name› › Inventory</c> (the account stays global context, shown elsewhere, never a crumb).</summary>
+/// <summary>Builds the Characters breadcrumb trails: <c>Account › Characters › ‹name›</c> and
+/// <c>Account › Characters › ‹name› › Inventory</c> (characters are a section of the account).</summary>
 public static class CharacterBreadcrumbs
 {
     public static BreadcrumbEntry[] Character(string name) => new[]
     {
+        new BreadcrumbEntry { Title = "Account", Target = AppPage.Account },
         new BreadcrumbEntry { Title = "Characters", Target = AppPage.Characters },
         new BreadcrumbEntry { Title = name },
     };
 
     public static BreadcrumbEntry[] Inventory(string name) => new[]
     {
+        new BreadcrumbEntry { Title = "Account", Target = AppPage.Account },
         new BreadcrumbEntry { Title = "Characters", Target = AppPage.Characters },
         new BreadcrumbEntry { Title = name, Target = AppPage.Character },
         new BreadcrumbEntry { Title = "Inventory" },

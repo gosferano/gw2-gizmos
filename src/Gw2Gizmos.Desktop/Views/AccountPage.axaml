@@ -23,6 +23,13 @@
                 <ui:FASettingsExpander Header="Value" Description="What the account is worth, over time"
                                        Margin="0,0,0,8" IconSource="{c:FluentIconSource DataTrending24}"
                                        IsClickEnabled="True" ActionIconSource="ChevronRight" Click="OnOpenValue" />
+                <ui:FASettingsExpander Header="Characters" Description="Your characters, their builds and bags"
+                                       Margin="0,0,0,8" IconSource="{c:FluentIconSource People24}"
+                                       IsClickEnabled="True" ActionIconSource="ChevronRight" Click="OnOpenCharacters" />
+                <ui:FASettingsExpander Header="Achievements" Description="Your progress, and quick wins"
+                                       Margin="0,0,0,8" IconSource="{c:FluentIconSource Trophy24}"
+                                       IsClickEnabled="True" ActionIconSource="ChevronRight"
+                                       Click="OnOpenAchievements" />
                 <ui:FASettingsExpander Header="Wallet" Description="Currencies and coin" Margin="0,0,0,8"
                                        IconSource="{c:FluentIconSource Wallet24}" IsClickEnabled="True"
                                        ActionIconSource="ChevronRight" Click="OnOpenWallet" />

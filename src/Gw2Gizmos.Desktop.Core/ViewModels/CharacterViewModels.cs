@@ -34,6 +34,7 @@ public sealed class CharactersViewModel : ViewModelBase, INavigationAware
         _navigation = navigation;
         HasAccount = !string.IsNullOrEmpty(account.AccountId);
         OpenCommand = new RelayCommand<string>(Open);
+        Breadcrumbs = AccountBreadcrumbs.Section("Characters");
 
         _ = LoadAsync();
         _dataChanges = dataChanges.Subscribe(AccountPageRefresh.When(() => _ = LoadAsync()));
@@ -45,6 +46,9 @@ public sealed class CharactersViewModel : ViewModelBase, INavigationAware
 
     /// <summary>False when no account is selected; the page shows a "pick an account" note instead.</summary>
     public bool HasAccount { get; }
+
+    /// <summary>Account › Characters: characters are a section of the account.</summary>
+    public BreadcrumbEntry[] Breadcrumbs { get; }
 
     /// <summary>True once at least one character has synced; otherwise the page shows <see cref="Status"/>.</summary>
     public bool HasCharacters => Characters.Count > 0;

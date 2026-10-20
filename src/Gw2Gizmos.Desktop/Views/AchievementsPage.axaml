@@ -18,7 +18,7 @@
         </Style>
     </UserControl.Styles>
 
-    <c:PageShell Title="Achievements" Scrollable="False" MaxContentWidth="100000">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}" Scrollable="False" MaxContentWidth="100000">
         <Grid ColumnDefinitions="360,*" ColumnSpacing="12">
             <!-- The game's groups and categories as the list's scope, each with how many are done. -->
             <Border Grid.Column="0" CornerRadius="8" Padding="4"
