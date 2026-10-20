@@ -13,4 +13,5 @@ public sealed class UpgradeComponentDetails
     public string Suffix { get; set; } = null!;
     public InfixUpgrade? InfixUpgrade { get; set; }
     public string[]? Bonuses { get; set; } = Array.Empty<string>();
+    public decimal AttributeAdjustment { get; set; }
 }

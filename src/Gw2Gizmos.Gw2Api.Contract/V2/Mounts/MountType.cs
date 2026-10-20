@@ -3,6 +3,7 @@
 public sealed class MountType
 {
     public string Id { get; set; } = null!;
+    public string Guid { get; set; } = null!;
     public string Name { get; set; } = null!;
     public int DefaultSkin { get; set; }
     public int[] Skins { get; set; } = Array.Empty<int>();

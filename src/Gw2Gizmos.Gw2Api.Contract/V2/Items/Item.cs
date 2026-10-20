@@ -15,4 +15,18 @@ public class Item
     public ItemFlag[] Flags { get; set; } = Array.Empty<ItemFlag>();
     public ItemGameType[] GameTypes { get; set; } = Array.Empty<ItemGameType>();
     public ItemRestriction[] Restrictions { get; set; } = Array.Empty<ItemRestriction>();
+
+    /// <summary>The attuned or infused versions this item can be made into (rings, accessories, back items).</summary>
+    public ItemUpgrade[] UpgradesInto { get; set; } = Array.Empty<ItemUpgrade>();
+
+    /// <summary>The items this one is an attuned or infused version of.</summary>
+    public ItemUpgrade[] UpgradesFrom { get; set; } = Array.Empty<ItemUpgrade>();
+}
+
+/// <summary>An item linked by an upgrade, e.g. a ring's attuned version.</summary>
+public sealed class ItemUpgrade
+{
+    /// <summary>"Attunement" or "Infusion".</summary>
+    public string Upgrade { get; set; } = null!;
+    public int ItemId { get; set; }
 }

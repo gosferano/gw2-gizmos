@@ -3,4 +3,5 @@
 public sealed class TraitFactDamage : TraitFact
 {
     public int HitCount { get; set; }
+    public decimal DmgMultiplier { get; set; }
 }
