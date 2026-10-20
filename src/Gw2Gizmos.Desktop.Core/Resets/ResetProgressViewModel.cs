@@ -35,18 +35,24 @@ public sealed class ResetProgressViewModel : ViewModelBase, INavigationAware
     private string _weeklyAt = "";
     private string _acclaimLeft = "";
     private IReadOnlyList<WizardsVaultGroup> _wizardsVault = [];
-    private IReadOnlyList<RaidWingRow> _raidWings = [];
+    private IReadOnlyList<ResetActivityGroupRow> _raidWings = [];
     private string _raidSummary = "";
+    private IReadOnlyList<ResetActivityGroupRow> _dungeons = [];
+    private string _dungeonSummary = "";
+    private IReadOnlyList<RotatingCategoryGroup> _rotating = [];
+    private readonly ReminderSettingsStore _eventSettings;
 
     public ResetProgressViewModel(
         ResetProgressReader reader,
         SelectedAccountService account,
         DataChangeMonitor dataChanges,
         IUiDispatcher dispatcher,
-        IClipboardService clipboard
+        IClipboardService clipboard,
+        ReminderSettingsStore eventSettings
     )
     {
         _reader = reader;
+        _eventSettings = eventSettings;
         _clipboard = clipboard;
         CopyChatLinkCommand = new RelayCommand<string>(chatLink => _ = CopyChatLinkAsync(chatLink));
         _accountId = string.IsNullOrEmpty(account.AccountId) ? null : account.AccountId;
@@ -119,11 +125,44 @@ public sealed class ResetProgressViewModel : ViewModelBase, INavigationAware
 
     public ResetActivitySection DailyCrafting { get; } = new("Daily crafting", "today");
 
-    public IReadOnlyList<RaidWingRow> RaidWings
+    public IReadOnlyList<ResetActivityGroupRow> RaidWings
     {
         get => _raidWings;
         private set => SetProperty(ref _raidWings, value);
     }
+
+    public IReadOnlyList<ResetActivityGroupRow> Dungeons
+    {
+        get => _dungeons;
+        private set => SetProperty(ref _dungeons, value);
+    }
+
+    /// <summary>E.g. "1 of 8 dungeons today".</summary>
+    public string DungeonSummary
+    {
+        get => _dungeonSummary;
+        private set => SetProperty(ref _dungeonSummary, value);
+    }
+
+    /// <summary>
+    /// The rotating achievement categories (Daily Fractals, rift hunts, …), and a festival's dailies while it's the
+    /// festival chosen on the Events page.
+    /// </summary>
+    public IReadOnlyList<RotatingCategoryGroup> RotatingAchievements
+    {
+        get => _rotating;
+        private set => SetProperty(ref _rotating, value);
+    }
+
+    public bool HasRotatingAchievements => RotatingAchievements.Count > 0;
+
+    /// <summary>The rotating categories' cards in two columns, alternating, so expanding one only moves its own
+    /// column.</summary>
+    public IReadOnlyList<RotatingCategoryGroup> RotatingLeft =>
+        RotatingAchievements.Where((_, i) => i % 2 == 0).ToList();
+
+    public IReadOnlyList<RotatingCategoryGroup> RotatingRight =>
+        RotatingAchievements.Where((_, i) => i % 2 == 1).ToList();
 
     /// <summary>E.g. "2 of 8 wings this week".</summary>
     public string RaidSummary
@@ -198,9 +237,21 @@ public sealed class ResetProgressViewModel : ViewModelBase, INavigationAware
         MapChests.Set(ResetProgress.Activities(_data, ResetActivityKind.MapChest, now), now);
         DailyCrafting.Set(ResetProgress.Activities(_data, ResetActivityKind.DailyCrafting, now), now);
 
-        IReadOnlyList<RaidWing> wings = ResetProgress.Raids(_data, now);
-        RaidWings = wings.Select(wing => new RaidWingRow(wing)).ToList();
+        IReadOnlyList<ResetActivityGroup> wings = ResetProgress.Raids(_data, now);
+        RaidWings = wings.Select(wing => new ResetActivityGroupRow(wing)).ToList();
         RaidSummary = $"{wings.Count(w => w.Done)} of {wings.Count} wings this week";
+        IReadOnlyList<ResetActivityGroup> dungeons = ResetProgress.Dungeons(_data, now);
+        Dungeons = dungeons.Select(dungeon => new ResetActivityGroupRow(dungeon)).ToList();
+        DungeonSummary = $"{dungeons.Count(d => d.Done)} of {dungeons.Count} dungeons today";
+
+        // Rebuilt every half minute, so each category keeps whether it's expanded.
+        HashSet<string> expanded = RotatingAchievements.Where(g => g.ShowAll).Select(g => g.Title).ToHashSet();
+        RotatingAchievements = ResetProgress.RotatingAchievements(_data, _eventSettings.SelectedFestival, now)
+            .Select(category => new RotatingCategoryGroup(category, expanded.Contains(category.Name)))
+            .ToList();
+        OnPropertyChanged(nameof(HasRotatingAchievements));
+        OnPropertyChanged(nameof(RotatingLeft));
+        OnPropertyChanged(nameof(RotatingRight));
     }
 
     private void UpdateCountdowns(DateTimeOffset now)

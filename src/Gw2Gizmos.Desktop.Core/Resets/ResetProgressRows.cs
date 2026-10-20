@@ -13,18 +13,19 @@ namespace Gw2Gizmos.Desktop.Core;
 /// </summary>
 public sealed class ResetActivityRow : ViewModelBase
 {
-    private readonly ScheduledEvent? _event;
+    private readonly ResetActivity _activity;
+    private string _name;
+    private string? _chatLink;
     private string _countdown = "";
     private bool _isActive;
     private bool _isSoon;
 
     public ResetActivityRow(ResetActivity activity, DateTimeOffset now)
     {
-        Name = activity.Name;
+        _activity = activity;
+        _name = activity.Name;
         ItemId = activity.ItemId;
         IsDone = activity.Done;
-        ChatLink = activity.Event?.ChatLink;
-        _event = activity.Done ? null : activity.Event;
         if (!activity.Done && activity.AnyTime)
         {
             _countdown = "any time";
@@ -33,7 +34,12 @@ public sealed class ResetActivityRow : ViewModelBase
         Tick(now);
     }
 
-    public string Name { get; }
+    /// <summary>Its name; for a chest shared by several metas (the Convergences), the one that's on or next.</summary>
+    public string Name
+    {
+        get => _name;
+        private set => SetProperty(ref _name, value);
+    }
 
     /// <summary>The item it is (a daily craft), for its icon and link; 0 for the other kinds.</summary>
     public int ItemId { get; }
@@ -43,9 +49,20 @@ public sealed class ResetActivityRow : ViewModelBase
     public bool IsDone { get; }
 
     /// <summary>
-    /// The chat link to its event's waypoint, to paste in game; null when not on the Events page's schedule.
+    /// The chat link to its event's waypoint (the one on or next), to paste in game; null when not on the Events
+    /// page's schedule.
     /// </summary>
-    public string? ChatLink { get; }
+    public string? ChatLink
+    {
+        get => _chatLink;
+        private set
+        {
+            if (SetProperty(ref _chatLink, value))
+            {
+                OnPropertyChanged(nameof(HasChatLink));
+            }
+        }
+    }
 
     public bool HasChatLink => !string.IsNullOrEmpty(ChatLink);
 
@@ -77,12 +94,22 @@ public sealed class ResetActivityRow : ViewModelBase
 
     public void Tick(DateTimeOffset now)
     {
-        if (_event is null)
+        if (_activity.Next(now) is not var (next, timing))
         {
             return;
         }
 
-        EventTiming timing = EventTiming.Of(_event, now);
+        ChatLink = next.ChatLink;
+        if (_activity.Events.Count > 1)
+        {
+            Name = next.Name;
+        }
+
+        if (IsDone)
+        {
+            return;
+        }
+
         SortKey = timing.SortKey;
         Countdown = timing.Countdown;
         IsActive = timing.IsActive;
@@ -162,15 +189,17 @@ public sealed class ResetActivitySection : ViewModelBase
     }
 }
 
-/// <summary>A raid wing on the page: its bosses cleared this week, each listed in its tooltip.</summary>
-public sealed class RaidWingRow
+/// <summary>
+/// A raid wing or a dungeon on the page: how many of its bosses or paths are done, each listed in its tooltip.
+/// </summary>
+public sealed class ResetActivityGroupRow
 {
-    public RaidWingRow(RaidWing wing)
+    public ResetActivityGroupRow(ResetActivityGroup group)
     {
-        Name = wing.Name;
-        IsDone = wing.Done;
-        Summary = $"{wing.Cleared} of {wing.Bosses.Count}";
-        Tooltip = string.Join("\n", wing.Bosses.Select(b => $"{(b.Done ? "✓" : "○")} {b.Name}"));
+        Name = group.Name;
+        IsDone = group.Done;
+        Summary = $"{group.Cleared} of {group.Activities.Count}";
+        Tooltip = string.Join("\n", group.Activities.Select(a => $"{(a.Done ? "✓" : "○")} {a.Name}"));
     }
 
     public string Name { get; }
@@ -248,4 +277,71 @@ public sealed class WizardsVaultGroup
     public string Summary { get; }
 
     public IReadOnlyList<WizardsVaultObjectiveRow> Objectives { get; }
+}
+
+/// <summary>An achievement of a rotating category on the page.</summary>
+public sealed class RotatingAchievementRow
+{
+    public RotatingAchievementRow(RotatingAchievement achievement)
+    {
+        Name = achievement.Name;
+        IsDone = achievement.Done;
+        ProgressText = !achievement.Done && achievement.Max > 1
+            ? $"{Math.Min(achievement.Current, achievement.Max)} / {achievement.Max}"
+            : "";
+    }
+
+    public string Name { get; }
+
+    public bool IsDone { get; }
+
+    /// <summary>E.g. "2 / 5" while under way; empty when done or a one-step achievement.</summary>
+    public string ProgressText { get; }
+}
+
+/// <summary>
+/// A rotating achievement category on the page (e.g. Daily Fractals): what's left first, then what's done, the first
+/// few until expanded.
+/// </summary>
+public sealed class RotatingCategoryGroup : ViewModelBase
+{
+    private const int CollapsedCount = 6;
+
+    private readonly IReadOnlyList<RotatingAchievementRow> _all;
+    private bool _showAll;
+
+    public RotatingCategoryGroup(RotatingCategory category, bool showAll)
+    {
+        Title = category.Name;
+        Icon = category.Icon;
+        Summary = $"{category.Done} of {category.Achievements.Count} done";
+        _all = category.Achievements.Select(a => new RotatingAchievementRow(a)).OrderBy(r => r.IsDone).ToList();
+        _showAll = showAll;
+        ToggleCommand = new RelayCommand(() =>
+        {
+            _showAll = !_showAll;
+            OnPropertyChanged(nameof(Rows));
+            OnPropertyChanged(nameof(ToggleText));
+            OnPropertyChanged(nameof(ShowAll));
+        });
+    }
+
+    public string Title { get; }
+
+    /// <summary>The category's icon (render URL), as in the game's achievement panel.</summary>
+    public string Icon { get; }
+
+    /// <summary>E.g. "2 of 15 done".</summary>
+    public string Summary { get; }
+
+    /// <summary>Expanded; kept by the page across rebuilds.</summary>
+    public bool ShowAll => _showAll;
+
+    public IReadOnlyList<RotatingAchievementRow> Rows => _showAll ? _all : _all.Take(CollapsedCount).ToList();
+
+    public bool HasMore => _all.Count > CollapsedCount;
+
+    public string ToggleText => _showAll ? "Show fewer" : $"Show all {_all.Count}";
+
+    public RelayCommand ToggleCommand { get; }
 }

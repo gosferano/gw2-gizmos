@@ -1,4 +1,6 @@
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
+using Gw2Gizmos.Data.Static.Events;
 using Gw2Gizmos.Desktop.Core;
 
 namespace Gw2Gizmos.Desktop.Core.Tests;
@@ -17,6 +19,7 @@ public sealed class ResetProgressTests
     private readonly List<AccountResetActivity> _activities = [];
     private readonly List<AccountWizardsVaultObjective> _objectives = [];
     private readonly List<AccountWizardsVaultMeta> _metas = [];
+    private readonly Dictionary<int, AccountAchievement> _progress = [];
 
     private ResetProgressData Data(Dictionary<int, string>? itemNames = null) =>
         new(_activities, _objectives, _metas, itemNames ?? new Dictionary<int, string>());
@@ -42,9 +45,12 @@ public sealed class ResetProgressTests
         ResetActivity chest = Assert.Single(ResetProgress.Activities(data, ResetActivityKind.MapChest, Now));
         ResetActivity craft = Assert.Single(ResetProgress.Activities(data, ResetActivityKind.DailyCrafting, Now));
 
-        Assert.Equal(("Tequatl the Sunless", "tequatl", true), (bosses[0].Name, bosses[0].Event?.Id, bosses[0].Done));
-        Assert.Equal(("A New Boss", null), (bosses[1].Name, bosses[1].Event?.Id)); // not kept yet: named from its id
-        Assert.Equal(("Dragon's Stand", "dragons-stand"), (chest.Name, chest.Event?.Id));
+        Assert.Equal(("Tequatl the Sunless", true), (bosses[0].Name, bosses[0].Done));
+        Assert.Equal(["tequatl"], bosses[0].Events.Select(e => e.Id));
+        Assert.Equal("A New Boss", bosses[1].Name); // not kept yet: named from its id
+        Assert.Empty(bosses[1].Events);
+        Assert.Equal("Dragon's Stand", chest.Name);
+        Assert.Equal(["dragons-stand"], chest.Events.Select(e => e.Id));
         Assert.Equal(("Lump of Mithrillium", 46742), (craft.Name, craft.ItemId));
     }
 
@@ -65,11 +71,94 @@ public sealed class ResetProgressTests
         Activity(ResetActivityKind.Raid, "gorseval", false, Today, "spirit_vale");
         Activity(ResetActivityKind.Raid, "cairn", true, beforeTheWeekly, "bastion_of_the_penitent");
 
-        IReadOnlyList<RaidWing> wings = ResetProgress.Raids(Data(), Now);
+        IReadOnlyList<ResetActivityGroup> wings = ResetProgress.Raids(Data(), Now);
 
         Assert.Equal(
             [("Spirit Vale", 1, 2), ("Bastion of the Penitent", 0, 1)],
-            wings.Select(w => (w.Name, w.Cleared, w.Bosses.Count))
+            wings.Select(w => (w.Name, w.Cleared, w.Activities.Count))
+        );
+    }
+
+    [Fact]
+    public void Dungeons_count_their_paths_completed_since_the_daily_reset()
+    {
+        Activity(ResetActivityKind.Dungeon, "se_story", true, Today, "sorrows_embrace");
+        Activity(ResetActivityKind.Dungeon, "fergg", true, Yesterday, "sorrows_embrace");
+
+        ResetActivityGroup dungeon = Assert.Single(ResetProgress.Dungeons(Data(), Now));
+
+        Assert.Equal(("Sorrow's Embrace", 1), (dungeon.Name, dungeon.Cleared));
+        Assert.Equal(["Story", "Fergg"], dungeon.Activities.Select(p => p.Name));
+    }
+
+    /// <summary>Synced rotating categories with their achievements (ids from 1), and the account's progress.</summary>
+    private ResetProgressData Rotating(
+        params (int CategoryId, string Name, (string Name, bool Weekly)[] Achievements)[] categories)
+    {
+        var achievements = new Dictionary<int, Achievement>();
+        var stored = new List<AchievementCategory>();
+        int id = 1;
+        foreach ((int categoryId, string name, (string Name, bool Weekly)[] list) in categories)
+        {
+            var ids = new List<int>();
+            foreach ((string achievementName, bool weekly) in list)
+            {
+                achievements[id] = new Achievement
+                {
+                    Id = id, Name = achievementName, Flags = weekly ? ["Weekly"] : ["Daily"],
+                    Tiers = [new AchievementTier { Count = 3 }],
+                };
+                ids.Add(id++);
+            }
+
+            stored.Add(new AchievementCategory { Id = categoryId, Name = name, AchievementIds = ids.ToArray() });
+        }
+
+        return Data() with
+        {
+            RotatingCategories = stored,
+            Achievements = achievements,
+            AchievementProgress = _progress,
+        };
+    }
+
+    [Fact]
+    public void Rotating_achievements_show_this_resets_progress()
+    {
+        _progress[1] = new AccountAchievement { AchievementId = 1, Done = true, SyncedAtUtc = Today };
+        _progress[2] = new AccountAchievement { AchievementId = 2, Current = 2, Max = 3, SyncedAtUtc = Today };
+        _progress[3] = new AccountAchievement { AchievementId = 3, Done = true, SyncedAtUtc = Yesterday };
+        _progress[4] = new AccountAchievement { AchievementId = 4, Done = true, SyncedAtUtc = Yesterday };
+
+        ResetProgressData data = Rotating(
+            (88, "Daily Fractals", [("Tier 4", false), ("Recommended", false), ("Tier 1", false)]),
+            (464, "Weekly Rift Hunting", [("Rifts", true)]));
+        IReadOnlyList<RotatingCategory> categories = ResetProgress.RotatingAchievements(data, null, Now);
+
+        RotatingCategory fractals = categories[0];
+        Assert.Equal(
+            [("Tier 4", true, 0), ("Recommended", false, 2), ("Tier 1", false, 0)], // yesterday's progress is gone
+            fractals.Achievements.Select(a => (a.Name, a.Done, a.Current))
+        );
+        Assert.True(categories[1].Achievements[0].Done); // weekly: done after Monday's reset, before today's
+        Assert.Equal("Weekly Rift Hunting: Visions of Eternity", categories[1].Name); // told apart by expansion
+    }
+
+    [Fact]
+    public void A_festivals_dailies_show_only_while_its_the_festival_chosen()
+    {
+        ResetProgressData data = Rotating(
+            (88, "Daily Fractals", [("Tier 4", false)]),
+            (79, "Halloween Daily", [("Shut and Locked", false)]));
+
+        Assert.Equal(["Daily Fractals"], ResetProgress.RotatingAchievements(data, null, Now).Select(c => c.Name));
+        Assert.Equal(
+            ["Daily Fractals", "Halloween Daily"],
+            ResetProgress.RotatingAchievements(data, Festival.Halloween, Now).Select(c => c.Name)
+        );
+        Assert.Equal(
+            ["Daily Fractals"],
+            ResetProgress.RotatingAchievements(data, Festival.DragonBash, Now).Select(c => c.Name)
         );
     }
 
@@ -163,6 +252,19 @@ public sealed class ResetProgressTests
 
         Assert.Equal(["Dragon's Stand", "Gyala Delve"], section.Rows.Select(r => r.Name));
         Assert.Equal("any time", section.Rows[1].Countdown);
+    }
+
+    [Fact]
+    public void The_convergences_shared_chest_follows_whichever_convergence_is_next()
+    {
+        DateTimeOffset at = new(2026, 10, 20, 0, 20, 0, TimeSpan.Zero); // Mount Balrior's 00:00 run has ended
+        Activity(ResetActivityKind.MapChest, "convergence_heros_choice_chest", false, at);
+
+        var row = new ResetActivityRow(
+            Assert.Single(ResetProgress.Activities(Data(), ResetActivityKind.MapChest, at)), at);
+
+        Assert.Equal(
+            ("Convergence: Nexus of Eternity", "in 40:00", "[&BDYQAAA=]"), (row.Name, row.Countdown, row.ChatLink));
     }
 
     [Theory]

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Gw2Gizmos.Data.Static.Events;
 
 namespace Gw2Gizmos.Data.Static.Resets;
 
@@ -41,7 +42,7 @@ public static class ResetActivities
         ["amnytas_heros_choice_chest"] = "Amnytas",
         ["auric_basin_heros_choice_chest"] = "Auric Basin",
         ["citadel_of_zakiros_heros_choice_chest"] = "Citadel of Zakiros",
-        ["convergence_heros_choice_chest"] = "Convergences",
+        ["convergence_heros_choice_chest"] = "Convergence",
         ["crystal_oasis_heros_choice_chest"] = "Crystal Oasis",
         ["domain_of_vabbi_heros_choice_chest"] = "Domain of Vabbi",
         ["dragons_end_heros_choice_chest"] = "Dragon's End",
@@ -59,26 +60,31 @@ public static class ResetActivities
         ["wild_island_heros_choice_chest"] = "Wild Island",
     };
 
-    /// <summary>The meta whose reward each map chest is, by its <see cref="Events.ScheduledEvent"/> id, where the
-    /// Events page schedules it.</summary>
-    public static readonly IReadOnlyDictionary<string, string> MapChestEvents = new Dictionary<string, string>
-    {
-        ["amnytas_heros_choice_chest"] = "amnytas",
-        ["auric_basin_heros_choice_chest"] = "octovine",
-        ["convergence_heros_choice_chest"] = "convergence-outer-nayos",
-        ["crystal_oasis_heros_choice_chest"] = "casino-blitz",
-        ["domain_of_vabbi_heros_choice_chest"] = "serpents-ire",
-        ["dragons_end_heros_choice_chest"] = "dragons-end",
-        ["dragons_stand_heros_choice_chest"] = "dragons-stand",
-        ["echovald_wilds_heros_choice_chest"] = "aspenwood",
-        ["elon_riverlands_heros_choice_chest"] = "doppelganger",
-        ["new_kaineng_city_heros_choice_chest"] = "kaineng-blackout",
-        ["seitung_province_heros_choice_chest"] = "aetherblade-assault",
-        ["skywatch_archipelago_heros_choice_chest"] = "skywatch",
-        ["tangled_depths_heros_choice_chest"] = "chak-gerent",
-        ["the_desolation_heros_choice_chest"] = "junundu-rising",
-        ["verdant_brink_heros_choice_chest"] = "verdant-brink",
-    };
+    /// <summary>
+    /// The meta(s) whose reward each map chest is, by <see cref="Events.ScheduledEvent"/> id, where the Events page
+    /// schedules them.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> MapChestEvents =
+        new Dictionary<string, IReadOnlyList<string>>
+        {
+            ["amnytas_heros_choice_chest"] = ["amnytas"],
+            ["auric_basin_heros_choice_chest"] = ["octovine"],
+            // One chest for all three Convergences: whichever is done first that day.
+            ["convergence_heros_choice_chest"] =
+                ["convergence-outer-nayos", "convergence-mount-balrior", "convergence-nexus-of-eternity"],
+            ["crystal_oasis_heros_choice_chest"] = ["casino-blitz"],
+            ["domain_of_vabbi_heros_choice_chest"] = ["serpents-ire"],
+            ["dragons_end_heros_choice_chest"] = ["dragons-end"],
+            ["dragons_stand_heros_choice_chest"] = ["dragons-stand"],
+            ["echovald_wilds_heros_choice_chest"] = ["aspenwood"],
+            ["elon_riverlands_heros_choice_chest"] = ["doppelganger"],
+            ["new_kaineng_city_heros_choice_chest"] = ["kaineng-blackout"],
+            ["seitung_province_heros_choice_chest"] = ["aetherblade-assault"],
+            ["skywatch_archipelago_heros_choice_chest"] = ["skywatch"],
+            ["tangled_depths_heros_choice_chest"] = ["chak-gerent"],
+            ["the_desolation_heros_choice_chest"] = ["junundu-rising"],
+            ["verdant_brink_heros_choice_chest"] = ["verdant-brink"],
+        };
 
     /// <summary>
     /// The map chests whose meta isn't on a timer (it runs whenever players get it going), so they can be done any
@@ -101,6 +107,54 @@ public static class ResetActivities
         ["spool_of_silk_weaving_thread"] = 46740,
         ["spool_of_thick_elonian_cord"] = 46745,
     };
+
+    /// <summary>
+    /// The rotating achievement categories (their achievements change each reset) the Daily and weekly page always
+    /// shows, in its order: Daily Fractals, Daily Raid Bounties, the Living World and expansion dailies, and Weekly
+    /// Rift Hunting for each expansion. Left out: the bonus events' Marshaling categories and the Wizard's Vault's
+    /// own (shown with the Vault).
+    /// </summary>
+    public static readonly IReadOnlyList<int> RotatingCategories = [88, 475, 238, 243, 330, 321, 365, 423, 464];
+
+    /// <summary>
+    /// Rotating categories that share a name in the API, told apart by their expansion: each expansion's Weekly Rift
+    /// Hunting.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<int, string> RotatingCategoryNames = new Dictionary<int, string>
+    {
+        [365] = "Weekly Rift Hunting: Secrets of the Obscure",
+        [423] = "Weekly Rift Hunting: Janthir Wilds",
+        [464] = "Weekly Rift Hunting: Visions of Eternity",
+    };
+
+    /// <summary>
+    /// Festival dailies, shown while their festival runs. The API lists them all year, so "runs" is the festival
+    /// chosen on the Events page; festivals it doesn't schedule have no daily shown.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<int, Festival> FestivalCategories = new Dictionary<int, Festival>
+    {
+        [79] = Festival.Halloween,
+        [213] = Festival.FestivalOfTheFourWinds,
+        [233] = Festival.DragonBash,
+    };
+
+    /// <summary>Dungeons whose name isn't their id spelled out.</summary>
+    private static readonly IReadOnlyDictionary<string, string> DungeonNames = new Dictionary<string, string>
+    {
+        ["caudecus_manor"] = "Caudecus's Manor",
+        ["sorrows_embrace"] = "Sorrow's Embrace",
+    };
+
+    /// <summary>A dungeon's name, e.g. "Sorrow's Embrace" for "sorrows_embrace".</summary>
+    public static string DungeonName(string id) => DungeonNames.GetValueOrDefault(id) ?? NameFromId(id);
+
+    /// <summary>
+    /// A dungeon path's name: "Story" for the story path (ids such as "ac_story"), otherwise the id spelled out, which
+    /// is the path's name in game (e.g. "Hodgins", "Front Door").
+    /// </summary>
+    public static string DungeonPathName(string id) => id.EndsWith("_story", StringComparison.Ordinal)
+        ? "Story"
+        : NameFromId(id);
 
     /// <summary>Raid wings and encounters whose name isn't their id spelled out.</summary>
     private static readonly IReadOnlyDictionary<string, string> RaidNames = new Dictionary<string, string>

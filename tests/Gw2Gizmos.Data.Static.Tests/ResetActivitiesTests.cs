@@ -15,7 +15,7 @@ public sealed class ResetActivitiesTests
         HashSet<string> scheduled = EventSchedule.All.Select(e => e.Id).ToHashSet();
 
         Assert.All(ResetActivities.WorldBossEvents.Values, id => Assert.Contains(id, scheduled));
-        Assert.All(ResetActivities.MapChestEvents.Values, id => Assert.Contains(id, scheduled));
+        Assert.All(ResetActivities.MapChestEvents.Values.SelectMany(ids => ids), id => Assert.Contains(id, scheduled));
         Assert.All(ResetActivities.MapChestEvents.Keys, id => Assert.Contains(id, ResetActivities.MapChestMaps.Keys));
         // A meta not on a timer has no scheduled event.
         Assert.All(ResetActivities.UntimedMapChests, id => Assert.Contains(id, ResetActivities.MapChestMaps.Keys));
@@ -31,5 +31,22 @@ public sealed class ResetActivitiesTests
     public void A_raid_name_is_its_id_spelled_out_unless_kept(string id, string name)
     {
         Assert.Equal(name, ResetActivities.RaidName(id));
+    }
+
+    [Theory]
+    [InlineData("ac_story", "Story")]
+    [InlineData("hodgins", "Hodgins")]
+    [InlineData("front_door", "Front Door")]
+    public void A_dungeon_path_is_story_or_its_id_spelled_out(string id, string name)
+    {
+        Assert.Equal(name, ResetActivities.DungeonPathName(id));
+    }
+
+    [Theory]
+    [InlineData("sorrows_embrace", "Sorrow's Embrace")]
+    [InlineData("ruined_city_of_arah", "Ruined City of Arah")]
+    public void A_dungeon_name_is_its_id_spelled_out_unless_kept(string id, string name)
+    {
+        Assert.Equal(name, ResetActivities.DungeonName(id));
     }
 }

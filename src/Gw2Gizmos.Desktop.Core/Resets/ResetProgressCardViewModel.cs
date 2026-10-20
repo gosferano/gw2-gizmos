@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Static;
+using Gw2Gizmos.Data.Static.Events;
 using Gw2Gizmos.Desktop.Core.Mvvm;
 using Gw2Gizmos.Desktop.Core.Ui;
 
@@ -123,11 +124,12 @@ public sealed class ResetProgressCardViewModel : ViewModelBase
         MapChests = Count(chests);
         DailyCrafting = Count(ResetProgress.Activities(_data, ResetActivityKind.DailyCrafting, now));
 
-        var next = bosses.Concat(chests)
-            .Where(a => !a.Done && a.Event is not null)
-            .Select(a => new { a.Name, Timing = EventTiming.Of(a.Event!, now) })
-            .MinBy(a => a.Timing.SortKey);
-        Next = next is null ? "" : $"Next: {next.Name} {next.Timing.Countdown}";
+        (ScheduledEvent Event, EventTiming Timing)? next = bosses.Concat(chests)
+            .Where(a => !a.Done)
+            .Select(a => a.Next(now))
+            .Where(pair => pair is not null)
+            .MinBy(pair => pair!.Value.Timing.SortKey);
+        Next = next is var (soonest, timing) ? $"Next: {soonest.Name} {timing.Countdown}" : "";
     }
 
     private static string Count(IReadOnlyList<ResetActivity> activities) =>
