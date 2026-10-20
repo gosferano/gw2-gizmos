@@ -59,6 +59,7 @@ public class AccountDataDeleter
             DeletableData.TradingPost => await DeleteTradingPostAsync(accountId, stoppingToken),
             DeletableData.ValueHistory => await DeleteValueHistoryAsync(accountId, stoppingToken),
             DeletableData.Achievements => await DeleteAchievementsAsync(accountId, stoppingToken),
+            DeletableData.ResetProgress => await DeleteResetProgressAsync(accountId, stoppingToken),
             DeletableData.Session => await DeleteOneSessionAsync(accountId, targetId, stoppingToken),
             DeletableData.SessionSegment => await DeleteOneSegmentAsync(accountId, targetId, stoppingToken),
             DeletableData.AllForAccount => await DeleteAllForAccountAsync(accountId, stoppingToken),
@@ -173,6 +174,18 @@ public class AccountDataDeleter
     private async Task<int> DeleteAchievementsAsync(string accountId, CancellationToken stoppingToken) =>
         await _dbContext.AccountAchievements.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
 
+    // Current progress only; re-synced on the next pass.
+    private async Task<int> DeleteResetProgressAsync(string accountId, CancellationToken stoppingToken)
+    {
+        int rows = await _dbContext.AccountResetActivities.Where(a => a.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.AccountWizardsVaultObjectives.Where(o => o.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.AccountWizardsVaultMetas.Where(m => m.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
+        return rows;
+    }
+
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {
         int rows = await DeleteWalletAsync(accountId, stoppingToken);
@@ -184,6 +197,7 @@ public class AccountDataDeleter
         rows += await DeleteTradingPostAsync(accountId, stoppingToken);
         rows += await DeleteValueHistoryAsync(accountId, stoppingToken);
         rows += await DeleteAchievementsAsync(accountId, stoppingToken);
+        rows += await DeleteResetProgressAsync(accountId, stoppingToken);
         // The account identity row itself; re-created on the next sync.
         rows += await _dbContext.Accounts.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;

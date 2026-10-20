@@ -2,6 +2,7 @@ using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -475,5 +476,143 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         await Sync();
 
         Assert.Equal(0, await Db.AccountAchievements.CountAsync());
+    }
+
+    /// <summary>The reset endpoints as the API returns them: the master lists, and the account's progress.</summary>
+    private void StubResetProgress(string worldBossesDone, string dailyObjectives)
+    {
+        _stub.SetJson("/v2/worldbosses", """["admiral_taidha_covington", "tequatl_the_sunless"]""");
+        _stub.SetJson("/v2/account/worldbosses", worldBossesDone);
+        _stub.SetJson("/v2/mapchests", """["verdant_brink_heros_choice_chest"]""");
+        _stub.SetJson("/v2/account/mapchests", "[]");
+        _stub.SetJson("/v2/dailycrafting", """["lump_of_mithrilium"]""");
+        _stub.SetJson("/v2/account/dailycrafting", """["lump_of_mithrilium"]""");
+        _stub.SetJson(
+            "/v2/raids?ids=all",
+            """
+            [{"id": "forsaken_thicket", "wings": [{"id": "spirit_vale", "events": [
+              {"id": "vale_guardian", "type": "Boss"}, {"id": "spirit_woods", "type": "Checkpoint"}]}]}]
+            """
+        );
+        _stub.SetJson("/v2/account/raids", """["vale_guardian"]""");
+        _stub.SetJson(
+            "/v2/account/wizardsvault/daily",
+            $$"""
+            {"meta_progress_current": 1, "meta_progress_complete": 4, "meta_reward_item_id": 99961,
+             "meta_reward_astral": 20, "meta_reward_claimed": false, "objectives": {{dailyObjectives}}}
+            """
+        );
+        _stub.SetJson(
+            "/v2/account/wizardsvault/weekly",
+            """
+            {"meta_progress_current": 0, "meta_progress_complete": 6, "meta_reward_item_id": 99962,
+             "meta_reward_astral": 50, "meta_reward_claimed": false, "objectives": []}
+            """
+        );
+        _stub.SetJson(
+            "/v2/account/wizardsvault/special",
+            """
+            {"objectives": [{"id": 300, "title": "Log in", "track": "PvE", "acclaim": 5,
+              "progress_current": 0, "progress_complete": 1, "claimed": false}]}
+            """
+        );
+    }
+
+    [Fact]
+    public async Task ResetProgress_StoresEveryActivityWithWhetherItsDone_AndTheWizardsVault()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        StubResetProgress(
+            """["tequatl_the_sunless"]""",
+            """
+            [{"id": 1, "title": "Complete 3 Events", "track": "PvE", "acclaim": 10,
+              "progress_current": 3, "progress_complete": 3, "claimed": true}]
+            """
+        );
+        await Sync();
+
+        List<AccountResetActivity> bosses = await Db.AccountResetActivities
+            .Where(a => a.Kind == ResetActivityKind.WorldBoss).OrderBy(a => a.Order).ToListAsync();
+        Assert.Equal(
+            [("admiral_taidha_covington", false), ("tequatl_the_sunless", true)],
+            bosses.Select(b => (b.ActivityId, b.Done))
+        );
+        Assert.False((await Db.AccountResetActivities.SingleAsync(a => a.Kind == ResetActivityKind.MapChest)).Done);
+        Assert.True((await Db.AccountResetActivities.SingleAsync(a => a.Kind == ResetActivityKind.DailyCrafting)).Done);
+        List<AccountResetActivity> raid = await Db.AccountResetActivities
+            .Where(a => a.Kind == ResetActivityKind.Raid).OrderBy(a => a.Order).ToListAsync();
+        Assert.Equal(
+            [("vale_guardian", "spirit_vale", false, true), ("spirit_woods", "spirit_vale", true, false)],
+            raid.Select(e => (e.ActivityId, e.Group, e.IsCheckpoint, e.Done))
+        );
+
+        AccountWizardsVaultMeta daily = await Db.AccountWizardsVaultMetas.SingleAsync(m => m.Period == "Daily");
+        Assert.Equal((1, 4, 20, false), (daily.ProgressCurrent, daily.ProgressComplete, daily.RewardAstral,
+            daily.RewardClaimed));
+        AccountWizardsVaultObjective events =
+            await Db.AccountWizardsVaultObjectives.SingleAsync(o => o.Period == "Daily");
+        Assert.Equal(("Complete 3 Events", 10, 3, 3, true), (events.Title, events.Acclaim, events.ProgressCurrent,
+            events.ProgressComplete, events.Claimed));
+        Assert.Equal(300, (await Db.AccountWizardsVaultObjectives.SingleAsync(o => o.Period == "Special")).ObjectiveId);
+        Assert.Equal(2, await Db.AccountWizardsVaultMetas.CountAsync()); // the special objectives have no meta
+    }
+
+    [Fact]
+    public async Task ResetProgress_ALaterSyncReplacesIt()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        StubResetProgress(
+            """["tequatl_the_sunless"]""",
+            """
+            [{"id": 1, "title": "Complete 3 Events", "track": "PvE", "acclaim": 10,
+              "progress_current": 3, "progress_complete": 3, "claimed": true}]
+            """
+        );
+        await Sync();
+
+        // After the reset: nothing done yet, and a new daily objective.
+        StubResetProgress(
+            "[]",
+            """
+            [{"id": 2, "title": "Gather 20 resources", "track": "PvE", "acclaim": 10,
+              "progress_current": 0, "progress_complete": 20, "claimed": false}]
+            """
+        );
+        await Sync();
+
+        Assert.False(await Db.AccountResetActivities.AnyAsync(a => a.Kind == ResetActivityKind.WorldBoss && a.Done));
+        Assert.Equal(2, (await Db.AccountWizardsVaultObjectives.SingleAsync(o => o.Period == "Daily")).ObjectiveId);
+    }
+
+    [Fact]
+    public async Task ResetProgress_KeepsAKindsLastStateWhenItsRequestFails()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("progression");
+        state.Apply(_stub);
+        StubResetProgress("""["tequatl_the_sunless"]""", "[]");
+        await Sync();
+
+        _stub.SetStatus("/v2/account/worldbosses", System.Net.HttpStatusCode.NotFound);
+        await Sync();
+
+        Assert.True(await Db.AccountResetActivities.AnyAsync(a => a.ActivityId == "tequatl_the_sunless" && a.Done));
+    }
+
+    [Fact]
+    public async Task ResetProgress_WithoutThePermission_IsSkipped()
+    {
+        AccountStateBuilder state = SmallAccount(); // no "progression" permission
+        state.Apply(_stub);
+        StubResetProgress("""["tequatl_the_sunless"]""", "[]");
+
+        await Sync();
+
+        Assert.Equal(0, await Db.AccountResetActivities.CountAsync());
+        Assert.Equal(0, await Db.AccountWizardsVaultMetas.CountAsync());
     }
 }

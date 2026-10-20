@@ -15,6 +15,7 @@ public sealed class EventRowViewModel : ViewModelBase
     private readonly EventFavoritesStore _favorites;
     private string _countdown = string.Empty;
     private bool _isActive;
+    private bool _isSoon;
     private bool _isSubscribed;
     private bool _isFavorite;
     private DateTimeOffset _sortKey;
@@ -59,6 +60,13 @@ public sealed class EventRowViewModel : ViewModelBase
     {
         get => _isActive;
         private set => SetProperty(ref _isActive, value);
+    }
+
+    /// <summary>Starting within <see cref="EventTiming.SoonWindow"/> (its countdown reads yellow).</summary>
+    public bool IsSoon
+    {
+        get => _isSoon;
+        private set => SetProperty(ref _isSoon, value);
     }
 
     /// <summary>Whether the user wants a reminder before this event; persisted on change.</summary>
@@ -106,6 +114,7 @@ public sealed class EventRowViewModel : ViewModelBase
     {
         EventTiming timing = EventTiming.Of(_event, now);
         IsActive = timing.IsActive;
+        IsSoon = timing.IsSoon;
         SortKey = timing.SortKey;
         Countdown = timing.Countdown;
     }

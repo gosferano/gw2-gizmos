@@ -7,6 +7,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Maps;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
+using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -91,6 +92,11 @@ public class Gw2GizmosDbContext : DbContext
 
     // The account's achievement progress (replaced each sync).
     public DbSet<AccountAchievement> AccountAchievements { get; set; }
+
+    // The account's progress for the current daily and weekly reset (replaced each sync).
+    public DbSet<AccountResetActivity> AccountResetActivities { get; set; }
+    public DbSet<AccountWizardsVaultObjective> AccountWizardsVaultObjectives { get; set; }
+    public DbSet<AccountWizardsVaultMeta> AccountWizardsVaultMetas { get; set; }
 
     // Maps (master data): resolves the map id MumbleLink reports.
     public DbSet<Map> Maps { get; set; }

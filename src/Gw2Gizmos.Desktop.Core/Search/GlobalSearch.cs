@@ -31,6 +31,8 @@ public sealed class GlobalSearch
         new("Dashboard", null, "Home24", AppPage.Dashboard, "home overview"),
         new("Notifications", null, "Alert24", AppPage.Notifications, "alerts toasts"),
         new("Events", null, "Clock24", AppPage.Events, "timers world bosses metas"),
+        new("Daily and weekly", null, "CalendarCheckmark24", AppPage.ResetProgress,
+            "dailies weeklies reset wizard's vault astral acclaim world bosses map chests daily crafting raids"),
         new("World map", null, "Map24", AppPage.WorldMap, "tyria waypoints location"),
         new("WvW", null, "Shield24", AppPage.Wvw, "world vs world matchup borderlands skirmish team"),
         new("Achievements", "Account", "Trophy24", AppPage.Achievements, "ap points collections progress quick wins"),

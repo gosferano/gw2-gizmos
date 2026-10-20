@@ -24,9 +24,6 @@ public sealed partial class MapView
     /// <summary>How far above its waypoint a badge stands once waypoints are drawn.</summary>
     private const double EventBadgeLift = 26;
 
-    /// <summary>An event starting within this is highlighted as soon.</summary>
-    private static readonly TimeSpan SoonWindow = TimeSpan.FromMinutes(15);
-
     private static readonly IBrush BadgeBackground = new SolidColorBrush(Color.FromArgb(0xE6, 0x1C, 0x1C, 0x1C));
     private static readonly IPen ActiveBorder = new Pen(new SolidColorBrush(Color.FromRgb(0x5C, 0xD6, 0x6B)), 1.5);
     private static readonly IPen SoonBorder = new Pen(new SolidColorBrush(Color.FromRgb(0xF5, 0xC5, 0x42)), 1.5);
@@ -78,7 +75,7 @@ public sealed partial class MapView
                 $"  {timing.ShortCountdown}{more}",
                 11,
                 FontWeight.Normal,
-                TimerBrush(timing, now)
+                TimerBrush(timing)
             );
 
             const double paddingX = 6;
@@ -98,7 +95,7 @@ public sealed partial class MapView
                 context.DrawLine(StemPen, new Point(at.X, badge.Bottom), new Point(at.X, at.Y - 10));
             }
 
-            context.DrawRectangle(BadgeBackground, BorderFor(timing, now), badge, 4, 4);
+            context.DrawRectangle(BadgeBackground, BorderFor(timing), badge, 4, 4);
             context.DrawText(name, new Point(badge.X + paddingX, badge.Y + paddingY));
             context.DrawText(time, new Point(badge.X + paddingX + name.Width, badge.Y + paddingY));
             _hitTargets.Add((badge, spot));
@@ -111,19 +108,19 @@ public sealed partial class MapView
         DateTimeOffset now = DateTimeOffset.UtcNow;
         return spot.ByUrgency(now)
             .Select(e =>
-                Text($"{e.Event.Name} — {e.Timing.Countdown}", 12, FontWeight.Normal, TimerBrush(e.Timing, now))
+                Text($"{e.Event.Name} — {e.Timing.Countdown}", 12, FontWeight.Normal, TimerBrush(e.Timing))
             )
             .ToList();
     }
 
-    private static IPen BorderFor(EventTiming timing, DateTimeOffset now) =>
+    private static IPen BorderFor(EventTiming timing) =>
         timing.IsActive ? ActiveBorder
-        : timing.SortKey - now <= SoonWindow ? SoonBorder
+        : timing.IsSoon ? SoonBorder
         : LaterBorder;
 
-    private static IBrush TimerBrush(EventTiming timing, DateTimeOffset now) =>
+    private static IBrush TimerBrush(EventTiming timing) =>
         timing.IsActive ? ActiveText
-        : timing.SortKey - now <= SoonWindow ? SoonText
+        : timing.IsSoon ? SoonText
         : LaterText;
 
     /// <summary>

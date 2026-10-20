@@ -2,6 +2,7 @@ using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
@@ -11,6 +12,7 @@ using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
 // Aliased so the contract's Character doesn't collide with the Character entity (Entities.Accounts).
 using ApiChar = Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 using ApiCommerce = Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
+using ApiRaids = Gw2Gizmos.Gw2Api.Contract.V2.Raids;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
@@ -175,6 +177,13 @@ public class AccountSyncUpdater
                 account,
                 permissions,
                 () => SyncAchievementsAsync(client, account.Id, now, stoppingToken)
+            );
+            // Nor the reset's dailies and weeklies.
+            await RunSection(
+                WorkerFeatures.ResetProgress,
+                account,
+                permissions,
+                () => SyncResetProgressAsync(client, account.Id, now, stoppingToken)
             );
         }
 
@@ -363,6 +372,138 @@ public class AccountSyncUpdater
 
         await _dbContext.SaveChangesAsync(stoppingToken);
         return progress.Length;
+    }
+
+    /// <summary>
+    /// The account's progress for the current reset: the Wizard's Vault's daily, weekly and special objectives, and
+    /// which world bosses, map chests, daily crafts and raid encounters are done. Each part is replaced on its own,
+    /// and only when its request succeeds, so one failing endpoint leaves its last known state. Returns the rows
+    /// stored.
+    /// </summary>
+    private async Task<int> SyncResetProgressAsync(
+        Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        int rows = 0;
+        rows += await StoreWizardsVaultAsync(accountId, WizardsVaultPeriod.Daily,
+            await client.V2.Account.WizardsVault.Daily.GetBlob(stoppingToken), now, stoppingToken);
+        rows += await StoreWizardsVaultAsync(accountId, WizardsVaultPeriod.Weekly,
+            await client.V2.Account.WizardsVault.Weekly.GetBlob(stoppingToken), now, stoppingToken);
+        Api.AccountWizardsVaultSpecial? special = await client.V2.Account.WizardsVault.Special.GetBlob(stoppingToken);
+        if (special is not null)
+        {
+            rows += await StoreWizardsVaultObjectivesAsync(
+                accountId, WizardsVaultPeriod.Special, special.Objectives, now, stoppingToken);
+        }
+
+        // Each kind's master list (every activity, in the API's order) with the account's done list.
+        rows += await StoreActivitiesAsync(accountId, ResetActivityKind.WorldBoss,
+            ToActivities(await client.V2.WorldBosses.GetIds(stoppingToken)),
+            await client.V2.Account.WorldBosses.GetBlob(stoppingToken), now, stoppingToken);
+        rows += await StoreActivitiesAsync(accountId, ResetActivityKind.MapChest,
+            ToActivities(await client.V2.MapChests.GetIds(stoppingToken)),
+            await client.V2.Account.MapChests.GetBlob(stoppingToken), now, stoppingToken);
+        rows += await StoreActivitiesAsync(accountId, ResetActivityKind.DailyCrafting,
+            ToActivities(await client.V2.DailyCrafting.GetIds(stoppingToken)),
+            await client.V2.Account.DailyCrafting.GetBlob(stoppingToken), now, stoppingToken);
+        ApiRaids.Raid[]? raids = await client.V2.Raids.GetAll(stoppingToken);
+        rows += await StoreActivitiesAsync(accountId, ResetActivityKind.Raid,
+            raids?.SelectMany(raid => raid.Wings)
+                .SelectMany(wing => wing.Events.Select(encounter =>
+                    (encounter.Id, (string?)wing.Id, encounter.Type == ApiRaids.RaidWingEventType.Checkpoint)))
+                .ToArray(),
+            await client.V2.Account.Raids.GetBlob(stoppingToken), now, stoppingToken);
+        return rows;
+    }
+
+    private static (string Id, string? Group, bool IsCheckpoint)[]? ToActivities(string[]? ids) =>
+        ids?.Select(id => (id, (string?)null, false)).ToArray();
+
+    private async Task<int> StoreWizardsVaultAsync(
+        string accountId, string period, Api.AccountWizardsVaultCategory? category, DateTimeOffset now,
+        CancellationToken stoppingToken)
+    {
+        if (category is null)
+        {
+            return 0;
+        }
+
+        await _dbContext.AccountWizardsVaultMetas.Where(m => m.AccountId == accountId && m.Period == period)
+            .ExecuteDeleteAsync(stoppingToken);
+        _dbContext.AccountWizardsVaultMetas.Add(new AccountWizardsVaultMeta
+        {
+            AccountId = accountId,
+            Period = period,
+            ProgressCurrent = category.MetaProgressCurrent,
+            ProgressComplete = category.MetaProgressComplete,
+            RewardItemId = category.MetaRewardItemId,
+            RewardAstral = category.MetaRewardAstral,
+            RewardClaimed = category.MetaRewardClaimed,
+            SyncedAtUtc = now,
+        });
+        return 1 + await StoreWizardsVaultObjectivesAsync(accountId, period, category.Objectives, now, stoppingToken);
+    }
+
+    private async Task<int> StoreWizardsVaultObjectivesAsync(
+        string accountId, string period, Api.AccountWizardsVaultObjective[] objectives, DateTimeOffset now,
+        CancellationToken stoppingToken)
+    {
+        await _dbContext.AccountWizardsVaultObjectives.Where(o => o.AccountId == accountId && o.Period == period)
+            .ExecuteDeleteAsync(stoppingToken);
+        foreach (Api.AccountWizardsVaultObjective objective in objectives.DistinctBy(o => o.Id))
+        {
+            _dbContext.AccountWizardsVaultObjectives.Add(new AccountWizardsVaultObjective
+            {
+                AccountId = accountId,
+                Period = period,
+                ObjectiveId = objective.Id,
+                Title = objective.Title,
+                Track = objective.Track,
+                Acclaim = objective.Acclaim,
+                ProgressCurrent = objective.ProgressCurrent,
+                ProgressComplete = objective.ProgressComplete,
+                Claimed = objective.Claimed,
+                SyncedAtUtc = now,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return objectives.Length;
+    }
+
+    /// <summary>
+    /// Replaces an account's activities of one kind: every activity of the master list, done when the account's list
+    /// has it. Left as they were when either request failed.
+    /// </summary>
+    private async Task<int> StoreActivitiesAsync(
+        string accountId, string kind, (string Id, string? Group, bool IsCheckpoint)[]? all, string[]? done,
+        DateTimeOffset now, CancellationToken stoppingToken)
+    {
+        if (all is null || done is null)
+        {
+            return 0;
+        }
+
+        var doneIds = new HashSet<string>(done, StringComparer.Ordinal);
+        await _dbContext.AccountResetActivities.Where(a => a.AccountId == accountId && a.Kind == kind)
+            .ExecuteDeleteAsync(stoppingToken);
+        int order = 0;
+        foreach ((string id, string? group, bool isCheckpoint) in all.DistinctBy(activity => activity.Id))
+        {
+            _dbContext.AccountResetActivities.Add(new AccountResetActivity
+            {
+                AccountId = accountId,
+                Kind = kind,
+                ActivityId = id,
+                Group = group,
+                Order = order++,
+                IsCheckpoint = isCheckpoint,
+                Done = doneIds.Contains(id),
+                SyncedAtUtc = now,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return order;
     }
 
     private async Task<int> SyncTradingPostAsync(Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)

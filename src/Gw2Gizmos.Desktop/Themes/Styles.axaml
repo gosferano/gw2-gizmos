@@ -34,6 +34,15 @@
     <Style Selector="TextBlock.item-link"><Setter Property="Background" Value="Transparent" /></Style>
     <Style Selector="TextBlock.item-link:pointerover"><Setter Property="TextDecorations" Value="Underline" /></Style>
 
+    <!-- Event countdowns, coloured like the world map's timers: green while the event is on, yellow when it starts
+         within 15 minutes (classes set from EventTiming), the normal text colour otherwise. -->
+    <Style Selector="TextBlock.countdown.active">
+        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+    </Style>
+    <Style Selector="TextBlock.countdown.soon">
+        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+    </Style>
+
     <!-- Signed coin amounts: gains green, losses red (classes set by CoinDisplay). -->
     <Style Selector="c|CoinDisplay.gain"><Setter Property="Foreground" Value="{DynamicResource GainBrush}" /></Style>
     <Style Selector="c|CoinDisplay.loss"><Setter Property="Foreground" Value="{DynamicResource LossBrush}" /></Style>

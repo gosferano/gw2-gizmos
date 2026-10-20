@@ -1,0 +1,212 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.ResetProgressPage"
+             x:DataType="core:ResetProgressViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <!-- Done rows stay listed, dimmed, so what's left stands out. -->
+        <Style Selector=":is(Control).done">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="c|FluentIcon.check">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style Selector="c|FluentIcon.open">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.DataTemplates>
+        <!-- A card of once-per-reset activities: what's left first, then what's done, the first few until expanded. -->
+        <DataTemplate DataType="core:ResetActivitySection">
+            <c:Card Margin="6" Padding="16,12" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" Classes="secondary" FontSize="12"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Title}" Classes="heading" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="core:ResetActivityRow">
+                                <DockPanel Margin="0,3" Classes.done="{Binding IsDone}">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Countdown}" Classes="countdown"
+                                               Classes.active="{Binding IsActive}" Classes.soon="{Binding IsSoon}"
+                                               FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"
+                                               MinWidth="110" TextAlignment="Right" />
+                                    <!-- The waypoint's chat link, copied on click (as on the Events page). -->
+                                    <Button DockPanel.Dock="Right" Content="{Binding ChatLink}" Margin="8,0,0,0"
+                                            FontFamily="{StaticResource MonospaceFontFamily}" FontSize="11"
+                                            Padding="6,1" MinWidth="0" VerticalAlignment="Center"
+                                            ToolTip.Tip="Copy chat link" IsVisible="{Binding HasChatLink}"
+                                            Command="{Binding $parent[UserControl].((core:ResetProgressViewModel)DataContext).CopyChatLinkCommand}"
+                                            CommandParameter="{Binding ChatLink}" />
+                                    <Panel DockPanel.Dock="Left" Width="18" Margin="0,0,8,0" VerticalAlignment="Center">
+                                        <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16" Classes="check"
+                                                      IsVisible="{Binding IsDone}" />
+                                        <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open"
+                                                      IsVisible="{Binding !IsDone}" />
+                                    </Panel>
+                                    <c:ItemImage DockPanel.Dock="Left" ItemId="{Binding ItemId}" Width="20" Height="20"
+                                                 Margin="0,0,8,0" VerticalAlignment="Center"
+                                                 IsVisible="{Binding HasItem}" />
+                                    <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}"
+                                                TextTrimming="CharacterEllipsis" HorizontalAlignment="Left"
+                                                VerticalAlignment="Center" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="{Binding ToggleText}" Command="{Binding ToggleCommand}"
+                            IsVisible="{Binding HasMore}" Theme="{StaticResource TransparentButton}"
+                            Padding="0,4" Margin="0,4,0,0" HorizontalAlignment="Left"
+                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                </StackPanel>
+            </c:Card>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <c:PageShell Title="Daily and weekly">
+        <StackPanel>
+            <TextBlock IsVisible="{Binding IsEmpty}" TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,12"
+                       Text="Nothing synced yet. Turn on “Daily and weekly progress” in Settings; it needs an API key with the progression permission." />
+
+            <!-- Time to the resets, and the Astral Acclaim still to get. -->
+            <UniformGrid Columns="3" Margin="-6,-6,-6,6">
+                <c:Card Margin="6" Padding="16,12">
+                    <StackPanel>
+                        <TextBlock Text="Daily reset" Classes="label" />
+                        <TextBlock Text="{Binding DailyCountdown}" FontSize="24" FontWeight="Medium" />
+                        <TextBlock Text="{Binding DailyAt}" Classes="secondary" FontSize="12" />
+                    </StackPanel>
+                </c:Card>
+                <c:Card Margin="6" Padding="16,12">
+                    <StackPanel>
+                        <TextBlock Text="Weekly reset" Classes="label" />
+                        <TextBlock Text="{Binding WeeklyCountdown}" FontSize="24" FontWeight="Medium" />
+                        <TextBlock Text="{Binding WeeklyAt}" Classes="secondary" FontSize="12" />
+                    </StackPanel>
+                </c:Card>
+                <c:Card Margin="6" Padding="16,12">
+                    <StackPanel>
+                        <TextBlock Text="Astral Acclaim left" Classes="label" />
+                        <TextBlock Text="{Binding AcclaimLeft}" FontSize="24" FontWeight="Medium" />
+                        <TextBlock Text="in current objectives" Classes="secondary" FontSize="12" />
+                    </StackPanel>
+                </c:Card>
+            </UniformGrid>
+
+            <StackPanel IsVisible="{Binding HasData}">
+                <!-- The Wizard's Vault: each set's objectives with their progress. -->
+                <c:Card Padding="16,12" Margin="0,0,0,6">
+                    <StackPanel>
+                        <TextBlock Text="Wizard's Vault" Classes="heading" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding WizardsVault}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="core:WizardsVaultGroup">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <DockPanel Margin="0,0,0,2">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}"
+                                                       Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                        </DockPanel>
+                                        <ItemsControl ItemsSource="{Binding Objectives}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="core:WizardsVaultObjectiveRow">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,110,70,60" ColumnSpacing="8"
+                                                          Margin="0,3" Classes.done="{Binding IsClaimed}">
+                                                        <Panel Grid.Column="0" Width="18" VerticalAlignment="Center">
+                                                            <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16"
+                                                                          Classes="check"
+                                                                          IsVisible="{Binding !IsInProgress}" />
+                                                            <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open"
+                                                                          IsVisible="{Binding IsInProgress}" />
+                                                        </Panel>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   ToolTip.Tip="{Binding Title}" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding Track}" FontSize="12"
+                                                                   Classes="secondary" VerticalAlignment="Center" />
+                                                        <c:TierBar Grid.Column="3" Height="6" VerticalAlignment="Center"
+                                                                   Value="{Binding Fraction}"
+                                                                   IsVisible="{Binding IsInProgress}"
+                                                                   Track="{DynamicResource ControlStrongFillColorDisabledBrush}"
+                                                                   Fill="{DynamicResource AccentFillColorDefaultBrush}" />
+                                                        <TextBlock Grid.Column="3" Text="Ready to claim" FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                   IsVisible="{Binding IsReadyToClaim}" />
+                                                        <TextBlock Grid.Column="3" Text="Claimed" FontSize="12"
+                                                                   Classes="secondary" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding IsClaimed}" />
+                                                        <TextBlock Grid.Column="4" Text="{Binding ProgressText}"
+                                                                   Classes="secondary" FontSize="12"
+                                                                   TextAlignment="Right" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="5" Text="{Binding AcclaimText}"
+                                                                   Classes="secondary" FontSize="12"
+                                                                   TextAlignment="Right" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </c:Card>
+
+                <!-- Once-per-reset rewards, two cards a row. Each row is as tall as its taller card (a Grid rather than a
+                     UniformGrid, whose rows are all the same height), so expanding a list only grows its own row. -->
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="-6,0">
+                    <ContentControl Grid.Row="0" Grid.Column="0" Content="{Binding WorldBosses}" />
+                    <ContentControl Grid.Row="0" Grid.Column="1" Content="{Binding MapChests}" />
+                    <ContentControl Grid.Row="1" Grid.Column="0" Content="{Binding DailyCrafting}" />
+                    <c:Card Grid.Row="1" Grid.Column="1" Margin="6" Padding="16,12" VerticalAlignment="Stretch"
+                            VerticalContentAlignment="Top">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,6">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding RaidSummary}" Classes="secondary"
+                                           FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="Raids" Classes="heading" />
+                            </DockPanel>
+                            <ItemsControl ItemsSource="{Binding RaidWings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="core:RaidWingRow">
+                                        <DockPanel Margin="0,3" Classes.done="{Binding IsDone}" Background="Transparent"
+                                                   ToolTip.Tip="{Binding Tooltip}">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}"
+                                                       Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+                                            <Panel DockPanel.Dock="Left" Width="18" Margin="0,0,8,0"
+                                                   VerticalAlignment="Center">
+                                                <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="16" Classes="check"
+                                                              IsVisible="{Binding IsDone}" />
+                                                <c:FluentIcon Symbol="Circle24" FontSize="16" Classes="open"
+                                                              IsVisible="{Binding !IsDone}" />
+                                            </Panel>
+                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Strike missions aren't in the API." Classes="secondary" FontSize="12"
+                                       Margin="0,6,0,0" />
+                        </StackPanel>
+                    </c:Card>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

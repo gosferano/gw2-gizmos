@@ -24,6 +24,7 @@
                                      SelectsOnInvoked="False" ToolTip.Tip="Search (Ctrl+K)" />
             <ui:FANavigationViewItem Content="Dashboard" IconSource="{c:FluentIconSource Home24}" Tag="{x:Static nav:AppPage.Dashboard}" />
             <ui:FANavigationViewItem Content="Notifications" IconSource="{c:FluentIconSource Alert24}" Tag="{x:Static nav:AppPage.Notifications}" />
+            <ui:FANavigationViewItem Content="Daily and weekly" IconSource="{c:FluentIconSource CalendarCheckmark24}" Tag="{x:Static nav:AppPage.ResetProgress}" />
             <ui:FANavigationViewItem Content="Events" IconSource="{c:FluentIconSource Clock24}" Tag="{x:Static nav:AppPage.Events}" />
             <ui:FANavigationViewItem Content="World map" IconSource="{c:FluentIconSource Map24}" Tag="{x:Static nav:AppPage.WorldMap}" />
             <ui:FANavigationViewItem Content="WvW" IconSource="{c:FluentIconSource Shield24}" Tag="{x:Static nav:AppPage.Wvw}" />

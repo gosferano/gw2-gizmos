@@ -143,6 +143,7 @@ public static class DesktopCoreServiceCollectionExtensions
         // Account: a shared read-only reader; each VM is transient so a section reloads fresh on navigation.
         services.AddSingleton<AccountReader>();
         services.AddSingleton<AchievementsReader>();
+        services.AddSingleton<ResetProgressReader>();
         // Carries the drilled-into account across parameterless page navigation.
         services.AddSingleton<SelectedAccountService>();
         services.AddTransient<AccountViewModel>();
@@ -164,6 +165,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<GlobalSearchViewModel>();
         services.AddTransient<CharactersViewModel>();
         services.AddTransient<AchievementsViewModel>();
+        services.AddTransient<ResetProgressViewModel>();
+        services.AddTransient<ResetProgressCardViewModel>();
         services.AddTransient<CharacterViewModel>();
         services.AddTransient<CharacterInventoryViewModel>();
         // Sessions: the drilled-into session/segment (transient nav context), the hub + per-session/segment VMs.

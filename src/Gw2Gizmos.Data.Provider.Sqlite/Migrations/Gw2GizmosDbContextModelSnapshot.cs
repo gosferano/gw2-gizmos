@@ -15,7 +15,7 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.Account", b =>
                 {
@@ -1456,6 +1456,116 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("RecipeIngredients");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Resets.AccountResetActivity", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActivityId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Done")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Group")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsCheckpoint")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SyncedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "Kind", "ActivityId");
+
+                    b.ToTable("AccountResetActivities");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Resets.AccountWizardsVaultMeta", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Period")
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProgressComplete")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProgressCurrent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RewardAstral")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RewardClaimed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RewardItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SyncedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "Period");
+
+                    b.ToTable("AccountWizardsVaultMetas");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Resets.AccountWizardsVaultObjective", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Period")
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ObjectiveId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Acclaim")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Claimed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProgressComplete")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProgressCurrent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SyncedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Track")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("AccountId", "Period", "ObjectiveId");
+
+                    b.ToTable("AccountWizardsVaultObjectives");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.Mini", b =>
                 {
                     b.Property<int>("Id")
@@ -1750,29 +1860,26 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 {
                     b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterCrafting", "Crafting", b1 =>
                         {
-                            b1.Property<string>("CharacterName")
-                                .HasColumnType("TEXT");
+                            b1.Property<string>("CharacterName");
 
                             b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate()
-                                .HasColumnType("INTEGER");
+                                .ValueGeneratedOnAddOrUpdate();
 
-                            b1.Property<bool>("Active")
-                                .HasColumnType("INTEGER");
+                            b1.Property<bool>("Active");
 
                             b1.Property<string>("Discipline")
                                 .IsRequired()
-                                .HasMaxLength(32)
-                                .HasColumnType("TEXT");
+                                .HasMaxLength(32);
 
-                            b1.Property<int>("Rating")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("Rating");
 
                             b1.HasKey("CharacterName", "__synthesizedOrdinal");
 
                             b1.ToTable("Characters");
 
-                            b1.ToJson("Crafting");
+                            b1
+                                .ToJson("Crafting")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("CharacterName");
@@ -1785,29 +1892,26 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 {
                     b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementBit", "Bits", b1 =>
                         {
-                            b1.Property<int>("AchievementId")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("AchievementId");
 
                             b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate()
-                                .HasColumnType("INTEGER");
+                                .ValueGeneratedOnAddOrUpdate();
 
-                            b1.Property<int>("Id")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("Id");
 
-                            b1.Property<string>("Text")
-                                .HasColumnType("TEXT");
+                            b1.Property<string>("Text");
 
                             b1.Property<string>("Type")
                                 .IsRequired()
-                                .HasMaxLength(16)
-                                .HasColumnType("TEXT");
+                                .HasMaxLength(16);
 
                             b1.HasKey("AchievementId", "__synthesizedOrdinal");
 
                             b1.ToTable("Achievements");
 
-                            b1.ToJson("Bits");
+                            b1
+                                .ToJson("Bits")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("AchievementId");
@@ -1815,33 +1919,29 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                     b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementReward", "Rewards", b1 =>
                         {
-                            b1.Property<int>("AchievementId")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("AchievementId");
 
                             b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate()
-                                .HasColumnType("INTEGER");
+                                .ValueGeneratedOnAddOrUpdate();
 
-                            b1.Property<int?>("Count")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int?>("Count");
 
-                            b1.Property<int?>("Id")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int?>("Id");
 
                             b1.Property<string>("Region")
-                                .HasMaxLength(32)
-                                .HasColumnType("TEXT");
+                                .HasMaxLength(32);
 
                             b1.Property<string>("Type")
                                 .IsRequired()
-                                .HasMaxLength(16)
-                                .HasColumnType("TEXT");
+                                .HasMaxLength(16);
 
                             b1.HasKey("AchievementId", "__synthesizedOrdinal");
 
                             b1.ToTable("Achievements");
 
-                            b1.ToJson("Rewards");
+                            b1
+                                .ToJson("Rewards")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("AchievementId");
@@ -1849,24 +1949,22 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                     b.OwnsMany("Gw2Gizmos.Data.EntityFramework.Entities.Achievements.AchievementTier", "Tiers", b1 =>
                         {
-                            b1.Property<int>("AchievementId")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("AchievementId");
 
                             b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate()
-                                .HasColumnType("INTEGER");
+                                .ValueGeneratedOnAddOrUpdate();
 
-                            b1.Property<int>("Count")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("Count");
 
-                            b1.Property<int>("Points")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("Points");
 
                             b1.HasKey("AchievementId", "__synthesizedOrdinal");
 
                             b1.ToTable("Achievements");
 
-                            b1.ToJson("Tiers");
+                            b1
+                                .ToJson("Tiers")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("AchievementId");
@@ -2136,28 +2234,26 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                 {
                     b.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapRect", "ContinentRect", b1 =>
                         {
-                            b1.Property<int>("MapId")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("MapId");
 
                             b1.HasKey("MapId");
 
                             b1.ToTable("Maps");
 
-                            b1.ToJson("ContinentRect");
+                            b1
+                                .ToJson("ContinentRect")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("MapId");
 
                             b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Max", b2 =>
                                 {
-                                    b2.Property<int>("MapRectMapId")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("MapRectMapId");
 
-                                    b2.Property<int>("X")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("X");
 
-                                    b2.Property<int>("Y")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("Y");
 
                                     b2.HasKey("MapRectMapId");
 
@@ -2169,14 +2265,11 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                             b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Min", b2 =>
                                 {
-                                    b2.Property<int>("MapRectMapId")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("MapRectMapId");
 
-                                    b2.Property<int>("X")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("X");
 
-                                    b2.Property<int>("Y")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("Y");
 
                                     b2.HasKey("MapRectMapId");
 
@@ -2195,28 +2288,26 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                     b.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapRect", "MapRect", b1 =>
                         {
-                            b1.Property<int>("MapId")
-                                .HasColumnType("INTEGER");
+                            b1.Property<int>("MapId");
 
                             b1.HasKey("MapId");
 
                             b1.ToTable("Maps");
 
-                            b1.ToJson("MapRect");
+                            b1
+                                .ToJson("MapRect")
+                                .HasColumnType("TEXT");
 
                             b1.WithOwner()
                                 .HasForeignKey("MapId");
 
                             b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Max", b2 =>
                                 {
-                                    b2.Property<int>("MapRectMapId")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("MapRectMapId");
 
-                                    b2.Property<int>("X")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("X");
 
-                                    b2.Property<int>("Y")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("Y");
 
                                     b2.HasKey("MapRectMapId");
 
@@ -2228,14 +2319,11 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
 
                             b1.OwnsOne("Gw2Gizmos.Data.EntityFramework.Entities.Maps.MapPoint", "Min", b2 =>
                                 {
-                                    b2.Property<int>("MapRectMapId")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("MapRectMapId");
 
-                                    b2.Property<int>("X")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("X");
 
-                                    b2.Property<int>("Y")
-                                        .HasColumnType("INTEGER");
+                                    b2.Property<int>("Y");
 
                                     b2.HasKey("MapRectMapId");
 

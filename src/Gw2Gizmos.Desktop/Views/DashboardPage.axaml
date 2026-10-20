@@ -150,6 +150,33 @@
                 </StackPanel>
             </c:Card>
 
+            <!-- Daily and weekly: what's done this reset, and the next boss or meta still worth doing. -->
+            <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top"
+                    DataContext="{Binding Resets}" x:DataType="core:ResetProgressCardViewModel">
+                <StackPanel>
+                    <TextBlock Text="Daily reset in" Opacity="0.7" />
+                    <TextBlock Text="{Binding DailyCountdown}" FontSize="26" FontWeight="Medium" Margin="0,6,0,0" />
+                    <DockPanel Margin="0,12,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding WizardsVault}" />
+                        <TextBlock Text="Wizard's Vault" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding WorldBosses}" />
+                        <TextBlock Text="World bosses" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding MapChests}" />
+                        <TextBlock Text="Map chests" Opacity="0.8" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3,0,0">
+                        <TextBlock DockPanel.Dock="Right" FontWeight="Medium" Text="{Binding DailyCrafting}" />
+                        <TextBlock Text="Daily crafting" Opacity="0.8" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Next}" Opacity="0.6" FontSize="12" Margin="0,12,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </c:Card>
+
             <!-- Play sessions -->
             <c:Card Margin="6" Padding="20" VerticalAlignment="Stretch" VerticalContentAlignment="Top">
                 <StackPanel>

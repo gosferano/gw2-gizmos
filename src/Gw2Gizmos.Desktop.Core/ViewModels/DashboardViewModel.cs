@@ -79,9 +79,11 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
         DataChangeMonitor dataChanges,
         WorkerProcessLauncher worker,
         LiveGameMonitor liveGame,
-        MapNames mapNames
+        MapNames mapNames,
+        ResetProgressCardViewModel resets
     )
     {
+        Resets = resets;
         _liveGame = liveGame;
         _mapNames = mapNames;
         _scopeFactory = scopeFactory;
@@ -130,7 +132,11 @@ public sealed class DashboardViewModel : ViewModelBase, INavigationAware
     {
         _dataChanges.Dispose();
         _livePoll.Stop();
+        Resets.Stop();
     }
+
+    /// <summary>The Daily and weekly card.</summary>
+    public ResetProgressCardViewModel Resets { get; }
 
     // --- Live session card ---
 

@@ -5,13 +5,6 @@
              x:Class="Gw2Gizmos.Desktop.Views.EventsPage"
              x:DataType="core:EventsViewModel">
     <UserControl.Styles>
-        <!-- An active event's countdown ("active, ends in …") reads green. -->
-        <Style Selector="TextBlock.countdown">
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        </Style>
-        <Style Selector="TextBlock.countdown.active">
-            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
-        </Style>
     </UserControl.Styles>
 
     <c:PageShell Title="Events" Scrollable="False">
@@ -110,7 +103,8 @@
                                 <TextBlock Grid.Column="3" Text="{Binding Countdown}" VerticalAlignment="Center"
                                            HorizontalAlignment="Right" FontSize="14" FontWeight="Medium"
                                            MinWidth="96" TextAlignment="Right"
-                                           Classes="countdown" Classes.active="{Binding IsActive}" />
+                                           Classes="countdown" Classes.active="{Binding IsActive}"
+                                           Classes.soon="{Binding IsSoon}" />
 
                                 <!-- Reminder opt-in -->
                                 <ToggleButton Grid.Column="4" Margin="14,0,0,0" VerticalAlignment="Center" Padding="8"
