@@ -26,7 +26,7 @@
         </Style>
     </UserControl.Styles>
 
-    <c:PageShell Title="Items" Scrollable="False">
+    <c:PageShell Title="Items" Scrollable="False" MaxContentWidth="100000">
         <Grid RowDefinitions="Auto,3*,Auto,2*">
             <StackPanel Grid.Row="0" Margin="0,0,0,8">
                 <!-- Sync notice spans the full width, above the search row. -->
