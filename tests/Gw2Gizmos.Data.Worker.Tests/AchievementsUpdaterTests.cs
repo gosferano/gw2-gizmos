@@ -53,7 +53,9 @@ public sealed class AchievementsUpdaterTests : IDisposable
             "/v2/achievements/categories",
             """
             [{"id": 1, "name": "Slayer", "description": "", "order": 10, "icon": "https://x/slayer.png",
-              "achievements": [{"id": 2258}, {"id": 1}]}]
+              "achievements": [{"id": 2258}, {"id": 1}]},
+             {"id": 88, "name": "Daily Fractals", "description": "", "order": 1, "icon": "https://x/f.png",
+              "achievements": [{"id": 2171, "flags": ["PvE"]}], "tomorrow": [{"id": 2172}]}]
             """
         );
         _stub.SetJson("/v2/achievements", "[1, 2258]");
@@ -81,9 +83,13 @@ public sealed class AchievementsUpdaterTests : IDisposable
         AchievementGroup group = await db.AchievementGroups.SingleAsync();
         Assert.Equal("General", group.Name);
         Assert.Equal([1], group.CategoryIds);
-        AchievementCategory category = await db.AchievementCategories.SingleAsync();
+        AchievementCategory category = await db.AchievementCategories.SingleAsync(c => c.Id == 1);
         Assert.Equal(("Slayer", 10), (category.Name, category.Order));
         Assert.Equal([2258, 1], category.AchievementIds);
+        Assert.Empty(category.TomorrowAchievementIds); // not a rotating category
+        AchievementCategory fractals = await db.AchievementCategories.SingleAsync(c => c.Id == 88);
+        Assert.Equal([2171], fractals.AchievementIds);
+        Assert.Equal([2172], fractals.TomorrowAchievementIds);
 
         Achievement collection = await db.Achievements.SingleAsync(a => a.Id == 2258);
         Assert.Equal("ItemSet", collection.Type);

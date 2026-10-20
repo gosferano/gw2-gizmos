@@ -75,6 +75,7 @@ public class AchievementsUpdater
             row.Order = category.Order;
             row.Icon = category.Icon;
             row.AchievementIds = category.Achievements.Select(a => a.Id).ToArray();
+            row.TomorrowAchievementIds = category.Tomorrow.Select(a => a.Id).ToArray();
         }
 
         await _dbContext.SaveChangesAsync(stoppingToken);

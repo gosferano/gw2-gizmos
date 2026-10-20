@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 
 /// <summary>
-/// One activity the account can do once per reset — a world boss, a map's meta reward chest, a daily craft or a raid
-/// encounter — and whether it's done. Every activity the API lists is stored (its master list, e.g.
+/// One activity the account can do once per reset — a world boss, a map's meta reward chest, a daily craft, a raid
+/// encounter or a dungeon path — and whether it's done. Every activity the API lists is stored (its master list, e.g.
 /// <c>/v2/worldbosses</c>), marked done when the account's list (e.g. <c>/v2/account/worldbosses</c>) has it. An
 /// account's rows of a kind are replaced on every sync.
 /// </summary>
@@ -26,7 +26,7 @@ public class AccountResetActivity
     [MaxLength(64)]
     public string ActivityId { get; set; } = "";
 
-    /// <summary>What it belongs to: a raid encounter's wing; null for the other kinds.</summary>
+    /// <summary>What it belongs to: a raid encounter's wing or a dungeon path's dungeon; null for the others.</summary>
     [MaxLength(64)]
     public string? Group { get; set; }
 
@@ -55,4 +55,7 @@ public static class ResetActivityKind
 
     /// <summary>Raid encounters cleared this week (weekly reset).</summary>
     public const string Raid = "Raid";
+
+    /// <summary>Dungeon paths completed today (daily reset).</summary>
+    public const string Dungeon = "Dungeon";
 }

@@ -12,6 +12,7 @@ using Api = Gw2Gizmos.Gw2Api.Contract.V2.Account;
 // Aliased so the contract's Character doesn't collide with the Character entity (Entities.Accounts).
 using ApiChar = Gw2Gizmos.Gw2Api.Contract.V2.Characters;
 using ApiCommerce = Gw2Gizmos.Gw2Api.Contract.V2.Commerce;
+using ApiDungeons = Gw2Gizmos.Gw2Api.Contract.V2.Dungeons;
 using ApiRaids = Gw2Gizmos.Gw2Api.Contract.V2.Raids;
 using ApiTokenInfo = Gw2Gizmos.Gw2Api.Contract.V2.TokenInfo.TokenInfo;
 
@@ -376,9 +377,9 @@ public class AccountSyncUpdater
 
     /// <summary>
     /// The account's progress for the current reset: the Wizard's Vault's daily, weekly and special objectives, and
-    /// which world bosses, map chests, daily crafts and raid encounters are done. Each part is replaced on its own,
-    /// and only when its request succeeds, so one failing endpoint leaves its last known state. Returns the rows
-    /// stored.
+    /// which world bosses, map chests, daily crafts, raid encounters and dungeon paths are done. Each part is replaced
+    /// on its own, and only when its request succeeds, so one failing endpoint leaves its last known state. Returns
+    /// the rows stored.
     /// </summary>
     private async Task<int> SyncResetProgressAsync(
         Gw2ApiClient client, string accountId, DateTimeOffset now, CancellationToken stoppingToken)
@@ -412,6 +413,11 @@ public class AccountSyncUpdater
                     (encounter.Id, (string?)wing.Id, encounter.Type == ApiRaids.RaidWingEventType.Checkpoint)))
                 .ToArray(),
             await client.V2.Account.Raids.GetBlob(stoppingToken), now, stoppingToken);
+        ApiDungeons.Dungeon[]? dungeons = await client.V2.Dungeons.GetAll(stoppingToken);
+        rows += await StoreActivitiesAsync(accountId, ResetActivityKind.Dungeon,
+            dungeons?.SelectMany(dungeon => dungeon.Paths.Select(path => (path.Id, (string?)dungeon.Id, false)))
+                .ToArray(),
+            await client.V2.Account.Dungeons.GetBlob(stoppingToken), now, stoppingToken);
         return rows;
     }
 
