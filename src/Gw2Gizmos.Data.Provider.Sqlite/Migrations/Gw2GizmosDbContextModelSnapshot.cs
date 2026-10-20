@@ -1505,6 +1505,9 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("CurrentSinceUtc")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("ProgressComplete")
                         .HasColumnType("INTEGER");
 

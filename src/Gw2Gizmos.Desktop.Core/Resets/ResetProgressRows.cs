@@ -262,7 +262,7 @@ public sealed class WizardsVaultGroup
         Objectives = set.IsStale ? [] : set.Objectives.Select(o => new WizardsVaultObjectiveRow(o)).ToList();
         string done = $"{set.Done} of {set.Objectives.Count} done";
         Summary =
-            set.IsStale ? "New objectives come with the next sync"
+            set.IsStale ? "Log in to the game to get the new objectives"
             : set.Meta is { } meta
                 ? $"{done} · meta reward {meta.RewardAstral} AA{(meta.RewardClaimed ? ", claimed" : "")}"
             : done;
