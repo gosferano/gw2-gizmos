@@ -81,6 +81,44 @@ public sealed class CraftCostTests : IDisposable
     }
 
     [Fact]
+    public async Task A_recipes_currency_stays_a_currency_when_the_tree_is_reused()
+    {
+        // Made-up items: Jade costs 2 of a tradeable piece and 30 Research Notes (currency 61, an id an item has
+        // too); Recycler takes a Jade. Built in one go, as the worker builds every tree, the Recycler reuses the
+        // Jade tree built first.
+        const int Jade = 9_300_001, Recycler = 9_300_002, JadePiece = 9_300_010;
+        Seed((JadePiece, 100), (Jade, 10_000));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.Add(Recipe(1, Jade, ("Item", JadePiece, 2), ("Currency", 61, 30)));
+            db.Recipes.Add(Recipe(2, Recycler, ("Item", Jade, 1)));
+            db.SaveChanges();
+        }
+
+        await using Gw2GizmosDbContext context = _fixture.NewContext();
+        var builder = new RecipeTreeBuilder(context, RecipeFinder.Configuration.Default, null);
+        await builder.BuildTreeAsync(Jade, CancellationToken.None);
+        RecipeNode recycler = await builder.BuildTreeAsync(Recycler, CancellationToken.None);
+
+        // Crafted from the pieces (the notes are a currency, left out), not bought at the Jade's trading post price.
+        RecipeNode jade = Assert.Single(recycler.Ingredients);
+        Assert.Equal(200m, jade.EffectiveCostOrNull);
+    }
+
+    private static Recipe Recipe(int id, int output, params (string Type, int Id, int Count)[] ingredients) =>
+        new()
+        {
+            Id = id,
+            Type = "Refinement",
+            OutputItemId = output,
+            OutputItemCount = 1,
+            ChatLink = "",
+            Ingredients = ingredients
+                .Select(i => new RecipeIngredient { Id = i.Id, Type = i.Type, Count = i.Count, RecipeId = id })
+                .ToList(),
+        };
+
+    [Fact]
     public async Task A_memory_from_the_legendary_armory_costs_what_its_legendary_does()
     {
         Seed((Sunrise, 20_000_000));
