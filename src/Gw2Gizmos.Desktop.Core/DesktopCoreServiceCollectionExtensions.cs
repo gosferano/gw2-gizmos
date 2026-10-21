@@ -144,6 +144,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<AccountReader>();
         services.AddSingleton<AchievementsReader>();
         services.AddSingleton<ResetProgressReader>();
+        services.AddSingleton<CompletedEvents>();
         // Carries the drilled-into account across parameterless page navigation.
         services.AddSingleton<SelectedAccountService>();
         services.AddTransient<AccountViewModel>();

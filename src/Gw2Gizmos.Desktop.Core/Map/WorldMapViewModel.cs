@@ -22,6 +22,9 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     /// <summary>How often the character's position is read while the page is open.</summary>
     private static readonly TimeSpan PlayerPollInterval = TimeSpan.FromMilliseconds(200);
 
+    /// <summary>How often what's done this reset is checked for hiding (it changes with syncs and the reset).</summary>
+    private static readonly TimeSpan DoneCheckInterval = TimeSpan.FromSeconds(5);
+
     /// <summary>Following the character from further out than this zooms in to it, to map level.</summary>
     private const double FollowMinZoom = 4;
     private const double FollowZoom = 5;
@@ -49,6 +52,10 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     private bool _showInvasions = true;
     private bool _showFestival = true;
     private bool _onlyFavorites;
+    private readonly CompletedEvents _completed;
+    private readonly IUiTimer _doneCheck;
+    private IReadOnlySet<string> _done = new HashSet<string>();
+    private bool _hasCompletionData;
     private double _centerX = HomeX;
     private double _centerY = HomeY;
     private double _zoom = HomeZoom;
@@ -61,9 +68,12 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
         LiveGameMonitor liveGame,
         EventFavoritesStore favorites,
         ReminderSettingsStore reminderSettings,
-        IUiDispatcher dispatcher
+        IUiDispatcher dispatcher,
+        CompletedEvents completed
     )
     {
+        _completed = completed;
+        _doneCheck = dispatcher.CreateTimer(DoneCheckInterval, CheckDone);
         _clipboard = clipboard;
         _liveGame = liveGame;
         _favorites = favorites;
@@ -160,6 +170,30 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     /// <summary>Whether a festival is picked on the Events page, so there are festival activities to show.</summary>
     public bool HasFestival => _reminderSettings.SelectedFestival is not null;
 
+    /// <summary>
+    /// Hide the events done this reset; the same setting as the Events page's, so it's one choice for both.
+    /// </summary>
+    public bool HideDone
+    {
+        get => _reminderSettings.HideDone;
+        set
+        {
+            if (_reminderSettings.HideDone != value)
+            {
+                _reminderSettings.HideDone = value;
+                OnPropertyChanged();
+                RebuildEventSpots();
+            }
+        }
+    }
+
+    /// <summary>Whether the account's completions are synced; without them the toggle is hidden.</summary>
+    public bool HasCompletionData
+    {
+        get => _hasCompletionData;
+        private set => SetProperty(ref _hasCompletionData, value);
+    }
+
     /// <summary>Only the events starred on the Events page.</summary>
     public bool OnlyFavorites
     {
@@ -225,9 +259,12 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
 
     public void OnNavigatedTo()
     {
-        // Favourites and the festival are picked on the Events page, which may have changed them since.
+        // Favourites, the festival and hiding what's done are picked on the Events page, which may have changed them.
         OnPropertyChanged(nameof(HasFestival));
+        OnPropertyChanged(nameof(HideDone));
+        CheckDone();
         RebuildEventSpots();
+        _doneCheck.Start();
 
         PollPlayer();
         if (Player is not null)
@@ -241,6 +278,7 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
     public void OnNavigatedFrom()
     {
         _playerPoll.Stop();
+        _doneCheck.Stop();
         // The page's next map mustn't be sent the last glide again when it's bound.
         Flight = null;
     }
@@ -281,6 +319,21 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
         }
     }
 
+    /// <summary>Picks up what's done as syncs land and the reset passes; the badges follow when hiding it.</summary>
+    private void CheckDone()
+    {
+        IReadOnlySet<string> done = _completed.DoneEventIds(DateTimeOffset.UtcNow);
+        HasCompletionData = _completed.HasData;
+        if (!done.SetEquals(_done))
+        {
+            _done = done;
+            if (HideDone)
+            {
+                RebuildEventSpots();
+            }
+        }
+    }
+
     private void RebuildEventSpots()
     {
         Festival? festival = _reminderSettings.SelectedFestival;
@@ -294,6 +347,7 @@ public sealed class WorldMapViewModel : ViewModelBase, INavigationAware
                 EventKind.Festival => ShowFestival && e.Festival == festival && festival is not null,
                 _ => false,
             } && (!OnlyFavorites || _favorites.IsFavorite(e.Id))
+            && !(HideDone && _done.Contains(e.Id))
         );
         EventSpots = MapEventSpots.Build(shown, Landmarks);
     }

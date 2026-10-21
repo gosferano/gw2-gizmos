@@ -16,6 +16,7 @@ public sealed class EventRowViewModel : ViewModelBase
     private string _countdown = string.Empty;
     private bool _isActive;
     private bool _isSoon;
+    private bool _isDone;
     private bool _isSubscribed;
     private bool _isFavorite;
     private DateTimeOffset _sortKey;
@@ -32,6 +33,9 @@ public sealed class EventRowViewModel : ViewModelBase
         _isSubscribed = subscriptions.IsSubscribed(scheduledEvent.Id);
         _isFavorite = favorites.IsFavorite(scheduledEvent.Id);
     }
+
+    /// <summary>The event's stable key (e.g. "tequatl").</summary>
+    public string Id => _event.Id;
 
     public string Name => _event.Name;
     public string Map => _event.Map;
@@ -60,6 +64,13 @@ public sealed class EventRowViewModel : ViewModelBase
     {
         get => _isActive;
         private set => SetProperty(ref _isActive, value);
+    }
+
+    /// <summary>The account has done it this reset (its reward can't be had again until the next).</summary>
+    public bool IsDone
+    {
+        get => _isDone;
+        set => SetProperty(ref _isDone, value);
     }
 
     /// <summary>Starting within <see cref="EventTiming.SoonWindow"/> (its countdown reads yellow).</summary>

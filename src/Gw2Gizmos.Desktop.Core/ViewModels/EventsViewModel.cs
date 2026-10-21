@@ -24,6 +24,8 @@ public sealed class EventsViewModel : ViewModelBase
     private readonly ReminderSettingsStore _reminderSettings;
     private readonly IClipboardService _clipboard;
     private readonly IUiTimer _timer;
+    private readonly CompletedEvents _completed;
+    private bool _hasCompletionData;
     private string _searchText = string.Empty;
 
     public EventsViewModel(
@@ -33,9 +35,11 @@ public sealed class EventsViewModel : ViewModelBase
         IItemsViewFactory views,
         IUiDispatcher dispatcher,
         IClipboardService clipboard,
-        PageTargets targets
+        PageTargets targets,
+        CompletedEvents completed
     )
     {
+        _completed = completed;
         // Opened on a particular event (e.g. from the global search): start filtered to it.
         _searchText = targets.TakeEventSearch() ?? string.Empty;
         _reminderSettings = reminderSettings;
@@ -129,6 +133,31 @@ public sealed class EventsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Hide the events done this reset; persisted, off by default.</summary>
+    public bool HideDone
+    {
+        get => _reminderSettings.HideDone;
+        set
+        {
+            if (_reminderSettings.HideDone != value)
+            {
+                _reminderSettings.HideDone = value;
+                OnPropertyChanged();
+                _view.Refresh();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether the account's completions are synced (the Daily and weekly progress feature, with the progression
+    /// permission); without them nothing reads as done, so the toggle is hidden.
+    /// </summary>
+    public bool HasCompletionData
+    {
+        get => _hasCompletionData;
+        private set => SetProperty(ref _hasCompletionData, value);
+    }
+
     public string SearchText
     {
         get => _searchText;
@@ -144,15 +173,32 @@ public sealed class EventsViewModel : ViewModelBase
     private void Refresh()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
+        IReadOnlySet<string> done = _completed.DoneEventIds(now);
+        HasCompletionData = _completed.HasData;
+        bool doneChanged = false;
         foreach (EventRowViewModel row in _rows)
         {
             row.Refresh(now);
+            bool isDone = done.Contains(row.Id);
+            doneChanged |= row.IsDone != isDone;
+            row.IsDone = isDone;
+        }
+
+        // Done ones come and go as syncs land and the reset passes; the list follows when it's hiding them.
+        if (doneChanged && HideDone)
+        {
+            _view?.Refresh();
         }
     }
 
     private bool FilterRow(object item)
     {
         if (item is not EventRowViewModel row)
+        {
+            return false;
+        }
+
+        if (HideDone && row.IsDone)
         {
             return false;
         }
