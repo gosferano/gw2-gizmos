@@ -63,7 +63,7 @@ public class ItemsMissingUpdater : BackgroundService
                     }
                 }
             }
-            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in items missing updater.");
@@ -82,7 +82,7 @@ public class ItemsMissingUpdater : BackgroundService
             _logger.LogInformation("Processing missing items with IDs: {ItemIds}", string.Join(", ", itemIds));
             await UpdateItemsWithIds(dbContext, itemIds, stoppingToken);
         }
-        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing missing items with IDs: {ItemIds}", string.Join(", ", itemIds));

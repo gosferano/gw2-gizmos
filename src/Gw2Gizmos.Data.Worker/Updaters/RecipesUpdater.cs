@@ -121,6 +121,10 @@ public class RecipesUpdater
                     i + pageIds.Length
                 );
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing recipes {Start} to {End}", i + 1, i + PageSize);
