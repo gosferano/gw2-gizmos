@@ -24,7 +24,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- The desktop release version: the release workflow tags gw2gizmos-desktop-{this} and releases it when that
          tag is new. -->
-    <Version>0.11.0</Version>
+    <Version>0.12.0</Version>
     <!-- ItemImage desaturates icons by walking the bitmap's pixel buffer directly. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
