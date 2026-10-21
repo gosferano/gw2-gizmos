@@ -37,6 +37,9 @@ public class AccountSyncUpdater
     private readonly ILogger<AccountSyncUpdater> _logger;
     private bool _warnedNoKey;
 
+    // The running sync's token, so a section cut short by shutdown isn't reported as an API failure.
+    private CancellationToken _stoppingToken;
+
     public AccountSyncUpdater(
         Gw2GizmosDbContext dbContext,
         IGw2ApiClientFactory apiClientFactory,
@@ -77,6 +80,7 @@ public class AccountSyncUpdater
 
     private async Task SyncAsync(SyncScope scope, CancellationToken stoppingToken)
     {
+        _stoppingToken = stoppingToken;
         IReadOnlyList<string> apiKeys = _apiKeyProvider.GetApiKeys();
         if (apiKeys.Count == 0)
         {
@@ -109,6 +113,11 @@ public class AccountSyncUpdater
                 {
                     syncedNames.Add(name);
                 }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Shutting down (e.g. the app closing to update): not a failure.
+                break;
             }
             catch (Exception ex)
             {
@@ -221,6 +230,12 @@ public class AccountSyncUpdater
             _logger.LogInformation("Syncing {Feature} for {Account}...", feature.Display, account.Name);
             int count = await action();
             _logger.LogInformation("{Feature} sync completed for {Account} ({Count}).", feature.Display, account.Name, count);
+        }
+        catch (OperationCanceledException) when (_stoppingToken.IsCancellationRequested)
+        {
+            // Shutting down: stop the sync here rather than warn about each remaining section.
+            _dbContext.ChangeTracker.Clear();
+            throw;
         }
         catch (Exception ex)
         {

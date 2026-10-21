@@ -686,6 +686,11 @@ public sealed class AccountReader
         try
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
+            if (!DatabaseSchema.Allows(scope))
+            {
+                return fallback;
+            }
+
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
             return read(db);
         }

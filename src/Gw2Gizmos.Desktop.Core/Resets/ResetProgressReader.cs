@@ -62,6 +62,11 @@ public sealed class ResetProgressReader
         try
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
+            if (!DatabaseSchema.Allows(scope))
+            {
+                return ResetProgressData.Empty;
+            }
+
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
             List<AccountResetActivity> activities = db.AccountResetActivities.AsNoTracking()
