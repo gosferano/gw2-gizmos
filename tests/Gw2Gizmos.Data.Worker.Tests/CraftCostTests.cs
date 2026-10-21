@@ -67,6 +67,20 @@ public sealed class CraftCostTests : IDisposable
     }
 
     [Fact]
+    public async Task A_vendor_offer_listed_with_its_cost_in_another_order_shows_once()
+    {
+        // The vendor data lists item 98079 for 1000 Research Note + 250 Magnetite Shard, and again with the two the
+        // other way round.
+        RecipeNode node = await TreeOf(98079);
+
+        VendorOffer offer = Assert.Single(node.VendorOffers);
+        Assert.Equal(
+            ["1000 Research Note", "250 Magnetite Shard"],
+            offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}").Order(StringComparer.Ordinal)
+        );
+    }
+
+    [Fact]
     public async Task A_memory_from_the_legendary_armory_costs_what_its_legendary_does()
     {
         Seed((Sunrise, 20_000_000));

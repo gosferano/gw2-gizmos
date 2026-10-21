@@ -567,8 +567,9 @@ public class RecipeTreeBuilder
         return new TradingPostPrices(sellOrderPrice, latest.Buy);
     }
 
-    /// <summary>Attach the vendor sale terms to a node: each distinct offer kept whole — its quantity and its
-    /// full cost (every component together, amounts exactly as charged, each with its icon resolved). Offers are
+    /// <summary>Attach the vendor sale terms to a node: each distinct offer (by its quantity and cost parts, in any
+    /// order) kept whole — its quantity and its full cost (every component together, amounts exactly as charged, each
+    /// with its icon resolved). Offers are
     /// ordered simplest first (single-unit, then fewest components, then cheapest), so the first is shown inline
     /// and the rest on hover.</summary>
     private void AttachVendorCost(RecipeNode node)
@@ -586,7 +587,10 @@ public class RecipeTreeBuilder
                     .Select(cost => new VendorCost(
                         cost.Value, cost.Currency, cost.ItemId, ResolveCurrencyIcon(cost), cost.CurrencyId == 1, cost.CurrencyId))
                     .ToList()))
-            .GroupBy(offer => $"{offer.Quantity}|{string.Join('+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}"))}")
+            // The same offer can be listed with its cost parts in a different order (sold by several vendors):
+            // list it once, whatever the order.
+            .GroupBy(offer => offer.Quantity + "|" + string.Join(
+                '+', offer.Cost.Select(cost => $"{cost.Amount} {cost.Currency}").Order(StringComparer.Ordinal)))
             .Select(group => group.First())
             // Cheapest coin-equivalent per unit first, so PrimaryVendorOffer is the best buy. Offers we can't
             // value (an unweighted account currency) sort last but stay listed.
