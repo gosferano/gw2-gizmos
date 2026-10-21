@@ -1,133 +1,60 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:c="using:Gw2Gizmos.Desktop.Controls"
              xmlns:core="using:Gw2Gizmos.Desktop.Core"
-             xmlns:v="using:Gw2Gizmos.Desktop.Views"
+             xmlns:nav="using:Gw2Gizmos.Desktop.Core.Navigation"
              x:Class="Gw2Gizmos.Desktop.Views.TradingPostPage"
              x:DataType="core:TradingPostViewModel">
-    <UserControl.Styles>
-        <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="MinHeight" Value="36" />
-        </Style>
-    </UserControl.Styles>
-
+    <!-- The trading post's sections, each with a summary of what's in it; a row opens its page. -->
     <c:PageShell Title="Trading post">
         <StackPanel>
-            <!-- The tabs show without an account too (price alerts need none); orders and history say they need one. -->
-            <TabControl SelectedIndex="0">
-                <TabItem Header="Orders">
-                    <Panel>
-                        <c:Card Margin="0,12,0,0" Padding="20" IsVisible="{Binding !HasAccount}">
-                            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="No account selected. Add an API key and pick an account on the API keys page." />
-                        </c:Card>
-                        <StackPanel Margin="0,8,0,0" IsVisible="{Binding HasAccount}">
-                            <TextBlock Text="No open buy or sell orders." Margin="0,4,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       IsVisible="{Binding NoOrders}" />
-                            <TextBlock Text="{Binding OrdersSummary}" Margin="0,0,0,8" Opacity="0.7"
-                                       IsVisible="{Binding HasOrders}" />
+            <ui:FASettingsExpander Header="Orders" Description="{Binding OrdersSummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource BuildingShop24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.TradingPostOrders}">
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel IsVisible="{Binding HasAccount}" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding TiedUpCopper}" FontWeight="Medium" FontSize="13"
+                                       HorizontalAlignment="Right" />
+                        <TextBlock Text="tied up" FontSize="11" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-                            <!-- One row per open order; the ones beaten by a better price come first, flagged. -->
-                            <ItemsControl ItemsSource="{Binding Orders}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="core:TradingPostOrderRow">
-                                        <Border Classes="hover-row">
-                                            <DockPanel>
-                                                <!-- Standing: the gap to the best competing price, or that it's the best. -->
-                                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center"
-                                                            HorizontalAlignment="Right" Margin="12,0,0,0">
-                                                    <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
-                                                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                                               IsVisible="{Binding IsBeaten}" />
-                                                    <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                               IsVisible="{Binding !IsBeaten}" />
-                                                    <c:CoinDisplay Copper="{Binding GapCopper}" HorizontalAlignment="Right"
-                                                                   IsVisible="{Binding IsBeaten}" />
-                                                </StackPanel>
-                                                <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Price}" FontWeight="Medium"
-                                                               VerticalAlignment="Center" Margin="12,0,0,0" />
-                                                <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
-                                                             VerticalAlignment="Center" />
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
-                                                                HorizontalAlignment="Left" />
-                                                    <TextBlock Text="{Binding Details}" FontSize="12"
-                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Panel>
-                </TabItem>
+            <ui:FASettingsExpander Header="History" Description="{Binding HistorySummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource History24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.TradingPostHistory}">
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel IsVisible="{Binding HasAccount}" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding HistoryNetCopper}" Signed="True" FontWeight="Medium"
+                                       FontSize="13" HorizontalAlignment="Right" />
+                        <TextBlock Text="net, last 30 days" FontSize="11" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-                <TabItem Header="History">
-                    <Panel>
-                        <c:Card Margin="0,12,0,0" Padding="20" IsVisible="{Binding !HasAccount}">
-                            <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="No account selected. Add an API key and pick an account on the API keys page." />
-                        </c:Card>
-                        <StackPanel Margin="0,8,0,0" IsVisible="{Binding HasAccount}">
-                            <DockPanel Margin="0,0,0,8" LastChildFill="False">
-                                <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding TradeFilterOptions}"
-                                          SelectedIndex="{Binding SelectedTradeFilterIndex}" MinWidth="110"
-                                          Height="{StaticResource FormControlHeight}" />
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding TradesSummary}" Opacity="0.7"
-                                           VerticalAlignment="Center" />
-                            </DockPanel>
+            <ui:FASettingsExpander Header="Profit" Description="{Binding ProfitSummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource DataTrending24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.TradingPostProfit}">
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel IsVisible="{Binding HasAccount}" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding MonthProfitCopper}" Signed="True" FontWeight="Medium"
+                                       FontSize="13" HorizontalAlignment="Right" />
+                        <TextBlock Text="this month" FontSize="11" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-                            <TextBlock Text="No completed trades yet." Margin="0,4,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       IsVisible="{Binding NoTrades}" />
-
-                            <!-- One row per trade, newest first: what it did to the wallet on the right. -->
-                            <ItemsControl ItemsSource="{Binding Trades}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="core:TradingPostTradeRow">
-                                        <Border Classes="hover-row">
-                                            <DockPanel>
-                                                <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding WalletCopper}" Signed="True"
-                                                               FontWeight="Medium" VerticalAlignment="Center" Margin="12,0,0,0" />
-                                                <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
-                                                             VerticalAlignment="Center" />
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
-                                                                HorizontalAlignment="Left" />
-                                                    <!-- E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05", the unit price with coin icons. -->
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <StackPanel.Styles>
-                                                            <Style Selector="TextBlock">
-                                                                <Setter Property="FontSize" Value="12" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                            </Style>
-                                                        </StackPanel.Styles>
-                                                        <TextBlock Text="{Binding Action}" VerticalAlignment="Center" />
-                                                        <c:CoinDisplay Copper="{Binding Price}" IconSize="11" VerticalAlignment="Center" />
-                                                        <TextBlock Text="·" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{Binding PurchasedText}" VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <Button Content="Show more" Command="{Binding ShowMoreTradesCommand}" Margin="0,8,0,0"
-                                    HorizontalAlignment="Center" IsVisible="{Binding HasMoreTrades}" />
-                        </StackPanel>
-                    </Panel>
-                </TabItem>
-
-                <TabItem Header="Price alerts">
-                    <v:PriceAlertsView Margin="0,8,0,0" DataContext="{Binding PriceAlerts}" />
-                </TabItem>
-            </TabControl>
+            <ui:FASettingsExpander Header="Price alerts" Description="{Binding AlertsSummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource AlertOn24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.PriceAlerts}" />
         </StackPanel>
     </c:PageShell>
 </UserControl>

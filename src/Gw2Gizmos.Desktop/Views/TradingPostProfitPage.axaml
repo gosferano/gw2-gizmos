@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.TradingPostProfitPage"
+             x:DataType="core:TradingPostProfitViewModel">
+    <UserControl.Resources>
+        <!-- An item sold in the period: what it made (profit for a traded item, its income otherwise). -->
+        <DataTemplate x:Key="ItemRowTemplate" x:DataType="core:TradingPostItemProfitRow">
+            <Border Classes="hover-row">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="140">
+                        <c:CoinDisplay Copper="{Binding ProfitCopper}" Signed="True" FontWeight="Medium"
+                                       HorizontalAlignment="Right" IsVisible="{Binding HasProfit}" />
+                        <c:CoinDisplay Copper="{Binding IncomeCopper}" FontWeight="Medium" HorizontalAlignment="Right"
+                                       IsVisible="{Binding !HasProfit}" />
+                        <!-- A traded item partly sold without a matching purchase: that part's income. -->
+                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right"
+                                    IsVisible="{Binding HasIncome}">
+                            <TextBlock Text="income" FontSize="11" Classes="secondary" VerticalAlignment="Center" />
+                            <c:CoinDisplay Copper="{Binding IncomeCopper}" IconSize="10" FontSize="11"
+                                           VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                    <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                 VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
+                                    HorizontalAlignment="Left" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding SoldText}" FontSize="12" Classes="secondary"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="·" FontSize="12" Classes="secondary" IsVisible="{Binding HasMargin}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding MarginText}" FontSize="12" Classes="secondary"
+                                       IsVisible="{Binding HasMargin}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <c:Card Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel IsVisible="{Binding HasAccount}">
+                <DockPanel Margin="0,0,0,10" LastChildFill="False">
+                    <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Periods}" SelectedItem="{Binding Period}"
+                              MinWidth="140" Height="{StaticResource FormControlHeight}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:TradingPostProfitPeriodOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </DockPanel>
+
+                <!-- The period's totals. -->
+                <UniformGrid Columns="3" Margin="-6,0,-6,6">
+                    <c:Card Margin="6" Padding="16,12" ToolTip.Tip="What units sold made over what they cost when bought here, after fees">
+                        <StackPanel>
+                            <TextBlock Text="Profit" Classes="label" />
+                            <c:CoinDisplay Copper="{Binding ProfitCopper}" Signed="True" FontSize="22"
+                                           FontWeight="Medium" HorizontalAlignment="Left" />
+                            <TextBlock Text="on items bought here" Classes="secondary" FontSize="12" />
+                        </StackPanel>
+                    </c:Card>
+                    <c:Card Margin="6" Padding="16,12" ToolTip.Tip="Sales of items got other ways: drops, crafts, or bought before the app recorded trades">
+                        <StackPanel>
+                            <TextBlock Text="Income" Classes="label" />
+                            <c:CoinDisplay Copper="{Binding IncomeCopper}" FontSize="22" FontWeight="Medium"
+                                           HorizontalAlignment="Left" />
+                            <TextBlock Text="from items not bought here" Classes="secondary" FontSize="12" />
+                        </StackPanel>
+                    </c:Card>
+                    <c:Card Margin="6" Padding="16,12" ToolTip.Tip="The 5% listing and 10% exchange fees on these sales. Listings cancelled before selling aren't in the API, so their fees aren't counted.">
+                        <StackPanel>
+                            <TextBlock Text="Fees" Classes="label" />
+                            <c:CoinDisplay Copper="{Binding FeesCopper}" FontSize="22" FontWeight="Medium"
+                                           HorizontalAlignment="Left" />
+                            <TextBlock Text="listing and exchange" Classes="secondary" FontSize="12" />
+                        </StackPanel>
+                    </c:Card>
+                </UniformGrid>
+
+                <TextBlock Text="No sales in this period." Margin="0,4,0,0" Classes="secondary"
+                           IsVisible="{Binding NoSales}" />
+
+                <!-- Items bought here and sold: what trading made, most profitable first, losses last. -->
+                <StackPanel IsVisible="{Binding HasTraded}" Margin="0,8,0,0">
+                    <DockPanel Margin="0,0,0,4">
+                        <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding ProfitCopper}" Signed="True"
+                                       FontWeight="Medium" VerticalAlignment="Center" />
+                        <TextBlock Text="Bought and sold" FontSize="16" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Traded}" ItemTemplate="{StaticResource ItemRowTemplate}" />
+                </StackPanel>
+
+                <!-- Items sold that weren't bought here: what selling them brought in. -->
+                <StackPanel IsVisible="{Binding HasIncomeOnly}" Margin="0,16,0,0">
+                    <DockPanel Margin="0,0,0,4">
+                        <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding IncomeOnlyCopper}" FontWeight="Medium"
+                                       VerticalAlignment="Center" />
+                        <TextBlock Text="Sold, not bought here" FontSize="16" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding IncomeOnly}" ItemTemplate="{StaticResource ItemRowTemplate}" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>
