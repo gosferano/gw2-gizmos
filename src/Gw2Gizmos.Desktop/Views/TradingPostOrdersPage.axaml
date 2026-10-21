@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.TradingPostOrdersPage"
+             x:DataType="core:TradingPostOrdersViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <c:Card Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+            <StackPanel IsVisible="{Binding HasAccount}">
+                <TextBlock Text="No open buy or sell orders." Margin="0,4,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsVisible="{Binding NoOrders}" />
+                <DockPanel Margin="0,0,0,8" IsVisible="{Binding HasOrders}">
+                    <CheckBox DockPanel.Dock="Right" Content="Stale only" IsChecked="{Binding StaleOnly}"
+                              ToolTip.Tip="Orders open a week or more and beaten by a better price: unlikely to fill" />
+                    <TextBlock Text="{Binding Summary}" Opacity="0.7" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <!-- One row per open order; the ones beaten by a better price come first, flagged; stale ones (old
+                     and beaten) have their age in the attention colour. -->
+                <ItemsControl ItemsSource="{Binding Orders}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:TradingPostOrderRow">
+                            <Border Classes="hover-row">
+                                <DockPanel>
+                                    <!-- Standing: the gap to the best competing price, or that it's the best. -->
+                                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center"
+                                                HorizontalAlignment="Right" Margin="12,0,0,0" MinWidth="130">
+                                        <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
+                                                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                                   IsVisible="{Binding IsBeaten}" />
+                                        <TextBlock Text="{Binding Standing}" FontSize="12" HorizontalAlignment="Right"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   IsVisible="{Binding !IsBeaten}" />
+                                        <c:CoinDisplay Copper="{Binding GapCopper}" HorizontalAlignment="Right"
+                                                       IsVisible="{Binding IsBeaten}" />
+                                    </StackPanel>
+                                    <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Price}" FontWeight="Medium"
+                                                   VerticalAlignment="Center" Margin="12,0,0,0" />
+                                    <!-- How long it has been open. -->
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding AgeText}" Width="48" FontSize="12"
+                                               TextAlignment="Right" VerticalAlignment="Center"
+                                               Classes="countdown" Classes.soon="{Binding IsStale}"
+                                               ToolTip.Tip="Open for" />
+                                    <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                                 VerticalAlignment="Center" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}"
+                                                    TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
+                                        <TextBlock Text="{Binding Details}" FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

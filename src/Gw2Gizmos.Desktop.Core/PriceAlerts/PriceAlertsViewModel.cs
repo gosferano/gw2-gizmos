@@ -37,6 +37,8 @@ public sealed class PriceAlertsViewModel : ViewModelBase, INavigationAware
 
     public void OnNavigatedFrom() => _store.Changed -= OnStoreChanged;
 
+    public BreadcrumbEntry[] Breadcrumbs { get; } = TradingPostBreadcrumbs.Section("Price alerts");
+
     public ObservableCollection<PriceAlertRow> Alerts { get; } = new();
 
     public bool NoAlerts => Alerts.Count == 0;

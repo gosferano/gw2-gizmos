@@ -4,7 +4,7 @@
              xmlns:core="using:Gw2Gizmos.Desktop.Core"
              x:Class="Gw2Gizmos.Desktop.Views.PriceAlertsView"
              x:DataType="core:PriceAlertsViewModel">
-    <!-- The user's price alerts, shown as the Trading post page's Price alerts tab. -->
+    <!-- The user's price alerts, on the Trading post › Price alerts page. -->
     <StackPanel>
         <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" IsVisible="{Binding NoAlerts}"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"

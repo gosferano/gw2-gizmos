@@ -3,7 +3,7 @@ using Gw2Gizmos.Desktop.Core;
 
 namespace Gw2Gizmos.Desktop.Views;
 
-/// <summary>The selected account's open trading-post orders and its log of completed trades.</summary>
+/// <summary>The trading post hub: orders, history, profit and price alerts, each summarised.</summary>
 public partial class TradingPostPage : UserControl
 {
     /// <summary>Parameterless constructor for the XAML previewer.</summary>

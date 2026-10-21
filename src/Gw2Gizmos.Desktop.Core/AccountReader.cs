@@ -924,6 +924,23 @@ public sealed record TradingPostOrderRow(
 
     public bool IsBeaten => GapCopper is not null;
 
+    /// <summary>How long an order may wait before, if beaten too, it's stale: unlikely to fill where it is.</summary>
+    public static readonly TimeSpan StaleAge = TimeSpan.FromDays(7);
+
+    /// <summary>What it ties up: a buy order's coin (paid up front), a listing's value at its price.</summary>
+    public long TiedUpCopper => (long)Price * Quantity;
+
+    /// <summary>Waiting at least <see cref="StaleAge"/> and beaten by a better price.</summary>
+    public bool IsStale => IsBeaten && DateTimeOffset.UtcNow - CreatedUtc >= StaleAge;
+
+    /// <summary>How long it has been open, e.g. "3d", "5h", "12m".</summary>
+    public string AgeText => (DateTimeOffset.UtcNow - CreatedUtc) switch
+    {
+        { TotalDays: >= 1 } age => $"{(int)age.TotalDays}d",
+        { TotalHours: >= 1 } age => $"{(int)age.TotalHours}h",
+        var age => $"{Math.Max(0, (int)age.TotalMinutes)}m",
+    };
+
     /// <summary>E.g. "Undercut by", "Outbid by", "Lowest listing", "Highest buy order".</summary>
     public string Standing => (IsBuy, IsBeaten) switch
     {

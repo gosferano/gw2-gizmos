@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             xmlns:v="using:Gw2Gizmos.Desktop.Views"
+             x:Class="Gw2Gizmos.Desktop.Views.PriceAlertsPage"
+             x:DataType="core:PriceAlertsViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <v:PriceAlertsView />
+    </c:PageShell>
+</UserControl>

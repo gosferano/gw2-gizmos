@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.TradingPostHistoryPage"
+             x:DataType="core:TradingPostHistoryViewModel">
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}">
+        <StackPanel>
+            <c:Card Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+            <StackPanel IsVisible="{Binding HasAccount}">
+                <DockPanel Margin="0,0,0,8" LastChildFill="False">
+                    <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding FilterOptions}"
+                              SelectedIndex="{Binding SelectedFilterIndex}" MinWidth="110"
+                              Height="{StaticResource FormControlHeight}" />
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" Opacity="0.7" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <TextBlock Text="No completed trades yet." Margin="0,4,0,0" IsVisible="{Binding NoTrades}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <!-- One row per trade, newest first: what it did to the wallet on the right, and under it, for a
+                     sale, what it made over what its units cost when bought here. -->
+                <ItemsControl ItemsSource="{Binding Trades}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="core:TradingPostHistoryRow">
+                            <Border Classes="hover-row">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+                                        <c:CoinDisplay Copper="{Binding Trade.WalletCopper}" Signed="True"
+                                                       FontWeight="Medium" HorizontalAlignment="Right" />
+                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right"
+                                                    IsVisible="{Binding HasProfit}">
+                                            <TextBlock Text="profit" FontSize="11" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <c:CoinDisplay Copper="{Binding ProfitCopper}" Signed="True" IconSize="10"
+                                                           FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="not bought here" FontSize="11" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding IsIncomeOnly}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{Binding UnmatchedNote}" FontSize="11" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasUnmatchedNote}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                    <c:ItemImage ItemId="{Binding Trade.ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                                 VerticalAlignment="Center" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <c:ItemName Text="{Binding Trade.Name}" ItemId="{Binding Trade.ItemId}"
+                                                    TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
+                                        <!-- E.g. "Sold 25 × 1g 20s · 2026-10-16 14:05", the unit price with coin icons. -->
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <StackPanel.Styles>
+                                                <Style Selector="TextBlock">
+                                                    <Setter Property="FontSize" Value="12" />
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                </Style>
+                                            </StackPanel.Styles>
+                                            <TextBlock Text="{Binding Trade.Action}" VerticalAlignment="Center" />
+                                            <c:CoinDisplay Copper="{Binding Trade.Price}" IconSize="11"
+                                                           VerticalAlignment="Center" />
+                                            <TextBlock Text="·" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Trade.PurchasedText}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Content="Show more" Command="{Binding ShowMoreCommand}" Margin="0,8,0,0"
+                        HorizontalAlignment="Center" IsVisible="{Binding HasMore}" />
+            </StackPanel>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>
