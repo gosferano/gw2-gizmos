@@ -107,6 +107,16 @@ public sealed class CraftCostTests : IDisposable
         Assert.Equal(0m, battle.EffectiveCostOrNull);
     }
 
+    [Fact]
+    public async Task An_earned_item_costs_nothing_even_with_a_recipe_that_only_exchanges_it()
+    {
+        // Pile of Bloodstone Dust's only recipe is the Mystic Forge turning a brick and a pile of it back into dust.
+        RecipeNode dust = await TreeOf(46731);
+
+        Assert.Equal("world boss and meta chests", dust.AcquiredVia);
+        Assert.Equal(0m, dust.EffectiveCostOrNull);
+    }
+
     // Made-up ids no vendor, recipe or trading post knows: a reward only an achievement gives, and its collection's
     // pieces.
     private const int Reward = 9_200_001, Piece = 9_200_010, CheapPiece = 9_200_011;

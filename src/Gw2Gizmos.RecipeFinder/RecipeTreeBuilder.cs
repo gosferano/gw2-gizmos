@@ -219,15 +219,19 @@ public class RecipeTreeBuilder
             currentNode.IsVendorAcquirable = VendorItems.IsAcquirable(currentNode.ItemId);
             AttachVendorCost(currentNode);
 
-            // Earned by playing (e.g. Gift of Exploration from world completion): obtainable for no coin.
+            // Fetch item name with fallback
+            currentNode.ItemName = GetItemName(currentNode.ItemId);
+
+            // Earned by playing (e.g. Gift of Exploration from world completion): obtainable for no coin, so a leaf.
+            // Any recipe it has only exchanges it (e.g. the Mystic Forge turning a Bloodstone Brick back into dust),
+            // and would otherwise be priced as if crafting it were the way to get it.
             if (EarnedItems.ByItemId.TryGetValue(currentNode.ItemId, out string? earnedBy))
             {
                 currentNode.IsEarned = true;
                 currentNode.AcquiredVia = earnedBy;
+                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                continue;
             }
-
-            // Fetch item name with fallback
-            currentNode.ItemName = GetItemName(currentNode.ItemId);
 
             // Cycle: this item is its own ancestor (e.g. a material-promotion loop). Stop and leave it as a
             // trading-post-priced leaf so the tree is finite. Not memoized — its value is path-dependent (it
