@@ -16,6 +16,9 @@ public static class EarnedItems
         // Account-bound materials with no vendor or recipe, got only by playing (per their wiki pages).
         [46735] = "open-world and dungeon chests", // Empyreal Fragment
         [46733] = "world boss and meta chests", // Dragonite Ore
+        // Its only recipe is the Mystic Forge turning a Bloodstone Brick (and a pile of the dust) back into dust: an
+        // exchange, not a source.
+        [46731] = "world boss and meta chests", // Pile of Bloodstone Dust
         [36450] = "chests and achievement rewards", // Sip of Liquid Karma
         [45175] = "salvaging and chests", // Fine Essence of Luck
         [96410] = "drops in the Echovald Wilds", // Stained Glass Shard
