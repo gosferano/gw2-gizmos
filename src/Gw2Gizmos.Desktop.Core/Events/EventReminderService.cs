@@ -13,8 +13,9 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <summary>
 /// Fires a reminder (toast + in-app feed, via the composite <see cref="INotifier"/>) shortly before each
 /// event the user has subscribed to on the Events screen — festival events only while their festival is the one the
-/// user marked as running. Runs in the desktop process because that owns the OS notifications. Each occurrence is
-/// notified at most once, tracked by its start time.
+/// user marked as running, and none for an event the account has already done this reset. Runs in the desktop
+/// process because that owns the OS notifications. Each occurrence is notified at most once, tracked by its start
+/// time.
 /// </summary>
 public sealed class EventReminderService : BackgroundService
 {
@@ -23,6 +24,7 @@ public sealed class EventReminderService : BackgroundService
     private readonly EventSubscriptionStore _subscriptions;
     private readonly ReminderSettingsStore _settings;
     private readonly INotifier _notifier;
+    private readonly CompletedEvents _completed;
     private readonly ILogger<EventReminderService> _logger;
     private readonly IReadOnlyDictionary<string, ScheduledEvent> _events;
     private readonly Dictionary<string, DateTimeOffset> _lastNotifiedStart = new();
@@ -31,8 +33,10 @@ public sealed class EventReminderService : BackgroundService
         EventSubscriptionStore subscriptions,
         ReminderSettingsStore settings,
         INotifier notifier,
+        CompletedEvents completed,
         ILogger<EventReminderService> logger)
     {
+        _completed = completed;
         _subscriptions = subscriptions;
         _settings = settings;
         _notifier = notifier;
@@ -67,6 +71,8 @@ public sealed class EventReminderService : BackgroundService
         // Read the settings each pass so changes from the Events screen apply without a restart.
         TimeSpan leadTime = TimeSpan.FromMinutes(_settings.LeadTimeMinutes);
         Festival? festival = _settings.SelectedFestival;
+        // A reward already had this reset can't be had again until the next, so its event isn't worth a reminder.
+        IReadOnlySet<string> done = _completed.DoneEventIds(now);
 
         foreach (string id in _subscriptions.SubscribedIds)
         {
@@ -77,6 +83,11 @@ public sealed class EventReminderService : BackgroundService
 
             // A festival event's bell stays set across festivals, but only rings while its festival is running.
             if (scheduledEvent.Festival is { } eventFestival && eventFestival != festival)
+            {
+                continue;
+            }
+
+            if (done.Contains(id))
             {
                 continue;
             }

@@ -53,8 +53,23 @@ public sealed class ReminderSettingsStore
         set => Update(_settings with { Festival = value });
     }
 
-    // Festival is optional so files written before it existed still load.
-    private sealed record Settings(int LeadTimeMinutes, Festival? Festival = null);
+    /// <summary>
+    /// Hide the events done this reset on the Events page (off by default: it's a timer for everyone's events too).
+    /// </summary>
+    public bool HideDone
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _settings.HideDone;
+            }
+        }
+        set => Update(_settings with { HideDone = value });
+    }
+
+    // Festival and HideDone are optional so files written before them still load.
+    private sealed record Settings(int LeadTimeMinutes, Festival? Festival = null, bool HideDone = false);
 
     private void Update(Settings updated)
     {

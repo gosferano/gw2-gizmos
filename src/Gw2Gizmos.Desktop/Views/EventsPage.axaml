@@ -49,6 +49,11 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
 
+                <!-- Hide what the account has already done this reset (only with its completions synced). -->
+                <CheckBox DockPanel.Dock="Left" Content="Hide done" IsChecked="{Binding HideDone}"
+                          IsVisible="{Binding HasCompletionData}" VerticalAlignment="Center" Margin="0,0,12,0"
+                          ToolTip.Tip="Hide world bosses and metas whose reward you've already had this reset" />
+
                 <TextBox PlaceholderText="Search events…" VerticalAlignment="Center" VerticalContentAlignment="Center"
                          Height="{StaticResource FormControlHeight}" Text="{Binding SearchText}" />
             </DockPanel>
@@ -83,10 +88,16 @@
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </Border>
 
-                                <!-- Name + map -->
+                                <!-- Name + map; a check when done this reset -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <c:FluentIcon Symbol="CheckmarkCircle24" FontSize="15" VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                                                      IsVisible="{Binding IsDone}"
+                                                      ToolTip.Tip="Done this reset" />
+                                        <TextBlock Text="{Binding Name}" FontWeight="Medium" FontSize="14"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
                                     <TextBlock Text="{Binding Map}" FontSize="12" Margin="0,1,0,0"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>

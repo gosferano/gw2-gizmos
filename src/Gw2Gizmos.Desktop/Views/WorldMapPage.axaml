@@ -14,6 +14,8 @@
                 <ToggleButton Content="Invasions" IsChecked="{Binding ShowInvasions}" />
                 <ToggleButton Content="Festival" IsChecked="{Binding ShowFestival}" IsVisible="{Binding HasFestival}" />
                 <CheckBox Content="Favourites only" IsChecked="{Binding OnlyFavorites}" Margin="10,0,0,0" />
+                <CheckBox Content="Hide done" IsChecked="{Binding HideDone}" IsVisible="{Binding HasCompletionData}"
+                          ToolTip.Tip="Hide world bosses and metas whose reward you've already had this reset" />
             </WrapPanel>
 
             <Border Grid.Row="1" CornerRadius="8" ClipToBounds="True">

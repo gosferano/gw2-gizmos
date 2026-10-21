@@ -2,7 +2,10 @@ using Gw2Gizmos.Data.Static.Events;
 
 namespace Gw2Gizmos.Desktop.Core.Tests;
 
-/// <summary>The Events screen's settings persist, including the selected festival, and older files still load.</summary>
+/// <summary>
+/// The Events screen's settings persist, including the selected festival and hiding what's done, and older files
+/// still load.
+/// </summary>
 public sealed class ReminderSettingsStoreTests : IDisposable
 {
     private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), $"gw2gizmos-tests-{Guid.NewGuid():N}");
@@ -38,6 +41,19 @@ public sealed class ReminderSettingsStoreTests : IDisposable
 
         Assert.Equal(15, store.LeadTimeMinutes);
         Assert.Null(store.SelectedFestival);
+        Assert.False(store.HideDone);
+    }
+
+    [Fact]
+    public void HideDone_IsOffByDefault_AndPersists()
+    {
+        var paths = new AppPaths(_dataDirectory);
+        var store = new ReminderSettingsStore(paths);
+        Assert.False(store.HideDone);
+
+        store.HideDone = true;
+
+        Assert.True(new ReminderSettingsStore(paths).HideDone);
     }
 
     public void Dispose()
