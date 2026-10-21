@@ -444,6 +444,9 @@ public class RecipeTreeBuilder
             CraftingCostPerUnit = node.CraftingCostPerUnit,
             Count = targetCount,
             OutputItemCount = node.OutputItemCount,
+            // A recipe's currency ingredient (e.g. Research Notes) shares its id space with items; without the flag
+            // a copy reads as an unpriced item, and the craft it's in as incomplete.
+            IsCurrency = node.IsCurrency,
             AcquiredVia = node.AcquiredVia,
             IsEarned = node.IsEarned,
             IsVendorAcquirable = node.IsVendorAcquirable,
