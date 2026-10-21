@@ -12,5 +12,13 @@ public static class EarnedItems
     {
         [19677] = "world completion", // Gift of Exploration — 2 per world completion
         [19678] = "a WvW reward track", // Gift of Battle — the Gift of Battle reward track
+
+        // Account-bound materials with no vendor or recipe, got only by playing (per their wiki pages).
+        [46735] = "open-world and dungeon chests", // Empyreal Fragment
+        [46733] = "world boss and meta chests", // Dragonite Ore
+        [36450] = "chests and achievement rewards", // Sip of Liquid Karma
+        [45175] = "salvaging and chests", // Fine Essence of Luck
+        [96410] = "drops in the Echovald Wilds", // Stained Glass Shard
+        [66608] = "gathering and drops in the Maguuma Wastes", // Pile of Silky Sand
     };
 }
