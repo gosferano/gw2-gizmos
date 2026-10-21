@@ -51,6 +51,11 @@ public sealed class AchievementsReader
         try
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
+            if (!DatabaseSchema.Allows(scope))
+            {
+                return AchievementsData.Empty;
+            }
+
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
             List<AchievementGroup> groups = db.AchievementGroups.AsNoTracking().OrderBy(g => g.Order).ToList();

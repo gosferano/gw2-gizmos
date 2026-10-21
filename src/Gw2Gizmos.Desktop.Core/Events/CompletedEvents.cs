@@ -87,6 +87,11 @@ public sealed class CompletedEvents
         }
 
         using IServiceScope scope = _scopeFactory.CreateScope();
+        if (!DatabaseSchema.Allows(scope))
+        {
+            return [];
+        }
+
         var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
         return db.AccountResetActivities.AsNoTracking()
             .Where(a => a.AccountId == accountId

@@ -144,6 +144,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<AccountReader>();
         services.AddSingleton<AchievementsReader>();
         services.AddSingleton<ResetProgressReader>();
+        // Whether the worker has migrated the database yet, for readers that start before it has.
+        services.AddSingleton<DatabaseSchema>();
         services.AddSingleton<CompletedEvents>();
         // Carries the drilled-into account across parameterless page navigation.
         services.AddSingleton<SelectedAccountService>();

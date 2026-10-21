@@ -158,6 +158,11 @@ public sealed class DataChangeMonitor
         try
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
+            if (!DatabaseSchema.Allows(scope))
+            {
+                return null; // Not migrated yet: try again next poll.
+            }
+
             var db = scope.ServiceProvider.GetRequiredService<Gw2GizmosDbContext>();
 
             // A handful of accounts at most; the max is taken here so it doesn't depend on the provider's date support.
