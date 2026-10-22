@@ -13,6 +13,7 @@ public sealed class InventoryCleanupTests
     private const int Chest = 3;
     private const int Sword = 4;
     private const int Gem = 5;
+    private const int Spike = 6;
 
     private readonly List<HeldStack> _stacks = [];
     private readonly Dictionary<int, int> _storage = [];
@@ -24,6 +25,7 @@ public sealed class InventoryCleanupTests
         [Chest] = new("Container", false),
         [Sword] = new("Weapon", false),
         [Gem] = new("CraftingMaterial", false),
+        [Spike] = new("Trophy", false),
     };
     private readonly Dictionary<int, long> _values = [];
     private readonly HashSet<int> _used = [];
@@ -123,14 +125,14 @@ public sealed class InventoryCleanupTests
     public void An_item_only_finished_achievements_asked_for_is_a_leftover_worth_something_or_not()
     {
         _doneFor[Gem] = ["Bloodstone Fen Insight"];
-        _doneFor[Sword] = ["Lost Bandit Chests"];
-        _values[Sword] = 300;
-        _stacks.AddRange([new("Bank", Gem, 1), new("Bank", Sword, 1)]);
+        _doneFor[Spike] = ["Trash Collector"];
+        _values[Spike] = 16;
+        _stacks.AddRange([new("Bank", Gem, 1), new("Bank", Spike, 1)]);
 
         List<CleanupSuggestion> leftovers = Suggest();
 
         Assert.All(leftovers, s => Assert.Equal(CleanupKind.Leftover, s.Kind));
-        Assert.Equal([(Sword, 300L), (Gem, 0L)], leftovers.Select(s => (s.ItemId, s.Copper)).Order().ToList());
+        Assert.Equal([(Gem, 0L), (Spike, 16L)], leftovers.Select(s => (s.ItemId, s.Copper)).Order().ToList());
         Assert.Equal(["Bloodstone Fen Insight"], leftovers.Single(s => s.ItemId == Gem).DoneFor);
     }
 
@@ -158,5 +160,27 @@ public sealed class InventoryCleanupTests
         Assert.Equal((CleanupKind.Consume, "dye"), (use.Kind, use.Unlocks));
         CleanupSuggestion sell = Assert.Single(suggestions, s => s.ItemId == Sword);
         Assert.Equal((CleanupKind.Unlocked, "skin", 300L), (sell.Kind, sell.Unlocks, sell.Copper));
+    }
+
+    [Fact]
+    public void Food_tomes_and_gizmos_are_never_suggested_for_selling_or_letting_go()
+    {
+        _items[Gem] = new("Gizmo", false);
+        _values[Essence] = 100;
+        _doneFor[Gem] = ["Teleportation Gizmos Collector"];
+        _stacks.AddRange([new("Bank", Essence, 2), new("Bank", Gem, 1)]);
+
+        Assert.Empty(Suggest());
+    }
+
+    [Fact]
+    public void Gear_a_finished_collection_asked_for_isnt_a_leftover_but_can_still_be_sold()
+    {
+        _doneFor[Sword] = ["Legendary Weapon: Wages of Stars"];
+        _stacks.Add(new("Bank", Sword, 1));
+        Assert.Empty(Suggest());
+
+        _values[Sword] = 500;
+        Assert.Equal(CleanupKind.Sell, Assert.Single(Suggest()).Kind);
     }
 }

@@ -99,10 +99,10 @@ public sealed class InventoryCleanupViewModel : ViewModelBase, INavigationAware
         (CleanupKind.Consume, "Use", "Recipe sheets, dyes, minis and skins you haven't unlocked yet."),
         (CleanupKind.Unlocked, "Already unlocked", "Recipe sheets, dyes, minis and skins you already have: sell or "
             + "salvage them."),
-        (CleanupKind.Leftover, "Leftovers", "Items only finished achievements and collections asked for. Sell "
-            + "what's worth something; the rest can go."),
+        (CleanupKind.Leftover, "Leftovers", "Items with no use of their own that only finished achievements and "
+            + "collections asked for. Sell what's worth something; the rest can go."),
         (CleanupKind.Sell, "Sell", "Items nothing in your account uses: no recipe takes them, and no unfinished "
-            + "achievement asks for them."),
+            + "achievement asks for them. Food, tomes and gizmos are left out: they're for using."),
     ];
 
     private readonly AccountReader _reader;

@@ -80,14 +80,23 @@ public sealed record CleanupInput(
 /// What to clean up in the account's bank, shared inventory and bags, each suggestion with its reason: partial stacks
 /// that fit in fewer slots; materials that material storage has room for, and those beyond it; containers to open;
 /// items worth selling that nothing in the account uses (no recipe takes them, no unfinished achievement asks for
-/// them); leftovers, which only finished achievements asked for (worth something or not); and unlock items, to use
-/// when the account doesn't have the unlock yet, or to sell when it does. Material storage itself is only read for how
-/// full it is.
+/// them); leftovers, which only finished achievements asked for (worth something or not) and have no use of their own
+/// (aren't eaten, used or worn); and unlock items, to use when the account doesn't have the unlock yet, or to sell when
+/// it does. Items used for their own effect (food, tomes, gizmos) are never suggested for selling or letting go.
+/// Material storage itself is only read for how full it is.
 /// </summary>
 public static class InventoryCleanup
 {
     /// <summary>How many of an item a slot holds.</summary>
     public const int StackSize = 250;
+
+    // Types whose items are used for their own effect (food, tomes, gizmos): their worth is in using them, so they're
+    // never suggested for selling or letting go.
+    private static readonly HashSet<string> UsedTypes = ["Consumable", "Gizmo"];
+
+    // Types whose items are worn: a finished collection doesn't make them useless, so they're never leftovers (though
+    // gear nothing uses can still be sold).
+    private static readonly HashSet<string> WornTypes = ["Armor", "Weapon", "Trinket", "Back"];
 
     // Types whose items stack even when every one held is a single.
     private static readonly HashSet<string> StackingTypes =
@@ -154,7 +163,11 @@ public static class InventoryCleanup
             {
                 suggestions.Add(new CleanupSuggestion(CleanupKind.Open, itemId, total, 0, places));
             }
-            else if (!input.Used.Contains(itemId)
+            else if (info is not null && UsedTypes.Contains(info.Type))
+            {
+                // Used for its own effect: nothing to clean up but stacks.
+            }
+            else if (!input.Used.Contains(itemId) && !(info is not null && WornTypes.Contains(info.Type))
                      && input.DoneFor.TryGetValue(itemId, out IReadOnlyList<string>? doneFor))
             {
                 suggestions.Add(new CleanupSuggestion(CleanupKind.Leftover, itemId, total, total * value, places)
