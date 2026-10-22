@@ -16,22 +16,27 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
 {
     private readonly AccountReader _reader;
     private readonly CraftFromStockSettingsStore _craftSettings;
+    private readonly InventoryCleanupSettingsStore _cleanupSettings;
     private readonly string? _accountId;
     private readonly IDisposable _dataChanges;
     private string _craftSummary = "";
     private long _bestCraftCopper;
     private bool _hasBestCraft;
+    private string _cleanupSummary = "";
+    private long _cleanupCopper;
 
     public AdvisorViewModel(
         AccountReader reader,
         SelectedAccountService selected,
         DataChangeMonitor dataChanges,
         INavigationService navigation,
-        CraftFromStockSettingsStore craftSettings
+        CraftFromStockSettingsStore craftSettings,
+        InventoryCleanupSettingsStore cleanupSettings
     )
     {
         _reader = reader;
         _craftSettings = craftSettings;
+        _cleanupSettings = cleanupSettings;
         _accountId = string.IsNullOrEmpty(selected.AccountId) ? null : selected.AccountId;
         OpenCommand = new RelayCommand<AppPage>(page => navigation.NavigateTo(page));
         _ = LoadAsync();
@@ -69,14 +74,74 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         private set => SetProperty(ref _hasBestCraft, value);
     }
 
+    /// <summary>E.g. "12 to stack · 4 to deposit · 3 to open · 20 to sell".</summary>
+    public string CleanupSummary
+    {
+        get => _cleanupSummary;
+        private set => SetProperty(ref _cleanupSummary, value);
+    }
+
+    /// <summary>What the items suggested for selling, and the overflow, are worth.</summary>
+    public long CleanupCopper
+    {
+        get => _cleanupCopper;
+        private set
+        {
+            if (SetProperty(ref _cleanupCopper, value))
+            {
+                OnPropertyChanged(nameof(HasCleanupCopper));
+            }
+        }
+    }
+
+    public bool HasCleanupCopper => CleanupCopper > 0;
+
     private async Task LoadAsync()
     {
         if (_accountId is not { } accountId)
         {
-            CraftSummary = "Needs an account: add an API key on the API keys page";
+            const string needsAccount = "Needs an account: add an API key on the API keys page";
+            CraftSummary = needsAccount;
+            CleanupSummary = needsAccount;
             return;
         }
 
+        await Task.WhenAll(LoadCraftsAsync(accountId), LoadCleanupAsync(accountId));
+    }
+
+    private async Task LoadCleanupAsync(string accountId)
+    {
+        try
+        {
+            int? capacity = _cleanupSettings.StorageCapacity;
+            CleanupData data = await Task.Run(() => _reader.GetCleanup(accountId, capacity));
+            List<CleanupSuggestion> shown = InventoryCleanupViewModel
+                .Shown(data, _cleanupSettings.Kept, showKept: false)
+                .ToList();
+            string? Part(CleanupKind kind, string verb)
+            {
+                int count = shown.Count(s => s.Kind == kind);
+                return count > 0 ? $"{Number(count)} to {verb}" : null;
+            }
+
+            CleanupSummary = shown.Count == 0
+                ? "Nothing to clean up"
+                : string.Join(" · ", new[]
+                {
+                    Part(CleanupKind.Stack, "stack"), Part(CleanupKind.Deposit, "deposit"),
+                    Part(CleanupKind.Overflow, "clear from bags"), Part(CleanupKind.Open, "open"),
+                    Part(CleanupKind.Sell, "sell"),
+                }.Where(part => part is not null));
+            CleanupCopper = shown.Sum(s => s.Copper);
+        }
+        catch (Exception)
+        {
+            // Leave as is on a read failure.
+        }
+    }
+
+    private async Task LoadCraftsAsync(string accountId)
+    {
         try
         {
             StockCrafts crafts = await Task.Run(() => _reader.GetStockCrafts(accountId));

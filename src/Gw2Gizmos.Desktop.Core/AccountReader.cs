@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
@@ -789,6 +790,96 @@ public sealed class AccountReader
                 .Append(c.Recipe.OutputItemId)),
             (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
         return new StockCrafts(crafts, names, ratings.Count > 0, learned.Count > 0);
+    }
+
+    /// <summary>
+    /// What to clean up in the account's bank, shared inventory and bags (<see cref="InventoryCleanup"/>), with
+    /// material storage taken to hold <paramref name="storageCapacity"/> per item (null to guess it).
+    /// </summary>
+    public CleanupData GetCleanup(string accountId, int? storageCapacity) =>
+        SafeRead(db => GetCleanup(db, accountId, storageCapacity), CleanupData.Empty);
+
+    private CleanupData GetCleanup(Gw2GizmosDbContext db, string accountId, int? storageCapacity)
+    {
+        var stacks = new List<HeldStack>();
+        foreach (AccountContainerSlot slot in db.AccountContainerSlots.AsNoTracking()
+                     .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
+        {
+            string place = slot.Store == AccountContainer.Bank ? "Bank" : "Shared inventory";
+            stacks.Add(new HeldStack(place, slot.ItemId!.Value, slot.Count, slot.Charges is not null));
+        }
+
+        foreach (CharacterItemSlot slot in db.CharacterItemSlots.AsNoTracking()
+                     .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
+        {
+            stacks.Add(new HeldStack(slot.CharacterName, slot.ItemId!.Value, slot.Count, slot.Charges is not null));
+        }
+
+        IQueryable<long> storageIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.Container == AccountContainer.MaterialStorage)
+            .GroupBy(o => o.ItemId)
+            .Select(g => g.Max(x => x.Id));
+        Dictionary<int, int> storage = db.AccountItemObservations.AsNoTracking()
+            .Where(o => storageIds.Contains(o.Id))
+            .ToDictionary(o => o.ItemId, o => o.Count);
+        HashSet<int> storageTakes = db.MaterialCategoryItems.AsNoTracking().Select(i => i.ItemId).ToHashSet();
+        int guessed = InventoryCleanup.GuessCapacity(storage);
+
+        int[] heldIds = stacks.Select(s => s.ItemId).Distinct().ToArray();
+        Dictionary<int, CleanupItem> items = db.Items.AsNoTracking()
+            .Where(i => heldIds.Contains(i.Id))
+            .Select(i => new
+            {
+                i.Id, i.Type,
+                Soulbound = i.Flags.Any(f => f.Value == "SoulbindOnAcquire" || f.Value == "SoulBindOnUse"),
+            })
+            .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Soulbound));
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, heldIds);
+
+        var input = new CleanupInput(stacks, storage, storageTakes, storageCapacity ?? guessed, items, values,
+            UsedItems(db, accountId));
+        List<CleanupSuggestion> suggestions = InventoryCleanup.Suggest(input);
+        Dictionary<int, string> names = LoadNames(suggestions.Select(s => s.ItemId), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+        return new CleanupData(suggestions, names, guessed);
+    }
+
+    /// <summary>
+    /// The items something in the account still uses: every recipe's ingredients (the game's and the Mystic Forge's),
+    /// and the items unfinished achievements ask for. Without achievement progress, every achievement's items count.
+    /// </summary>
+    private static HashSet<int> UsedItems(Gw2GizmosDbContext db, string accountId)
+    {
+        HashSet<int> used = db.RecipeIngredients.AsNoTracking()
+            .Where(i => i.Type == "Item")
+            .Select(i => i.Id)
+            .Distinct()
+            .ToHashSet();
+        used.UnionWith(Gw2Gizmos.Data.Static.Crafting.StaticRecipes.All
+            .SelectMany(r => r.Ingredients)
+            .Select(i => i.ItemId));
+
+        Dictionary<int, AccountAchievement> progress = db.AccountAchievements.AsNoTracking()
+            .Where(a => a.AccountId == accountId)
+            .ToDictionary(a => a.AchievementId);
+        foreach (Achievement achievement in db.Achievements.AsNoTracking().AsEnumerable())
+        {
+            AccountAchievement? mine = progress.GetValueOrDefault(achievement.Id);
+            if (mine?.Done == true)
+            {
+                continue;
+            }
+
+            for (int bit = 0; bit < achievement.Bits.Count; bit++)
+            {
+                if (achievement.Bits[bit].Type == "Item" && mine?.Bits.Contains(bit) != true)
+                {
+                    used.Add(achievement.Bits[bit].Id);
+                }
+            }
+        }
+
+        return used;
     }
 
     /// <summary>The account's completed trades, newest first.</summary>

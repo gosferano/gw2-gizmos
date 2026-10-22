@@ -16,6 +16,7 @@ public enum FluentSymbol
     ArrowUp24 = 0xF19C,
     Backpack24 = 0xF8F3,
     BoxMultiple24 = 0xE1C8,
+    Broom24 = 0xF202,
     BuildingBank24 = 0xE20E,
     BuildingShop24 = 0xE22F,
     CalendarCheckmark24 = 0xF8C9,
