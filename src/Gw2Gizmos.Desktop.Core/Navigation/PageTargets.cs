@@ -16,6 +16,12 @@ public sealed class PageTargets
     /// <summary>The Events page opens filtered by this text (an event's name).</summary>
     public void OpenEvents(string search) => _eventSearch = search;
 
+    /// <summary>The item the next page to open will select, if any, without taking it.</summary>
+    public int? PendingItem => _itemId;
+
+    /// <summary>The text the next page to open will filter by, if any, without taking it.</summary>
+    public string? PendingEventSearch => _eventSearch;
+
     public int? TakeItem()
     {
         int? itemId = _itemId;

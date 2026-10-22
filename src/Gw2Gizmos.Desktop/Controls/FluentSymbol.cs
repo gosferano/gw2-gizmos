@@ -12,6 +12,8 @@ public enum FluentSymbol
     Alert24 = 0xF115,
     AlertOn24 = 0xF11B,
     ArrowDown24 = 0xF149,
+    ArrowLeft24 = 0xF15C,
+    ArrowRight24 = 0xF182,
     ArrowSync24 = 0xF191,
     ArrowUp24 = 0xF19C,
     Backpack24 = 0xF8F3,
