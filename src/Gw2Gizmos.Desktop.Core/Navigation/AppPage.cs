@@ -31,6 +31,8 @@ public enum AppPage
     TradingPostHistory,
     TradingPostProfit,
     PriceAlerts,
+    Advisor,
+    CraftFromStock,
     Notifications,
     Logs,
     ApiKeys,

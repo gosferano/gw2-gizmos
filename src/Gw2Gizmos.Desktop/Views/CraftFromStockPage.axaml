@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.CraftFromStockPage"
+             x:DataType="core:CraftFromStockViewModel">
+    <UserControl.DataTemplates>
+        <DataTemplate x:DataType="core:StockCraftHeading">
+            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Margin="0,12,0,4" />
+        </DataTemplate>
+        <!-- A craft: what it makes, who can make it, what it uses and what's missing; its profit on the right. -->
+        <DataTemplate x:DataType="core:StockCraftRow">
+            <Border Classes="hover-row">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" MinWidth="140"
+                                Background="Transparent" ToolTip.Tip="{Binding Breakdown}">
+                        <!-- Made from stock: what crafting them all makes, and each. -->
+                        <StackPanel IsVisible="{Binding !HasMissing}">
+                            <c:CoinDisplay Copper="{Binding StockProfitCopper}" Signed="True" FontWeight="Medium"
+                                           HorizontalAlignment="Right" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                <c:CoinDisplay Copper="{Binding ProfitCopper}" Signed="True" IconSize="10"
+                                               FontSize="11" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding CanMakeText}" FontSize="11" Classes="secondary"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+                        <!-- Short of something: what one makes, buying the rest. -->
+                        <StackPanel IsVisible="{Binding HasMissing}">
+                            <c:CoinDisplay Copper="{Binding ProfitCopper}" Signed="True" FontWeight="Medium"
+                                           HorizontalAlignment="Right" />
+                            <TextBlock Text="each" FontSize="11" Classes="secondary" HorizontalAlignment="Right" />
+                        </StackPanel>
+                    </StackPanel>
+                    <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                 VerticalAlignment="Top" />
+                    <StackPanel VerticalAlignment="Center">
+                        <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
+                                    HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding Details}" FontSize="12" Classes="secondary" />
+                        <TextBlock Text="{Binding UsesText}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CraftedText}" FontSize="12" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasCrafted}" />
+                        <TextBlock Text="{Binding MissingText}" FontSize="12" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasMissing}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Not scrollable itself: the list scrolls on its own, so it can build only the rows in view. -->
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}" Scrollable="False">
+        <Grid RowDefinitions="Auto,*">
+            <c:Card Grid.Row="0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel Grid.Row="0" IsVisible="{Binding HasAccount}">
+                <TextBlock TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,10"
+                           Text="Crafts that sell for more than the materials you hold would. A material you can't sell counts at what crafting another costs. Prices are today's highest buy orders, after the trading post's fees." />
+                <WrapPanel Margin="0,0,0,6">
+                    <ComboBox ItemsSource="{x:Static core:CraftFromStockViewModel.Minimums}"
+                              SelectedItem="{Binding Minimum}" MinWidth="140" Margin="0,0,16,0"
+                              Height="{StaticResource FormControlHeight}" VerticalAlignment="Center"
+                              ToolTip.Tip="What a craft makes each, at least">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:StockCraftMinimum">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="Only what I can craft" IsChecked="{Binding OnlyCraftable}"
+                              IsVisible="{Binding CanTellCraftable}" VerticalAlignment="Center"
+                              ToolTip.Tip="Recipes the account has learned, at a level one of your characters has" />
+                </WrapPanel>
+                <TextBlock Text="Nothing you hold is worth more crafted than sold, with these filters." Margin="0,4,0,0"
+                           Classes="secondary" IsVisible="{Binding NoCrafts}" />
+            </StackPanel>
+
+            <!-- A gutter on the right for the scrollbar. Each entry picks its template (heading or craft) by type. -->
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasAccount}">
+                <ItemsRepeater ItemsSource="{Binding Rows}" Margin="0,0,16,0">
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding}" />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+        </Grid>
+    </c:PageShell>
+</UserControl>

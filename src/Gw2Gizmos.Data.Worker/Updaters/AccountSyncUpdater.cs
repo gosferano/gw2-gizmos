@@ -2,6 +2,7 @@ using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
@@ -181,6 +182,13 @@ public class AccountSyncUpdater
         {
             // The trading post doesn't change what a session earned in-game, so a boundary sync leaves it.
             await RunSection(WorkerFeatures.TradingPost, account, permissions, () => SyncTradingPostAsync(client, account.Id, now, stoppingToken));
+            // Nor the recipes learned.
+            await RunSection(
+                WorkerFeatures.LearnedRecipes,
+                account,
+                permissions,
+                () => SyncLearnedRecipesAsync(client, account.Id, stoppingToken)
+            );
             // Nor achievement progress.
             await RunSection(
                 WorkerFeatures.Achievements,
@@ -388,6 +396,23 @@ public class AccountSyncUpdater
 
         await _dbContext.SaveChangesAsync(stoppingToken);
         return progress.Length;
+    }
+
+    private async Task<int> SyncLearnedRecipesAsync(
+        Gw2ApiClient client, string accountId, CancellationToken stoppingToken)
+    {
+        // Replaced wholesale: the API lists every recipe the account knows.
+        int[]? recipeIds = await client.V2.Account.Recipes.GetBlob(stoppingToken);
+        if (recipeIds is null)
+        {
+            return 0;
+        }
+
+        await _dbContext.AccountRecipes.Where(r => r.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        _dbContext.AccountRecipes.AddRange(
+            recipeIds.Distinct().Select(id => new AccountRecipe { AccountId = accountId, RecipeId = id }));
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return recipeIds.Length;
     }
 
     /// <summary>

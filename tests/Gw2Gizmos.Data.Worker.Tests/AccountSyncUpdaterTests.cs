@@ -478,6 +478,36 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         Assert.Equal(0, await Db.AccountAchievements.CountAsync());
     }
 
+    [Fact]
+    public async Task LearnedRecipes_AreStored_AndALaterSyncReplacesThem()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("unlocks");
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/recipes", "[7, 12, 12]");
+        await Sync();
+
+        Assert.Equal([7, 12], await Db.AccountRecipes.Where(r => r.AccountId == state.Id)
+            .OrderBy(r => r.RecipeId).Select(r => r.RecipeId).ToListAsync());
+
+        _stub.SetJson("/v2/account/recipes", "[12, 30]");
+        await Sync();
+
+        Assert.Equal([12, 30], await Db.AccountRecipes.OrderBy(r => r.RecipeId).Select(r => r.RecipeId).ToListAsync());
+    }
+
+    [Fact]
+    public async Task LearnedRecipes_WithoutThePermission_AreSkipped()
+    {
+        AccountStateBuilder state = SmallAccount(); // no "unlocks" permission
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/recipes", "[7]");
+
+        await Sync();
+
+        Assert.Equal(0, await Db.AccountRecipes.CountAsync());
+    }
+
     /// <summary>The reset endpoints as the API returns them: the master lists, and the account's progress.</summary>
     private void StubResetProgress(string worldBossesDone, string dailyObjectives)
     {
