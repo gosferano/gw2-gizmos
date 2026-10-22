@@ -9,10 +9,15 @@ namespace Gw2Gizmos.Desktop.Core;
 /// <param name="HasCharges">
 /// Whether it's a tool with charges (salvage kits, gathering tools), which don't stack.
 /// </param>
-public sealed record HeldStack(string Place, int ItemId, int Count, bool HasCharges = false);
+/// <param name="Binding">What this copy is bound to ("Account" or "Character"), or null when it's not bound.</param>
+public sealed record HeldStack(
+    string Place, int ItemId, int Count, bool HasCharges = false, string? Binding = null);
 
-/// <summary>What cleanup needs to know about an item: its type, and whether it binds to a character.</summary>
-public sealed record CleanupItem(string Type, bool Soulbound);
+/// <summary>
+/// What cleanup needs to know about an item: its type, whether every copy is bound (account-bound, or soulbound on
+/// acquiring it), so it can't be traded, and whether it's junk, whose only use is selling it to a vendor.
+/// </summary>
+public sealed record CleanupItem(string Type, bool Bound, bool Junk = false);
 
 /// <summary>
 /// What an unlock item unlocks ("recipe", "dye", "mini" or "skin"), and whether the account already has it.
@@ -59,6 +64,9 @@ public sealed record CleanupSuggestion(
 
     /// <summary>For a leftover: the finished achievements that asked for it.</summary>
     public IReadOnlyList<string> DoneFor { get; init; } = [];
+
+    /// <summary>For a sale: the item is junk, only good for selling to a vendor.</summary>
+    public bool Junk { get; init; }
 
     /// <summary>For an unlock item: what it unlocks ("recipe", "dye", "mini" or "skin").</summary>
     public string? Unlocks { get; init; }
@@ -121,10 +129,7 @@ public static class InventoryCleanup
             int total = item.Sum(s => s.Count);
             CleanupItem? info = input.Items.GetValueOrDefault(itemId);
             long value = input.Values.GetValueOrDefault(itemId);
-            List<(string Place, int Count)> places = item
-                .GroupBy(s => s.Place)
-                .Select(g => (g.Key, g.Sum(s => s.Count)))
-                .ToList();
+            List<(string Place, int Count)> places = Places(item);
 
             if (input.StorageTakes.Contains(itemId))
             {
@@ -175,23 +180,41 @@ public static class InventoryCleanup
                     DoneFor = doneFor,
                 });
             }
-            else if (value > 0 && !input.Used.Contains(itemId))
+            else if (value > 0 && info?.Junk == true)
             {
-                suggestions.Add(new CleanupSuggestion(CleanupKind.Sell, itemId, total, total * value, places));
+                // Junk sells to a vendor, bound or not; that's all it's for.
+                suggestions.Add(new CleanupSuggestion(CleanupKind.Sell, itemId, total, total * value, places)
+                {
+                    Junk = true,
+                });
+            }
+            else if (value > 0 && !input.Used.Contains(itemId) && info?.Bound != true)
+            {
+                // Only the copies that aren't bound to the account or a character can be sold.
+                List<HeldStack> free = item.Where(s => s.Binding is null).ToList();
+                int count = free.Sum(s => s.Count);
+                if (count > 0)
+                {
+                    suggestions.Add(new CleanupSuggestion(
+                        CleanupKind.Sell, itemId, count, count * value, Places(free)));
+                }
             }
         }
 
         return suggestions;
     }
 
-    // Partial stacks that fit in fewer slots. A tool with charges doesn't stack, nor does equipment; an item that
-    // binds to a character only stacks with copies on the same character, so it's left alone when it's on several.
+    private static List<(string Place, int Count)> Places(IEnumerable<HeldStack> stacks) =>
+        stacks.GroupBy(s => s.Place).Select(g => (g.Key, g.Sum(s => s.Count))).ToList();
+
+    // Partial stacks that fit in fewer slots. A tool with charges doesn't stack, nor does equipment; a copy bound to a
+    // character only stacks with copies on the same character, so the item is left alone when it's on several.
     private static CleanupSuggestion? Stack(
         List<HeldStack> stacks, CleanupItem? info, List<(string Place, int Count)> places)
     {
         List<HeldStack> stackable = stacks.Where(s => !s.HasCharges).ToList();
         bool canStack = stackable.Any(s => s.Count > 1) || (info is not null && StackingTypes.Contains(info.Type));
-        if (stackable.Count < 2 || !canStack || (info?.Soulbound == true && places.Count > 1))
+        if (stackable.Count < 2 || !canStack || (stackable.Any(s => s.Binding == "Character") && places.Count > 1))
         {
             return null;
         }

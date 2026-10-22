@@ -807,13 +807,14 @@ public sealed class AccountReader
                      .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
         {
             string place = slot.Store == AccountContainer.Bank ? "Bank" : "Shared inventory";
-            stacks.Add(new HeldStack(place, slot.ItemId!.Value, slot.Count, slot.Charges is not null));
+            stacks.Add(new HeldStack(place, slot.ItemId!.Value, slot.Count, slot.Charges is not null, slot.Binding));
         }
 
         foreach (CharacterItemSlot slot in db.CharacterItemSlots.AsNoTracking()
                      .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
         {
-            stacks.Add(new HeldStack(slot.CharacterName, slot.ItemId!.Value, slot.Count, slot.Charges is not null));
+            stacks.Add(new HeldStack(
+                slot.CharacterName, slot.ItemId!.Value, slot.Count, slot.Charges is not null, slot.Binding));
         }
 
         IQueryable<long> storageIds = db.AccountItemObservations
@@ -832,9 +833,10 @@ public sealed class AccountReader
             .Select(i => new
             {
                 i.Id, i.Type,
-                Soulbound = i.Flags.Any(f => f.Value == "SoulbindOnAcquire" || f.Value == "SoulBindOnUse"),
+                Bound = i.Flags.Any(f => f.Value == "AccountBound" || f.Value == "SoulbindOnAcquire"),
+                Junk = i.Rarity == "Junk",
             })
-            .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Soulbound));
+            .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Bound, i.Junk));
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, heldIds);
 
         (HashSet<int> used, Dictionary<int, IReadOnlyList<string>> doneFor) = UsedItems(db, accountId);

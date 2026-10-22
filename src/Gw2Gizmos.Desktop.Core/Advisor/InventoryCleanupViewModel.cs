@@ -46,6 +46,7 @@ public sealed class CleanupRow
         CleanupKind.Overflow =>
             $"{Number(_suggestion.Count)} more than material storage holds ({Number(_capacity)} each)",
         CleanupKind.Open => $"{Number(_suggestion.Count)} to open",
+        CleanupKind.Sell when _suggestion.Junk => $"{Number(_suggestion.Count)} junk, only good for a vendor",
         CleanupKind.Sell => $"{Number(_suggestion.Count)} that no recipe or unfinished achievement uses",
         CleanupKind.Consume => $"{Number(_suggestion.Count)}, for a {_suggestion.Unlocks} you don't have yet",
         CleanupKind.Unlocked => $"{Number(_suggestion.Count)}, for a {_suggestion.Unlocks} you already have",
@@ -102,7 +103,8 @@ public sealed class InventoryCleanupViewModel : ViewModelBase, INavigationAware
         (CleanupKind.Leftover, "Leftovers", "Items with no use of their own that only finished achievements and "
             + "collections asked for. Sell what's worth something; the rest can go."),
         (CleanupKind.Sell, "Sell", "Items nothing in your account uses: no recipe takes them, and no unfinished "
-            + "achievement asks for them. Food, tomes and gizmos are left out: they're for using."),
+            + "achievement asks for them, and junk. Other bound copies are left out, as are food, tomes and gizmos: "
+            + "they're for using."),
     ];
 
     private readonly AccountReader _reader;

@@ -59,10 +59,9 @@ public sealed class InventoryCleanupTests
     }
 
     [Fact]
-    public void An_item_bound_to_characters_isnt_stacked_across_them()
+    public void Copies_bound_to_characters_arent_stacked_across_them()
     {
-        _items[Essence] = new("Consumable", true);
-        _stacks.AddRange([new("Gosferano", Essence, 5), new("Party Plants", Essence, 5)]);
+        _stacks.AddRange([new("Gosferano", Essence, 5, Binding: "Character"), new("Party Plants", Essence, 5)]);
 
         Assert.DoesNotContain(Suggest(), s => s.Kind == CleanupKind.Stack);
     }
@@ -182,5 +181,39 @@ public sealed class InventoryCleanupTests
 
         _values[Sword] = 500;
         Assert.Equal(CleanupKind.Sell, Assert.Single(Suggest()).Kind);
+    }
+
+    [Fact]
+    public void Only_copies_that_arent_bound_are_suggested_for_selling()
+    {
+        _values[Sword] = 5_000;
+        _stacks.AddRange([new("Erfindiel", Sword, 1, Binding: "Character"), new("Bank", Sword, 1)]);
+
+        CleanupSuggestion sell = Assert.Single(Suggest());
+
+        Assert.Equal((1, 5_000L), (sell.Count, sell.Copper));
+        Assert.Equal([("Bank", 1)], sell.Places);
+    }
+
+    [Fact]
+    public void An_item_every_copy_of_which_is_bound_isnt_suggested_for_selling()
+    {
+        _items[Sword] = new("Weapon", true); // ascended: account bound, sells to a vendor
+        _values[Sword] = 10_000;
+        _stacks.Add(new("Bank", Sword, 1));
+
+        Assert.Empty(Suggest());
+    }
+
+    [Fact]
+    public void Junk_is_suggested_for_selling_bound_or_not()
+    {
+        _items[Spike] = new("Trophy", Bound: true, Junk: true);
+        _values[Spike] = 10_000;
+        _stacks.Add(new("Mister Legend", Spike, 2, Binding: "Character"));
+
+        CleanupSuggestion sell = Assert.Single(Suggest());
+
+        Assert.Equal((CleanupKind.Sell, true, 20_000L), (sell.Kind, sell.Junk, sell.Copper));
     }
 }
