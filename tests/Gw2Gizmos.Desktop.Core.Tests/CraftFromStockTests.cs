@@ -190,7 +190,24 @@ public sealed class CraftFromStockTests
         _prices[Output] = (Buy: 1_000, Sell: 1_200);
         var crafts = new StockCrafts(Find(Recipe(ingredients: (Ore, 10))), new Dictionary<int, string>(), false, false);
 
-        Assert.Equal(shown, CraftFromStockViewModel.Shown(crafts, true, true, minimum).Any());
+        Assert.Equal(shown, CraftFromStockViewModel.Shown(crafts, true, minimum).Any());
+    }
+
+    [Theory]
+    [InlineData(400, true, true)]
+    [InlineData(450, true, false)] // no character has the level
+    [InlineData(400, false, false)] // the account hasn't learned it
+    public void Only_what_the_account_can_craft_needs_both_the_level_and_the_recipe(
+        int minRating, bool learned, bool shown)
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 1;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+        _learned = learned ? [1] : [];
+        var crafts = new StockCrafts(Find(Recipe(minRating, (Ore, 10))), new Dictionary<int, string>(), true, true);
+
+        Assert.Equal(shown, CraftFromStockViewModel.Shown(crafts, true, 0).Any());
+        Assert.True(CraftFromStockViewModel.Shown(crafts, false, 0).Any());
     }
 
     private const int Ingot = 13;

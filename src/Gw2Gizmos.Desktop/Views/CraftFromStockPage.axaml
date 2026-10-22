@@ -77,10 +77,9 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <CheckBox Content="Only what my characters can craft" IsChecked="{Binding OnlyCharactersCanCraft}"
-                              IsVisible="{Binding HasRatings}" Margin="0,0,16,0" VerticalAlignment="Center" />
-                    <CheckBox Content="Only recipes I know" IsChecked="{Binding OnlyKnown}"
-                              IsVisible="{Binding HasLearned}" VerticalAlignment="Center" />
+                    <CheckBox Content="Only what I can craft" IsChecked="{Binding OnlyCraftable}"
+                              IsVisible="{Binding CanTellCraftable}" VerticalAlignment="Center"
+                              ToolTip.Tip="Recipes the account has learned, at a level one of your characters has" />
                 </WrapPanel>
                 <TextBlock Text="Nothing you hold is worth more crafted than sold, with these filters." Margin="0,4,0,0"
                            Classes="secondary" IsVisible="{Binding NoCrafts}" />

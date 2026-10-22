@@ -112,8 +112,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     private readonly string? _accountId;
     private readonly IDisposable _dataChanges;
     private StockCrafts _crafts = StockCrafts.Empty;
-    private bool _onlyCharactersCanCraft = true;
-    private bool _onlyKnown = true;
+    private bool _onlyCraftable = true;
     private StockCraftMinimum _minimum = DefaultMinimum;
     private bool _loaded;
 
@@ -140,32 +139,22 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     public bool HasAccount { get; }
 
-    /// <summary>Whether the characters' crafting levels are known, so crafts can be limited to theirs.</summary>
-    public bool HasRatings => _crafts.HasRatings;
+    /// <summary>
+    /// Whether the characters' crafting levels or the account's learned recipes are known, so crafts can be limited
+    /// to what the account can craft.
+    /// </summary>
+    public bool CanTellCraftable => _crafts.HasRatings || _crafts.HasLearned;
 
-    /// <summary>Leave out crafts no character has the discipline and level for.</summary>
-    public bool OnlyCharactersCanCraft
+    /// <summary>
+    /// Leave out crafts the account can't make: no character has the discipline at the level, or the account hasn't
+    /// learned the recipe (each as far as it's known).
+    /// </summary>
+    public bool OnlyCraftable
     {
-        get => _onlyCharactersCanCraft;
+        get => _onlyCraftable;
         set
         {
-            if (SetProperty(ref _onlyCharactersCanCraft, value))
-            {
-                Apply();
-            }
-        }
-    }
-
-    /// <summary>Whether the account's learned recipes are synced, so crafts can be limited to those it knows.</summary>
-    public bool HasLearned => _crafts.HasLearned;
-
-    /// <summary>Leave out recipes the account hasn't learned.</summary>
-    public bool OnlyKnown
-    {
-        get => _onlyKnown;
-        set
-        {
-            if (SetProperty(ref _onlyKnown, value))
+            if (SetProperty(ref _onlyCraftable, value))
             {
                 Apply();
             }
@@ -208,14 +197,12 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     public bool NoCrafts => _loaded && Rows.Count == 0;
 
     /// <summary>
-    /// The crafts to show: those making at least <paramref name="minimumCopper"/> each, and those the characters can
-    /// make and the account knows, when each is asked for and known.
+    /// The crafts to show: those making at least <paramref name="minimumCopper"/> each, and, when asked for, only
+    /// those a character has the level for and the account knows (each as far as it's known).
     /// </summary>
-    public static IEnumerable<StockCraft> Shown(
-        StockCrafts crafts, bool onlyCharactersCanCraft, bool onlyKnown, long minimumCopper) =>
+    public static IEnumerable<StockCraft> Shown(StockCrafts crafts, bool onlyCraftable, long minimumCopper) =>
         crafts.Crafts.Where(c => c.ProfitCopper >= minimumCopper
-            && (!onlyCharactersCanCraft || !crafts.HasRatings || c.CharactersCanCraft)
-            && (!onlyKnown || c.Known != false));
+            && (!onlyCraftable || ((!crafts.HasRatings || c.CharactersCanCraft) && c.Known != false)));
 
     private async Task LoadAsync()
     {
@@ -228,8 +215,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
         {
             _crafts = await Task.Run(() => _reader.GetStockCrafts(accountId));
             _loaded = true;
-            OnPropertyChanged(nameof(HasRatings));
-            OnPropertyChanged(nameof(HasLearned));
+            OnPropertyChanged(nameof(CanTellCraftable));
             Apply();
         }
         catch (Exception)
@@ -240,7 +226,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     private void Apply()
     {
-        List<StockCraft> shown = Shown(_crafts, _onlyCharactersCanCraft, _onlyKnown, _minimum.Copper).ToList();
+        List<StockCraft> shown = Shown(_crafts, _onlyCraftable, _minimum.Copper).ToList();
         List<StockCraft> ready = shown.Where(c => c.Missing.Count == 0)
             .OrderByDescending(c => c.StockProfitCopper)
             .ToList();
