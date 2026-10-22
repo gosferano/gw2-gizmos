@@ -112,13 +112,18 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     private readonly string? _accountId;
     private readonly IDisposable _dataChanges;
     private StockCrafts _crafts = StockCrafts.Empty;
-    private bool _onlyCraftable = true;
-    private StockCraftMinimum _minimum = DefaultMinimum;
+    private readonly CraftFromStockSettingsStore _settings;
     private bool _loaded;
 
-    public CraftFromStockViewModel(AccountReader reader, SelectedAccountService selected, DataChangeMonitor dataChanges)
+    public CraftFromStockViewModel(
+        AccountReader reader,
+        SelectedAccountService selected,
+        DataChangeMonitor dataChanges,
+        CraftFromStockSettingsStore settings
+    )
     {
         _reader = reader;
+        _settings = settings;
         _accountId = string.IsNullOrEmpty(selected.AccountId) ? null : selected.AccountId;
         HasAccount = _accountId is not null;
         Breadcrumbs = AdvisorBreadcrumbs.Section("Craft from stock");
@@ -151,11 +156,13 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     /// </summary>
     public bool OnlyCraftable
     {
-        get => _onlyCraftable;
+        get => _settings.OnlyCraftable;
         set
         {
-            if (SetProperty(ref _onlyCraftable, value))
+            if (value != _settings.OnlyCraftable)
             {
+                _settings.OnlyCraftable = value;
+                OnPropertyChanged();
                 Apply();
             }
         }
@@ -171,17 +178,19 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
         new("1g or more", 10_000),
     ];
 
-    /// <summary>The minimum the page opens with, and the Advisor's summary counts with.</summary>
+    /// <summary>The minimum until another is picked.</summary>
     public static StockCraftMinimum DefaultMinimum => Minimums[2];
 
     /// <summary>Leave out crafts making less than this each.</summary>
     public StockCraftMinimum Minimum
     {
-        get => _minimum;
+        get => _settings.Minimum;
         set
         {
-            if (value is not null && SetProperty(ref _minimum, value))
+            if (value is not null && value != _settings.Minimum)
             {
+                _settings.Minimum = value;
+                OnPropertyChanged();
                 Apply();
             }
         }
@@ -226,7 +235,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     private void Apply()
     {
-        List<StockCraft> shown = Shown(_crafts, _onlyCraftable, _minimum.Copper).ToList();
+        List<StockCraft> shown = Shown(_crafts, OnlyCraftable, Minimum.Copper).ToList();
         List<StockCraft> ready = shown.Where(c => c.Missing.Count == 0)
             .OrderByDescending(c => c.StockProfitCopper)
             .ToList();

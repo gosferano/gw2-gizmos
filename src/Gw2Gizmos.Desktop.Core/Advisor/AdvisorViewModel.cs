@@ -15,6 +15,7 @@ namespace Gw2Gizmos.Desktop.Core;
 public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
 {
     private readonly AccountReader _reader;
+    private readonly CraftFromStockSettingsStore _craftSettings;
     private readonly string? _accountId;
     private readonly IDisposable _dataChanges;
     private string _craftSummary = "";
@@ -25,10 +26,12 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         AccountReader reader,
         SelectedAccountService selected,
         DataChangeMonitor dataChanges,
-        INavigationService navigation
+        INavigationService navigation,
+        CraftFromStockSettingsStore craftSettings
     )
     {
         _reader = reader;
+        _craftSettings = craftSettings;
         _accountId = string.IsNullOrEmpty(selected.AccountId) ? null : selected.AccountId;
         OpenCommand = new RelayCommand<AppPage>(page => navigation.NavigateTo(page));
         _ = LoadAsync();
@@ -77,14 +80,14 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         try
         {
             StockCrafts crafts = await Task.Run(() => _reader.GetStockCrafts(accountId));
-            // As the page opens: limited to what the characters can craft and the account knows, and worth the trip.
+            // With the page's filters.
             List<StockCraft> shown = CraftFromStockViewModel
-                .Shown(crafts, onlyCraftable: true, CraftFromStockViewModel.DefaultMinimum.Copper)
+                .Shown(crafts, _craftSettings.OnlyCraftable, _craftSettings.Minimum.Copper)
                 .ToList();
             StockCraft? best = shown.Where(c => c.Missing.Count == 0).MaxBy(c => c.StockProfitCopper);
             int ready = shown.Count(c => c.Missing.Count == 0);
             CraftSummary = shown.Count == 0
-                ? "Nothing you hold is worth more crafted than sold"
+                ? "Nothing you hold is worth more crafted than sold, with the page's filters"
                 : string.Join(" · ", new[]
                 {
                     $"{Number(shown.Count)} {(shown.Count == 1 ? "craft" : "crafts")} worth more than their materials",

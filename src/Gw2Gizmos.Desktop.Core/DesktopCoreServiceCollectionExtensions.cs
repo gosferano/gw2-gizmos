@@ -130,6 +130,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<WvwViewModel>();
         services.AddSingleton<WvwMatchupProvider>();
         services.AddSingleton<WvwSettingsStore>();
+        services.AddSingleton<CraftFromStockSettingsStore>();
         services.AddSingleton<LogsViewModel>();
         // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         services.AddTransient<ApiKeysViewModel>();
