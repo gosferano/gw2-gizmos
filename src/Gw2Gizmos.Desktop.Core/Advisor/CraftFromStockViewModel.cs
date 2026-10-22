@@ -8,6 +8,9 @@ using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop.Core;
 
+/// <summary>A minimum profit per craft the Craft from stock page can filter by.</summary>
+public sealed record StockCraftMinimum(string Label, long Copper);
+
 /// <summary>A group's heading in the Craft from stock list.</summary>
 public sealed record StockCraftHeading(string Title);
 
@@ -103,6 +106,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     private StockCrafts _crafts = StockCrafts.Empty;
     private bool _onlyCharactersCanCraft = true;
     private bool _onlyKnown = true;
+    private StockCraftMinimum _minimum = DefaultMinimum;
     private bool _loaded;
 
     public CraftFromStockViewModel(AccountReader reader, SelectedAccountService selected, DataChangeMonitor dataChanges)
@@ -160,6 +164,32 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
         }
     }
 
+    /// <summary>The minimums to pick from: a craft making less isn't worth a trip to a crafting station.</summary>
+    public static IReadOnlyList<StockCraftMinimum> Minimums { get; } =
+    [
+        new("Any profit", 1),
+        new("1s or more", 100),
+        new("10s or more", 1_000),
+        new("50s or more", 5_000),
+        new("1g or more", 10_000),
+    ];
+
+    /// <summary>The minimum the page opens with, and the Advisor's summary counts with.</summary>
+    public static StockCraftMinimum DefaultMinimum => Minimums[2];
+
+    /// <summary>Leave out crafts making less than this each.</summary>
+    public StockCraftMinimum Minimum
+    {
+        get => _minimum;
+        set
+        {
+            if (value is not null && SetProperty(ref _minimum, value))
+            {
+                Apply();
+            }
+        }
+    }
+
     /// <summary>
     /// One list, so it can be virtualized (hundreds of rows): crafts made entirely from stock, by what crafting as
     /// many as are worth making makes, then those short of a few materials, by what one makes; each group under a
@@ -170,11 +200,13 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     public bool NoCrafts => _loaded && Rows.Count == 0;
 
     /// <summary>
-    /// The crafts to show: those the characters can make and those the account knows, when each is asked for and
-    /// known.
+    /// The crafts to show: those making at least <paramref name="minimumCopper"/> each, and those the characters can
+    /// make and the account knows, when each is asked for and known.
     /// </summary>
-    public static IEnumerable<StockCraft> Shown(StockCrafts crafts, bool onlyCharactersCanCraft, bool onlyKnown) =>
-        crafts.Crafts.Where(c => (!onlyCharactersCanCraft || !crafts.HasRatings || c.CharactersCanCraft)
+    public static IEnumerable<StockCraft> Shown(
+        StockCrafts crafts, bool onlyCharactersCanCraft, bool onlyKnown, long minimumCopper) =>
+        crafts.Crafts.Where(c => c.ProfitCopper >= minimumCopper
+            && (!onlyCharactersCanCraft || !crafts.HasRatings || c.CharactersCanCraft)
             && (!onlyKnown || c.Known != false));
 
     private async Task LoadAsync()
@@ -200,7 +232,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     private void Apply()
     {
-        List<StockCraft> shown = Shown(_crafts, _onlyCharactersCanCraft, _onlyKnown).ToList();
+        List<StockCraft> shown = Shown(_crafts, _onlyCharactersCanCraft, _onlyKnown, _minimum.Copper).ToList();
         List<StockCraft> ready = shown.Where(c => c.Missing.Count == 0)
             .OrderByDescending(c => c.StockProfitCopper)
             .ToList();

@@ -64,11 +64,23 @@
             <StackPanel Grid.Row="0" IsVisible="{Binding HasAccount}">
                 <TextBlock TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,10"
                            Text="Crafts that sell for more than the materials you hold would. A material you can't sell counts at what crafting another costs. Prices are today's highest buy orders, after the trading post's fees." />
-                <CheckBox Content="Only what my characters can craft" IsChecked="{Binding OnlyCharactersCanCraft}"
-                          IsVisible="{Binding HasRatings}" Margin="0,0,0,2" />
-                <CheckBox Content="Only recipes I know" IsChecked="{Binding OnlyKnown}"
-                          IsVisible="{Binding HasLearned}" Margin="0,0,0,6" />
-                <TextBlock Text="Nothing you hold is worth more crafted than sold." Margin="0,4,0,0"
+                <WrapPanel Margin="0,0,0,6">
+                    <ComboBox ItemsSource="{x:Static core:CraftFromStockViewModel.Minimums}"
+                              SelectedItem="{Binding Minimum}" MinWidth="140" Margin="0,0,16,0"
+                              Height="{StaticResource FormControlHeight}" VerticalAlignment="Center"
+                              ToolTip.Tip="What a craft makes each, at least">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:StockCraftMinimum">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="Only what my characters can craft" IsChecked="{Binding OnlyCharactersCanCraft}"
+                              IsVisible="{Binding HasRatings}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                    <CheckBox Content="Only recipes I know" IsChecked="{Binding OnlyKnown}"
+                              IsVisible="{Binding HasLearned}" VerticalAlignment="Center" />
+                </WrapPanel>
+                <TextBlock Text="Nothing you hold is worth more crafted than sold, with these filters." Margin="0,4,0,0"
                            Classes="secondary" IsVisible="{Binding NoCrafts}" />
             </StackPanel>
 

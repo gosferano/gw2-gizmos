@@ -179,4 +179,17 @@ public sealed class CraftFromStockTests
 
         Assert.Empty(CraftFromStock.LimitToMarket(Find(Recipe(ingredients: (Ore, 10))), new Dictionary<int, int>()));
     }
+
+    [Theory]
+    [InlineData(750, true)]
+    [InlineData(751, false)]
+    public void A_craft_making_less_than_the_minimum_isnt_shown(long minimum, bool shown)
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 10;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+        var crafts = new StockCrafts(Find(Recipe(ingredients: (Ore, 10))), new Dictionary<int, string>(), false, false);
+
+        Assert.Equal(shown, CraftFromStockViewModel.Shown(crafts, true, true, minimum).Any());
+    }
 }
