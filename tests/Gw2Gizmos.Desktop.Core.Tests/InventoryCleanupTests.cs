@@ -27,9 +27,11 @@ public sealed class InventoryCleanupTests
     };
     private readonly Dictionary<int, long> _values = [];
     private readonly HashSet<int> _used = [];
+    private readonly Dictionary<int, IReadOnlyList<string>> _doneFor = [];
 
     private List<CleanupSuggestion> Suggest(int capacity = 1_000) =>
-        InventoryCleanup.Suggest(new CleanupInput(_stacks, _storage, _storageTakes, capacity, _items, _values, _used));
+        InventoryCleanup.Suggest(
+            new CleanupInput(_stacks, _storage, _storageTakes, capacity, _items, _values, _used, _doneFor));
 
     [Fact]
     public void Partial_stacks_that_fit_in_fewer_slots_are_suggested_for_stacking()
@@ -114,5 +116,30 @@ public sealed class InventoryCleanupTests
     public void Storage_capacity_is_guessed_from_the_fullest_slot(int fullest, int capacity)
     {
         Assert.Equal(capacity, InventoryCleanup.GuessCapacity(new Dictionary<int, int> { [Ore] = fullest }));
+    }
+
+    [Fact]
+    public void An_item_only_finished_achievements_asked_for_is_a_leftover_worth_something_or_not()
+    {
+        _doneFor[Gem] = ["Bloodstone Fen Insight"];
+        _doneFor[Sword] = ["Lost Bandit Chests"];
+        _values[Sword] = 300;
+        _stacks.AddRange([new("Bank", Gem, 1), new("Bank", Sword, 1)]);
+
+        List<CleanupSuggestion> leftovers = Suggest();
+
+        Assert.All(leftovers, s => Assert.Equal(CleanupKind.Leftover, s.Kind));
+        Assert.Equal([(Sword, 300L), (Gem, 0L)], leftovers.Select(s => (s.ItemId, s.Copper)).Order().ToList());
+        Assert.Equal(["Bloodstone Fen Insight"], leftovers.Single(s => s.ItemId == Gem).DoneFor);
+    }
+
+    [Fact]
+    public void An_item_still_used_elsewhere_isnt_a_leftover()
+    {
+        _doneFor[Gem] = ["Bloodstone Fen Insight"];
+        _used.Add(Gem); // a recipe, or an unfinished achievement
+        _stacks.Add(new("Bank", Gem, 1));
+
+        Assert.Empty(Suggest());
     }
 }

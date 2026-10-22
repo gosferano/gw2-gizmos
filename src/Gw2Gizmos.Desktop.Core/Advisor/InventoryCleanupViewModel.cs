@@ -47,7 +47,16 @@ public sealed class CleanupRow
             $"{Number(_suggestion.Count)} more than material storage holds ({Number(_capacity)} each)",
         CleanupKind.Open => $"{Number(_suggestion.Count)} to open",
         CleanupKind.Sell => $"{Number(_suggestion.Count)} that no recipe or unfinished achievement uses",
+        CleanupKind.Leftover => $"{Number(_suggestion.Count)}, only for {DoneForText}, which you've done",
         _ => "",
+    };
+
+    // E.g. "Bloodstone Fen Insight" or "Lost Bandit Chest and 2 more".
+    private string DoneForText => _suggestion.DoneFor.Count switch
+    {
+        1 => _suggestion.DoneFor[0],
+        2 => $"{_suggestion.DoneFor[0]} and {_suggestion.DoneFor[1]}",
+        _ => $"{_suggestion.DoneFor[0]} and {_suggestion.DoneFor.Count - 1} more",
     };
 
     /// <summary>E.g. "In the bank (115), Gosferano (65)".</summary>
@@ -85,6 +94,8 @@ public sealed class InventoryCleanupViewModel : ViewModelBase, INavigationAware
         (CleanupKind.Deposit, "Deposit", "Materials that material storage has room for."),
         (CleanupKind.Overflow, "Overflow", "Materials beyond what material storage holds, taking up slots."),
         (CleanupKind.Open, "Open", "Containers waiting to be opened."),
+        (CleanupKind.Leftover, "Leftovers", "Items only finished achievements and collections asked for. Sell "
+            + "what's worth something; the rest can go."),
         (CleanupKind.Sell, "Sell", "Items nothing in your account uses: no recipe takes them, and no unfinished "
             + "achievement asks for them."),
     ];

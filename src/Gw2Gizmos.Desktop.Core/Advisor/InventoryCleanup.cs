@@ -31,6 +31,9 @@ public enum CleanupKind
 
     /// <summary>Items nothing in the account uses, worth selling.</summary>
     Sell,
+
+    /// <summary>Items only finished achievements asked for.</summary>
+    Leftover,
 }
 
 /// <summary>
@@ -42,6 +45,9 @@ public sealed record CleanupSuggestion(
 {
     /// <summary>For a stack: how many slots the item takes now, and how few it would.</summary>
     public (int Now, int After)? Slots { get; init; }
+
+    /// <summary>For a leftover: the finished achievements that asked for it.</summary>
+    public IReadOnlyList<string> DoneFor { get; init; } = [];
 }
 
 /// <summary>Everything cleanup reads, gathered from the account's synced data.</summary>
@@ -52,13 +58,15 @@ public sealed record CleanupInput(
     int StorageCapacity,
     IReadOnlyDictionary<int, CleanupItem> Items,
     IReadOnlyDictionary<int, long> Values,
-    IReadOnlySet<int> Used);
+    IReadOnlySet<int> Used,
+    IReadOnlyDictionary<int, IReadOnlyList<string>> DoneFor);
 
 /// <summary>
 /// What to clean up in the account's bank, shared inventory and bags, each suggestion with its reason: partial stacks
 /// that fit in fewer slots; materials that material storage has room for, and those beyond it; containers to open;
-/// and items worth selling that nothing in the account uses (no recipe takes them, no unfinished achievement asks for
-/// them). Material storage itself is only read for how full it is.
+/// items worth selling that nothing in the account uses (no recipe takes them, no unfinished achievement asks for
+/// them); and leftovers, which only finished achievements asked for (worth something or not). Material storage itself
+/// is only read for how full it is.
 /// </summary>
 public static class InventoryCleanup
 {
@@ -120,6 +128,14 @@ public static class InventoryCleanup
             if (info?.Type == "Container")
             {
                 suggestions.Add(new CleanupSuggestion(CleanupKind.Open, itemId, total, 0, places));
+            }
+            else if (!input.Used.Contains(itemId)
+                     && input.DoneFor.TryGetValue(itemId, out IReadOnlyList<string>? doneFor))
+            {
+                suggestions.Add(new CleanupSuggestion(CleanupKind.Leftover, itemId, total, total * value, places)
+                {
+                    DoneFor = doneFor,
+                });
             }
             else if (value > 0 && !input.Used.Contains(itemId))
             {

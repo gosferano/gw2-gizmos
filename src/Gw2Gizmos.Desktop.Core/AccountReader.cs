@@ -836,8 +836,9 @@ public sealed class AccountReader
             .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Soulbound));
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, heldIds);
 
+        (HashSet<int> used, Dictionary<int, IReadOnlyList<string>> doneFor) = UsedItems(db, accountId);
         var input = new CleanupInput(stacks, storage, storageTakes, storageCapacity ?? guessed, items, values,
-            UsedItems(db, accountId));
+            used, doneFor);
         List<CleanupSuggestion> suggestions = InventoryCleanup.Suggest(input);
         Dictionary<int, string> names = LoadNames(suggestions.Select(s => s.ItemId), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
@@ -847,8 +848,11 @@ public sealed class AccountReader
     /// <summary>
     /// The items something in the account still uses: every recipe's ingredients (the game's and the Mystic Forge's),
     /// and the items unfinished achievements ask for. Without achievement progress, every achievement's items count.
+    /// And for the items achievements asked for but are done with (finished, or that item's objective is), their
+    /// names.
     /// </summary>
-    private static HashSet<int> UsedItems(Gw2GizmosDbContext db, string accountId)
+    private static (HashSet<int> Used, Dictionary<int, IReadOnlyList<string>> DoneFor) UsedItems(
+        Gw2GizmosDbContext db, string accountId)
     {
         HashSet<int> used = db.RecipeIngredients.AsNoTracking()
             .Where(i => i.Type == "Item")
@@ -862,24 +866,36 @@ public sealed class AccountReader
         Dictionary<int, AccountAchievement> progress = db.AccountAchievements.AsNoTracking()
             .Where(a => a.AccountId == accountId)
             .ToDictionary(a => a.AchievementId);
+        var doneFor = new Dictionary<int, List<string>>();
         foreach (Achievement achievement in db.Achievements.AsNoTracking().AsEnumerable())
         {
             AccountAchievement? mine = progress.GetValueOrDefault(achievement.Id);
-            if (mine?.Done == true)
-            {
-                continue;
-            }
-
             for (int bit = 0; bit < achievement.Bits.Count; bit++)
             {
-                if (achievement.Bits[bit].Type == "Item" && mine?.Bits.Contains(bit) != true)
+                if (achievement.Bits[bit].Type != "Item")
                 {
-                    used.Add(achievement.Bits[bit].Id);
+                    continue;
+                }
+
+                int itemId = achievement.Bits[bit].Id;
+                if (mine is not null && (mine.Done || mine.Bits.Contains(bit)))
+                {
+                    if (!doneFor.TryGetValue(itemId, out List<string>? names))
+                    {
+                        doneFor[itemId] = names = [];
+                    }
+
+                    names.Add(achievement.Name);
+                }
+                else
+                {
+                    used.Add(itemId);
                 }
             }
         }
 
-        return used;
+        return (used, doneFor.ToDictionary(
+            pair => pair.Key, pair => (IReadOnlyList<string>)pair.Value.Distinct().ToList()));
     }
 
     /// <summary>The account's completed trades, newest first.</summary>
