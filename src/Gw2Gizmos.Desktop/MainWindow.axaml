@@ -18,6 +18,20 @@
          page view is hosted as the NavigationView's content. -->
     <ui:FANavigationView x:Name="RootNavigation" PaneDisplayMode="Left" OpenPaneLength="190"
                          IsBackButtonVisible="False" IsPaneToggleButtonVisible="False" IsSettingsVisible="False">
+        <!-- Back and forward through the pages visited, like a browser's (also the mouse's side buttons and
+             Alt+Left/Right). -->
+        <ui:FANavigationView.PaneHeader>
+            <StackPanel Orientation="Horizontal" Spacing="2" Margin="4,4,0,4">
+                <Button x:Name="BackButton" Theme="{StaticResource TransparentButton}" Padding="8,6"
+                        Click="OnBackClick" ToolTip.Tip="Back (Alt+Left)" IsEnabled="False">
+                    <c:FluentIcon Symbol="ArrowLeft24" FontSize="16" />
+                </Button>
+                <Button x:Name="ForwardButton" Theme="{StaticResource TransparentButton}" Padding="8,6"
+                        Click="OnForwardClick" ToolTip.Tip="Forward (Alt+Right)" IsEnabled="False">
+                    <c:FluentIcon Symbol="ArrowRight24" FontSize="16" />
+                </Button>
+            </StackPanel>
+        </ui:FANavigationView.PaneHeader>
         <ui:FANavigationView.MenuItems>
             <!-- Opens the global search rather than a page. -->
             <ui:FANavigationViewItem Content="Search" IconSource="{c:FluentIconSource Search24}" Tag="search"

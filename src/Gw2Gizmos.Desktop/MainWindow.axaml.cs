@@ -14,8 +14,10 @@ public partial class MainWindow : Window
 {
     private readonly PageFactory? _pages;
     private readonly GlobalSearchViewModel? _search;
+    private readonly NavigationHistory? _history;
     private AppPage? _current;
     private bool _syncingSelection;
+    private bool _movingThroughHistory;
 
     /// <summary>Parameterless constructor for the XAML previewer.</summary>
     public MainWindow()
@@ -24,11 +26,21 @@ public partial class MainWindow : Window
     }
 
     public MainWindow(
-        AvaloniaNavigationService navigation, PageFactory pages, OnboardingStore onboarding, GlobalSearchViewModel search)
+        AvaloniaNavigationService navigation,
+        PageFactory pages,
+        OnboardingStore onboarding,
+        GlobalSearchViewModel search,
+        NavigationHistory history)
         : this()
     {
         _pages = pages;
         _search = search;
+        _history = history;
+        history.Changed += (_, _) =>
+        {
+            BackButton.IsEnabled = history.CanGoBack;
+            ForwardButton.IsEnabled = history.CanGoForward;
+        };
         navigation.Attach(this);
         RootNavigation.SelectionChanged += OnSelectionChanged;
         RootNavigation.ItemInvoked += OnItemInvoked;
@@ -36,6 +48,8 @@ public partial class MainWindow : Window
         SearchOverlay.SizeChanged += (_, _) => PlaceSearchCard();
         // Ctrl+K from anywhere in the window, even while a text box has focus.
         AddHandler(KeyDownEvent, OnWindowKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        // The mouse's side buttons go back and forward from anywhere, even over a control that handles the press.
+        AddHandler(PointerPressedEvent, OnWindowPointerPressed, handledEventsToo: true);
 
         // First launch lands on the one-time welcome/onboarding page; afterwards straight to the dashboard.
         ShowPage(StartPageOverride() ?? (onboarding.IsCompleted ? AppPage.Dashboard : AppPage.Onboarding));
@@ -65,6 +79,12 @@ public partial class MainWindow : Window
         }
 
         _current = page;
+        // Recorded before the page is created, so its target (an item to select) is captured before it takes it.
+        if (!_movingThroughHistory)
+        {
+            _history?.Record(page);
+        }
+
         // Let the page being left stop its live updates.
         ((RootNavigation.Content as Control)?.DataContext as INavigationAware)?.OnNavigatedFrom();
         RootNavigation.Content = _pages?.Create(page);
@@ -107,9 +127,66 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Goes back to the previous page visited, with what it showed.</summary>
+    public void GoBack() => MoveThroughHistory(_history?.Back());
+
+    /// <summary>Goes forward again, after going back.</summary>
+    public void GoForward() => MoveThroughHistory(_history?.Forward());
+
+    private void MoveThroughHistory(AppPage? page)
+    {
+        if (page is not { } target)
+        {
+            return;
+        }
+
+        _search?.Close();
+        _movingThroughHistory = true;
+        try
+        {
+            // Reopened even when it's the page shown: the same page can show something else (another character).
+            ShowPage(target, reload: true);
+        }
+        finally
+        {
+            _movingThroughHistory = false;
+        }
+    }
+
+    private void OnBackClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GoBack();
+
+    private void OnForwardClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => GoForward();
+
+    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        switch (e.GetCurrentPoint(this).Properties.PointerUpdateKind)
+        {
+            case PointerUpdateKind.XButton1Pressed:
+                e.Handled = true;
+                GoBack();
+                break;
+            case PointerUpdateKind.XButton2Pressed:
+                e.Handled = true;
+                GoForward();
+                break;
+        }
+    }
+
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (e.KeyModifiers == KeyModifiers.Alt && e.Key is Key.Left or Key.Right)
+        {
+            e.Handled = true;
+            if (e.Key == Key.Left)
+            {
+                GoBack();
+            }
+            else
+            {
+                GoForward();
+            }
+        }
+        else if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             e.Handled = true;
             if (_search is { IsOpen: true })
