@@ -43,7 +43,9 @@ public sealed class StockCraftRow
             {
                 $"{who} {_craft.Recipe.MinRating}".Trim(),
                 _craft.Recipe.OutputCount > 1 ? $"makes {_craft.Recipe.OutputCount}" : null,
-                _craft.Recipe.LearnedFromItem ? "needs its recipe sheet" : null,
+                _craft.Known == true ? null
+                    : _craft.Recipe.LearnedFromItem ? "needs its recipe sheet"
+                    : _craft.Known == false && !_craft.Recipe.AutoLearned ? "needs discovering" : null,
                 _craft.CharactersCanCraft ? null : "no character has the level",
             }.Where(part => !string.IsNullOrEmpty(part)));
         }
@@ -51,7 +53,8 @@ public sealed class StockCraftRow
 
     /// <summary>E.g. "Uses 10 Gold Ingot, 1 Lump of Mithrillium (at craft cost)".</summary>
     public string UsesText => "Uses " + string.Join(", ", _craft.Uses.Select(u =>
-        $"{u.Count:N0} {NameOf(u.ItemId)}{(u.AtCraftCost ? " (at craft cost)" : u.Copper == 0 ? " (no sell value)" : "")}"));
+        $"{u.Count:N0} {NameOf(u.ItemId)}"
+        + (u.AtCraftCost ? " (at craft cost)" : u.Copper == 0 ? " (no sell value)" : "")));
 
     /// <summary>E.g. "Buy 10 Orichalcum Setting"; empty when everything is in stock.</summary>
     public string MissingText => _craft.Missing.Count == 0
@@ -90,6 +93,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     private readonly IDisposable _dataChanges;
     private StockCrafts _crafts = StockCrafts.Empty;
     private bool _onlyCharactersCanCraft = true;
+    private bool _onlyKnown = true;
     private bool _loaded;
 
     public CraftFromStockViewModel(AccountReader reader, SelectedAccountService selected, DataChangeMonitor dataChanges)
@@ -131,6 +135,22 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
         }
     }
 
+    /// <summary>Whether the account's learned recipes are synced, so crafts can be limited to those it knows.</summary>
+    public bool HasLearned => _crafts.HasLearned;
+
+    /// <summary>Leave out recipes the account hasn't learned.</summary>
+    public bool OnlyKnown
+    {
+        get => _onlyKnown;
+        set
+        {
+            if (SetProperty(ref _onlyKnown, value))
+            {
+                Apply();
+            }
+        }
+    }
+
     /// <summary>
     /// One list, so it can be virtualized (hundreds of rows): crafts made entirely from stock, by what crafting all of
     /// them makes, then those short of a few materials, by what one makes; each group under a
@@ -140,9 +160,13 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     public bool NoCrafts => _loaded && Rows.Count == 0;
 
-    /// <summary>The crafts to show: those the characters can make, when that's asked for and their levels are known.</summary>
-    public static IEnumerable<StockCraft> Shown(StockCrafts crafts, bool onlyCharactersCanCraft) =>
-        crafts.Crafts.Where(c => !onlyCharactersCanCraft || !crafts.HasRatings || c.CharactersCanCraft);
+    /// <summary>
+    /// The crafts to show: those the characters can make and those the account knows, when each is asked for and
+    /// known.
+    /// </summary>
+    public static IEnumerable<StockCraft> Shown(StockCrafts crafts, bool onlyCharactersCanCraft, bool onlyKnown) =>
+        crafts.Crafts.Where(c => (!onlyCharactersCanCraft || !crafts.HasRatings || c.CharactersCanCraft)
+            && (!onlyKnown || c.Known != false));
 
     private async Task LoadAsync()
     {
@@ -156,6 +180,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
             _crafts = await Task.Run(() => _reader.GetStockCrafts(accountId));
             _loaded = true;
             OnPropertyChanged(nameof(HasRatings));
+            OnPropertyChanged(nameof(HasLearned));
             Apply();
         }
         catch (Exception)
@@ -166,7 +191,7 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 
     private void Apply()
     {
-        List<StockCraft> shown = Shown(_crafts, _onlyCharactersCanCraft).ToList();
+        List<StockCraft> shown = Shown(_crafts, _onlyCharactersCanCraft, _onlyKnown).ToList();
         List<StockCraft> ready = shown.Where(c => c.Missing.Count == 0)
             .OrderByDescending(c => c.StockProfitCopper)
             .ToList();

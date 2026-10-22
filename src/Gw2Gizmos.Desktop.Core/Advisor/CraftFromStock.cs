@@ -12,6 +12,7 @@ public sealed record StockRecipe(
     int MinRating,
     IReadOnlyList<string> Disciplines,
     bool LearnedFromItem,
+    bool AutoLearned,
     IReadOnlyList<(int ItemId, int Count)> Ingredients);
 
 /// <summary>
@@ -23,6 +24,7 @@ public sealed record StockIngredient(int ItemId, int Count, long Copper, bool At
 /// <summary>
 /// A craft worth more than the materials it takes: per craft, the result's instant-sell value, what the owned
 /// materials it uses would sell for, and what the missing ones cost to buy; and how many can be made from stock alone.
+/// <see cref="Known"/> says whether the account knows the recipe (null when its learned recipes aren't synced).
 /// </summary>
 public sealed record StockCraft(
     StockRecipe Recipe,
@@ -30,7 +32,8 @@ public sealed record StockCraft(
     IReadOnlyList<StockIngredient> Uses,
     IReadOnlyList<StockIngredient> Missing,
     int CanMake,
-    bool CharactersCanCraft)
+    bool CharactersCanCraft,
+    bool? Known)
 {
     public long UsesCopper => Uses.Sum(u => u.Copper);
 
@@ -62,18 +65,20 @@ public static class CraftFromStock
     /// <param name="craftCosts">What crafting one of an item costs, for the held ones that don't sell.</param>
     /// <param name="prices">The latest highest buy order and lowest listing per item, 0 when there's none.</param>
     /// <param name="ratings">The highest level the account's characters have in each discipline.</param>
+    /// <param name="learned">The recipes the account has learned, or null when they aren't synced.</param>
     public static List<StockCraft> Find(
         IEnumerable<StockRecipe> recipes,
         IReadOnlyDictionary<int, int> held,
         IReadOnlyDictionary<int, long> heldValues,
         IReadOnlyDictionary<int, long> craftCosts,
         IReadOnlyDictionary<int, (int Buy, int Sell)> prices,
-        IReadOnlyDictionary<string, int> ratings)
+        IReadOnlyDictionary<string, int> ratings,
+        IReadOnlySet<int>? learned)
     {
         var crafts = new List<StockCraft>();
         foreach (StockRecipe recipe in recipes)
         {
-            if (Craft(recipe, held, heldValues, craftCosts, prices, ratings) is { ProfitCopper: > 0 } craft)
+            if (Craft(recipe, held, heldValues, craftCosts, prices, ratings, learned) is { ProfitCopper: > 0 } craft)
             {
                 crafts.Add(craft);
             }
@@ -88,7 +93,8 @@ public static class CraftFromStock
         IReadOnlyDictionary<int, long> heldValues,
         IReadOnlyDictionary<int, long> craftCosts,
         IReadOnlyDictionary<int, (int Buy, int Sell)> prices,
-        IReadOnlyDictionary<string, int> ratings)
+        IReadOnlyDictionary<string, int> ratings,
+        IReadOnlySet<int>? learned)
     {
         int outputBuy = prices.GetValueOrDefault(recipe.OutputItemId).Buy;
         if (outputBuy <= 0 || recipe.Ingredients.Count == 0)
@@ -132,16 +138,21 @@ public static class CraftFromStock
 
         bool charactersCanCraft = recipe.Disciplines.Any(d => ratings.GetValueOrDefault(d, -1) >= recipe.MinRating);
         long output = (long)outputBuy * TakePercent / 100 * recipe.OutputCount;
-        return new StockCraft(recipe, output, uses, missing, canMake, charactersCanCraft);
+        // A recipe learned at a discipline's level is known once a character has the level, listed or not.
+        bool? known = learned is null
+            ? null
+            : learned.Contains(recipe.Id) || (recipe.AutoLearned && charactersCanCraft);
+        return new StockCraft(recipe, output, uses, missing, canMake, charactersCanCraft, known);
     }
 }
 
 /// <summary>
 /// The crafts worth making from stock, the names of the items they make and take, and whether any character's
-/// crafting levels are known (without them, nothing can be said about who can craft what).
+/// crafting levels and the account's learned recipes are known (without them, nothing can be said about who can
+/// craft what, or which recipes the account knows).
 /// </summary>
 public sealed record StockCrafts(
-    IReadOnlyList<StockCraft> Crafts, IReadOnlyDictionary<int, string> Names, bool HasRatings)
+    IReadOnlyList<StockCraft> Crafts, IReadOnlyDictionary<int, string> Names, bool HasRatings, bool HasLearned)
 {
-    public static StockCrafts Empty { get; } = new([], new Dictionary<int, string>(), false);
+    public static StockCrafts Empty { get; } = new([], new Dictionary<int, string>(), false, false);
 }

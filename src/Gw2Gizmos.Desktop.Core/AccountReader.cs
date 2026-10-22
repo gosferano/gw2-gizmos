@@ -749,11 +749,12 @@ public sealed class AccountReader
                 r.Id, r.OutputItemId, r.OutputItemCount, r.MinRating,
                 Disciplines = r.Disciplines.Select(d => d.Value).ToList(),
                 LearnedFromItem = r.Flags.Any(f => f.Value == "LearnedFromItem"),
+                AutoLearned = r.Flags.Any(f => f.Value == "AutoLearned"),
                 Ingredients = r.Ingredients.Select(i => new { i.Id, i.Count }).ToList(),
             })
             .AsEnumerable()
             .Select(r => new StockRecipe(r.Id, r.OutputItemId, r.OutputItemCount, r.MinRating, r.Disciplines,
-                r.LearnedFromItem, r.Ingredients.Select(i => (i.Id, i.Count)).ToList()))
+                r.LearnedFromItem, r.AutoLearned, r.Ingredients.Select(i => (i.Id, i.Count)).ToList()))
             .ToList();
 
         // A discipline counts at the highest level any character has it, active or not: switching costs a little coin.
@@ -765,11 +766,17 @@ public sealed class AccountReader
             .GroupBy(c => c.Discipline)
             .ToDictionary(g => g.Key, g => g.Max(c => c.Rating));
 
-        List<StockCraft> crafts = CraftFromStock.Find(recipes, held, heldValues, craftCosts, prices, ratings);
+        HashSet<int> learned = db.AccountRecipes.AsNoTracking()
+            .Where(r => r.AccountId == accountId)
+            .Select(r => r.RecipeId)
+            .ToHashSet();
+
+        List<StockCraft> crafts = CraftFromStock.Find(recipes, held, heldValues, craftCosts, prices, ratings,
+            learned.Count > 0 ? learned : null);
         Dictionary<int, string> names = LoadNames(
             crafts.SelectMany(c => c.Uses.Concat(c.Missing).Select(i => i.ItemId).Append(c.Recipe.OutputItemId)),
             (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
-        return new StockCrafts(crafts, names, ratings.Count > 0);
+        return new StockCrafts(crafts, names, ratings.Count > 0, learned.Count > 0);
     }
 
     /// <summary>The account's completed trades, newest first.</summary>

@@ -65,7 +65,9 @@
                 <TextBlock TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,10"
                            Text="Crafts that sell for more than the materials you hold would. A material you can't sell counts at what crafting another costs. Prices are today's highest buy orders, after the trading post's fees." />
                 <CheckBox Content="Only what my characters can craft" IsChecked="{Binding OnlyCharactersCanCraft}"
-                          IsVisible="{Binding HasRatings}" Margin="0,0,0,6" />
+                          IsVisible="{Binding HasRatings}" Margin="0,0,0,2" />
+                <CheckBox Content="Only recipes I know" IsChecked="{Binding OnlyKnown}"
+                          IsVisible="{Binding HasLearned}" Margin="0,0,0,6" />
                 <TextBlock Text="Nothing you hold is worth more crafted than sold." Margin="0,4,0,0"
                            Classes="secondary" IsVisible="{Binding NoCrafts}" />
             </StackPanel>

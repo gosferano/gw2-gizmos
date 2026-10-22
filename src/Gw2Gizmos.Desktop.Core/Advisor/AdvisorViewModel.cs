@@ -77,8 +77,10 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         try
         {
             StockCrafts crafts = await Task.Run(() => _reader.GetStockCrafts(accountId));
-            // As the page opens: limited to what the characters can craft.
-            List<StockCraft> shown = CraftFromStockViewModel.Shown(crafts, onlyCharactersCanCraft: true).ToList();
+            // As the page opens: limited to what the characters can craft and the account knows.
+            List<StockCraft> shown = CraftFromStockViewModel
+                .Shown(crafts, onlyCharactersCanCraft: true, onlyKnown: true)
+                .ToList();
             StockCraft? best = shown.Where(c => c.Missing.Count == 0).MaxBy(c => c.StockProfitCopper);
             int ready = shown.Count(c => c.Missing.Count == 0);
             CraftSummary = shown.Count == 0

@@ -19,12 +19,13 @@ public sealed class CraftFromStockTests
     private readonly Dictionary<int, long> _craftCosts = [];
     private readonly Dictionary<int, (int Buy, int Sell)> _prices = [];
     private readonly Dictionary<string, int> _ratings = new() { ["Jeweler"] = 400 };
+    private HashSet<int>? _learned;
 
     private static StockRecipe Recipe(int minRating = 400, params (int ItemId, int Count)[] ingredients) =>
-        new(1, Output, 1, minRating, ["Jeweler"], false, ingredients);
+        new(1, Output, 1, minRating, ["Jeweler"], false, false, ingredients);
 
     private List<StockCraft> Find(StockRecipe recipe) =>
-        CraftFromStock.Find([recipe], _held, _values, _craftCosts, _prices, _ratings);
+        CraftFromStock.Find([recipe], _held, _values, _craftCosts, _prices, _ratings, _learned);
 
     [Fact]
     public void A_craft_from_stock_makes_its_result_less_what_its_materials_would_sell_for()
@@ -125,5 +126,30 @@ public sealed class CraftFromStockTests
         _prices[Output] = (Buy: 1_000, Sell: 1_200);
 
         Assert.Equal(canCraft, Assert.Single(Find(Recipe(minRating, (Ore, 10)))).CharactersCanCraft);
+    }
+
+    [Theory]
+    [InlineData(new[] { 1 }, false, true)] // learned
+    [InlineData(new int[0], false, false)] // not learned
+    [InlineData(new int[0], true, true)] // learned at the discipline's level, which a character has
+    public void A_craft_says_whether_the_account_knows_its_recipe(int[] learned, bool autoLearned, bool known)
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 1;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+        _learned = [.. learned];
+        StockRecipe recipe = Recipe(ingredients: (Ore, 10)) with { AutoLearned = autoLearned };
+
+        Assert.Equal(known, Assert.Single(Find(recipe)).Known);
+    }
+
+    [Fact]
+    public void Without_the_learned_recipes_nothing_is_said_about_knowing_one()
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 1;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+
+        Assert.Null(Assert.Single(Find(Recipe(ingredients: (Ore, 10)))).Known);
     }
 }
