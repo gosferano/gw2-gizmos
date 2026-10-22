@@ -29,6 +29,7 @@ public static class DeletableData
     public const string Achievements = "Achievements";
     public const string ResetProgress = "ResetProgress";
     public const string LearnedRecipes = "LearnedRecipes";
+    public const string WardrobeUnlocks = "WardrobeUnlocks";
 
     // Targeted account-scoped deletes that act on a single row by its id (DeleteRequest.TargetId), raised from the
     // sessions UI rather than the Settings → Stored data bulk list, so they're deliberately not in AccountTypes.
@@ -55,6 +56,7 @@ public static class DeletableData
         new DeletableDataType(Achievements, "Achievement progress", true),
         new DeletableDataType(ResetProgress, "Daily and weekly progress", true),
         new DeletableDataType(LearnedRecipes, "Learned recipes", true),
+        new DeletableDataType(WardrobeUnlocks, "Wardrobe unlocks", true),
     };
 
     /// <summary>The global (non-account) categories.</summary>

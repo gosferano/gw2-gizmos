@@ -1,6 +1,7 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
 using Gw2Gizmos.Data.Worker.Updaters;
@@ -292,6 +293,24 @@ public sealed class AccountSyncUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task Slots_KeepWhatTheirCopyIsBoundTo()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Bank.Clear();
+        state.Bank.Add(new AccountStateBuilder.ItemSlot(Id: 555, Count: 1, Binding: "Account"));
+        state.Bank.Add(new AccountStateBuilder.ItemSlot(Id: 556, Count: 1));
+        state.Characters["Alice Necro"] = [new(Id: 900, Count: 1, Binding: "Character")];
+        state.Apply(_stub);
+
+        await Sync();
+
+        Assert.Equal(["Account", null], await Db.AccountContainerSlots
+            .Where(s => s.Store == AccountContainer.Bank).OrderBy(s => s.SlotIndex).Select(s => s.Binding)
+            .ToListAsync());
+        Assert.Equal("Character", (await Db.CharacterItemSlots.SingleAsync(s => s.ItemId == 900)).Binding);
+    }
+
+    [Fact]
     public async Task RoundTrip_ReconstructorReturnsAsOfState()
     {
         // T0: the initial holdings.
@@ -506,6 +525,41 @@ public sealed class AccountSyncUpdaterTests : IDisposable
         await Sync();
 
         Assert.Equal(0, await Db.AccountRecipes.CountAsync());
+    }
+
+    [Fact]
+    public async Task WardrobeUnlocks_AreStoredByKind_AndALaterSyncReplacesThem()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("unlocks");
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/dyes", "[1, 2]");
+        _stub.SetJson("/v2/account/minis", "[5]");
+        _stub.SetJson("/v2/account/skins", "[10, 11, 12]");
+        await Sync();
+
+        Assert.Equal(
+            [("Dye", 1), ("Dye", 2), ("Mini", 5), ("Skin", 10), ("Skin", 11), ("Skin", 12)],
+            (await Db.AccountUnlocks.Where(u => u.AccountId == state.Id).ToListAsync())
+                .Select(u => (u.Kind, u.UnlockId)).Order().ToList());
+
+        _stub.SetJson("/v2/account/minis", "[5, 6]");
+        await Sync();
+
+        Assert.Equal([5, 6], await Db.AccountUnlocks.Where(u => u.Kind == AccountUnlockKind.Mini)
+            .OrderBy(u => u.UnlockId).Select(u => u.UnlockId).ToListAsync());
+    }
+
+    [Fact]
+    public async Task WardrobeUnlocks_WithoutThePermission_AreSkipped()
+    {
+        AccountStateBuilder state = SmallAccount(); // no "unlocks" permission
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/dyes", "[1]");
+
+        await Sync();
+
+        Assert.Equal(0, await Db.AccountUnlocks.CountAsync());
     }
 
     /// <summary>The reset endpoints as the API returns them: the master lists, and the account's progress.</summary>

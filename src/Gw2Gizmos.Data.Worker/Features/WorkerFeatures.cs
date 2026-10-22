@@ -73,6 +73,10 @@ public static class WorkerFeatures
         "LearnedRecipes", "Learned recipes", "Which recipes the account knows, for crafting advice.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Unlocks) });
 
+    public static readonly WorkerFeature WardrobeUnlocks = new(
+        "WardrobeUnlocks", "Wardrobe unlocks", "Which dyes, minis and skins the account has, for cleanup advice.",
+        new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Unlocks) });
+
     public static readonly WorkerFeature ResetProgress = new(
         "ResetProgress", "Daily and weekly progress",
         "Wizard's Vault objectives, world bosses, map chests, daily crafting and raid clears for the current reset.",
@@ -89,7 +93,7 @@ public static class WorkerFeatures
         new[]
         {
             ItemsSync, RecipesSync, PricesSync, Wallet, MaterialStorage, Bank, SharedInventory, CharacterInventory,
-            TradingPost, Achievements, ResetProgress, LearnedRecipes, PlaySessions,
+            TradingPost, Achievements, ResetProgress, LearnedRecipes, WardrobeUnlocks, PlaySessions,
         };
 
     /// <summary>

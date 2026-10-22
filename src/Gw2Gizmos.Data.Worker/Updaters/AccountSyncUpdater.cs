@@ -4,6 +4,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Gw2Gizmos.Data.EntityFramework.Entities.Resets;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Data.Worker.Configuration;
 using Gw2Gizmos.Data.Worker.Features;
 using Gw2Gizmos.Gw2Api.Client;
@@ -188,6 +189,13 @@ public class AccountSyncUpdater
                 account,
                 permissions,
                 () => SyncLearnedRecipesAsync(client, account.Id, stoppingToken)
+            );
+            // Nor the wardrobe's unlocks.
+            await RunSection(
+                WorkerFeatures.WardrobeUnlocks,
+                account,
+                permissions,
+                () => SyncWardrobeUnlocksAsync(client, account.Id, stoppingToken)
             );
             // Nor achievement progress.
             await RunSection(
@@ -413,6 +421,39 @@ public class AccountSyncUpdater
             recipeIds.Distinct().Select(id => new AccountRecipe { AccountId = accountId, RecipeId = id }));
         await _dbContext.SaveChangesAsync(stoppingToken);
         return recipeIds.Length;
+    }
+
+    /// <summary>
+    /// The dyes, minis and skins the account has unlocked. Each kind is replaced on its own, and only when its request
+    /// succeeds, so one failing endpoint leaves its last known state. Returns the rows stored.
+    /// </summary>
+    private async Task<int> SyncWardrobeUnlocksAsync(
+        Gw2ApiClient client, string accountId, CancellationToken stoppingToken)
+    {
+        int rows = 0;
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Dye,
+            await client.V2.Account.Dyes.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Mini,
+            await client.V2.Account.Minis.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Skin,
+            await client.V2.Account.Skins.GetBlob(stoppingToken), stoppingToken);
+        return rows;
+    }
+
+    private async Task<int> StoreUnlocksAsync(
+        string accountId, string kind, int[]? unlockIds, CancellationToken stoppingToken)
+    {
+        if (unlockIds is null)
+        {
+            return 0;
+        }
+
+        await _dbContext.AccountUnlocks.Where(u => u.AccountId == accountId && u.Kind == kind)
+            .ExecuteDeleteAsync(stoppingToken);
+        _dbContext.AccountUnlocks.AddRange(unlockIds.Distinct()
+            .Select(id => new AccountUnlock { AccountId = accountId, Kind = kind, UnlockId = id }));
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return unlockIds.Length;
     }
 
     /// <summary>
@@ -781,6 +822,7 @@ public class AccountSyncUpdater
                             ItemId = item?.Id,
                             Count = item?.Count ?? 0,
                             Charges = item?.Charges,
+                            Binding = item?.Binding?.Value,
                         }
                     );
                     slotIndex++;
@@ -883,6 +925,7 @@ public class AccountSyncUpdater
                     ItemId = item?.Id,
                     Count = item?.Count ?? 0,
                     Charges = item?.Charges,
+                    Binding = item?.Binding?.Value,
                 }
             );
         }

@@ -52,6 +52,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Binding")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Charges")
                         .HasColumnType("INTEGER");
 
@@ -248,6 +252,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<string>("AccountId")
                         .IsRequired()
                         .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Binding")
+                        .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Charges")
@@ -1585,6 +1593,24 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasKey("AccountId", "Period", "ObjectiveId");
 
                     b.ToTable("AccountWizardsVaultObjectives");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.AccountUnlock", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnlockId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "Kind", "UnlockId");
+
+                    b.ToTable("AccountUnlocks");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.Mini", b =>

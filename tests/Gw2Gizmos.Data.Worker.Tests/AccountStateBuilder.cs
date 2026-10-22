@@ -39,7 +39,7 @@ internal sealed class AccountStateBuilder
 
     public string Id => AccountId;
 
-    internal sealed record ItemSlot(int Id, int Count, int? Charges = null);
+    internal sealed record ItemSlot(int Id, int Count, int? Charges = null, string? Binding = null);
 
     public void Apply(RoutingHttpStub stub)
     {
@@ -100,7 +100,8 @@ internal sealed class AccountStateBuilder
     private static string ItemJson(ItemSlot slot)
     {
         string charges = slot.Charges is { } c ? $",\"charges\":{c}" : "";
-        return $$"""{"id":{{slot.Id}},"count":{{slot.Count}}{{charges}}}""";
+        string binding = slot.Binding is { } b ? $",\"binding\":\"{b}\"" : "";
+        return $$"""{"id":{{slot.Id}},"count":{{slot.Count}}{{charges}}{{binding}}}""";
     }
 
     private string CharacterIdsJson() =>

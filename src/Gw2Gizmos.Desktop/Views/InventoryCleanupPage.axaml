@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.InventoryCleanupPage"
+             x:DataType="core:InventoryCleanupViewModel">
+    <UserControl.DataTemplates>
+        <!-- A kind of suggestion: what it means, and what its suggestions are worth. -->
+        <DataTemplate x:DataType="core:CleanupHeading">
+            <DockPanel Margin="0,12,0,4">
+                <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Copper}" FontWeight="Medium"
+                               VerticalAlignment="Bottom" IsVisible="{Binding HasCopper}" />
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Description}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </DataTemplate>
+        <!-- A suggestion: the item, why, and where it is; its worth and a Keep button on the right. -->
+        <DataTemplate x:DataType="core:CleanupRow">
+            <Border Classes="hover-row">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="{Binding KeepLabel}" Command="{Binding KeepCommand}"
+                            CommandParameter="{Binding}" ToolTip.Tip="{Binding KeepTip}" VerticalAlignment="Center"
+                            Margin="12,0,0,0" MinWidth="72" />
+                    <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Copper}" FontWeight="Medium"
+                                   VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding HasCopper}" />
+                    <c:ItemImage ItemId="{Binding ItemId}" Width="28" Height="28" Margin="0,0,10,0"
+                                 VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
+                                    HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding Reason}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PlacesText}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Not scrollable itself: the list scrolls on its own, so it can build only the rows in view. -->
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}" Scrollable="False">
+        <Grid RowDefinitions="Auto,*">
+            <c:Card Grid.Row="0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel Grid.Row="0" IsVisible="{Binding HasAccount}">
+                <TextBlock TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,10"
+                           Text="What to tidy up in your bank, shared inventory and bags. Keep an item to stop suggestions for it. Values are what an item sells for instantly, after the trading post's fees." />
+                <WrapPanel Margin="0,0,0,6">
+                    <ComboBox ItemsSource="{Binding Capacities}" SelectedItem="{Binding Capacity}" MinWidth="190"
+                              Margin="0,0,16,0" Height="{StaticResource FormControlHeight}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="How much material storage holds per item: the API doesn't say, so it's guessed from your fullest one">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:CapacityOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="{Binding ShowKeptLabel}" IsChecked="{Binding ShowKept}"
+                              VerticalAlignment="Center" />
+                </WrapPanel>
+                <TextBlock Text="Nothing to clean up." Margin="0,4,0,0" Classes="secondary"
+                           IsVisible="{Binding NoSuggestions}" />
+            </StackPanel>
+
+            <!-- A gutter on the right for the scrollbar. Each entry picks its template (heading or row) by type. -->
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasAccount}">
+                <ItemsRepeater ItemsSource="{Binding Rows}" Margin="0,0,16,0">
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding}" />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </ScrollViewer>
+        </Grid>
+    </c:PageShell>
+</UserControl>

@@ -47,6 +47,8 @@ public sealed class GlobalSearch
         new("Advisor", null, "Lightbulb24", AppPage.Advisor, "advice suggestions"),
         new("Craft from stock", "Advisor", "Wrench24", AppPage.CraftFromStock,
             "crafting profit materials owned storage what to craft"),
+        new("Inventory cleanup", "Advisor", "Broom24", AppPage.InventoryCleanup,
+            "bank bags stack deposit sell open containers declutter space slots"),
         new("Account", null, "Person24", AppPage.Account, ""),
         new("Value", "Account", "DataTrending24", AppPage.AccountValue, "account value worth net gold"),
         new("Wallet", "Account", "Wallet24", AppPage.Wallet, "currencies coin karma"),

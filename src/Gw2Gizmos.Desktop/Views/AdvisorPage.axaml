@@ -22,6 +22,20 @@
                     </StackPanel>
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="Inventory cleanup" Description="{Binding CleanupSummary}"
+                                   Margin="0,0,0,8" IconSource="{c:FluentIconSource Broom24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.InventoryCleanup}">
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel IsVisible="{Binding HasCleanupCopper}" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding CleanupCopper}" FontWeight="Medium" FontSize="13"
+                                       HorizontalAlignment="Right" />
+                        <TextBlock Text="to sell" FontSize="11" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
         </StackPanel>
     </c:PageShell>
 </UserControl>

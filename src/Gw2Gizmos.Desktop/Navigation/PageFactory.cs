@@ -40,6 +40,7 @@ public sealed class PageFactory
         [AppPage.PriceAlerts] = typeof(PriceAlertsPage),
         [AppPage.Advisor] = typeof(AdvisorPage),
         [AppPage.CraftFromStock] = typeof(CraftFromStockPage),
+        [AppPage.InventoryCleanup] = typeof(InventoryCleanupPage),
         [AppPage.Notifications] = typeof(NotificationsPage),
         [AppPage.Logs] = typeof(LogsPage),
         [AppPage.ApiKeys] = typeof(ApiKeysPage),

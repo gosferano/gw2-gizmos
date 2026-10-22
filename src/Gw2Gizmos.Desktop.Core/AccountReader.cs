@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
+using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Data.Worker.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -789,6 +791,173 @@ public sealed class AccountReader
                 .Append(c.Recipe.OutputItemId)),
             (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
         return new StockCrafts(crafts, names, ratings.Count > 0, learned.Count > 0);
+    }
+
+    /// <summary>
+    /// What to clean up in the account's bank, shared inventory and bags (<see cref="InventoryCleanup"/>), with
+    /// material storage taken to hold <paramref name="storageCapacity"/> per item (null to guess it).
+    /// </summary>
+    public CleanupData GetCleanup(string accountId, int? storageCapacity) =>
+        SafeRead(db => GetCleanup(db, accountId, storageCapacity), CleanupData.Empty);
+
+    private CleanupData GetCleanup(Gw2GizmosDbContext db, string accountId, int? storageCapacity)
+    {
+        var stacks = new List<HeldStack>();
+        foreach (AccountContainerSlot slot in db.AccountContainerSlots.AsNoTracking()
+                     .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
+        {
+            string place = slot.Store == AccountContainer.Bank ? "Bank" : "Shared inventory";
+            stacks.Add(new HeldStack(place, slot.ItemId!.Value, slot.Count, slot.Charges is not null, slot.Binding));
+        }
+
+        foreach (CharacterItemSlot slot in db.CharacterItemSlots.AsNoTracking()
+                     .Where(s => s.AccountId == accountId && s.ItemId != null && s.Count > 0))
+        {
+            stacks.Add(new HeldStack(
+                slot.CharacterName, slot.ItemId!.Value, slot.Count, slot.Charges is not null, slot.Binding));
+        }
+
+        IQueryable<long> storageIds = db.AccountItemObservations
+            .Where(o => o.AccountId == accountId && o.Container == AccountContainer.MaterialStorage)
+            .GroupBy(o => o.ItemId)
+            .Select(g => g.Max(x => x.Id));
+        Dictionary<int, int> storage = db.AccountItemObservations.AsNoTracking()
+            .Where(o => storageIds.Contains(o.Id))
+            .ToDictionary(o => o.ItemId, o => o.Count);
+        HashSet<int> storageTakes = db.MaterialCategoryItems.AsNoTracking().Select(i => i.ItemId).ToHashSet();
+        int guessed = InventoryCleanup.GuessCapacity(storage);
+
+        int[] heldIds = stacks.Select(s => s.ItemId).Distinct().ToArray();
+        Dictionary<int, CleanupItem> items = db.Items.AsNoTracking()
+            .Where(i => heldIds.Contains(i.Id))
+            .Select(i => new
+            {
+                i.Id, i.Type,
+                Bound = i.Flags.Any(f => f.Value == "AccountBound" || f.Value == "SoulbindOnAcquire"),
+                Junk = i.Rarity == "Junk",
+            })
+            .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Bound, i.Junk));
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, heldIds);
+
+        (HashSet<int> used, Dictionary<int, IReadOnlyList<string>> doneFor) = UsedItems(db, accountId);
+        var input = new CleanupInput(stacks, storage, storageTakes, storageCapacity ?? guessed, items, values,
+            used, doneFor, Unlocks(db, accountId, heldIds));
+        List<CleanupSuggestion> suggestions = InventoryCleanup.Suggest(input);
+        Dictionary<int, string> names = LoadNames(suggestions.Select(s => s.ItemId), (d, ids) =>
+            d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+        return new CleanupData(suggestions, names, guessed);
+    }
+
+    /// <summary>
+    /// What each held unlock item unlocks and whether the account has it: recipe sheets (against the learned recipes),
+    /// dyes, minis and skins (against the wardrobe's unlocks). A kind the account's unlocks aren't synced for is left
+    /// out, as there's no telling.
+    /// </summary>
+    private static Dictionary<int, CleanupUnlock> Unlocks(Gw2GizmosDbContext db, string accountId, int[] heldIds)
+    {
+        HashSet<int> learned = db.AccountRecipes.AsNoTracking()
+            .Where(r => r.AccountId == accountId)
+            .Select(r => r.RecipeId)
+            .ToHashSet();
+        Dictionary<string, HashSet<int>> unlocked = db.AccountUnlocks.AsNoTracking()
+            .Where(u => u.AccountId == accountId)
+            .Select(u => new { u.Kind, u.UnlockId })
+            .AsEnumerable()
+            .GroupBy(u => u.Kind)
+            .ToDictionary(g => g.Key, g => g.Select(u => u.UnlockId).ToHashSet());
+        HashSet<int> Have(string kind) => unlocked.GetValueOrDefault(kind) ?? [];
+
+        var unlocks = new Dictionary<int, CleanupUnlock>();
+        foreach (var item in db.ConsumableDetails.AsNoTracking()
+                     .Where(d => heldIds.Contains(d.ItemId))
+                     .Select(d => new
+                     {
+                         d.ItemId, d.Type, d.UnlockType, d.RecipeId, d.ColorId,
+                         ExtraRecipes = d.ExtraRecipes.Select(r => r.RecipeId).ToList(),
+                         Skins = d.Skins.Select(s => s.SkinId).ToList(),
+                     }))
+        {
+            if (item is { UnlockType: "CraftingRecipe", RecipeId: { } recipeId } && learned.Count > 0)
+            {
+                bool have = item.ExtraRecipes.Append(recipeId).All(learned.Contains);
+                unlocks[item.ItemId] = new CleanupUnlock("recipe", have);
+            }
+            else if (item is { UnlockType: "Dye", ColorId: { } colorId } && unlocked.ContainsKey(AccountUnlockKind.Dye))
+            {
+                unlocks[item.ItemId] = new CleanupUnlock("dye", Have(AccountUnlockKind.Dye).Contains(colorId));
+            }
+            else if (item.Type == "Transmutation" && item.Skins.Count > 0
+                     && unlocked.ContainsKey(AccountUnlockKind.Skin))
+            {
+                unlocks[item.ItemId] = new CleanupUnlock(
+                    "skin", item.Skins.All(Have(AccountUnlockKind.Skin).Contains));
+            }
+        }
+
+        if (unlocked.ContainsKey(AccountUnlockKind.Mini))
+        {
+            foreach (var mini in db.Minis.AsNoTracking()
+                         .Where(m => heldIds.Contains(m.ItemId))
+                         .Select(m => new { m.Id, m.ItemId }))
+            {
+                unlocks[mini.ItemId] = new CleanupUnlock("mini", Have(AccountUnlockKind.Mini).Contains(mini.Id));
+            }
+        }
+
+        return unlocks;
+    }
+
+    /// <summary>
+    /// The items something in the account still uses: every recipe's ingredients (the game's and the Mystic Forge's),
+    /// and the items unfinished achievements ask for. Without achievement progress, every achievement's items count.
+    /// And for the items achievements asked for but are done with (finished, or that item's objective is), their
+    /// names.
+    /// </summary>
+    private static (HashSet<int> Used, Dictionary<int, IReadOnlyList<string>> DoneFor) UsedItems(
+        Gw2GizmosDbContext db, string accountId)
+    {
+        HashSet<int> used = db.RecipeIngredients.AsNoTracking()
+            .Where(i => i.Type == "Item")
+            .Select(i => i.Id)
+            .Distinct()
+            .ToHashSet();
+        used.UnionWith(Gw2Gizmos.Data.Static.Crafting.StaticRecipes.All
+            .SelectMany(r => r.Ingredients)
+            .Select(i => i.ItemId));
+
+        Dictionary<int, AccountAchievement> progress = db.AccountAchievements.AsNoTracking()
+            .Where(a => a.AccountId == accountId)
+            .ToDictionary(a => a.AchievementId);
+        var doneFor = new Dictionary<int, List<string>>();
+        foreach (Achievement achievement in db.Achievements.AsNoTracking().AsEnumerable())
+        {
+            AccountAchievement? mine = progress.GetValueOrDefault(achievement.Id);
+            for (int bit = 0; bit < achievement.Bits.Count; bit++)
+            {
+                if (achievement.Bits[bit].Type != "Item")
+                {
+                    continue;
+                }
+
+                int itemId = achievement.Bits[bit].Id;
+                if (mine is not null && (mine.Done || mine.Bits.Contains(bit)))
+                {
+                    if (!doneFor.TryGetValue(itemId, out List<string>? names))
+                    {
+                        doneFor[itemId] = names = [];
+                    }
+
+                    names.Add(achievement.Name);
+                }
+                else
+                {
+                    used.Add(itemId);
+                }
+            }
+        }
+
+        return (used, doneFor.ToDictionary(
+            pair => pair.Key, pair => (IReadOnlyList<string>)pair.Value.Distinct().ToList()));
     }
 
     /// <summary>The account's completed trades, newest first.</summary>

@@ -33,6 +33,7 @@ public enum AppPage
     PriceAlerts,
     Advisor,
     CraftFromStock,
+    InventoryCleanup,
     Notifications,
     Logs,
     ApiKeys,
