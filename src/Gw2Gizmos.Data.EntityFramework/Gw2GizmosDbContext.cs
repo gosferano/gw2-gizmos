@@ -68,6 +68,9 @@ public class Gw2GizmosDbContext : DbContext
     // The recipes each account has learned (replaced each sync).
     public DbSet<AccountRecipe> AccountRecipes { get; set; }
 
+    // The dyes, minis and skins each account has unlocked (replaced each sync).
+    public DbSet<AccountUnlock> AccountUnlocks { get; set; }
+
     // Authenticated account data (keyed by account id). Item holdings (material storage, bank, shared inventory,
     // character bags) are one append-on-change log discriminated by location; the wallet is its own log
     // (currencies aren't items). AccountContainerSlots / CharacterItemSlots are the current slot-by-slot grids

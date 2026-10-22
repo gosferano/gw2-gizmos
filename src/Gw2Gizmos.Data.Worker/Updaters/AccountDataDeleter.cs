@@ -61,6 +61,7 @@ public class AccountDataDeleter
             DeletableData.Achievements => await DeleteAchievementsAsync(accountId, stoppingToken),
             DeletableData.ResetProgress => await DeleteResetProgressAsync(accountId, stoppingToken),
             DeletableData.LearnedRecipes => await DeleteLearnedRecipesAsync(accountId, stoppingToken),
+            DeletableData.WardrobeUnlocks => await DeleteWardrobeUnlocksAsync(accountId, stoppingToken),
             DeletableData.Session => await DeleteOneSessionAsync(accountId, targetId, stoppingToken),
             DeletableData.SessionSegment => await DeleteOneSegmentAsync(accountId, targetId, stoppingToken),
             DeletableData.AllForAccount => await DeleteAllForAccountAsync(accountId, stoppingToken),
@@ -191,6 +192,10 @@ public class AccountDataDeleter
     private async Task<int> DeleteLearnedRecipesAsync(string accountId, CancellationToken stoppingToken) =>
         await _dbContext.AccountRecipes.Where(r => r.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
 
+    // Current state only; re-synced on the next pass.
+    private async Task<int> DeleteWardrobeUnlocksAsync(string accountId, CancellationToken stoppingToken) =>
+        await _dbContext.AccountUnlocks.Where(u => u.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {
         int rows = await DeleteWalletAsync(accountId, stoppingToken);
@@ -204,6 +209,7 @@ public class AccountDataDeleter
         rows += await DeleteAchievementsAsync(accountId, stoppingToken);
         rows += await DeleteResetProgressAsync(accountId, stoppingToken);
         rows += await DeleteLearnedRecipesAsync(accountId, stoppingToken);
+        rows += await DeleteWardrobeUnlocksAsync(accountId, stoppingToken);
         // The account identity row itself; re-created on the next sync.
         rows += await _dbContext.Accounts.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;

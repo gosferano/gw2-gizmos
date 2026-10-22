@@ -1587,6 +1587,24 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountWizardsVaultObjectives");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.AccountUnlock", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnlockId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "Kind", "UnlockId");
+
+                    b.ToTable("AccountUnlocks");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.Mini", b =>
                 {
                     b.Property<int>("Id")
