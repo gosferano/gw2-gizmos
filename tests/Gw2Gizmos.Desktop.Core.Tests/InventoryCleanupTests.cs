@@ -28,10 +28,11 @@ public sealed class InventoryCleanupTests
     private readonly Dictionary<int, long> _values = [];
     private readonly HashSet<int> _used = [];
     private readonly Dictionary<int, IReadOnlyList<string>> _doneFor = [];
+    private readonly Dictionary<int, CleanupUnlock> _unlocks = [];
 
     private List<CleanupSuggestion> Suggest(int capacity = 1_000) =>
-        InventoryCleanup.Suggest(
-            new CleanupInput(_stacks, _storage, _storageTakes, capacity, _items, _values, _used, _doneFor));
+        InventoryCleanup.Suggest(new CleanupInput(
+            _stacks, _storage, _storageTakes, capacity, _items, _values, _used, _doneFor, _unlocks));
 
     [Fact]
     public void Partial_stacks_that_fit_in_fewer_slots_are_suggested_for_stacking()
@@ -141,5 +142,21 @@ public sealed class InventoryCleanupTests
         _stacks.Add(new("Bank", Gem, 1));
 
         Assert.Empty(Suggest());
+    }
+
+    [Fact]
+    public void An_unlock_item_is_used_when_the_account_lacks_the_unlock_and_sold_when_it_has_it()
+    {
+        _unlocks[Gem] = new CleanupUnlock("dye", Have: false);
+        _unlocks[Sword] = new CleanupUnlock("skin", Have: true);
+        _values[Sword] = 300;
+        _stacks.AddRange([new("Bank", Gem, 1), new("Bank", Sword, 1)]);
+
+        List<CleanupSuggestion> suggestions = Suggest();
+
+        CleanupSuggestion use = Assert.Single(suggestions, s => s.ItemId == Gem);
+        Assert.Equal((CleanupKind.Consume, "dye"), (use.Kind, use.Unlocks));
+        CleanupSuggestion sell = Assert.Single(suggestions, s => s.ItemId == Sword);
+        Assert.Equal((CleanupKind.Unlocked, "skin", 300L), (sell.Kind, sell.Unlocks, sell.Copper));
     }
 }

@@ -47,6 +47,8 @@ public sealed class CleanupRow
             $"{Number(_suggestion.Count)} more than material storage holds ({Number(_capacity)} each)",
         CleanupKind.Open => $"{Number(_suggestion.Count)} to open",
         CleanupKind.Sell => $"{Number(_suggestion.Count)} that no recipe or unfinished achievement uses",
+        CleanupKind.Consume => $"{Number(_suggestion.Count)}, for a {_suggestion.Unlocks} you don't have yet",
+        CleanupKind.Unlocked => $"{Number(_suggestion.Count)}, for a {_suggestion.Unlocks} you already have",
         CleanupKind.Leftover => $"{Number(_suggestion.Count)}, only for {DoneForText}, which you've done",
         _ => "",
     };
@@ -94,6 +96,9 @@ public sealed class InventoryCleanupViewModel : ViewModelBase, INavigationAware
         (CleanupKind.Deposit, "Deposit", "Materials that material storage has room for."),
         (CleanupKind.Overflow, "Overflow", "Materials beyond what material storage holds, taking up slots."),
         (CleanupKind.Open, "Open", "Containers waiting to be opened."),
+        (CleanupKind.Consume, "Use", "Recipe sheets, dyes, minis and skins you haven't unlocked yet."),
+        (CleanupKind.Unlocked, "Already unlocked", "Recipe sheets, dyes, minis and skins you already have: sell or "
+            + "salvage them."),
         (CleanupKind.Leftover, "Leftovers", "Items only finished achievements and collections asked for. Sell "
             + "what's worth something; the rest can go."),
         (CleanupKind.Sell, "Sell", "Items nothing in your account uses: no recipe takes them, and no unfinished "

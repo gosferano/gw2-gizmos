@@ -8,6 +8,7 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Currencies;
 using Gw2Gizmos.Data.EntityFramework.Entities.Materials;
 using Gw2Gizmos.Data.EntityFramework.Entities.Professions;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Data.Worker.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -838,11 +839,70 @@ public sealed class AccountReader
 
         (HashSet<int> used, Dictionary<int, IReadOnlyList<string>> doneFor) = UsedItems(db, accountId);
         var input = new CleanupInput(stacks, storage, storageTakes, storageCapacity ?? guessed, items, values,
-            used, doneFor);
+            used, doneFor, Unlocks(db, accountId, heldIds));
         List<CleanupSuggestion> suggestions = InventoryCleanup.Suggest(input);
         Dictionary<int, string> names = LoadNames(suggestions.Select(s => s.ItemId), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
         return new CleanupData(suggestions, names, guessed);
+    }
+
+    /// <summary>
+    /// What each held unlock item unlocks and whether the account has it: recipe sheets (against the learned recipes),
+    /// dyes, minis and skins (against the wardrobe's unlocks). A kind the account's unlocks aren't synced for is left
+    /// out, as there's no telling.
+    /// </summary>
+    private static Dictionary<int, CleanupUnlock> Unlocks(Gw2GizmosDbContext db, string accountId, int[] heldIds)
+    {
+        HashSet<int> learned = db.AccountRecipes.AsNoTracking()
+            .Where(r => r.AccountId == accountId)
+            .Select(r => r.RecipeId)
+            .ToHashSet();
+        Dictionary<string, HashSet<int>> unlocked = db.AccountUnlocks.AsNoTracking()
+            .Where(u => u.AccountId == accountId)
+            .Select(u => new { u.Kind, u.UnlockId })
+            .AsEnumerable()
+            .GroupBy(u => u.Kind)
+            .ToDictionary(g => g.Key, g => g.Select(u => u.UnlockId).ToHashSet());
+        HashSet<int> Have(string kind) => unlocked.GetValueOrDefault(kind) ?? [];
+
+        var unlocks = new Dictionary<int, CleanupUnlock>();
+        foreach (var item in db.ConsumableDetails.AsNoTracking()
+                     .Where(d => heldIds.Contains(d.ItemId))
+                     .Select(d => new
+                     {
+                         d.ItemId, d.Type, d.UnlockType, d.RecipeId, d.ColorId,
+                         ExtraRecipes = d.ExtraRecipes.Select(r => r.RecipeId).ToList(),
+                         Skins = d.Skins.Select(s => s.SkinId).ToList(),
+                     }))
+        {
+            if (item is { UnlockType: "CraftingRecipe", RecipeId: { } recipeId } && learned.Count > 0)
+            {
+                bool have = item.ExtraRecipes.Append(recipeId).All(learned.Contains);
+                unlocks[item.ItemId] = new CleanupUnlock("recipe", have);
+            }
+            else if (item is { UnlockType: "Dye", ColorId: { } colorId } && unlocked.ContainsKey(AccountUnlockKind.Dye))
+            {
+                unlocks[item.ItemId] = new CleanupUnlock("dye", Have(AccountUnlockKind.Dye).Contains(colorId));
+            }
+            else if (item.Type == "Transmutation" && item.Skins.Count > 0
+                     && unlocked.ContainsKey(AccountUnlockKind.Skin))
+            {
+                unlocks[item.ItemId] = new CleanupUnlock(
+                    "skin", item.Skins.All(Have(AccountUnlockKind.Skin).Contains));
+            }
+        }
+
+        if (unlocked.ContainsKey(AccountUnlockKind.Mini))
+        {
+            foreach (var mini in db.Minis.AsNoTracking()
+                         .Where(m => heldIds.Contains(m.ItemId))
+                         .Select(m => new { m.Id, m.ItemId }))
+            {
+                unlocks[mini.ItemId] = new CleanupUnlock("mini", Have(AccountUnlockKind.Mini).Contains(mini.Id));
+            }
+        }
+
+        return unlocks;
     }
 
     /// <summary>

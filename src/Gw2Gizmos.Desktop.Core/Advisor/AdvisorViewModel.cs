@@ -130,6 +130,7 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
                 {
                     Part(CleanupKind.Stack, "stack"), Part(CleanupKind.Deposit, "deposit"),
                     Part(CleanupKind.Overflow, "clear from bags"), Part(CleanupKind.Open, "open"),
+                    Part(CleanupKind.Consume, "use"), Part(CleanupKind.Unlocked, "sell, already unlocked"),
                     Part(CleanupKind.Leftover, "let go"), Part(CleanupKind.Sell, "sell"),
                 }.Where(part => part is not null));
             CleanupCopper = shown.Sum(s => s.Copper);

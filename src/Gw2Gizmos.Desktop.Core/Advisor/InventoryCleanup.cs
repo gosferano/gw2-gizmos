@@ -14,6 +14,11 @@ public sealed record HeldStack(string Place, int ItemId, int Count, bool HasChar
 /// <summary>What cleanup needs to know about an item: its type, and whether it binds to a character.</summary>
 public sealed record CleanupItem(string Type, bool Soulbound);
 
+/// <summary>
+/// What an unlock item unlocks ("recipe", "dye", "mini" or "skin"), and whether the account already has it.
+/// </summary>
+public sealed record CleanupUnlock(string What, bool Have);
+
 /// <summary>The kinds of cleanup suggestion, in the order the page shows them.</summary>
 public enum CleanupKind
 {
@@ -34,6 +39,12 @@ public enum CleanupKind
 
     /// <summary>Items only finished achievements asked for.</summary>
     Leftover,
+
+    /// <summary>Unlock items (recipe sheets, dyes, minis, skins) for something the account doesn't have yet.</summary>
+    Consume,
+
+    /// <summary>Unlock items for something the account already has.</summary>
+    Unlocked,
 }
 
 /// <summary>
@@ -48,6 +59,9 @@ public sealed record CleanupSuggestion(
 
     /// <summary>For a leftover: the finished achievements that asked for it.</summary>
     public IReadOnlyList<string> DoneFor { get; init; } = [];
+
+    /// <summary>For an unlock item: what it unlocks ("recipe", "dye", "mini" or "skin").</summary>
+    public string? Unlocks { get; init; }
 }
 
 /// <summary>Everything cleanup reads, gathered from the account's synced data.</summary>
@@ -59,14 +73,16 @@ public sealed record CleanupInput(
     IReadOnlyDictionary<int, CleanupItem> Items,
     IReadOnlyDictionary<int, long> Values,
     IReadOnlySet<int> Used,
-    IReadOnlyDictionary<int, IReadOnlyList<string>> DoneFor);
+    IReadOnlyDictionary<int, IReadOnlyList<string>> DoneFor,
+    IReadOnlyDictionary<int, CleanupUnlock> Unlocks);
 
 /// <summary>
 /// What to clean up in the account's bank, shared inventory and bags, each suggestion with its reason: partial stacks
 /// that fit in fewer slots; materials that material storage has room for, and those beyond it; containers to open;
 /// items worth selling that nothing in the account uses (no recipe takes them, no unfinished achievement asks for
-/// them); and leftovers, which only finished achievements asked for (worth something or not). Material storage itself
-/// is only read for how full it is.
+/// them); leftovers, which only finished achievements asked for (worth something or not); and unlock items, to use
+/// when the account doesn't have the unlock yet, or to sell when it does. Material storage itself is only read for how
+/// full it is.
 /// </summary>
 public static class InventoryCleanup
 {
@@ -125,7 +141,16 @@ public static class InventoryCleanup
                 suggestions.Add(stack);
             }
 
-            if (info?.Type == "Container")
+            if (input.Unlocks.TryGetValue(itemId, out CleanupUnlock? unlock))
+            {
+                suggestions.Add(unlock.Have
+                    ? new CleanupSuggestion(CleanupKind.Unlocked, itemId, total, total * value, places)
+                    {
+                        Unlocks = unlock.What,
+                    }
+                    : new CleanupSuggestion(CleanupKind.Consume, itemId, total, 0, places) { Unlocks = unlock.What });
+            }
+            else if (info?.Type == "Container")
             {
                 suggestions.Add(new CleanupSuggestion(CleanupKind.Open, itemId, total, 0, places));
             }
