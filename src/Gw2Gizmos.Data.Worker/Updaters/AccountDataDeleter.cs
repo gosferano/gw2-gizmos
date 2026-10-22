@@ -60,6 +60,7 @@ public class AccountDataDeleter
             DeletableData.ValueHistory => await DeleteValueHistoryAsync(accountId, stoppingToken),
             DeletableData.Achievements => await DeleteAchievementsAsync(accountId, stoppingToken),
             DeletableData.ResetProgress => await DeleteResetProgressAsync(accountId, stoppingToken),
+            DeletableData.LearnedRecipes => await DeleteLearnedRecipesAsync(accountId, stoppingToken),
             DeletableData.Session => await DeleteOneSessionAsync(accountId, targetId, stoppingToken),
             DeletableData.SessionSegment => await DeleteOneSegmentAsync(accountId, targetId, stoppingToken),
             DeletableData.AllForAccount => await DeleteAllForAccountAsync(accountId, stoppingToken),
@@ -186,6 +187,10 @@ public class AccountDataDeleter
         return rows;
     }
 
+    // Current state only; re-synced on the next pass.
+    private async Task<int> DeleteLearnedRecipesAsync(string accountId, CancellationToken stoppingToken) =>
+        await _dbContext.AccountRecipes.Where(r => r.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {
         int rows = await DeleteWalletAsync(accountId, stoppingToken);
@@ -198,6 +203,7 @@ public class AccountDataDeleter
         rows += await DeleteValueHistoryAsync(accountId, stoppingToken);
         rows += await DeleteAchievementsAsync(accountId, stoppingToken);
         rows += await DeleteResetProgressAsync(accountId, stoppingToken);
+        rows += await DeleteLearnedRecipesAsync(accountId, stoppingToken);
         // The account identity row itself; re-created on the next sync.
         rows += await _dbContext.Accounts.Where(a => a.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;
