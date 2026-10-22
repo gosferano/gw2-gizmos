@@ -60,6 +60,14 @@ public sealed class StockCraftRow
         $"{u.Count:N0} {NameOf(u.ItemId)}"
         + (u.AtCraftCost ? " (at craft cost)" : u.Copper == 0 ? " (no sell value)" : "")));
 
+    /// <summary>E.g. "Crafts 20 Mithril Ingot from stock first"; empty when nothing is.</summary>
+    public string CraftedText => _craft.Crafted.Count == 0
+        ? ""
+        : "Crafts " + string.Join(", ", _craft.Crafted.Select(c => $"{c.Count:N0} {NameOf(c.ItemId)}"))
+            + " from stock first";
+
+    public bool HasCrafted => _craft.Crafted.Count > 0;
+
     /// <summary>E.g. "Buy 10 Orichalcum Setting"; empty when everything is in stock.</summary>
     public string MissingText => _craft.Missing.Count == 0
         ? ""

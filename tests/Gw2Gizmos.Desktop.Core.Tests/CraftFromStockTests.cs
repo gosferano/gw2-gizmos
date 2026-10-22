@@ -192,4 +192,69 @@ public sealed class CraftFromStockTests
 
         Assert.Equal(shown, CraftFromStockViewModel.Shown(crafts, true, true, minimum).Any());
     }
+
+    private const int Ingot = 13;
+
+    // An ingot from 2 ore; the output from 5 ingots.
+    private static readonly StockRecipe Smelt = new(2, Ingot, 1, 0, ["Jeweler"], false, true, [(Ore, 2)]);
+
+    [Fact]
+    public void A_missing_ingredient_is_crafted_from_stock_when_that_costs_less_than_buying_it()
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 10;
+        _prices[Ingot] = (Buy: 40, Sell: 50);
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+        StockRecipe recipe = Recipe(ingredients: (Ingot, 5));
+
+        StockCraft craft = Assert.Single(CraftFromStock.Find(
+            [recipe, Smelt], _held, _values, _craftCosts, _prices, _ratings, _learned), c => c.Recipe == recipe);
+
+        StockIngredient crafted = Assert.Single(craft.Crafted);
+        Assert.Equal((Ingot, 5), (crafted.ItemId, crafted.Count));
+        StockIngredient ore = Assert.Single(craft.Uses);
+        Assert.Equal((Ore, 10, 100L), (ore.ItemId, ore.Count, ore.Copper));
+        Assert.Empty(craft.Missing);
+        Assert.Equal(850 - 100, craft.ProfitCopper);
+        Assert.Equal(1, craft.CanMake);
+    }
+
+    [Fact]
+    public void A_missing_ingredient_is_bought_when_that_costs_less_than_crafting_it_from_stock()
+    {
+        _held[Ore] = 10;
+        _values[Ore] = 100; // two ore sell for more than an ingot costs
+        _held[Gem] = 1;
+        _values[Gem] = 500;
+        _prices[Ingot] = (Buy: 40, Sell: 50);
+        _prices[Output] = (Buy: 2_000, Sell: 2_400);
+        StockRecipe recipe = Recipe(ingredients: [(Gem, 1), (Ingot, 5)]);
+
+        StockCraft craft = Assert.Single(CraftFromStock.Find(
+            [recipe, Smelt], _held, _values, _craftCosts, _prices, _ratings, _learned), c => c.Recipe == recipe);
+
+        Assert.Empty(craft.Crafted);
+        StockIngredient missing = Assert.Single(craft.Missing);
+        Assert.Equal((Ingot, 5), (missing.ItemId, missing.Count));
+    }
+
+    [Fact]
+    public void Once_stock_of_an_ingredient_runs_out_later_crafts_make_it_from_what_is_left()
+    {
+        _held[Ingot] = 5;
+        _values[Ingot] = 40;
+        _held[Ore] = 20;
+        _values[Ore] = 10;
+        _prices[Ingot] = (Buy: 40, Sell: 50);
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+        StockRecipe recipe = Recipe(ingredients: (Ingot, 5));
+
+        StockCraft craft = Assert.Single(CraftFromStock.Find(
+            [recipe, Smelt], _held, _values, _craftCosts, _prices, _ratings, _learned), c => c.Recipe == recipe);
+
+        // The owned ingots first (850 - 200), then two crafts from 10 ore each (850 - 100).
+        Assert.Equal([(1, 650L), (2, 750L)], craft.Runs);
+        Assert.Equal(3, craft.CanMake);
+        Assert.Equal(650 + 2 * 750, craft.StockProfitCopper);
+    }
 }

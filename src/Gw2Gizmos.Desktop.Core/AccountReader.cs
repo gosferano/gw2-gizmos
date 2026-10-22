@@ -741,9 +741,10 @@ public sealed class AccountReader
             .Select(s => new { s.ItemId, s.Buy, s.Sell })
             .ToDictionary(s => s.ItemId, s => (s.Buy ?? 0, s.Sell ?? 0));
 
-        // Only recipes made of items: a currency (e.g. Research Notes) or guild upgrade isn't stock to sell.
+        // Only recipes made of items: a currency (e.g. Research Notes) or guild upgrade isn't stock to sell. All of
+        // them, held ingredients or not, as an ingredient can be crafted from stock on the way.
         List<StockRecipe> recipes = db.Recipes.AsNoTracking()
-            .Where(r => r.Ingredients.All(i => i.Type == "Item") && r.Ingredients.Any(i => held.Keys.Contains(i.Id)))
+            .Where(r => r.Ingredients.All(i => i.Type == "Item"))
             .Select(r => new
             {
                 r.Id, r.OutputItemId, r.OutputItemCount, r.MinRating,
@@ -784,7 +785,8 @@ public sealed class AccountReader
             .ToDictionary(g => g.ItemId, g => g.Bought);
         crafts = CraftFromStock.LimitToMarket(crafts, soldPerWeek);
         Dictionary<int, string> names = LoadNames(
-            crafts.SelectMany(c => c.Uses.Concat(c.Missing).Select(i => i.ItemId).Append(c.Recipe.OutputItemId)),
+            crafts.SelectMany(c => c.Uses.Concat(c.Missing).Concat(c.Crafted).Select(i => i.ItemId)
+                .Append(c.Recipe.OutputItemId)),
             (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
         return new StockCrafts(crafts, names, ratings.Count > 0, learned.Count > 0);
     }

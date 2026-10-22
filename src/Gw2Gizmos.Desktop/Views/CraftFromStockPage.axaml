@@ -39,6 +39,8 @@
                                     HorizontalAlignment="Left" />
                         <TextBlock Text="{Binding Details}" FontSize="12" Classes="secondary" />
                         <TextBlock Text="{Binding UsesText}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CraftedText}" FontSize="12" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasCrafted}" />
                         <TextBlock Text="{Binding MissingText}" FontSize="12" Classes="secondary" TextWrapping="Wrap"
                                    IsVisible="{Binding HasMissing}" />
                     </StackPanel>
