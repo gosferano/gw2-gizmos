@@ -30,6 +30,7 @@
             <ui:FANavigationViewItem Content="WvW" IconSource="{c:FluentIconSource Shield24}" Tag="{x:Static nav:AppPage.Wvw}" />
             <ui:FANavigationViewItem Content="Items" IconSource="{c:FluentIconSource BoxMultiple24}" Tag="{x:Static nav:AppPage.Items}" />
             <ui:FANavigationViewItem Content="Trading post" IconSource="{c:FluentIconSource BuildingShop24}" Tag="{x:Static nav:AppPage.TradingPost}" />
+            <ui:FANavigationViewItem Content="Advisor" IconSource="{c:FluentIconSource Lightbulb24}" Tag="{x:Static nav:AppPage.Advisor}" />
             <ui:FANavigationViewItem Content="Account" IconSource="{c:FluentIconSource Person24}" Tag="{x:Static nav:AppPage.Account}" />
             <ui:FANavigationViewItem Content="Sessions" IconSource="{c:FluentIconSource History24}" Tag="{x:Static nav:AppPage.Sessions}" />
         </ui:FANavigationView.MenuItems>

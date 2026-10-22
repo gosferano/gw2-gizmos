@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             xmlns:nav="using:Gw2Gizmos.Desktop.Core.Navigation"
+             x:Class="Gw2Gizmos.Desktop.Views.AdvisorPage"
+             x:DataType="core:AdvisorViewModel">
+    <!-- Advice drawn from the account's own data, each with a summary of what it found; a row opens its page. -->
+    <c:PageShell Title="Advisor">
+        <StackPanel>
+            <ui:FASettingsExpander Header="Craft from stock" Description="{Binding CraftSummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource Wrench24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.CraftFromStock}">
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel IsVisible="{Binding HasBestCraft}" HorizontalAlignment="Right">
+                        <c:CoinDisplay Copper="{Binding BestCraftCopper}" Signed="True" FontWeight="Medium"
+                                       FontSize="13" HorizontalAlignment="Right" />
+                        <TextBlock Text="best, from stock" FontSize="11" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+        </StackPanel>
+    </c:PageShell>
+</UserControl>

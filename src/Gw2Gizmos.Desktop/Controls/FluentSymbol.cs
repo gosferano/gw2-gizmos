@@ -33,6 +33,7 @@ public enum FluentSymbol
     History24 = 0xF47F,
     Home24 = 0xF481,
     Key24 = 0xF4B7,
+    Lightbulb24 = 0xF4D7,
     Map24 = 0xF52E,
     MyLocation24 = 0xF55F,
     Open24 = 0xF583,
@@ -46,6 +47,7 @@ public enum FluentSymbol
     Trophy24 = 0xF837,
     Wallet24 = 0xEE2D,
     Warning24 = 0xF86A,
+    Wrench24 = 0xF8C1,
     ZoomIn24 = 0xF8C5,
     ZoomOut24 = 0xF8C7,
 }

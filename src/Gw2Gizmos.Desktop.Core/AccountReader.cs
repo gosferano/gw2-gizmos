@@ -719,6 +719,59 @@ public sealed class AccountReader
             .ToList();
     }
 
+    /// <summary>
+    /// What's worth crafting from the account's holdings (<see cref="CraftFromStock"/>), with the names of every item
+    /// the crafts make or take.
+    /// </summary>
+    public StockCrafts GetStockCrafts(string accountId) =>
+        SafeRead(db => GetStockCrafts(db, accountId), StockCrafts.Empty);
+
+    private StockCrafts GetStockCrafts(Gw2GizmosDbContext db, string accountId)
+    {
+        Dictionary<int, int> held = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, DateTimeOffset.UtcNow);
+        Dictionary<int, long> heldValues = AccountHoldingsReconstructor.ItemValues(db, held.Keys.ToList());
+        int[] unsold = heldValues.Where(v => v.Value == 0).Select(v => v.Key).ToArray();
+        Dictionary<int, long> craftCosts = db.ItemCraftCosts.AsNoTracking()
+            .Where(c => unsold.Contains(c.ItemId))
+            .ToDictionary(c => c.ItemId, c => (long)Math.Round(c.CraftingCost));
+
+        IQueryable<long> latestIds = db.PriceSnapshots.GroupBy(s => s.ItemId).Select(g => g.Max(s => s.Id));
+        Dictionary<int, (int Buy, int Sell)> prices = db.PriceSnapshots.AsNoTracking()
+            .Where(s => latestIds.Contains(s.Id))
+            .Select(s => new { s.ItemId, s.Buy, s.Sell })
+            .ToDictionary(s => s.ItemId, s => (s.Buy ?? 0, s.Sell ?? 0));
+
+        // Only recipes made of items: a currency (e.g. Research Notes) or guild upgrade isn't stock to sell.
+        List<StockRecipe> recipes = db.Recipes.AsNoTracking()
+            .Where(r => r.Ingredients.All(i => i.Type == "Item") && r.Ingredients.Any(i => held.Keys.Contains(i.Id)))
+            .Select(r => new
+            {
+                r.Id, r.OutputItemId, r.OutputItemCount, r.MinRating,
+                Disciplines = r.Disciplines.Select(d => d.Value).ToList(),
+                LearnedFromItem = r.Flags.Any(f => f.Value == "LearnedFromItem"),
+                Ingredients = r.Ingredients.Select(i => new { i.Id, i.Count }).ToList(),
+            })
+            .AsEnumerable()
+            .Select(r => new StockRecipe(r.Id, r.OutputItemId, r.OutputItemCount, r.MinRating, r.Disciplines,
+                r.LearnedFromItem, r.Ingredients.Select(i => (i.Id, i.Count)).ToList()))
+            .ToList();
+
+        // A discipline counts at the highest level any character has it, active or not: switching costs a little coin.
+        Dictionary<string, int> ratings = db.Characters.AsNoTracking()
+            .Where(c => c.AccountId == accountId)
+            .Select(c => c.Crafting)
+            .AsEnumerable()
+            .SelectMany(crafting => crafting)
+            .GroupBy(c => c.Discipline)
+            .ToDictionary(g => g.Key, g => g.Max(c => c.Rating));
+
+        List<StockCraft> crafts = CraftFromStock.Find(recipes, held, heldValues, craftCosts, prices, ratings);
+        Dictionary<int, string> names = LoadNames(
+            crafts.SelectMany(c => c.Uses.Concat(c.Missing).Select(i => i.ItemId).Append(c.Recipe.OutputItemId)),
+            (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
+        return new StockCrafts(crafts, names, ratings.Count > 0);
+    }
+
     /// <summary>The account's completed trades, newest first.</summary>
     public List<TradingPostTradeRow> GetTradingPostTrades(string accountId)
     {

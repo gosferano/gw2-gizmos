@@ -179,6 +179,8 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddTransient<TradingPostOrdersViewModel>();
         services.AddTransient<TradingPostHistoryViewModel>();
         services.AddTransient<TradingPostProfitViewModel>();
+        services.AddTransient<AdvisorViewModel>();
+        services.AddTransient<CraftFromStockViewModel>();
         services.AddTransient<PriceAlertsViewModel>();
         services.AddTransient<SessionViewModel>();
         services.AddTransient<SessionLootViewModel>();
