@@ -35,6 +35,15 @@ public sealed record StockCraft(
     bool CharactersCanCraft,
     bool? Known)
 {
+    /// <summary>
+    /// How many of the result instant sales took in the last week (buy orders filled), or null without the price
+    /// history to tell.
+    /// </summary>
+    public int? SoldPerWeek { get; init; }
+
+    /// <summary>How many to make: as many as stock allows, but no more than a week of sales takes.</summary>
+    public int ToMake => SoldPerWeek is { } sold ? Math.Min(CanMake, sold / Recipe.OutputCount) : CanMake;
+
     public long UsesCopper => Uses.Sum(u => u.Copper);
 
     public long MissingCopper => Missing.Sum(m => m.Copper);
@@ -42,8 +51,8 @@ public sealed record StockCraft(
     /// <summary>What one craft makes over selling the owned materials (and buying the missing ones).</summary>
     public long ProfitCopper => OutputCopper - UsesCopper - MissingCopper;
 
-    /// <summary>What crafting all <see cref="CanMake"/> from stock makes.</summary>
-    public long StockProfitCopper => ProfitCopper * CanMake;
+    /// <summary>What crafting <see cref="ToMake"/> from stock makes.</summary>
+    public long StockProfitCopper => ProfitCopper * ToMake;
 }
 
 /// <summary>
@@ -86,6 +95,18 @@ public static class CraftFromStock
 
         return crafts;
     }
+
+    /// <summary>
+    /// Each craft with how many of its result sold instantly in the last week (<paramref name="soldPerWeek"/>, by
+    /// item), which caps how many are worth making; a result nobody sold to a buy order all week is left out, as its
+    /// buy order is no price it would sell at.
+    /// </summary>
+    public static List<StockCraft> LimitToMarket(
+        IEnumerable<StockCraft> crafts, IReadOnlyDictionary<int, int> soldPerWeek) =>
+        crafts
+            .Select(c => c with { SoldPerWeek = soldPerWeek.GetValueOrDefault(c.Recipe.OutputItemId) })
+            .Where(c => c.SoldPerWeek >= c.Recipe.OutputCount)
+            .ToList();
 
     private static StockCraft? Craft(
         StockRecipe recipe,

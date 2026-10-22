@@ -773,6 +773,16 @@ public sealed class AccountReader
 
         List<StockCraft> crafts = CraftFromStock.Find(recipes, held, heldValues, craftCosts, prices, ratings,
             learned.Count > 0 ? learned : null);
+
+        // A week of instant sales of each result: the units its buy orders filled.
+        int[] outputs = crafts.Select(c => c.Recipe.OutputItemId).Distinct().ToArray();
+        DateTimeOffset weekAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        Dictionary<int, int> soldPerWeek = db.PriceSnapshots.AsNoTracking()
+            .Where(s => outputs.Contains(s.ItemId) && s.TimestampUtc >= weekAgo)
+            .GroupBy(s => s.ItemId)
+            .Select(g => new { ItemId = g.Key, Bought = g.Sum(s => s.Bought) })
+            .ToDictionary(g => g.ItemId, g => g.Bought);
+        crafts = CraftFromStock.LimitToMarket(crafts, soldPerWeek);
         Dictionary<int, string> names = LoadNames(
             crafts.SelectMany(c => c.Uses.Concat(c.Missing).Select(i => i.ItemId).Append(c.Recipe.OutputItemId)),
             (d, ids) => d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));

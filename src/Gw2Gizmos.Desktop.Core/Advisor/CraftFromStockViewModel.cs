@@ -43,6 +43,7 @@ public sealed class StockCraftRow
             {
                 $"{who} {_craft.Recipe.MinRating}".Trim(),
                 _craft.Recipe.OutputCount > 1 ? $"makes {_craft.Recipe.OutputCount}" : null,
+                _craft.SoldPerWeek is { } sold ? $"sells ~{sold:N0} a week" : null,
                 _craft.Known == true ? null
                     : _craft.Recipe.LearnedFromItem ? "needs its recipe sheet"
                     : _craft.Known == false && !_craft.Recipe.AutoLearned ? "needs discovering" : null,
@@ -69,22 +70,30 @@ public sealed class StockCraftRow
         $"Sells for {Coin.Format(_craft.OutputCopper)} at the highest buy order, after fees",
         $"Your materials would sell for {Coin.Format(_craft.UsesCopper)}",
         HasMissing ? $"The rest costs {Coin.Format(_craft.MissingCopper)} at the lowest listings" : null,
+        _craft.ToMake < _craft.CanMake
+            ? $"Stock makes {Number(_craft.CanMake)}, but only ~{Number(_craft.SoldPerWeek ?? 0)} sold a week"
+            : null,
     }.Where(line => line is not null));
 
     public long ProfitCopper => _craft.ProfitCopper;
 
     public long StockProfitCopper => _craft.StockProfitCopper;
 
-    /// <summary>E.g. "each × 12".</summary>
-    public string CanMakeText => $"each × {_craft.CanMake.ToString("N0", CultureInfo.CurrentCulture)}";
+    /// <summary>E.g. "each × 12", or "each × 12 of 40" when the market takes fewer than stock allows.</summary>
+    public string CanMakeText => _craft.ToMake < _craft.CanMake
+        ? $"each × {Number(_craft.ToMake)} of {Number(_craft.CanMake)}"
+        : $"each × {Number(_craft.CanMake)}";
+
+    private static string Number(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
 
     private string NameOf(int itemId) => _names.GetValueOrDefault(itemId) ?? $"Item {itemId}";
 }
 
 /// <summary>
 /// Backs the Advisor › Craft from stock page: what's worth crafting from the materials the account holds, rather than
-/// selling them (<see cref="CraftFromStock"/>). Crafts that need nothing bought come first, by what crafting all of
-/// them makes; then those short of a few materials, by what one makes. Refreshes after syncs and price polls.
+/// selling them (<see cref="CraftFromStock"/>). Crafts that need nothing bought come first, by what crafting as many
+/// as stock allows and a week's sales take makes; then those short of a few materials, by what one makes. Refreshes
+/// after syncs and price polls.
 /// </summary>
 public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
 {
@@ -152,8 +161,8 @@ public sealed class CraftFromStockViewModel : ViewModelBase, INavigationAware
     }
 
     /// <summary>
-    /// One list, so it can be virtualized (hundreds of rows): crafts made entirely from stock, by what crafting all of
-    /// them makes, then those short of a few materials, by what one makes; each group under a
+    /// One list, so it can be virtualized (hundreds of rows): crafts made entirely from stock, by what crafting as
+    /// many as are worth making makes, then those short of a few materials, by what one makes; each group under a
     /// <see cref="StockCraftHeading"/>.
     /// </summary>
     public IReadOnlyList<object> Rows { get; private set; } = [];

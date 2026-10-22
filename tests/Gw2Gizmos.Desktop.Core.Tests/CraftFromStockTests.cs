@@ -152,4 +152,31 @@ public sealed class CraftFromStockTests
 
         Assert.Null(Assert.Single(Find(Recipe(ingredients: (Ore, 10)))).Known);
     }
+
+    [Theory]
+    [InlineData(40, 5)] // stock makes 5, the market takes more
+    [InlineData(3, 3)] // the market takes 3
+    public void A_week_of_sales_caps_how_many_are_worth_making(int soldPerWeek, int toMake)
+    {
+        _held[Ore] = 50;
+        _values[Ore] = 10;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+
+        StockCraft craft = Assert.Single(CraftFromStock.LimitToMarket(
+            Find(Recipe(ingredients: (Ore, 10))), new Dictionary<int, int> { [Output] = soldPerWeek }));
+
+        Assert.Equal(5, craft.CanMake);
+        Assert.Equal(toMake, craft.ToMake);
+        Assert.Equal(750 * toMake, craft.StockProfitCopper);
+    }
+
+    [Fact]
+    public void A_result_nobody_sold_all_week_is_left_out()
+    {
+        _held[Ore] = 50;
+        _values[Ore] = 10;
+        _prices[Output] = (Buy: 1_000, Sell: 1_200);
+
+        Assert.Empty(CraftFromStock.LimitToMarket(Find(Recipe(ingredients: (Ore, 10))), new Dictionary<int, int>()));
+    }
 }
