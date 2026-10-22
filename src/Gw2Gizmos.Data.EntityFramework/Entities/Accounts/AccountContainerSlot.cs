@@ -26,4 +26,11 @@ public class AccountContainerSlot
 
     /// <summary>Remaining charges for consumable stacks, when applicable.</summary>
     public int? Charges { get; set; }
+
+    /// <summary>
+    /// What this copy is bound to, when it's bound: "Account", or "Character" (soulbound). An item can bind on use, so
+    /// this is the slot's, not the item's.
+    /// </summary>
+    [MaxLength(16)]
+    public string? Binding { get; set; }
 }

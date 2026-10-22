@@ -52,6 +52,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<int>("SlotIndex")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Binding")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Charges")
                         .HasColumnType("INTEGER");
 
@@ -248,6 +252,10 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<string>("AccountId")
                         .IsRequired()
                         .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Binding")
+                        .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Charges")

@@ -293,6 +293,24 @@ public sealed class AccountSyncUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task Slots_KeepWhatTheirCopyIsBoundTo()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Bank.Clear();
+        state.Bank.Add(new AccountStateBuilder.ItemSlot(Id: 555, Count: 1, Binding: "Account"));
+        state.Bank.Add(new AccountStateBuilder.ItemSlot(Id: 556, Count: 1));
+        state.Characters["Alice Necro"] = [new(Id: 900, Count: 1, Binding: "Character")];
+        state.Apply(_stub);
+
+        await Sync();
+
+        Assert.Equal(["Account", null], await Db.AccountContainerSlots
+            .Where(s => s.Store == AccountContainer.Bank).OrderBy(s => s.SlotIndex).Select(s => s.Binding)
+            .ToListAsync());
+        Assert.Equal("Character", (await Db.CharacterItemSlots.SingleAsync(s => s.ItemId == 900)).Binding);
+    }
+
+    [Fact]
     public async Task RoundTrip_ReconstructorReturnsAsOfState()
     {
         // T0: the initial holdings.

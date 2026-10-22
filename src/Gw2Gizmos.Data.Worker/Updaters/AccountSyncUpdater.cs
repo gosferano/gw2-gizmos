@@ -822,6 +822,7 @@ public class AccountSyncUpdater
                             ItemId = item?.Id,
                             Count = item?.Count ?? 0,
                             Charges = item?.Charges,
+                            Binding = item?.Binding?.Value,
                         }
                     );
                     slotIndex++;
@@ -924,6 +925,7 @@ public class AccountSyncUpdater
                     ItemId = item?.Id,
                     Count = item?.Count ?? 0,
                     Charges = item?.Charges,
+                    Binding = item?.Binding?.Value,
                 }
             );
         }
