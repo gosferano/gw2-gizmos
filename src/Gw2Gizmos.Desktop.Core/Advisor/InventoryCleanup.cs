@@ -70,6 +70,15 @@ public sealed record CleanupSuggestion(
 
     /// <summary>For an unlock item: what it unlocks ("recipe", "dye", "mini" or "skin").</summary>
     public string? Unlocks { get; init; }
+
+    /// <summary>
+    /// What listing them at the lowest sell price would pay, after the listing and exchange fees, when that's worth
+    /// waiting for over selling instantly (<see cref="Copper"/>); null otherwise.
+    /// </summary>
+    public long? ListCopper { get; init; }
+
+    /// <summary>How many sold from listings in the last week, when the item trades on the trading post.</summary>
+    public int? SoldPerWeek { get; init; }
 }
 
 /// <summary>Everything cleanup reads, gathered from the account's synced data.</summary>
@@ -82,7 +91,8 @@ public sealed record CleanupInput(
     IReadOnlyDictionary<int, long> Values,
     IReadOnlySet<int> Used,
     IReadOnlyDictionary<int, IReadOnlyList<string>> DoneFor,
-    IReadOnlyDictionary<int, CleanupUnlock> Unlocks);
+    IReadOnlyDictionary<int, CleanupUnlock> Unlocks,
+    IReadOnlyDictionary<int, (int Sell, int SoldPerWeek)>? Market = null);
 
 /// <summary>
 /// What to clean up in the account's bank, shared inventory and bags, each suggestion with its reason: partial stacks
@@ -90,13 +100,19 @@ public sealed record CleanupInput(
 /// items worth selling that nothing in the account uses (no recipe takes them, no unfinished achievement asks for
 /// them); leftovers, which only finished achievements asked for (worth something or not) and have no use of their own
 /// (aren't eaten, used or worn); and unlock items, to use when the account doesn't have the unlock yet, or to sell when
-/// it does. Items used for their own effect (food, tomes, gizmos) are never suggested for selling or letting go.
+/// it does. Items used for their own effect (food, tomes, gizmos) are never suggested for selling or letting go. What's
+/// worth selling is valued at selling instantly, with listing it suggested where that pays enough more.
 /// Material storage itself is only read for how full it is.
 /// </summary>
 public static class InventoryCleanup
 {
     /// <summary>How many of an item a slot holds.</summary>
     public const int StackSize = 250;
+
+    // Listing is worth the wait when it pays at least this much more than selling instantly, both relatively and in
+    // copper (10s), so a few copper on a cheap item doesn't count.
+    private const double ListGain = 0.10;
+    private const long ListMinimumGain = 1_000;
 
     // Types whose items are used for their own effect (food, tomes, gizmos): their worth is in using them, so they're
     // never suggested for selling or letting go.
@@ -201,7 +217,25 @@ public static class InventoryCleanup
             }
         }
 
-        return suggestions;
+        return input.Market is { } market ? suggestions.Select(s => WithListing(s, market)).ToList() : suggestions;
+    }
+
+    // What's worth selling (or letting go) could also be listed: suggested when it pays enough more than selling
+    // instantly, and the market takes the lot within a week, so it's likely to sell before the price moves.
+    private static CleanupSuggestion WithListing(
+        CleanupSuggestion suggestion, IReadOnlyDictionary<int, (int Sell, int SoldPerWeek)> market)
+    {
+        if (suggestion is not { Kind: CleanupKind.Sell or CleanupKind.Overflow or CleanupKind.Leftover, Copper: > 0 }
+            || !market.TryGetValue(suggestion.ItemId, out (int Sell, int SoldPerWeek) item) || item.Sell <= 0)
+        {
+            return suggestion;
+        }
+
+        long listed = TradingPostLedger.UnitProceeds(item.Sell) * suggestion.Count;
+        long gain = listed - suggestion.Copper;
+        bool worthIt = gain >= ListMinimumGain && gain >= suggestion.Copper * ListGain
+            && item.SoldPerWeek >= suggestion.Count;
+        return suggestion with { ListCopper = worthIt ? listed : null, SoldPerWeek = item.SoldPerWeek };
     }
 
     private static List<(string Place, int Count)> Places(IEnumerable<HeldStack> stacks) =>

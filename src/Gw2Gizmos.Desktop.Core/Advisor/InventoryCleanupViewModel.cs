@@ -8,10 +8,18 @@ using Gw2Gizmos.Desktop.Core.Navigation;
 
 namespace Gw2Gizmos.Desktop.Core;
 
-/// <summary>A kind's heading in the cleanup list, with what the suggestions under it mean.</summary>
-public sealed record CleanupHeading(string Title, string Description, long Copper)
+/// <summary>
+/// A kind's heading in the cleanup list, with what the suggestions under it mean, what they're worth selling
+/// instantly, and what listing the ones where it pays would bring instead (null when it doesn't anywhere).
+/// </summary>
+public sealed record CleanupHeading(string Title, string Description, long Copper, long? ListCopper = null)
 {
     public bool HasCopper => Copper > 0;
+
+    /// <summary>E.g. "or 12g 40s listing where it pays".</summary>
+    public string ListText => ListCopper is { } listed ? $"or {Coin.Format(listed)} listing where it pays" : "";
+
+    public bool HasList => ListCopper is not null;
 }
 
 /// <summary>A material storage capacity to pick: a size, or the guess from what's stored (null).</summary>
@@ -61,6 +69,14 @@ public sealed class CleanupRow
         2 => $"{_suggestion.DoneFor[0]} and {_suggestion.DoneFor[1]}",
         _ => $"{_suggestion.DoneFor[0]} and {_suggestion.DoneFor.Count - 1} more",
     };
+
+    /// <summary>E.g. "List them for 2g 10s after fees instead; about 40 sell a week".</summary>
+    public string ListText => _suggestion.ListCopper is { } listed
+        ? $"List {(_suggestion.Count == 1 ? "it" : "them")} for {Coin.Format(listed)} after fees instead; about "
+            + $"{Number(_suggestion.SoldPerWeek ?? 0)} sell a week"
+        : "";
+
+    public bool HasList => _suggestion.ListCopper is not null;
 
     /// <summary>E.g. "In the bank (115), Gosferano (65)".</summary>
     public string PlacesText => "In " + string.Join(", ", _suggestion.Places.Select(p =>
@@ -242,7 +258,8 @@ public sealed class InventoryCleanupViewModel : ViewModelBase, INavigationAware
                 continue;
             }
 
-            rows.Add(new CleanupHeading(title, description, ofKind.Sum(s => s.Copper)));
+            rows.Add(new CleanupHeading(title, description, ofKind.Sum(s => s.Copper),
+                ofKind.Any(s => s.ListCopper is not null) ? ofKind.Sum(s => s.ListCopper ?? s.Copper) : null));
             rows.AddRange(ofKind.Select(s => new CleanupRow(
                 s, _data.Names.GetValueOrDefault(s.ItemId) ?? $"Item {s.ItemId}", capacity, kept.Contains(s.ItemId),
                 _keepCommand)));

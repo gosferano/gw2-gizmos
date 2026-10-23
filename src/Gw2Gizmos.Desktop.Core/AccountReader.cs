@@ -839,9 +839,26 @@ public sealed class AccountReader
             .ToDictionary(i => i.Id, i => new CleanupItem(i.Type, i.Bound, i.Junk));
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, heldIds);
 
+        // Each held item's lowest listing, and how many sold from listings in the last week.
+        IQueryable<long> latestIds = db.PriceSnapshots
+            .Where(s => heldIds.Contains(s.ItemId))
+            .GroupBy(s => s.ItemId)
+            .Select(g => g.Max(s => s.Id));
+        Dictionary<int, int> sells = db.PriceSnapshots.AsNoTracking()
+            .Where(s => latestIds.Contains(s.Id) && s.Sell != null)
+            .ToDictionary(s => s.ItemId, s => s.Sell!.Value);
+        DateTimeOffset weekAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        Dictionary<int, int> soldPerWeek = db.PriceSnapshots.AsNoTracking()
+            .Where(s => heldIds.Contains(s.ItemId) && s.TimestampUtc >= weekAgo)
+            .GroupBy(s => s.ItemId)
+            .Select(g => new { ItemId = g.Key, Sold = g.Sum(s => s.Sold) })
+            .ToDictionary(g => g.ItemId, g => g.Sold);
+        Dictionary<int, (int Sell, int SoldPerWeek)> market = sells.ToDictionary(
+            pair => pair.Key, pair => (pair.Value, soldPerWeek.GetValueOrDefault(pair.Key)));
+
         (HashSet<int> used, Dictionary<int, IReadOnlyList<string>> doneFor) = UsedItems(db, accountId);
         var input = new CleanupInput(stacks, storage, storageTakes, storageCapacity ?? guessed, items, values,
-            used, doneFor, Unlocks(db, accountId, heldIds));
+            used, doneFor, Unlocks(db, accountId, heldIds), market);
         List<CleanupSuggestion> suggestions = InventoryCleanup.Suggest(input);
         Dictionary<int, string> names = LoadNames(suggestions.Select(s => s.ItemId), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
