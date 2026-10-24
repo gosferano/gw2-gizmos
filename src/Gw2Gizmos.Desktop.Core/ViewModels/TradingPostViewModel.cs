@@ -173,30 +173,9 @@ public sealed class TradingPostViewModel : ViewModelBase, INavigationAware
     // The price check saves from a background thread.
     private void OnAlertsChanged() => _dispatcher.Post(SummariseAlerts);
 
-    private void SummariseAlerts()
-    {
-        IReadOnlyList<PriceAlert> alerts = _alerts.All;
-        int triggered = alerts.Count(a => a.IsTriggered);
-        // The waiting alert nearest its target, relative to the target.
-        var closest = alerts
-            .Where(a => !a.IsTriggered && a.PriceCopper > 0)
-            .Select(a => (Alert: a, Distance: PriceAlerts.Distance(a)))
-            .Where(pair => pair.Distance is not null)
-            .MinBy(pair => (double)pair.Distance!.Value / pair.Alert.PriceCopper);
-        AlertsSummary = alerts.Count == 0
-            ? "No alerts: add one from an item on the Items page"
-            : Join($"{Number(alerts.Count)} {(alerts.Count == 1 ? "alert" : "alerts")}",
-                triggered > 0 ? $"{Number(triggered)} triggered" : null,
-                closest.Alert is { } near
-                    ? $"closest: {near.ItemName}, "
-                        + $"{Percent((double)closest.Distance!.Value / near.PriceCopper)} from its target"
-                    : null);
-    }
+    private void SummariseAlerts() => AlertsSummary = PriceAlerts.Summary(_alerts.All);
 
     private static string Join(params string?[] parts) => string.Join(" · ", parts.Where(p => p is not null));
 
     private static string Number(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
-
-    private static string Percent(double fraction) =>
-        fraction < 0.01 ? "under 1%" : fraction.ToString("P0", CultureInfo.CurrentCulture);
 }
