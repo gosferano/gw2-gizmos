@@ -70,6 +70,34 @@ public sealed class PriceAlertsTests
         Assert.Equal(300, PriceAlerts.Distance(SellBelow(10_000) with { LastPrice = 10_300 }));
         Assert.Equal("Buy price above", PriceAlerts.Condition(buyAbove));
     }
+
+    [Fact]
+    public void The_summary_says_when_there_are_no_alerts()
+    {
+        Assert.Equal("No alerts: add one from an item on the Items page", PriceAlerts.Summary([]));
+    }
+
+    [Fact]
+    public void The_summary_names_the_waiting_alert_nearest_its_target()
+    {
+        PriceAlert far = SellBelow(100) with { ItemName = "Glob of Ectoplasm", LastPrice = 150 };
+        PriceAlert near = SellBelow(100) with { LastPrice = 102 };
+        PriceAlert triggered = SellBelow(100) with { IsTriggered = true, LastPrice = 90 };
+
+        string summary = PriceAlerts.Summary([far, near, triggered]);
+
+        Assert.Equal("3 alerts · 1 triggered · closest: Mystic Coin, 2% from its target", summary);
+    }
+
+    [Fact]
+    public void The_summary_works_when_no_alert_is_waiting_with_a_price()
+    {
+        // Every alert triggered, or not checked yet: nothing to be nearest.
+        PriceAlert triggered = SellBelow(100) with { IsTriggered = true, LastPrice = 90 };
+        PriceAlert notChecked = SellBelow(100);
+
+        Assert.Equal("2 alerts · 1 triggered", PriceAlerts.Summary([triggered, notChecked]));
+    }
 }
 
 /// <summary>An alert's row only changes when something it shows changes.</summary>

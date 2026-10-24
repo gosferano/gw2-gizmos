@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace Gw2Gizmos.Desktop.Core;
 
@@ -85,6 +88,43 @@ public static class PriceAlerts
         alert.LastPrice is not { } price || IsMet(alert, price)
             ? null
             : Math.Abs((long)price - alert.PriceCopper);
+
+    /// <summary>
+    /// The alerts in a line, e.g. "5 alerts · 1 triggered · closest: Mystic Coin, 2% from its target": the waiting
+    /// alert nearest its target, relative to the target, when any has a price to tell.
+    /// </summary>
+    public static string Summary(IReadOnlyList<PriceAlert> alerts)
+    {
+        if (alerts.Count == 0)
+        {
+            return "No alerts: add one from an item on the Items page";
+        }
+
+        int triggered = alerts.Count(a => a.IsTriggered);
+        // Nullable, so MinBy gives null when no alert is waiting with a price, rather than throwing (as it does for a
+        // plain tuple).
+        (PriceAlert Alert, double Fraction)? closest = alerts
+            .Where(a => !a.IsTriggered && a.PriceCopper > 0 && Distance(a) is not null)
+            .Select(a => ((PriceAlert, double)?)(a, (double)Distance(a)!.Value / a.PriceCopper))
+            .MinBy(pair => pair!.Value.Item2);
+        var parts = new List<string> { $"{Number(alerts.Count)} {(alerts.Count == 1 ? "alert" : "alerts")}" };
+        if (triggered > 0)
+        {
+            parts.Add($"{Number(triggered)} triggered");
+        }
+
+        if (closest is var (near, fraction))
+        {
+            parts.Add($"closest: {near.ItemName}, {Percent(fraction)} from its target");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string Number(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string Percent(double fraction) =>
+        fraction < 0.01 ? "under 1%" : fraction.ToString("P0", CultureInfo.CurrentCulture);
 
     /// <summary>E.g. "Sell price below" — followed in the UI by the threshold.</summary>
     public static string Condition(PriceAlert alert) =>
