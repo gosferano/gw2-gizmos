@@ -1,4 +1,4 @@
-using Gw2Gizmos.RecipeFinder.Model;
+﻿using Gw2Gizmos.RecipeFinder.Model;
 
 namespace Gw2Gizmos.RecipeFinder;
 
@@ -53,5 +53,33 @@ public static class OfferValuer
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// An offer's coin and tradeable-item cost, with its account currencies (and account-bound token items) counted
+    /// as nothing: what it costs in money alone. <c>null</c> for an offer costing no money at all (e.g. only Astral
+    /// Acclaim), which stays obtainable but never wins the "cheapest" comparison, rather than making the item free;
+    /// likewise for one with a part that's neither (an unresolved name, e.g. "Ectoplasm"), which could cost anything.
+    /// </summary>
+    public static decimal? CoinOnlyValue(VendorOffer offer, Func<int, int> itemValue)
+    {
+        decimal total = 0m;
+        foreach (VendorCost cost in offer.Cost)
+        {
+            if (cost.IsCoin)
+            {
+                total += cost.Amount;
+            }
+            else if (cost.ItemId is > 0 and { } itemId)
+            {
+                total += cost.Amount * (decimal)Math.Max(0, itemValue(itemId));
+            }
+            else if (cost.CurrencyId is not > 0)
+            {
+                return null;
+            }
+        }
+
+        return total > 0 ? total : null;
     }
 }

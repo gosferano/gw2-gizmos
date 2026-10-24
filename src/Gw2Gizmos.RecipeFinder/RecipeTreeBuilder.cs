@@ -85,7 +85,11 @@ public class RecipeTreeBuilder
 
             _latestPrices ??= latest.ToDictionary(row => row.ItemId, row => (row.Buy ?? 0, row.Sell ?? 0));
 
-            if (_currencyWeights is null)
+            if (_currencyWeights is null && !_priceConfiguration.CountAccountCurrencies)
+            {
+                _currencyWeights = new Dictionary<string, decimal>();
+            }
+            else if (_currencyWeights is null)
             {
                 var sellSupply = latest.ToDictionary(row => row.ItemId, row => (row.Sell ?? 0, row.Supply));
                 _currencyWeights = CurrencyValuer
@@ -728,11 +732,14 @@ public class RecipeTreeBuilder
 
     /// <summary>An offer's coin-equivalent per single unit it yields (its full valued cost ÷ its quantity), or
     /// null when a cost currency has no derived weight.</summary>
-    private decimal? OfferPerUnitCoinValue(Model.VendorOffer offer) =>
-        OfferValuer.CoinValue(offer, _currencyWeights!, itemId => _latestPrices!.GetValueOrDefault(itemId).Sell)
-            is { } total
-            ? total / offer.Quantity
-            : null;
+    private decimal? OfferPerUnitCoinValue(Model.VendorOffer offer)
+    {
+        Func<int, int> itemValue = itemId => _latestPrices!.GetValueOrDefault(itemId).Sell;
+        decimal? total = _priceConfiguration.CountAccountCurrencies
+            ? OfferValuer.CoinValue(offer, _currencyWeights!, itemValue)
+            : OfferValuer.CoinOnlyValue(offer, itemValue);
+        return total / offer.Quantity;
+    }
 
     /// <summary>The icon URL for a cost component's currency, or null for an item-currency (rendered via its item
     /// icon instead). Resolved by currency id, then by normalized name (singular/plural tolerant).</summary>

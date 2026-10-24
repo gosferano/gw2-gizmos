@@ -358,6 +358,22 @@ public sealed class CraftCostTests : IDisposable
         Assert.Equal(250m, promoted.CraftingCostPerUnit);
     }
 
+    [Fact]
+    public async Task Counting_only_coin_a_mystic_clover_costs_its_cheapest_money_offer()
+    {
+        // Every vendor offer for one takes an account currency too (Fractal Relics, Spirit Shards, …), counted as
+        // nothing; the cheapest in money is 2 Mystic Coins and 2 Globs of Ectoplasm. The Wizard's Vault's, for Astral
+        // Acclaim alone, doesn't make it free.
+        const int MysticClover = 19675, MysticCoin = 19976, Ectoplasm = 19721;
+        Seed((MysticCoin, 20_000), (Ectoplasm, 1_600));
+
+        await using Gw2GizmosDbContext db = _fixture.NewContext();
+        var builder = new RecipeTreeBuilder(db, RecipeFinder.Configuration.CoinOnly, null);
+        RecipeNode clover = await builder.BuildTreeAsync(MysticClover, CancellationToken.None);
+
+        Assert.Equal(43_200m, clover.EffectiveCostOrNull);
+    }
+
     private static Recipe CraftOf(int output, params (int ItemId, int Count)[] ingredients) =>
         CraftOf(output, 1, ingredients);
 
