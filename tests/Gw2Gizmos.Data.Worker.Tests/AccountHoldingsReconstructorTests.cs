@@ -1,6 +1,7 @@
 using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 
 namespace Gw2Gizmos.Data.Worker.Tests;
 
@@ -52,6 +53,31 @@ public sealed class AccountHoldingsReconstructorTests : IDisposable
         Assert.Equal(30, values[5]);                               // buy 0 ignored → vendor
         Assert.Equal(200 * TradingPostTakePercent / 100, values[6]);  // latest buy − fee
         Assert.False(values.ContainsKey(99));                      // unknown item → absent (treated as 0)
+    }
+
+    [Fact]
+    public void ItemValues_WithCoinCosts_ValuesItemsWithNoBuyOrderAtTheirCoinCost()
+    {
+        using (Gw2GizmosDbContext seed = _fixture.NewContext())
+        {
+            // 1: NoSell, no TP price, made for 640c of coin → 640.
+            seed.Items.Add(Item(1, vendorValue: 0, noSell: true));
+            seed.ItemCoinCosts.Add(new ItemCoinCost { ItemId = 1, Cost = 639.6 });
+            // 2: a TP buy wins over a coin cost (it's what it sells for).
+            seed.Items.Add(Item(2, vendorValue: 0));
+            seed.PriceSnapshots.Add(Price(2, buy: 1000));
+            seed.ItemCoinCosts.Add(new ItemCoinCost { ItemId = 2, Cost = 5000 });
+            // 3: no coin cost → vendor value, as before.
+            seed.Items.Add(Item(3, vendorValue: 30));
+            seed.SaveChanges();
+        }
+
+        using Gw2GizmosDbContext db = _fixture.NewContext();
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, new[] { 1, 2, 3 }, coinCosts: true);
+        Dictionary<int, long> forSale = AccountHoldingsReconstructor.ItemValues(db, new[] { 1, 2, 3 });
+
+        Assert.Equal([640, 850, 30], new[] { values[1], values[2], values[3] });
+        Assert.Equal(0, forSale[1]); // without coin costs, what it sells for: nothing
     }
 
     [Fact]

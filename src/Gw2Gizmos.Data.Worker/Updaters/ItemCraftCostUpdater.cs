@@ -12,7 +12,7 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// engine. Replaces the table wholesale each commerce refresh (ingredient prices come from the listings, so
 /// it refreshes after each commerce sync). Heavy enough to belong in the background worker; everything else
 /// the grid shows — live buy/sell, profit, margin — is derived at read time from the price history, so it is
-/// no longer computed or stored here.
+/// no longer computed or stored here. Then rebuilds the <see cref="ItemCoinCost"/> cache for valuing holdings.
 /// </summary>
 public class ItemCraftCostUpdater
 {
@@ -92,5 +92,46 @@ public class ItemCraftCostUpdater
         await _dbContext.SaveChangesAsync(stoppingToken);
 
         _logger.LogInformation("Craft-cost computation completed: {Count} craftable items.", rows.Count);
+
+        await UpdateCoinCosts(accountId, computedAt, stoppingToken);
+    }
+
+    /// <summary>
+    /// Rebuilds the <see cref="ItemCoinCost"/> cache: for each item an account holds that the trading post doesn't
+    /// buy, what it costs for coin alone (bought from a vendor or made), to value holdings of it. Only run with
+    /// prices loaded, after the craft costs.
+    /// </summary>
+    private async Task UpdateCoinCosts(string? accountId, DateTimeOffset computedAt, CancellationToken stoppingToken)
+    {
+        IQueryable<int> bought = _dbContext.PriceSnapshots
+            .Where(snapshot => snapshot.Buy != null && snapshot.Buy > 0)
+            .Select(snapshot => snapshot.ItemId);
+        List<int> itemIds = await _dbContext.AccountItemObservations.AsNoTracking()
+            .Where(observation => observation.Count > 0 && !bought.Contains(observation.ItemId))
+            .Select(observation => observation.ItemId)
+            .Distinct()
+            .ToListAsync(stoppingToken);
+
+        var builder = new RecipeTreeBuilder(_dbContext, RecipeFinder.Configuration.CoinOnly, accountId);
+        var rows = new List<ItemCoinCost>();
+        foreach (int itemId in itemIds)
+        {
+            if (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            RecipeNode tree = await builder.BuildTreeAsync(itemId, stoppingToken);
+            if (tree.EffectiveCostOrNull is > 0 and { } cost)
+            {
+                rows.Add(new ItemCoinCost { ItemId = itemId, Cost = (double)cost, ComputedAtUtc = computedAt });
+            }
+        }
+
+        await _dbContext.ItemCoinCosts.ExecuteDeleteAsync(stoppingToken);
+        await _dbContext.ItemCoinCosts.AddRangeAsync(rows, stoppingToken);
+        await _dbContext.SaveChangesAsync(stoppingToken);
+
+        _logger.LogInformation("Coin-cost computation completed: {Count} items.", rows.Count);
     }
 }

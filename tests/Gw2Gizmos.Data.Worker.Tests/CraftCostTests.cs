@@ -1,4 +1,5 @@
 ﻿using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
@@ -372,6 +373,41 @@ public sealed class CraftCostTests : IDisposable
         RecipeNode clover = await builder.BuildTreeAsync(MysticClover, CancellationToken.None);
 
         Assert.Equal(43_200m, clover.EffectiveCostOrNull);
+    }
+
+    [Fact]
+    public async Task Items_held_that_the_trading_post_does_not_buy_get_a_coin_cost()
+    {
+        // Made-up ids: an untradeable item crafted from 2 of a priced material, and a tradeable one, both held.
+        const int Bound = 9_600_001, Tradeable = 9_600_002, Material = 9_600_010;
+        Seed((Material, 500), (Tradeable, 2_000));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.Add(CraftOf(Bound, (Material, 2)));
+            foreach (int itemId in new[] { Bound, Tradeable })
+            {
+                db.AccountItemObservations.Add(new AccountItemObservation
+                {
+                    AccountId = "acc",
+                    Container = "Bank",
+                    ItemId = itemId,
+                    Count = 3,
+                    ObservedAtUtc = DateTimeOffset.UtcNow,
+                });
+            }
+
+            db.SaveChanges();
+        }
+
+        await using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            var updater = new ItemCraftCostUpdater(db, NullLogger<ItemCraftCostUpdater>.Instance);
+            await updater.UpdateCraftCosts(CancellationToken.None);
+        }
+
+        Dictionary<int, double> costs = _fixture.NewContext().ItemCoinCosts.AsNoTracking()
+            .ToDictionary(cost => cost.ItemId, cost => cost.Cost);
+        Assert.Equal(new Dictionary<int, double> { [Bound] = 1_000 }, costs);
     }
 
     private static Recipe CraftOf(int output, params (int ItemId, int Count)[] ingredients) =>

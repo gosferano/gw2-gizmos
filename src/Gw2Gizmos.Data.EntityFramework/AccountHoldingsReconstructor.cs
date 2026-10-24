@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
+using Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gw2Gizmos.Data.EntityFramework;
@@ -68,10 +69,13 @@ public static class AccountHoldingsReconstructor
     /// exists, otherwise the item's vendor value — but only when it's sellable ("NoSell" items can't be vendored, so
     /// they're worth 0). Items with neither resolve to 0. Used to value session loot/profit and the account.
     /// With <paramref name="asOfUtc"/>, the buy order at that time is used where the price history has one, and
-    /// today's otherwise.
+    /// today's otherwise. With <paramref name="coinCosts"/>, an item with no buy order is valued at what it costs for
+    /// coin (<see cref="ItemCoinCost"/>, e.g. a Mystic Clover) where it has one, before its vendor value: what it's
+    /// worth to hold, not what it sells for, so only for valuing the account (always today's cost).
     /// </summary>
     public static Dictionary<int, long> ItemValues(
-        Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds, DateTimeOffset? asOfUtc = null)
+        Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds, DateTimeOffset? asOfUtc = null,
+        bool coinCosts = false)
     {
         var values = new Dictionary<int, long>();
         int[] distinct = itemIds.Distinct().ToArray();
@@ -93,12 +97,18 @@ public static class AccountHoldingsReconstructor
                 }
             }
 
+            Dictionary<int, double> coinCost = coinCosts
+                ? db.ItemCoinCosts.AsNoTracking()
+                    .Where(c => batch.Contains(c.ItemId))
+                    .ToDictionary(c => c.ItemId, c => c.Cost)
+                : [];
             foreach (var item in db.Items.AsNoTracking()
                          .Where(i => batch.Contains(i.Id))
                          .Select(i => new { i.Id, i.VendorValue, NoSell = i.Flags.Any(f => f.Value == NoSellFlag) }))
             {
                 values[item.Id] = buy.TryGetValue(item.Id, out int b)
                     ? b * TradingPostTakePercent / 100
+                    : coinCost.TryGetValue(item.Id, out double cost) ? (long)Math.Round(cost)
                     : item.NoSell ? 0 : item.VendorValue;
             }
 
