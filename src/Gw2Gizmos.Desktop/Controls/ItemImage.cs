@@ -12,7 +12,7 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// A small image that shows a GW2 item's icon, resolved and cached by item id through <see cref="AppServices.Icons"/>.
 /// Drop it next to an item name anywhere a row exposes an <c>ItemId</c> — the market grid, the craft tree, etc.
 /// Loads asynchronously and guards against container recycling. Outlined in the item's rarity colour, like in game
-/// (none for Basic items).
+/// (none for Basic items). Hovering it shows the item's prices (<see cref="ItemTooltip"/>).
 /// </summary>
 public sealed class ItemImage : Image
 {
@@ -65,6 +65,7 @@ public sealed class ItemImage : Image
         base.OnPropertyChanged(change);
         if (change.Property == ItemIdProperty)
         {
+            ItemTooltip.SetItemId(this, ItemId);
             _ = LoadAsync(ItemId);
             _ = LoadRarityAsync(ItemId);
         }

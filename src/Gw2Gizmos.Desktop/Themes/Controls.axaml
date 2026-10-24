@@ -138,9 +138,8 @@
     <!-- A bank/shared-inventory slot, or a placeholder when empty. The cell is square (SquareCell) inside a 10-column
          UniformGrid → exactly 10 per row with equal spacing on both axes. -->
     <DataTemplate x:Key="SlotTemplate" x:DataType="core:SlotRow">
-        <!-- Empty slots have no name, so their (otherwise blank) tooltip is disabled. -->
-        <c:SquareCell ToolTip.Tip="{Binding Name}" ToolTip.ServiceEnabled="{Binding !IsEmpty}"
-                      c:ItemLink.ItemId="{Binding ItemId}">
+        <!-- Empty slots have no item (0), so no hover text. -->
+        <c:SquareCell c:ItemTooltip.ItemId="{Binding ItemId}" c:ItemLink.ItemId="{Binding ItemId}">
             <Panel>
                 <!-- Placeholder tile, always drawn: an empty slot shows it alone, and a filled slot whose item hasn't
                      synced yet (icon not downloaded) still reads as occupied — with its known count — instead of a
@@ -161,7 +160,7 @@
     <!-- A material-storage cell: like a slot, but the count is always shown (0 included) and a held-none material
          is greyed out. -->
     <DataTemplate x:Key="MaterialCellTemplate" x:DataType="core:SlotRow">
-        <c:SquareCell ToolTip.Tip="{Binding Name}" c:ItemLink.ItemId="{Binding ItemId}">
+        <c:SquareCell c:ItemTooltip.ItemId="{Binding ItemId}" c:ItemLink.ItemId="{Binding ItemId}">
             <Panel>
                 <Border Margin="5" CornerRadius="6" BorderThickness="1"
                         Background="{DynamicResource ControlFillColorSecondaryBrush}"

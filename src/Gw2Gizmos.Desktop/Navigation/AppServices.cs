@@ -22,4 +22,7 @@ public static class AppServices
 
     /// <summary>Which items the Items page lists, behind item names that link to it.</summary>
     public static ItemLinks? ItemLinks { get; internal set; }
+
+    /// <summary>Item prices, behind item hover text.</summary>
+    public static ItemPrices? ItemPrices { get; internal set; }
 }

@@ -5,7 +5,8 @@ namespace Gw2Gizmos.Desktop.Controls;
 
 /// <summary>
 /// An item's name, the same everywhere it's shown: coloured by the item's rarity (<see cref="ItemRarity"/>) and, when
-/// the Items page lists the item, a link that opens it there (<see cref="ItemLink"/>), shown as one only on hover.
+/// the Items page lists the item, a link that opens it there (<see cref="ItemLink"/>), shown as one only on hover;
+/// hovering it shows the item's prices (<see cref="ItemTooltip"/>).
 /// Styled as a <see cref="TextBlock"/>, so text styles apply to it as to any other.
 /// </summary>
 public class ItemName : TextBlock
@@ -20,6 +21,7 @@ public class ItemName : TextBlock
         {
             ItemRarity.SetItemId(name, name.ItemId);
             ItemLink.SetItemId(name, name.ItemId);
+            ItemTooltip.SetItemId(name, name.ItemId);
         });
     }
 

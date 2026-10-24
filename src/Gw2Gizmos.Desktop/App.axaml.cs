@@ -69,6 +69,7 @@ public partial class App : Application
             AppServices.Rarities.StartLoading();
             AppServices.ItemLinks = _host.Services.GetRequiredService<ItemLinks>();
             AppServices.ItemLinks.StartLoading();
+            AppServices.ItemPrices = _host.Services.GetRequiredService<ItemPrices>();
             AppServices.Icons = new IconProvider<Bitmap>(
                 _host.Services.GetRequiredService<IServiceScopeFactory>(), dataDirectory, AvaloniaIconDecoder.Decode);
             AppServices.Tiles = new MapTileCache<Bitmap>(dataDirectory, AvaloniaTileDecoder.Decode);
