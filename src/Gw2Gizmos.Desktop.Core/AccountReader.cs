@@ -303,7 +303,8 @@ public sealed class AccountReader
             s => (
                 ItemDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now),
                 CoinDeltaOver(db, accountId, s.StartedAtUtc, s.EndedAtUtc ?? now)));
-        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, deltas.Values.SelectMany(d => d.Items.Keys).ToList());
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(
+            db, deltas.Values.SelectMany(d => d.Items.Keys).ToList(), coinCosts: true);
 
         return sessions
             .Select(s =>
@@ -348,7 +349,8 @@ public sealed class AccountReader
                 Items: ItemDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now),
                 Coin: CoinDeltaOver(db, accountId, seg.StartedAtUtc, seg.EndedAtUtc ?? now)))
             .ToList();
-        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, perSegment.SelectMany(x => x.Items.Keys).ToList());
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(
+            db, perSegment.SelectMany(x => x.Items.Keys).ToList(), coinCosts: true);
 
         var rows = new List<SessionSegmentRow>();
         foreach ((CharacterSegment segment, Dictionary<int, int> items, long coin) in perSegment)
@@ -481,7 +483,8 @@ public sealed class AccountReader
             .ToList();
         Dictionary<int, string> itemNames = LoadNames(itemDeltas.Select(x => x.Id), (d, ids) =>
             d.Items.AsNoTracking().Where(i => ids.Contains(i.Id)).Select(i => new IdName(i.Id, i.Name)));
-        Dictionary<int, long> itemValues = AccountHoldingsReconstructor.ItemValues(db, itemDeltas.Select(x => x.Id).ToList());
+        Dictionary<int, long> itemValues = AccountHoldingsReconstructor.ItemValues(
+            db, itemDeltas.Select(x => x.Id).ToList(), coinCosts: true);
         List<SessionLootItem> items = itemDeltas
             .Select(x => new SessionLootItem(
                 x.Id,
@@ -531,7 +534,8 @@ public sealed class AccountReader
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset end = session.EndedAtUtc ?? now;
         Dictionary<int, int> deltas = ItemDeltaOver(db, accountId, session.StartedAtUtc, end);
-        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, deltas.Keys.ToList());
+        Dictionary<int, long> values =
+            AccountHoldingsReconstructor.ItemValues(db, deltas.Keys.ToList(), coinCosts: true);
         long loot = deltas.Sum(kv => (long)kv.Value * values.GetValueOrDefault(kv.Key));
         long coin = CoinDeltaOver(db, accountId, session.StartedAtUtc, end);
 
@@ -1329,7 +1333,8 @@ public sealed record SessionLoot(IReadOnlyList<SessionLootCurrency> Currencies, 
 
 /// <summary>A session's estimated worth: coin gained plus the instant-sell value of net item loot, with the
 /// gold-per-hour rate over the time actually played. Item value is the latest trading-post buy order minus the 15%
-/// fee, falling back to vendor value for untradeable loot.</summary>
+/// fee; untradeable loot is valued at what it costs for coin (made or bought from a vendor), else its vendor value,
+/// so turning tradeable items into untradeable ones (forging Mystic Clovers) isn't counted as a loss.</summary>
 public sealed record SessionValueSummary(
     long CoinDeltaCopper,
     long LootValueCopper,

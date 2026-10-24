@@ -71,7 +71,8 @@ public static class AccountHoldingsReconstructor
     /// With <paramref name="asOfUtc"/>, the buy order at that time is used where the price history has one, and
     /// today's otherwise. With <paramref name="coinCosts"/>, an item with no buy order is valued at what it costs for
     /// coin (<see cref="ItemCoinCost"/>, e.g. a Mystic Clover) where it has one, before its vendor value: what it's
-    /// worth to hold, not what it sells for, so only for valuing the account (always today's cost).
+    /// worth to hold, not what it sells for, so for valuing the account and session loot, not for selling (always
+    /// today's cost).
     /// </summary>
     public static Dictionary<int, long> ItemValues(
         Gw2GizmosDbContext db, IReadOnlyCollection<int> itemIds, DateTimeOffset? asOfUtc = null,
