@@ -91,6 +91,8 @@ public class AccountDataDeleter
     {
         int rows = await DeleteItemContainerAsync(accountId, AccountContainer.CharacterInventory, stoppingToken);
         rows += await _dbContext.CharacterItemSlots.Where(s => s.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        rows += await _dbContext.CharacterEquippedItems.Where(e => e.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
         rows += await _dbContext.Characters.Where(c => c.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
         return rows;
     }
@@ -192,9 +194,11 @@ public class AccountDataDeleter
     private async Task<int> DeleteLearnedRecipesAsync(string accountId, CancellationToken stoppingToken) =>
         await _dbContext.AccountRecipes.Where(r => r.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
 
-    // Current state only; re-synced on the next pass.
+    // Current state only; re-synced on the next pass. The legendary armory is synced with the unlocks.
     private async Task<int> DeleteWardrobeUnlocksAsync(string accountId, CancellationToken stoppingToken) =>
-        await _dbContext.AccountUnlocks.Where(u => u.AccountId == accountId).ExecuteDeleteAsync(stoppingToken);
+        await _dbContext.AccountUnlocks.Where(u => u.AccountId == accountId).ExecuteDeleteAsync(stoppingToken)
+        + await _dbContext.AccountLegendaryArmory.Where(l => l.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
 
     private async Task<int> DeleteAllForAccountAsync(string accountId, CancellationToken stoppingToken)
     {

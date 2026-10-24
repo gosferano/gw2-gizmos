@@ -4,15 +4,22 @@ using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Gw2Api.Client;
 using Gw2Gizmos.Gw2Api.Contract;
 using Microsoft.EntityFrameworkCore;
+using ApiFinishers = Gw2Gizmos.Gw2Api.Contract.V2.Finishers;
+using ApiGliders = Gw2Gizmos.Gw2Api.Contract.V2.Gliders;
+using ApiJadeBots = Gw2Gizmos.Gw2Api.Contract.V2.JadeBots;
+using ApiMailCarriers = Gw2Gizmos.Gw2Api.Contract.V2.MailCarriers;
 using ApiMinis = Gw2Gizmos.Gw2Api.Contract.V2.Minis;
+using ApiNovelties = Gw2Gizmos.Gw2Api.Contract.V2.Novelties;
+using ApiOutfits = Gw2Gizmos.Gw2Api.Contract.V2.Outfits;
 using ApiSkins = Gw2Gizmos.Gw2Api.Contract.V2.Skins;
 
 namespace Gw2Gizmos.Data.Worker.Updaters;
 
 /// <summary>
 /// Full-refresh ingester for the wardrobe: every skin (<c>/v2/skins</c>, about 10,700, fetched 200 at a time) with its
-/// type-specific details, and every miniature (<c>/v2/minis</c>). All public, changing only with game releases, so it
-/// runs daily. Rows the API stops listing are kept.
+/// type-specific details, and every miniature (<c>/v2/minis</c>); and the items that unlock each novelty, outfit,
+/// finisher, mail carrier, glider and jade bot (<see cref="UnlockItem"/>). All public, changing only with game
+/// releases, so it runs daily. Skins and minis the API stops listing are kept.
 /// </summary>
 public class WardrobeUpdater
 {
@@ -81,7 +88,55 @@ public class WardrobeUpdater
         }
 
         await _dbContext.SaveChangesAsync(stoppingToken);
-        _logger.LogInformation("Wardrobe update completed: {Skins} skins, {Minis} minis.", skins, minis.Length);
+        int unlockItems = await UpdateUnlockItemsAsync(stoppingToken);
+        _logger.LogInformation(
+            "Wardrobe update completed: {Skins} skins, {Minis} minis, {UnlockItems} unlock items.",
+            skins, minis.Length, unlockItems);
+    }
+
+    /// <summary>The items that unlock each novelty, outfit, finisher, mail carrier, glider and jade bot.</summary>
+    private async Task<int> UpdateUnlockItemsAsync(CancellationToken stoppingToken)
+    {
+        ApiNovelties.Novelty[]? novelties = await _apiClient.V2.Novelties.GetAll(stoppingToken);
+        ApiOutfits.Outfit[]? outfits = await _apiClient.V2.Outfits.GetAll(stoppingToken);
+        ApiFinishers.Finisher[]? finishers = await _apiClient.V2.Finishers.GetAll(stoppingToken);
+        ApiMailCarriers.MailCarrier[]? mailCarriers = await _apiClient.V2.MailCarriers.GetAll(stoppingToken);
+        ApiGliders.Glider[]? gliders = await _apiClient.V2.Gliders.GetAll(stoppingToken);
+        ApiJadeBots.JadeBot[]? jadeBots = await _apiClient.V2.JadeBots.GetAll(stoppingToken);
+        int rows = 0;
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.Novelty,
+            novelties?.Select(n => (n.Id, n.UnlockItem)), stoppingToken);
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.Outfit,
+            outfits?.Select(o => (o.Id, o.UnlockItems)), stoppingToken);
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.Finisher,
+            finishers?.Select(f => (f.Id, f.UnlockItems)), stoppingToken);
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.MailCarrier,
+            mailCarriers?.Select(m => (m.Id, m.UnlockItems)), stoppingToken);
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.Glider,
+            gliders?.Select(g => (g.Id, g.UnlockItems)), stoppingToken);
+        rows += await StoreUnlockItemsAsync(AccountUnlockKind.JadeBot,
+            jadeBots?.Select(j => (j.Id, new[] { j.UnlockItem })), stoppingToken);
+        return rows;
+    }
+
+    // Replaces a kind's unlock items, when its catalog came back.
+    private async Task<int> StoreUnlockItemsAsync(
+        string kind, IEnumerable<(int UnlockId, int[] ItemIds)>? unlocks, CancellationToken stoppingToken)
+    {
+        if (unlocks is null)
+        {
+            return 0;
+        }
+
+        List<UnlockItem> rows = unlocks
+            .SelectMany(u => u.ItemIds.Where(id => id > 0).Select(itemId => (u.UnlockId, ItemId: itemId)))
+            .Distinct()
+            .Select(u => new UnlockItem { Kind = kind, UnlockId = u.UnlockId, ItemId = u.ItemId })
+            .ToList();
+        await _dbContext.UnlockItems.Where(u => u.Kind == kind).ExecuteDeleteAsync(stoppingToken);
+        _dbContext.UnlockItems.AddRange(rows);
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return rows.Count;
     }
 
     private static void Map(ApiSkins.Skin skin, Skin row)

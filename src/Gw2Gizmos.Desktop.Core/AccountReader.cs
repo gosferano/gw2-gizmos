@@ -596,6 +596,7 @@ public sealed class AccountReader
                 [DeletableData.Characters] = db.AccountItemObservations
                     .Count(o => o.AccountId == accountId && o.Container == AccountContainer.CharacterInventory)
                     + db.CharacterItemSlots.Count(s => s.AccountId == accountId)
+                    + db.CharacterEquippedItems.Count(e => e.AccountId == accountId)
                     + db.Characters.Count(c => c.AccountId == accountId),
                 [DeletableData.Sessions] = db.GameSessions.Count(g => g.AccountId == accountId)
                     + db.CharacterSegments.Count(seg =>

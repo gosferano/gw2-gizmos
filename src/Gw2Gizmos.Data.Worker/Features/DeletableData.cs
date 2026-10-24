@@ -56,7 +56,7 @@ public static class DeletableData
         new DeletableDataType(Achievements, "Achievement progress", true),
         new DeletableDataType(ResetProgress, "Daily and weekly progress", true),
         new DeletableDataType(LearnedRecipes, "Learned recipes", true),
-        new DeletableDataType(WardrobeUnlocks, "Wardrobe unlocks", true),
+        new DeletableDataType(WardrobeUnlocks, "Unlocks and legendary armory", true),
     };
 
     /// <summary>The global (non-account) categories.</summary>

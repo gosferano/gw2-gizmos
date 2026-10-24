@@ -102,6 +102,23 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountItemObservations");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountLegendaryItem", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AccountId", "ItemId");
+
+                    b.ToTable("AccountLegendaryArmory");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.AccountValueSnapshot", b =>
                 {
                     b.Property<long>("Id")
@@ -238,6 +255,38 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasKey("Name");
 
                     b.ToTable("Characters");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterEquippedItem", b =>
+                {
+                    b.Property<string>("CharacterName")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Part")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CharacterName", "Index");
+
+                    b.ToTable("CharacterEquippedItems");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Accounts.CharacterItemSlot", b =>
@@ -1720,6 +1769,23 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Skins");
+                });
+
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe.UnlockItem", b =>
+                {
+                    b.Property<string>("Kind")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UnlockId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Kind", "UnlockId", "ItemId");
+
+                    b.ToTable("UnlockItems");
                 });
 
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Items.ArmorInfixUpgrade", b =>

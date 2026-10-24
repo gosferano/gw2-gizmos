@@ -424,8 +424,9 @@ public class AccountSyncUpdater
     }
 
     /// <summary>
-    /// The dyes, minis and skins the account has unlocked. Each kind is replaced on its own, and only when its request
-    /// succeeds, so one failing endpoint leaves its last known state. Returns the rows stored.
+    /// The dyes, minis, skins, novelties, outfits, finishers, mail carriers, gliders and jade bots the account has
+    /// unlocked, and its legendary armory. Each part is replaced on its own, and only when its request succeeds, so one
+    /// failing endpoint leaves its last known state. Returns the rows stored.
     /// </summary>
     private async Task<int> SyncWardrobeUnlocksAsync(
         Gw2ApiClient client, string accountId, CancellationToken stoppingToken)
@@ -437,7 +438,55 @@ public class AccountSyncUpdater
             await client.V2.Account.Minis.GetBlob(stoppingToken), stoppingToken);
         rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Skin,
             await client.V2.Account.Skins.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Novelty,
+            await client.V2.Account.Novelties.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Outfit,
+            await client.V2.Account.Outfits.GetBlob(stoppingToken), stoppingToken);
+        // A finisher bought with charges isn't owned for good.
+        Api.AccountFinisher[]? finishers = await client.V2.Account.Finishers.GetBlob(stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Finisher,
+            finishers?.Where(f => f.Permanent).Select(f => f.Id).ToArray(), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.MailCarrier,
+            await client.V2.Account.MailCarriers.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.Glider,
+            await client.V2.Account.Gliders.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreUnlocksAsync(accountId, AccountUnlockKind.JadeBot,
+            await client.V2.Account.JadeBots.GetBlob(stoppingToken), stoppingToken);
+        rows += await StoreLegendaryArmoryAsync(client, accountId, stoppingToken);
         return rows;
+    }
+
+    // The legendary armory also needs the key's inventories permission: without it, the armory is left as it was.
+    private async Task<int> StoreLegendaryArmoryAsync(
+        Gw2ApiClient client, string accountId, CancellationToken stoppingToken)
+    {
+        Api.AccountLegendaryArmoryItem[]? armory;
+        try
+        {
+            armory = await client.V2.Account.LegendaryArmory.GetBlob(stoppingToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Legendary armory sync failed for {Account}; keeping the last known armory.",
+                accountId);
+            return 0;
+        }
+
+        if (armory is null)
+        {
+            return 0;
+        }
+
+        await _dbContext.AccountLegendaryArmory.Where(l => l.AccountId == accountId)
+            .ExecuteDeleteAsync(stoppingToken);
+        _dbContext.AccountLegendaryArmory.AddRange(armory.Where(l => l.Count > 0)
+            .GroupBy(l => l.Id)
+            .Select(g => new AccountLegendaryItem
+            {
+                AccountId = accountId, ItemId = g.Key, Count = g.Sum(l => l.Count),
+            }));
+        await _dbContext.SaveChangesAsync(stoppingToken);
+        return armory.Length;
     }
 
     private async Task<int> StoreUnlocksAsync(
@@ -797,8 +846,9 @@ public class AccountSyncUpdater
             // (a) Upsert the character's details — the source of the character list.
             await UpsertCharacterAsync(accountId, character, stoppingToken);
 
-            // (b) Replace this character's bag slot grid. ExecuteDelete runs now (inside the transaction); the
-            // re-inserts commit with the observation save.
+            // (b) Replace this character's equipment, and its bag slot grid. ExecuteDelete runs now (inside the
+            // transaction); the re-inserts commit with the observation save.
+            await StoreEquipmentAsync(accountId, character, stoppingToken);
             await _dbContext
                 .CharacterItemSlots.Where(s => s.AccountId == accountId && s.CharacterName == characterName)
                 .ExecuteDeleteAsync(stoppingToken);
@@ -855,6 +905,46 @@ public class AccountSyncUpdater
         await SyncItemObservationsAsync(accountId, AccountContainer.CharacterInventory, totals, now, stoppingToken);
         await transaction.CommitAsync(stoppingToken);
         return characterNames.Length;
+    }
+
+    /// <summary>
+    /// Replaces the character's equipped items: each once (an item in several equipment tabs is listed once, with its
+    /// tabs), with its upgrades and infusions. Without the key's permissions for it, the API lists none.
+    /// </summary>
+    private async Task StoreEquipmentAsync(
+        string accountId, ApiChar.Character character, CancellationToken stoppingToken)
+    {
+        await _dbContext.CharacterEquippedItems
+            .Where(e => e.AccountId == accountId && e.CharacterName == character.Name)
+            .ExecuteDeleteAsync(stoppingToken);
+        int index = 0;
+        foreach (ApiChar.CharacterEquipmentItem? item in character.Equipment)
+        {
+            if (item is null)
+            {
+                continue;
+            }
+
+            string location = item.Location.Value ?? "";
+            var parts = new[] { (Part: EquippedPart.Item, Ids: new[] { item.Id }) }
+                .Append((EquippedPart.Upgrade, item.Upgrades))
+                .Append((EquippedPart.Infusion, item.Infusions));
+            foreach ((string part, int[] ids) in parts)
+            {
+                foreach (int itemId in ids.Where(id => id > 0))
+                {
+                    _dbContext.CharacterEquippedItems.Add(new CharacterEquippedItem
+                    {
+                        AccountId = accountId,
+                        CharacterName = character.Name,
+                        Index = index++,
+                        ItemId = itemId,
+                        Part = part,
+                        Location = location,
+                    });
+                }
+            }
+        }
     }
 
     private async Task UpsertCharacterAsync(string accountId, ApiChar.Character character, CancellationToken stoppingToken)

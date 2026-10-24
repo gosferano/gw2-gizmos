@@ -74,7 +74,9 @@ public static class WorkerFeatures
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Unlocks) });
 
     public static readonly WorkerFeature WardrobeUnlocks = new(
-        "WardrobeUnlocks", "Wardrobe unlocks", "Which dyes, minis and skins the account has, for cleanup advice.",
+        "WardrobeUnlocks", "Unlocks",
+        "Which skins, dyes, minis, outfits, novelties and other unlocks the account has, and its legendary armory "
+        + "(which also needs the inventories permission), to value them and for cleanup advice.",
         new[] { Perm(TokenPermission.Account), Perm(TokenPermission.Unlocks) });
 
     public static readonly WorkerFeature ResetProgress = new(
