@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
@@ -12,7 +13,9 @@ namespace Gw2Gizmos.Data.EntityFramework;
 /// (<see cref="AccountHoldingsReconstructor.ItemValues"/>, with coin costs). Skins are unlocked by the items that have
 /// them as their default skin, and by the consumables that unlock them; dyes by their dye items; minis by their item;
 /// recipes by their recipe sheets; the rest by the items their catalogs list (<see cref="UnlockItem"/>). An unlock no
-/// item with a value grants (gem store, achievement rewards, recipes learned by discovery) counts as nothing.
+/// item with a value grants (gem store, achievement rewards, recipes learned by discovery) counts as nothing, and so
+/// does one whose item the account holds, has equipped or keeps in its legendary armory, as that item is already
+/// counted (gw2efficiency's figure without "items in inventories").
 /// </summary>
 public static class AccountUnlockValuation
 {
@@ -23,12 +26,13 @@ public static class AccountUnlockValuation
     public static Dictionary<string, long> ByKind(Gw2GizmosDbContext db, string accountId)
     {
         Dictionary<string, Dictionary<int, List<int>>> unlocks = ItemsByUnlock(db, accountId);
+        HashSet<int> held = HeldItems(db, accountId);
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(
             db, unlocks.Values.SelectMany(u => u.Values).SelectMany(items => items).Distinct().ToList(),
             coinCosts: true);
         return unlocks.ToDictionary(
             kind => kind.Key,
-            kind => kind.Value.Values.Sum(items => items
+            kind => kind.Value.Values.Where(items => !items.Any(held.Contains)).Sum(items => items
                 .Select(itemId => values.GetValueOrDefault(itemId))
                 .Where(value => value > 0)
                 .DefaultIfEmpty(0)
@@ -38,6 +42,20 @@ public static class AccountUnlockValuation
     /// <summary>Every item that unlocks something the account has (for working out their coin costs).</summary>
     public static IReadOnlyCollection<int> UnlockingItems(Gw2GizmosDbContext db, string accountId) =>
         ItemsByUnlock(db, accountId).Values.SelectMany(u => u.Values).SelectMany(items => items).Distinct().ToList();
+
+    // What the account holds in its bank, storage and inventories, has equipped or keeps in its legendary armory.
+    private static HashSet<int> HeldItems(Gw2GizmosDbContext db, string accountId)
+    {
+        HashSet<int> held = AccountHoldingsReconstructor.ItemTotalsAsOf(db, accountId, DateTimeOffset.MaxValue).Keys
+            .ToHashSet();
+        held.UnionWith(db.CharacterEquippedItems.AsNoTracking()
+            .Where(e => e.AccountId == accountId)
+            .Select(e => e.ItemId));
+        held.UnionWith(db.AccountLegendaryArmory.AsNoTracking()
+            .Where(l => l.AccountId == accountId)
+            .Select(l => l.ItemId));
+        return held;
+    }
 
     // For each kind, each unlock the account has, with the items that grant it (none for some).
     private static Dictionary<string, Dictionary<int, List<int>>> ItemsByUnlock(

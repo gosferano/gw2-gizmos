@@ -100,6 +100,30 @@ public sealed class AccountUnlockValuationTests : IDisposable
     }
 
     [Fact]
+    public void An_unlock_whose_item_is_held_equipped_or_in_the_armory_is_already_counted()
+    {
+        // Skins 10–13 each come on one weapon buying for 1000: the first is in the bank, the second equipped, the
+        // third in the legendary armory; only the fourth's is counted as an unlock.
+        Seed(db =>
+        {
+            db.Items.AddRange(Item(1, defaultSkin: 10), Item(2, defaultSkin: 11), Item(3, defaultSkin: 12),
+                Item(4, defaultSkin: 13));
+            db.PriceSnapshots.AddRange(Buy(1, 1000), Buy(2, 1000), Buy(3, 1000), Buy(4, 1000));
+            db.AccountUnlocks.AddRange(Unlocked(AccountUnlockKind.Skin, 10), Unlocked(AccountUnlockKind.Skin, 11),
+                Unlocked(AccountUnlockKind.Skin, 12), Unlocked(AccountUnlockKind.Skin, 13));
+            db.AccountItemObservations.Add(new AccountItemObservation
+            {
+                AccountId = AccountId, Container = AccountContainer.Bank, ItemId = 1, Count = 1,
+                ObservedAtUtc = DateTimeOffset.UtcNow,
+            });
+            db.CharacterEquippedItems.Add(Equipped(0, 2, EquippedPart.Item, "Equipped"));
+            db.AccountLegendaryArmory.Add(new AccountLegendaryItem { AccountId = AccountId, ItemId = 3, Count = 1 });
+        });
+
+        Assert.Equal(850, ByKind()[AccountUnlockKind.Skin]);
+    }
+
+    [Fact]
     public void Equipment_counts_whats_slotted_in_legendaries_but_not_the_legendaries()
     {
         Seed(db =>
