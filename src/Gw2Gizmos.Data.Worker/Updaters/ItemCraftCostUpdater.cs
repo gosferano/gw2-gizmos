@@ -99,7 +99,9 @@ public class ItemCraftCostUpdater
     /// <summary>
     /// Rebuilds the <see cref="ItemCoinCost"/> cache: for each item an account holds, has equipped or in its legendary
     /// armory, or that unlocks something it has, that the trading post doesn't buy, what it costs for coin alone
-    /// (bought from a vendor or made), to value it. Only run with prices loaded, after the craft costs.
+    /// (bought from a vendor or made), to value it. Parts coin can't buy (Legendary Insights, Gifts of Maguuma, …)
+    /// count as nothing, as gw2efficiency counts them, so a legendary is worth what the rest of it costs; an item
+    /// nothing of which costs coin gets none. Only run with prices loaded, after the craft costs.
     /// </summary>
     private async Task UpdateCoinCosts(string? accountId, DateTimeOffset computedAt, CancellationToken stoppingToken)
     {
@@ -136,7 +138,7 @@ public class ItemCraftCostUpdater
             }
 
             RecipeNode tree = await builder.BuildTreeAsync(itemId, stoppingToken);
-            if (tree.EffectiveCostOrNull is > 0 and { } cost)
+            if (tree.EffectiveCost is > 0 and var cost)
             {
                 rows.Add(new ItemCoinCost { ItemId = itemId, Cost = (double)cost, ComputedAtUtc = computedAt });
             }
