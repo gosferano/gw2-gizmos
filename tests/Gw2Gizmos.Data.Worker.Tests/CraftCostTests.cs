@@ -410,6 +410,42 @@ public sealed class CraftCostTests : IDisposable
         Assert.Equal(new Dictionary<int, double> { [Bound] = 1_000 }, costs);
     }
 
+    [Fact]
+    public async Task A_part_coin_cannot_buy_counts_as_nothing_in_a_coin_cost()
+    {
+        // Made-up ids: a held legendary made from 2 of a priced material and an account-bound part (no price, recipe
+        // or vendor, like a Legendary Insight), and a held item made only from that part.
+        const int Legendary = 9_700_001, OnlyBound = 9_700_002, Material = 9_700_010, BoundPart = 9_700_011;
+        Seed((Material, 500));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.AddRange(CraftOf(Legendary, (Material, 2), (BoundPart, 25)), CraftOf(OnlyBound, (BoundPart, 1)));
+            foreach (int itemId in new[] { Legendary, OnlyBound })
+            {
+                db.AccountItemObservations.Add(new AccountItemObservation
+                {
+                    AccountId = "acc",
+                    Container = "Bank",
+                    ItemId = itemId,
+                    Count = 1,
+                    ObservedAtUtc = DateTimeOffset.UtcNow,
+                });
+            }
+
+            db.SaveChanges();
+        }
+
+        await using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            var updater = new ItemCraftCostUpdater(db, NullLogger<ItemCraftCostUpdater>.Instance);
+            await updater.UpdateCraftCosts(CancellationToken.None);
+        }
+
+        Dictionary<int, double> costs = _fixture.NewContext().ItemCoinCosts.AsNoTracking()
+            .ToDictionary(cost => cost.ItemId, cost => cost.Cost);
+        Assert.Equal(new Dictionary<int, double> { [Legendary] = 1_000 }, costs);
+    }
+
     private static Recipe CraftOf(int output, params (int ItemId, int Count)[] ingredients) =>
         CraftOf(output, 1, ingredients);
 

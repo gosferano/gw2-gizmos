@@ -44,6 +44,9 @@ public sealed class WardrobeUpdaterTests : IDisposable
             "/v2/minis",
             """[{"id": 1, "name": "Mini Rytlock", "icon": "https://x/m1.png", "order": 10, "item_id": 21047}]"""
         );
+        _stub.SetJson("/v2/novelties", """[{"id": 1, "name": "Chair", "unlock_item": [70001, 70002]}]""");
+        _stub.SetJson("/v2/outfits", """[{"id": 2, "name": "Outfit", "unlock_items": [70003]}]""");
+        _stub.SetJson("/v2/jadebots", """[{"id": 3, "name": "Jade Bot", "unlock_item": 70004}]""");
         using Gw2GizmosDbContext db = _fixture.NewContext();
         await new WardrobeUpdater(db, _stub.BuildClientFactory(), NullLogger<WardrobeUpdater>.Instance)
             .UpdateWardrobe(CancellationToken.None);
@@ -87,5 +90,16 @@ public sealed class WardrobeUpdaterTests : IDisposable
 
         Mini mini = await _fixture.NewContext().Minis.SingleAsync();
         Assert.Equal(("Mini Rytlock", 10, 21047), (mini.Name, mini.Order, mini.ItemId));
+    }
+
+    [Fact]
+    public async Task Stores_the_items_that_unlock_each_novelty_outfit_and_jade_bot()
+    {
+        await SyncAsync();
+
+        Assert.Equal(
+            [("JadeBot", 3, 70004), ("Novelty", 1, 70001), ("Novelty", 1, 70002), ("Outfit", 2, 70003)],
+            (await _fixture.NewContext().UnlockItems.ToListAsync()).Select(u => (u.Kind, u.UnlockId, u.ItemId))
+                .Order().ToList());
     }
 }

@@ -551,6 +551,50 @@ public sealed class AccountSyncUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task Unlocks_OfEveryKind_AndTheLegendaryArmory_AreStored()
+    {
+        AccountStateBuilder state = SmallAccount();
+        state.Permissions.Add("unlocks");
+        state.Apply(_stub);
+        _stub.SetJson("/v2/account/novelties", "[3]");
+        _stub.SetJson("/v2/account/outfits", "[4]");
+        // A finisher with charges left isn't owned for good.
+        _stub.SetJson("/v2/account/finishers",
+            """[{"id": 7, "permanent": true}, {"id": 8, "permanent": false, "quantity": 5}]""");
+        _stub.SetJson("/v2/account/mailcarriers", "[9]");
+        _stub.SetJson("/v2/account/gliders", "[13]");
+        _stub.SetJson("/v2/account/jadebots", "[14]");
+        _stub.SetJson("/v2/account/legendaryarmory", """[{"id": 30684, "count": 2}, {"id": 80111, "count": 1}]""");
+        await Sync();
+
+        Assert.Equal(
+            [("Finisher", 7), ("Glider", 13), ("JadeBot", 14), ("MailCarrier", 9), ("Novelty", 3), ("Outfit", 4)],
+            (await Db.AccountUnlocks.ToListAsync()).Select(u => (u.Kind, u.UnlockId)).Order().ToList());
+        Assert.Equal([(30684, 2), (80111, 1)],
+            (await Db.AccountLegendaryArmory.ToListAsync()).Select(l => (l.ItemId, l.Count)).Order().ToList());
+    }
+
+    [Fact]
+    public async Task EquippedItems_AreStoredOnce_WithTheirUpgradesAndInfusions()
+    {
+        AccountStateBuilder state = SmallAccount();
+        // A weapon in two equipment tabs, with a sigil and an infusion; and a legendary from the armory.
+        state.Equipment["Alice Necro"] = """
+            [{"id": 1000, "slot": "WeaponA1", "upgrades": [24615], "infusions": [49424], "location": "Equipped",
+              "tabs": [1, 2]},
+             {"id": 30684, "slot": "WeaponB1", "location": "EquippedFromLegendaryArmory", "tabs": [1]}]
+            """;
+        state.Apply(_stub);
+        await Sync();
+
+        Assert.Equal(
+            [(1000, "Item", "Equipped"), (24615, "Upgrade", "Equipped"), (30684, "Item", "EquippedFromLegendaryArmory"),
+             (49424, "Infusion", "Equipped")],
+            (await Db.CharacterEquippedItems.ToListAsync()).Select(e => (e.ItemId, e.Part, e.Location)).Order()
+                .ToList());
+    }
+
+    [Fact]
     public async Task WardrobeUnlocks_WithoutThePermission_AreSkipped()
     {
         AccountStateBuilder state = SmallAccount(); // no "unlocks" permission

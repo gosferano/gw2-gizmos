@@ -63,7 +63,7 @@
                            Text="Price history is off, so items are valued at their vendor price. Turn on “Price history” in Settings to value them at trading-post prices." />
                 <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="Items are valued at what they'd sell for instantly: the highest buy order minus the 15% trading-post fee, or the vendor price for items that can't be traded (0 if they can't be sold at all). Equipment and currencies other than coin aren't counted. Days before the app started recording are filled in from the synced holdings, at that day's prices where price history has them." />
+                           Text="Items are valued at what they'd sell for instantly: the highest buy order minus the 15% trading-post fee; for items the trading post doesn't buy, what they cost for coin (bought from a vendor or made), else the vendor price (0 if they can't be sold at all). Characters include what they have equipped. Unlocks are each worth the cheapest item that unlocks them, unless you already have that item. Currencies other than coin aren't counted. Days before the app started recording are filled in from the synced holdings, at that day's prices where price history has them; equipped gear, the legendary armory and unlocks are only known from then on." />
             </StackPanel>
         </StackPanel>
     </c:PageShell>

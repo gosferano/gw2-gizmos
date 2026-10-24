@@ -71,8 +71,15 @@ public class Gw2GizmosDbContext : DbContext
     // The recipes each account has learned (replaced each sync).
     public DbSet<AccountRecipe> AccountRecipes { get; set; }
 
-    // The dyes, minis and skins each account has unlocked (replaced each sync).
+    // The dyes, minis, skins and other unlocks each account has (replaced each sync).
     public DbSet<AccountUnlock> AccountUnlocks { get; set; }
+
+    // The items that unlock each novelty, outfit, finisher, mail carrier, glider and jade bot, from their catalogs.
+    public DbSet<UnlockItem> UnlockItems { get; set; }
+
+    // The legendaries in the account's legendary armory, and characters' equipped items.
+    public DbSet<AccountLegendaryItem> AccountLegendaryArmory { get; set; }
+    public DbSet<CharacterEquippedItem> CharacterEquippedItems { get; set; }
 
     // Authenticated account data (keyed by account id). Item holdings (material storage, bank, shared inventory,
     // character bags) are one append-on-change log discriminated by location; the wallet is its own log

@@ -6,10 +6,11 @@ namespace Gw2Gizmos.Data.EntityFramework.Entities.Recipes;
 
 /// <summary>
 /// What one of an item the trading post doesn't buy costs to get for coin alone: the cheapest of buying it from a
-/// vendor and making it, with account currencies (karma, Fractal Relics, …) counted as nothing. Holdings with no buy
+/// vendor and making it, with account currencies (karma, Fractal Relics, …) and parts coin can't buy counted as
+/// nothing. Holdings with no buy
 /// order are valued at it (see <see cref="AccountHoldingsReconstructor.ItemValues"/>), as gw2efficiency values
 /// untradeable items at their crafting cost. The worker rebuilds it on each commerce refresh for the items accounts
-/// hold, replacing it wholesale; absence means it can't be had for coin.
+/// hold, replacing it wholesale; absence means nothing of it costs coin.
 /// </summary>
 [Table("ItemCoinCosts")]
 public class ItemCoinCost

@@ -37,6 +37,9 @@ internal sealed class AccountStateBuilder
     /// <summary>character name -> bag slot grid (one bag); null entries = empty slots.</summary>
     public Dictionary<string, List<ItemSlot?>> Characters { get; } = new();
 
+    /// <summary>character name -> its <c>equipment</c> JSON array, as the API returns it (none when unset).</summary>
+    public Dictionary<string, string> Equipment { get; } = new();
+
     public string Id => AccountId;
 
     internal sealed record ItemSlot(int Id, int Count, int? Charges = null, string? Binding = null);
@@ -53,7 +56,7 @@ internal sealed class AccountStateBuilder
         stub.SetJson("/v2/characters", CharacterIdsJson());
         foreach ((string name, List<ItemSlot?> bag) in Characters)
         {
-            stub.SetJson($"/v2/characters/{name}", CharacterJson(name, bag));
+            stub.SetJson($"/v2/characters/{name}", CharacterJson(name, bag, Equipment.GetValueOrDefault(name) ?? "[]"));
         }
     }
 
@@ -107,7 +110,7 @@ internal sealed class AccountStateBuilder
     private string CharacterIdsJson() =>
         "[" + string.Join(",", Characters.Keys.Select(n => $"\"{n}\"")) + "]";
 
-    private static string CharacterJson(string name, IReadOnlyList<ItemSlot?> bagSlots)
+    private static string CharacterJson(string name, IReadOnlyList<ItemSlot?> bagSlots, string equipment)
     {
         // One bag holding the slot grid. Minimal core fields the upsert reads; dates as ISO-8601.
         string created = "2020-01-01T00:00:00Z";
@@ -139,6 +142,7 @@ internal sealed class AccountStateBuilder
                 { "tab": 2, "is_active": true, "build": { "name": "", "profession": "Necromancer",
                   "specializations": [{ "id": 19, "traits": [] }, { "id": 50, "traits": [] }, { "id": 34, "traits": [] }] } }
               ],
+              "equipment": {{equipment}},
               "bags": [
                 { "id": 0, "size": {{bagSlots.Count}}, "inventory": {{SlotArrayJson(bagSlots)}} }
               ]

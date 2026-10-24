@@ -8,7 +8,7 @@ public readonly struct CharacterEquipmentLocation : IEquatable<CharacterEquipmen
         "EquippedFromLegendaryArmory"
     );
     public static readonly CharacterEquipmentLocation LegendaryArmory = new CharacterEquipmentLocation(
-        "LegendaryArmory "
+        "LegendaryArmory"
     );
 
     public string Value { get; }

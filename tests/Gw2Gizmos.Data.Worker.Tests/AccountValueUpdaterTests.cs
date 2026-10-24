@@ -1,7 +1,8 @@
-using Gw2Gizmos.Data.EntityFramework;
+﻿using Gw2Gizmos.Data.EntityFramework;
 using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
+using Gw2Gizmos.Data.EntityFramework.Entities.Wardrobe;
 using Gw2Gizmos.Data.Worker.Updaters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -84,6 +85,32 @@ public sealed class AccountValueUpdaterTests : IDisposable
         Assert.Equal(170, live.CharactersCopper);
         // 4 × 50 held in the buy order, and 2 × 100 listed paying out 90%.
         Assert.Equal(200 + 180, live.TradingPostCopper);
+    }
+
+    [Fact]
+    public async Task Records_equipment_with_characters_and_the_legendary_armory_and_unlocks_live()
+    {
+        DateTimeOffset at = _time.Now.AddMinutes(-1);
+        SeedAccount();
+        Seed(db =>
+        {
+            db.Items.AddRange(Item(1, vendorValue: 10), Item(2, vendorValue: 20), Item(3, vendorValue: 0));
+            db.PriceSnapshots.Add(Price(3, buy: 1_000, at));
+            db.Minis.Add(new Mini { Id = 5, Name = "Mini", ItemId = 3 });
+            db.AccountUnlocks.Add(
+                new AccountUnlock { AccountId = AccountId, Kind = AccountUnlockKind.Mini, UnlockId = 5 });
+            db.AccountLegendaryArmory.Add(new AccountLegendaryItem { AccountId = AccountId, ItemId = 2, Count = 3 });
+            db.CharacterEquippedItems.Add(new CharacterEquippedItem
+            {
+                AccountId = AccountId, CharacterName = "Alice", Index = 0, ItemId = 1, Part = EquippedPart.Item,
+                Location = "Equipped",
+            });
+        });
+
+        await RecordAsync();
+
+        AccountValueSnapshot live = Snapshots().Single(s => !s.IsBackfilled);
+        Assert.Equal((10, 60, 850), (live.CharactersCopper, live.LegendaryArmoryCopper, live.UnlocksCopper));
     }
 
     [Fact]

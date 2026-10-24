@@ -173,6 +173,8 @@ public static class AccountValueCategories
         new("Shared inventory", 0xFFAB47BC, p => p.SharedInventory),
         new("Characters", 0xFFFF7043, p => p.Characters),
         new("Trading post", 0xFF26A69A, p => p.TradingPost),
+        new("Legendary armory", 0xFFEC407A, p => p.LegendaryArmory),
+        new("Unlocks", 0xFF78909C, p => p.Unlocks),
     };
 }
 
