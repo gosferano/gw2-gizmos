@@ -8,8 +8,11 @@
         <!-- A kind of suggestion: what it means, and what its suggestions are worth. -->
         <DataTemplate x:DataType="core:CleanupHeading">
             <DockPanel Margin="0,12,0,4">
-                <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Copper}" FontWeight="Medium"
-                               VerticalAlignment="Bottom" IsVisible="{Binding HasCopper}" />
+                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" IsVisible="{Binding HasCopper}">
+                    <c:CoinDisplay Copper="{Binding Copper}" FontWeight="Medium" HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding ListText}" FontSize="11" Classes="secondary" HorizontalAlignment="Right"
+                               IsVisible="{Binding HasList}" />
+                </StackPanel>
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding Description}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
@@ -31,6 +34,8 @@
                         <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}" TextTrimming="CharacterEllipsis"
                                     HorizontalAlignment="Left" />
                         <TextBlock Text="{Binding Reason}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ListText}" FontSize="12" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasList}" />
                         <TextBlock Text="{Binding PlacesText}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
                     </StackPanel>
                 </DockPanel>
@@ -54,7 +59,7 @@
 
             <StackPanel Grid.Row="0" IsVisible="{Binding HasAccount}">
                 <TextBlock TextWrapping="Wrap" Classes="secondary" Margin="0,0,0,10"
-                           Text="What to tidy up in your bank, shared inventory and bags. Keep an item to stop suggestions for it. Values are what an item sells for instantly, after the trading post's fees." />
+                           Text="What to tidy up in your bank, shared inventory and bags. Keep an item to stop suggestions for it. Values are what an item sells for instantly, after the trading post's fees; where listing it pays enough more and it sells within a week, that's suggested too." />
                 <WrapPanel Margin="0,0,0,6">
                     <ComboBox ItemsSource="{Binding Capacities}" SelectedItem="{Binding Capacity}" MinWidth="190"
                               Margin="0,0,16,0" Height="{StaticResource FormControlHeight}"

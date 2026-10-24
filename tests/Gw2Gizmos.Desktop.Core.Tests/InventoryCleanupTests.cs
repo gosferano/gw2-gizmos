@@ -31,10 +31,11 @@ public sealed class InventoryCleanupTests
     private readonly HashSet<int> _used = [];
     private readonly Dictionary<int, IReadOnlyList<string>> _doneFor = [];
     private readonly Dictionary<int, CleanupUnlock> _unlocks = [];
+    private readonly Dictionary<int, (int Sell, int SoldPerWeek)> _market = [];
 
     private List<CleanupSuggestion> Suggest(int capacity = 1_000) =>
         InventoryCleanup.Suggest(new CleanupInput(
-            _stacks, _storage, _storageTakes, capacity, _items, _values, _used, _doneFor, _unlocks));
+            _stacks, _storage, _storageTakes, capacity, _items, _values, _used, _doneFor, _unlocks, _market));
 
     [Fact]
     public void Partial_stacks_that_fit_in_fewer_slots_are_suggested_for_stacking()
@@ -215,5 +216,33 @@ public sealed class InventoryCleanupTests
         CleanupSuggestion sell = Assert.Single(Suggest());
 
         Assert.Equal((CleanupKind.Sell, true, 20_000L), (sell.Kind, sell.Junk, sell.Copper));
+    }
+
+    [Theory]
+    [InlineData(10_000, 100, true)] // listed, each pays 8,500 rather than 6,800
+    [InlineData(8_000, 100, false)] // 6,800 either way: nothing gained
+    [InlineData(10_000, 2, false)] // pays, but the market takes 2 a week and there are 3
+    public void Listing_is_suggested_when_it_pays_enough_more_and_sells_within_a_week(
+        int lowestListing, int soldPerWeek, bool suggested)
+    {
+        _values[Sword] = 6_800; // a buy order of 8,000 less 15%
+        _market[Sword] = (lowestListing, soldPerWeek);
+        _stacks.Add(new("Bank", Sword, 3));
+
+        CleanupSuggestion sell = Assert.Single(Suggest());
+
+        Assert.Equal(3 * 6_800L, sell.Copper);
+        Assert.Equal(suggested ? 3 * 8_500L : null, sell.ListCopper);
+        Assert.Equal(soldPerWeek, sell.SoldPerWeek);
+    }
+
+    [Fact]
+    public void A_few_copper_more_isnt_worth_listing_for()
+    {
+        _values[Gem] = 10;
+        _market[Gem] = (20, 1_000); // 17 listed against 10: 70% more, but only 7c each
+        _stacks.Add(new("Bank", Gem, 10));
+
+        Assert.Null(Assert.Single(Suggest()).ListCopper);
     }
 }
