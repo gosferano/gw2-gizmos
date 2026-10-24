@@ -97,20 +97,34 @@ public class ItemCraftCostUpdater
     }
 
     /// <summary>
-    /// Rebuilds the <see cref="ItemCoinCost"/> cache: for each item an account holds that the trading post doesn't
-    /// buy, what it costs for coin alone (bought from a vendor or made), to value holdings of it. Only run with
-    /// prices loaded, after the craft costs.
+    /// Rebuilds the <see cref="ItemCoinCost"/> cache: for each item an account holds, has equipped or in its legendary
+    /// armory, or that unlocks something it has, that the trading post doesn't buy, what it costs for coin alone
+    /// (bought from a vendor or made), to value it. Only run with prices loaded, after the craft costs.
     /// </summary>
     private async Task UpdateCoinCosts(string? accountId, DateTimeOffset computedAt, CancellationToken stoppingToken)
     {
         IQueryable<int> bought = _dbContext.PriceSnapshots
             .Where(snapshot => snapshot.Buy != null && snapshot.Buy > 0)
             .Select(snapshot => snapshot.ItemId);
-        List<int> itemIds = await _dbContext.AccountItemObservations.AsNoTracking()
-            .Where(observation => observation.Count > 0 && !bought.Contains(observation.ItemId))
-            .Select(observation => observation.ItemId)
-            .Distinct()
-            .ToListAsync(stoppingToken);
+        // Held, equipped, in the legendary armory, or unlocking something an account has.
+        var held = (await _dbContext.AccountItemObservations.AsNoTracking()
+                .Where(observation => observation.Count > 0)
+                .Select(observation => observation.ItemId)
+                .Distinct()
+                .ToListAsync(stoppingToken))
+            .Concat(await _dbContext.CharacterEquippedItems.AsNoTracking().Select(e => e.ItemId)
+                .ToListAsync(stoppingToken))
+            .Concat(await _dbContext.AccountLegendaryArmory.AsNoTracking().Select(l => l.ItemId)
+                .ToListAsync(stoppingToken))
+            .ToHashSet();
+        foreach (string account in await _dbContext.Accounts.AsNoTracking().Select(a => a.AccountId)
+                     .ToListAsync(stoppingToken))
+        {
+            held.UnionWith(AccountUnlockValuation.UnlockingItems(_dbContext, account));
+        }
+
+        HashSet<int> boughtIds = (await bought.Distinct().ToListAsync(stoppingToken)).ToHashSet();
+        List<int> itemIds = held.Where(id => !boughtIds.Contains(id)).ToList();
 
         var builder = new RecipeTreeBuilder(_dbContext, RecipeFinder.Configuration.CoinOnly, accountId);
         var rows = new List<ItemCoinCost>();

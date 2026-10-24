@@ -29,7 +29,7 @@ public class AccountValueSnapshot
 
     public long SharedInventoryCopper { get; set; }
 
-    /// <summary>Items in character bags (equipment isn't tracked, so it isn't counted).</summary>
+    /// <summary>Items in character bags.</summary>
     public long CharactersCopper { get; set; }
 
     /// <summary>
@@ -37,6 +37,18 @@ public class AccountValueSnapshot
     /// recorded live — backfilled points have 0, since past orders aren't stored.
     /// </summary>
     public long TradingPostCopper { get; set; }
+
+    /// <summary>
+    /// What characters have equipped, with upgrades and infusions (legendaries from the armory aside). Only known for
+    /// points recorded live, like the next two.
+    /// </summary>
+    public long EquipmentCopper { get; set; }
+
+    /// <summary>The legendaries in the legendary armory.</summary>
+    public long LegendaryArmoryCopper { get; set; }
+
+    /// <summary>The account's unlocks: skins, dyes, minis, outfits, recipes and the rest.</summary>
+    public long UnlocksCopper { get; set; }
 
     /// <summary>True for points reconstructed from the holdings logs rather than recorded after a sync.</summary>
     public bool IsBackfilled { get; set; }

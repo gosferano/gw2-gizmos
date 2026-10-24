@@ -88,7 +88,13 @@ public class AccountValueUpdater
     private void RecordNow(string accountId, DateTimeOffset now)
     {
         AccountValue value = AccountValuation.HoldingsAsOf(_dbContext, accountId, now, historicalPrices: false)
-            with { TradingPost = AccountValuation.TradingPostValue(_dbContext, accountId) };
+            with
+            {
+                TradingPost = AccountValuation.TradingPostValue(_dbContext, accountId),
+                Equipment = AccountValuation.EquipmentValue(_dbContext, accountId),
+                LegendaryArmory = AccountValuation.LegendaryArmoryValue(_dbContext, accountId),
+                Unlocks = AccountUnlockValuation.ByKind(_dbContext, accountId).Values.Sum(),
+            };
         if (value.Total == 0)
         {
             // Nothing synced to value (e.g. every holdings feature off) — no point in a flat zero line.
@@ -123,6 +129,9 @@ public class AccountValueUpdater
             SharedInventoryCopper = value.SharedInventory,
             CharactersCopper = value.Characters,
             TradingPostCopper = value.TradingPost,
+            EquipmentCopper = value.Equipment,
+            LegendaryArmoryCopper = value.LegendaryArmory,
+            UnlocksCopper = value.Unlocks,
             IsBackfilled = isBackfilled,
         };
 }

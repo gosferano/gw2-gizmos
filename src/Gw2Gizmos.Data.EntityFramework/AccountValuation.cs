@@ -11,8 +11,9 @@ namespace Gw2Gizmos.Data.EntityFramework;
 /// Estimates what an account is worth: its coin plus every item it holds (material storage, bank, shared inventory,
 /// character bags) at its instant-sell value (<see cref="AccountHoldingsReconstructor.ItemValues"/>: the buy order
 /// minus the trading-post fee), or for an item the trading post doesn't buy, what it costs for coin (made or bought
-/// from a vendor, e.g. a Mystic Clover), else its vendor price, else 0; plus its open trading-post orders. Equipment
-/// and other currencies aren't counted.
+/// from a vendor, e.g. a Mystic Clover), else its vendor price, else 0; plus its open trading-post orders, what
+/// characters have equipped, its legendary armory and its unlocks (<see cref="AccountUnlockValuation"/>), valued the
+/// same way. Currencies other than coin aren't counted.
 /// </summary>
 public static class AccountValuation
 {
@@ -56,6 +57,34 @@ public static class AccountValuation
     }
 
     /// <summary>
+    /// What the account's characters have equipped, with upgrades and infusions, as of the last sync. Legendaries
+    /// equipped from the legendary armory are counted with the armory (<see cref="LegendaryArmoryValue"/>), but what's
+    /// slotted in them is counted here.
+    /// </summary>
+    public static long EquipmentValue(Gw2GizmosDbContext db, string accountId)
+    {
+        List<int> equipped = db.CharacterEquippedItems.AsNoTracking()
+            .Where(e => e.AccountId == accountId
+                && !(e.Part == EquippedPart.Item && e.Location.Contains("LegendaryArmory")))
+            .Select(e => e.ItemId)
+            .ToList();
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(db, equipped, coinCosts: true);
+        return equipped.Sum(itemId => values.GetValueOrDefault(itemId));
+    }
+
+    /// <summary>The legendaries in the account's legendary armory, each as many times as it holds them.</summary>
+    public static long LegendaryArmoryValue(Gw2GizmosDbContext db, string accountId)
+    {
+        var armory = db.AccountLegendaryArmory.AsNoTracking()
+            .Where(l => l.AccountId == accountId)
+            .Select(l => new { l.ItemId, l.Count })
+            .ToList();
+        Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(
+            db, armory.Select(l => l.ItemId).ToList(), coinCosts: true);
+        return armory.Sum(l => l.Count * values.GetValueOrDefault(l.ItemId));
+    }
+
+    /// <summary>
     /// The account's open trading-post orders as of the last sync: the coin held in its buy orders, plus what its
     /// listings pay out when they sell.
     /// </summary>
@@ -69,9 +98,14 @@ public static class AccountValuation
                 : (long)o.Price * o.Quantity * ListingPayoutPercent / 100);
 }
 
-/// <summary>An account's estimated value by where it's held, in copper.</summary>
+/// <summary>
+/// An account's estimated value by where it's held, in copper. Equipment, the legendary armory and unlocks are only
+/// known as of the last sync, so they're 0 for past points.
+/// </summary>
 public sealed record AccountValue(
-    long Coin, long Materials, long Bank, long SharedInventory, long Characters, long TradingPost)
+    long Coin, long Materials, long Bank, long SharedInventory, long Characters, long TradingPost,
+    long Equipment = 0, long LegendaryArmory = 0, long Unlocks = 0)
 {
-    public long Total => Coin + Materials + Bank + SharedInventory + Characters + TradingPost;
+    public long Total =>
+        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + Equipment + LegendaryArmory + Unlocks;
 }
