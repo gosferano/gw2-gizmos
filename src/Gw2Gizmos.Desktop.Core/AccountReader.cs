@@ -616,7 +616,12 @@ public sealed class AccountReader
                 .OrderBy(s => s.TakenAtUtc)
                 .Select(s => new AccountValuePoint(
                     s.TakenAtUtc, s.CoinCopper, s.MaterialsCopper, s.BankCopper, s.SharedInventoryCopper,
-                    s.CharactersCopper, s.TradingPostCopper, s.IsBackfilled))
+                    s.CharactersCopper, s.TradingPostCopper, s.IsBackfilled)
+                {
+                    Equipment = s.EquipmentCopper,
+                    LegendaryArmory = s.LegendaryArmoryCopper,
+                    Unlocks = s.UnlocksCopper,
+                })
                 .ToList(),
             new List<AccountValuePoint>());
 
@@ -1095,7 +1100,17 @@ public sealed record AccountValuePoint(
     bool IsBackfilled
 )
 {
-    public long Total => Coin + Materials + Bank + SharedInventory + Characters + TradingPost;
+    /// <summary>What characters have equipped (legendaries from the armory aside); 0 for past points.</summary>
+    public long Equipment { get; init; }
+
+    /// <summary>The legendaries in the legendary armory; 0 for past points.</summary>
+    public long LegendaryArmory { get; init; }
+
+    /// <summary>Skins, dyes, minis, recipes and the account's other unlocks; 0 for past points.</summary>
+    public long Unlocks { get; init; }
+
+    public long Total =>
+        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + Equipment + LegendaryArmory + Unlocks;
 }
 
 /// <summary>The account's latest value and its change over the last day and week (null when not known yet).</summary>
