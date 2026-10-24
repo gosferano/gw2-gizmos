@@ -1,4 +1,5 @@
-using Gw2Gizmos.Data.EntityFramework;
+﻿using Gw2Gizmos.Data.EntityFramework;
+using Gw2Gizmos.Data.EntityFramework.Entities.Accounts;
 using Gw2Gizmos.Data.EntityFramework.Entities.Achievements;
 using Gw2Gizmos.Data.EntityFramework.Entities.Commerce;
 using Gw2Gizmos.Data.EntityFramework.Entities.Items;
@@ -292,12 +293,132 @@ public sealed class CraftCostTests : IDisposable
         Assert.False(cached.ContainsKey(9_000_002));
     }
 
+    // Made-up ids for recipe loops, like the Mists Essences': a Shard made from Globs, Globs downgraded from a
+    // Shard or made from Vials, Vials downgraded from a Glob. None can be bought; the extra material can.
+    private const int Shard = 9_400_001, Glob = 9_400_002, Vial = 9_400_003, Extra = 9_400_010;
+
+    private void SeedLoop()
+    {
+        Seed((Extra, 100));
+        using Gw2GizmosDbContext db = _fixture.NewContext();
+        db.Recipes.AddRange(
+            CraftOf(Shard, 1, (Glob, 5), (Extra, 1)),
+            CraftOf(Glob, 3, (Shard, 1), (Extra, 1)),
+            CraftOf(Glob, 1, (Vial, 5), (Extra, 1)),
+            CraftOf(Vial, 3, (Glob, 1), (Extra, 1))
+        );
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task An_item_every_recipe_of_which_comes_back_to_it_has_no_craft_cost()
+    {
+        // Globs priced by downgrading a Shard would make the Shard from Shards.
+        SeedLoop();
+
+        RecipeNode shard = await TreeOf(Shard);
+
+        Assert.Empty(shard.Ingredients);
+        Assert.Null(shard.EffectiveCostOrNull);
+    }
+
+    [Fact]
+    public async Task A_tree_built_first_is_not_reused_where_it_would_price_an_item_from_itself()
+    {
+        // The Shard can be bought here. Built on their own, Globs are downgraded from a bought Shard; reused in the
+        // Shard's tree, that would price the Shard from Shards, so it's bought instead.
+        SeedLoop();
+        Seed((Shard, 1_000));
+
+        await using Gw2GizmosDbContext context = _fixture.NewContext();
+        var builder = new RecipeTreeBuilder(context, RecipeFinder.Configuration.Default, null);
+        RecipeNode glob = await builder.BuildTreeAsync(Glob, CancellationToken.None);
+        RecipeNode shard = await builder.BuildTreeAsync(Shard, CancellationToken.None);
+
+        Assert.Equal([Shard, Extra], glob.Ingredients.Select(i => i.ItemId).Order());
+        Assert.Equal(1_100m / 3, glob.CraftingCostPerUnit);
+        Assert.Empty(shard.Ingredients);
+        Assert.Equal(1_000m, shard.EffectiveCostOrNull);
+    }
+
+    [Fact]
+    public async Task A_promotion_taking_a_copy_of_what_it_makes_is_still_a_recipe()
+    {
+        // Made-up ids: 10 of a material from 50 of the tier below and one of itself, as material promotions go.
+        const int Promoted = 9_500_001, Lower = 9_500_010;
+        Seed((Promoted, 2_000), (Lower, 10));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.Add(CraftOf(Promoted, 10, (Lower, 50), (Promoted, 1)));
+            db.SaveChanges();
+        }
+
+        RecipeNode promoted = await TreeOf(Promoted);
+
+        Assert.Equal([Promoted, Lower], promoted.Ingredients.Select(i => i.ItemId).Order());
+        Assert.Equal(250m, promoted.CraftingCostPerUnit);
+    }
+
+    [Fact]
+    public async Task Counting_only_coin_a_mystic_clover_costs_its_cheapest_money_offer()
+    {
+        // Every vendor offer for one takes an account currency too (Fractal Relics, Spirit Shards, …), counted as
+        // nothing; the cheapest in money is 2 Mystic Coins and 2 Globs of Ectoplasm. The Wizard's Vault's, for Astral
+        // Acclaim alone, doesn't make it free.
+        const int MysticClover = 19675, MysticCoin = 19976, Ectoplasm = 19721;
+        Seed((MysticCoin, 20_000), (Ectoplasm, 1_600));
+
+        await using Gw2GizmosDbContext db = _fixture.NewContext();
+        var builder = new RecipeTreeBuilder(db, RecipeFinder.Configuration.CoinOnly, null);
+        RecipeNode clover = await builder.BuildTreeAsync(MysticClover, CancellationToken.None);
+
+        Assert.Equal(43_200m, clover.EffectiveCostOrNull);
+    }
+
+    [Fact]
+    public async Task Items_held_that_the_trading_post_does_not_buy_get_a_coin_cost()
+    {
+        // Made-up ids: an untradeable item crafted from 2 of a priced material, and a tradeable one, both held.
+        const int Bound = 9_600_001, Tradeable = 9_600_002, Material = 9_600_010;
+        Seed((Material, 500), (Tradeable, 2_000));
+        using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            db.Recipes.Add(CraftOf(Bound, (Material, 2)));
+            foreach (int itemId in new[] { Bound, Tradeable })
+            {
+                db.AccountItemObservations.Add(new AccountItemObservation
+                {
+                    AccountId = "acc",
+                    Container = "Bank",
+                    ItemId = itemId,
+                    Count = 3,
+                    ObservedAtUtc = DateTimeOffset.UtcNow,
+                });
+            }
+
+            db.SaveChanges();
+        }
+
+        await using (Gw2GizmosDbContext db = _fixture.NewContext())
+        {
+            var updater = new ItemCraftCostUpdater(db, NullLogger<ItemCraftCostUpdater>.Instance);
+            await updater.UpdateCraftCosts(CancellationToken.None);
+        }
+
+        Dictionary<int, double> costs = _fixture.NewContext().ItemCoinCosts.AsNoTracking()
+            .ToDictionary(cost => cost.ItemId, cost => cost.Cost);
+        Assert.Equal(new Dictionary<int, double> { [Bound] = 1_000 }, costs);
+    }
+
     private static Recipe CraftOf(int output, params (int ItemId, int Count)[] ingredients) =>
+        CraftOf(output, 1, ingredients);
+
+    private static Recipe CraftOf(int output, int outputCount, params (int ItemId, int Count)[] ingredients) =>
         new()
         {
             Type = "Refinement",
             OutputItemId = output,
-            OutputItemCount = 1,
+            OutputItemCount = outputCount,
             ChatLink = "",
             Ingredients = ingredients
                 .Select(ingredient =>

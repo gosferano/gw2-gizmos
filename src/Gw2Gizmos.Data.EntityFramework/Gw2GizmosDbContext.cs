@@ -51,6 +51,9 @@ public class Gw2GizmosDbContext : DbContext
     // live prices/profit/margin are derived from PriceSnapshots at read time, not stored here.
     public DbSet<ItemCraftCost> ItemCraftCosts { get; set; }
 
+    // What items the trading post doesn't buy cost for coin alone, to value holdings of them.
+    public DbSet<ItemCoinCost> ItemCoinCosts { get; set; }
+
     // Append-only trading-post price history (one row per item per market refresh; downsampled over time).
     public DbSet<PriceSnapshot> PriceSnapshots { get; set; }
 

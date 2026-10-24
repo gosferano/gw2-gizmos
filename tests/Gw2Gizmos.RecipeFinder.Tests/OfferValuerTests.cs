@@ -1,4 +1,4 @@
-using Gw2Gizmos.RecipeFinder;
+﻿using Gw2Gizmos.RecipeFinder;
 using Gw2Gizmos.RecipeFinder.Model;
 
 namespace Gw2Gizmos.RecipeFinder.Tests;
@@ -64,5 +64,43 @@ public class OfferValuerTests
             [new VendorCost(25_000, "Festival Token", 66224, "icon", IsCoin: false, CurrencyId: 50)]);
 
         Assert.Null(OfferValuer.CoinValue(offer, Weights, ItemValue));
+    }
+
+    [Fact]
+    public void CoinOnlyValue_CountsCoinAndTradeableItems_AndAccountCurrenciesAsNothing()
+    {
+        // INFUZ-5959's Shard of Crystallized Mists Essence: 2g 88s and 300 Fractal Relics; here with 2 ecto too.
+        var offer = new VendorOffer(1,
+        [
+            new VendorCost(28_800, "Coin", null, null, IsCoin: true),
+            new VendorCost(300, "Fractal Relic", null, "icon", IsCoin: false, CurrencyId: 7),
+            new VendorCost(2, "Glob of Ectoplasm", 19721, null, IsCoin: false),
+            new VendorCost(1050, "Karma", null, "karma-icon", IsCoin: false, CurrencyId: 2),
+        ]);
+
+        Assert.Equal(29_200m, OfferValuer.CoinOnlyValue(offer, ItemValue));
+    }
+
+    [Fact]
+    public void CoinOnlyValue_IsNull_WithAPartThatIsNeitherAnItemNorACurrency()
+    {
+        // A League Vendor's Mystic Clover lists "2 Ectoplasm", resolved to no item: it isn't free.
+        var offer = new VendorOffer(1,
+        [
+            new VendorCost(2, "Mystic Coin", 19976, null, IsCoin: false),
+            new VendorCost(2, "Ectoplasm", null, null, IsCoin: false),
+        ]);
+
+        Assert.Null(OfferValuer.CoinOnlyValue(offer, ItemValue));
+    }
+
+    [Fact]
+    public void CoinOnlyValue_IsNull_ForAnOfferCostingNoMoney()
+    {
+        // The Wizard's Vault's Mystic Clover, for 60 Astral Acclaim: it mustn't make the clover free.
+        var offer = new VendorOffer(1,
+            [new VendorCost(60, "Astral Acclaim", null, "icon", IsCoin: false, CurrencyId: 63)]);
+
+        Assert.Null(OfferValuer.CoinOnlyValue(offer, ItemValue));
     }
 }

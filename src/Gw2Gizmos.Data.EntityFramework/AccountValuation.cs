@@ -10,8 +10,9 @@ namespace Gw2Gizmos.Data.EntityFramework;
 /// <summary>
 /// Estimates what an account is worth: its coin plus every item it holds (material storage, bank, shared inventory,
 /// character bags) at its instant-sell value (<see cref="AccountHoldingsReconstructor.ItemValues"/>: the buy order
-/// minus the trading-post fee, else the vendor price, else 0), plus its open trading-post orders. Equipment and
-/// other currencies aren't counted.
+/// minus the trading-post fee), or for an item the trading post doesn't buy, what it costs for coin (made or bought
+/// from a vendor, e.g. a Mystic Clover), else its vendor price, else 0; plus its open trading-post orders. Equipment
+/// and other currencies aren't counted.
 /// </summary>
 public static class AccountValuation
 {
@@ -39,7 +40,7 @@ public static class AccountValuation
             .ToList();
 
         Dictionary<int, long> values = AccountHoldingsReconstructor.ItemValues(
-            db, held.Select(h => h.ItemId).ToList(), historicalPrices ? asOfUtc : null);
+            db, held.Select(h => h.ItemId).ToList(), historicalPrices ? asOfUtc : null, coinCosts: true);
 
         long Sum(string container) => held
             .Where(h => h.Container == container)

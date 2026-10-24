@@ -85,7 +85,11 @@ public class RecipeTreeBuilder
 
             _latestPrices ??= latest.ToDictionary(row => row.ItemId, row => (row.Buy ?? 0, row.Sell ?? 0));
 
-            if (_currencyWeights is null)
+            if (_currencyWeights is null && !_priceConfiguration.CountAccountCurrencies)
+            {
+                _currencyWeights = new Dictionary<string, decimal>();
+            }
+            else if (_currencyWeights is null)
             {
                 var sellSupply = latest.ToDictionary(row => row.ItemId, row => (row.Sell ?? 0, row.Supply));
                 _currencyWeights = CurrencyValuer
@@ -153,15 +157,50 @@ public class RecipeTreeBuilder
             .ToList();
     }
 
-    /// <param name="path">Item ids on the current branch from the root, used to detect recipe cycles (e.g. a
-    /// material-promotion loop) — an item that is its own ancestor is priced as a leaf instead of recursing.
-    /// This bounds every branch to the distinct item count, so recursion always terminates.</param>
-    public async Task<RecipeNode> BuildTreeAsync(
-        int rootItemId, CancellationToken ct, long parentMultiplier = 1, HashSet<int>? path = null)
+    public Task<RecipeNode> BuildTreeAsync(int rootItemId, CancellationToken ct) =>
+        BuildTreeAsync(rootItemId, ct, 1, new Walk(), isRoot: true);
+
+    /// <summary>
+    /// The items on the branch being built, from the root, and the shallowest of them a recipe was ruled out for
+    /// since <see cref="LowestCut"/> was last reset.
+    /// </summary>
+    private sealed class Walk
+    {
+        public List<int> Path { get; } = [];
+
+        public int LowestCut { get; set; } = int.MaxValue;
+
+        public void Cut(int index) => LowestCut = Math.Min(LowestCut, index);
+    }
+
+    /// <summary>
+    /// Builds an item's tree. A recipe that takes an item on the branch above (e.g. making a Shard of Crystallized
+    /// Mists Essence from Globs, priced by downgrading Shards into Globs) is ruled out: it would price the item from
+    /// itself. So is one taking an item every recipe of which is ruled out that way, and that can't be bought. The
+    /// item's own recipe taking a copy of it (a material promotion's catalyst) stays, priced as bought. A tree that
+    /// depended on what's above it is not remembered, as it would be priced differently on another branch.
+    /// </summary>
+    private async Task<RecipeNode> BuildTreeAsync(
+        int rootItemId, CancellationToken ct, long parentMultiplier, Walk walk, bool isRoot = false)
     {
         await EnsureLoadedAsync(ct);
-        bool isRoot = path is null;
-        path ??= new HashSet<int>();
+        int depth = walk.Path.Count;
+        int outerCut = walk.LowestCut;
+        walk.LowestCut = int.MaxValue;
+        try
+        {
+            return await BuildNodeAsync(rootItemId, ct, parentMultiplier, walk, depth, isRoot);
+        }
+        finally
+        {
+            walk.LowestCut = Math.Min(outerCut, walk.LowestCut);
+        }
+    }
+
+    private async Task<RecipeNode> BuildNodeAsync(
+        int rootItemId, CancellationToken ct, long parentMultiplier, Walk walk, int depth, bool isRoot)
+    {
+        List<int> path = walk.Path;
         var rootNode = new RecipeNode { ItemId = rootItemId, Count = parentMultiplier };
         var stack = new Stack<(RecipeNode Node, bool Processed)>();
         stack.Push((rootNode, false));
@@ -180,14 +219,16 @@ public class RecipeTreeBuilder
                         / currentNode.Count;
                 }
 
-                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                Remember(currentNode, walk, depth);
                 continue;
             }
 
-            // CHECK CACHE FIRST - before any expensive operations
-            if (_memoizationCache.TryGetValue(currentNode.ItemId, out var cachedNode))
+            // CHECK CACHE FIRST - before any expensive operations. A remembered tree that takes an item on this
+            // branch would price it from itself here: built afresh instead, ruling that recipe out.
+            if (_memoizationCache.TryGetValue(currentNode.ItemId, out Memo? memo)
+                && !path.Any(memo.Contains.Contains))
             {
-                var scaledNode = CopyForMemo(cachedNode, currentNode.Count);
+                var scaledNode = CopyForMemo(memo.Node, currentNode.Count);
 
                 currentNode.ItemName = scaledNode.ItemName;
                 currentNode.SellPricePerUnit = scaledNode.SellPricePerUnit;
@@ -229,15 +270,16 @@ public class RecipeTreeBuilder
             {
                 currentNode.IsEarned = true;
                 currentNode.AcquiredVia = earnedBy;
-                _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                Remember(currentNode, walk, depth);
                 continue;
             }
 
-            // Cycle: this item is its own ancestor (e.g. a material-promotion loop). Stop and leave it as a
-            // trading-post-priced leaf so the tree is finite. Not memoized — its value is path-dependent (it
-            // assumes the recursive copy is bought, not re-crafted).
-            if (path.Contains(currentNode.ItemId))
+            // Cycle: this item is its own ancestor (a material promotion's catalyst, as recipes taking an item
+            // further up are ruled out). Stop and leave it as a trading-post-priced leaf so the tree is finite. Not
+            // memoized — its value is path-dependent (it assumes the recursive copy is bought, not re-crafted).
+            if (path.IndexOf(currentNode.ItemId) is var ancestor and >= 0)
             {
+                walk.Cut(ancestor);
                 continue;
             }
 
@@ -254,9 +296,10 @@ public class RecipeTreeBuilder
                     foreach (Recipe recipe in recipes)
                     {
                         // Build a separate tree for each recipe
-                        RecipeNode recipeTree = await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct, path);
+                        RecipeNode? recipeTree =
+                            await BuildRecipeTreeForComparison(recipe, currentNode.Count, ct, walk);
 
-                        if (IsBetterVariant(recipeTree, bestRecipeTree))
+                        if (recipeTree is not null && IsBetterVariant(recipeTree, bestRecipeTree))
                         {
                             bestRecipeTree = recipeTree;
                         }
@@ -270,7 +313,11 @@ public class RecipeTreeBuilder
                         currentNode.Ingredients = bestRecipeTree.Ingredients;
 
                         // Mark as processed since we've built the complete subtree
-                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                        Remember(currentNode, walk, depth);
+                    }
+                    else
+                    {
+                        MarkLoopBlocked(currentNode);
                     }
                 }
                 else if (StaticRecipes.ByOutputItemId.TryGetValue(currentNode.ItemId, out IReadOnlyList<StaticRecipe>? staticRecipes))
@@ -281,8 +328,9 @@ public class RecipeTreeBuilder
                     RecipeNode? bestRecipeTree = null;
                     foreach (StaticRecipe staticRecipe in staticRecipes)
                     {
-                        RecipeNode recipeTree = await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, path);
-                        if (IsBetterVariant(recipeTree, bestRecipeTree))
+                        RecipeNode? recipeTree =
+                            await BuildStaticRecipeTree(staticRecipe, currentNode.Count, ct, walk);
+                        if (recipeTree is not null && IsBetterVariant(recipeTree, bestRecipeTree))
                         {
                             bestRecipeTree = recipeTree;
                         }
@@ -294,7 +342,11 @@ public class RecipeTreeBuilder
                         currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
                         currentNode.AcquiredVia = bestRecipeTree.AcquiredVia;
                         currentNode.Ingredients = bestRecipeTree.Ingredients;
-                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                        Remember(currentNode, walk, depth);
+                    }
+                    else
+                    {
+                        MarkLoopBlocked(currentNode);
                     }
                 }
                 else if (currentNode.BuyPricePerUnit == 0
@@ -308,8 +360,8 @@ public class RecipeTreeBuilder
                     RecipeNode? bestRecipeTree = null;
                     foreach (StaticRecipe achievement in achievements)
                     {
-                        RecipeNode recipeTree = await BuildStaticRecipeTree(achievement, currentNode.Count, ct, path);
-                        if (IsBetterVariant(recipeTree, bestRecipeTree))
+                        RecipeNode? recipeTree = await BuildStaticRecipeTree(achievement, currentNode.Count, ct, walk);
+                        if (recipeTree is not null && IsBetterVariant(recipeTree, bestRecipeTree))
                         {
                             bestRecipeTree = recipeTree;
                         }
@@ -321,7 +373,11 @@ public class RecipeTreeBuilder
                         currentNode.CraftingCostPerUnit = bestRecipeTree.CraftingCostPerUnit;
                         currentNode.AcquiredVia = bestRecipeTree.AcquiredVia;
                         currentNode.Ingredients = bestRecipeTree.Ingredients;
-                        _memoizationCache.TryAdd(currentNode.ItemId, CopyForMemo(currentNode, 1));
+                        Remember(currentNode, walk, depth);
+                    }
+                    else
+                    {
+                        MarkLoopBlocked(currentNode);
                     }
                 }
                 else
@@ -332,7 +388,7 @@ public class RecipeTreeBuilder
             }
             finally
             {
-                path.Remove(currentNode.ItemId);
+                path.RemoveAt(path.Count - 1);
             }
         }
 
@@ -426,7 +482,43 @@ public class RecipeTreeBuilder
         }
     }
 
-    private readonly ConcurrentDictionary<int, RecipeNode> _memoizationCache = new();
+    private readonly ConcurrentDictionary<int, Memo> _memoizationCache = new();
+
+    /// <summary>A remembered tree (for one), and every item in it below its root.</summary>
+    private sealed record Memo(RecipeNode Node, HashSet<int> Contains);
+
+    // Remembers a node's tree, unless a recipe was ruled out in it for an item above it on this branch.
+    private void Remember(RecipeNode node, Walk walk, int depth)
+    {
+        if (walk.LowestCut < depth)
+        {
+            return;
+        }
+
+        var contains = new HashSet<int>();
+        AddItems(node.Ingredients, contains);
+        _memoizationCache.TryAdd(node.ItemId, new Memo(CopyForMemo(node, 1), contains));
+    }
+
+    private static void AddItems(List<RecipeNode> nodes, HashSet<int> into)
+    {
+        foreach (RecipeNode node in nodes.Where(node => !node.IsCurrency))
+        {
+            into.Add(node.ItemId);
+            AddItems(node.Ingredients, into);
+        }
+    }
+
+    // Every recipe of the node was ruled out: when it can't be bought either, it can't be had on this branch, so
+    // recipes taking it are ruled out too.
+    private static void MarkLoopBlocked(RecipeNode node) => node.IsLoopBlocked = node.EffectiveCostOrNull is null;
+
+    // The item on the branch above a recipe's output (the last item on it) that the recipe takes, if any.
+    private static int AncestorIndex(List<int> path, IEnumerable<int> ingredientIds)
+    {
+        var ids = ingredientIds.ToHashSet();
+        return path.FindIndex(0, path.Count - 1, ids.Contains);
+    }
 
     private RecipeNode CopyForMemo(RecipeNode node, long targetCount)
     {
@@ -462,9 +554,16 @@ public class RecipeTreeBuilder
         };
     }
 
-    private async Task<RecipeNode> BuildRecipeTreeForComparison(
-        Recipe recipe, long targetCount, CancellationToken ct, HashSet<int> path)
+    private async Task<RecipeNode?> BuildRecipeTreeForComparison(
+        Recipe recipe, long targetCount, CancellationToken ct, Walk walk)
     {
+        if (AncestorIndex(walk.Path, recipe.Ingredients.Where(i => i.Type != "Currency").Select(i => i.Id))
+            is var ancestor and >= 0)
+        {
+            walk.Cut(ancestor);
+            return null;
+        }
+
         var recipeNode = new RecipeNode
         {
             ItemId = recipe.OutputItemId,
@@ -500,7 +599,11 @@ public class RecipeTreeBuilder
             }
             else
             {
-                ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount, path);
+                ingredientTree = await BuildTreeAsync(ingredient.Id, ct, requiredCount, walk);
+                if (ingredientTree.IsLoopBlocked)
+                {
+                    return null;
+                }
             }
 
             recipeNode.Ingredients.Add(ingredientTree);
@@ -519,9 +622,15 @@ public class RecipeTreeBuilder
     /// <see cref="BuildRecipeTreeForComparison"/>, but every ingredient is a real item (no currency inputs),
     /// so each recurses through <see cref="BuildTreeAsync"/> and is priced from the trading post / vendors.
     /// </summary>
-    private async Task<RecipeNode> BuildStaticRecipeTree(
-        StaticRecipe recipe, long targetCount, CancellationToken ct, HashSet<int> path)
+    private async Task<RecipeNode?> BuildStaticRecipeTree(
+        StaticRecipe recipe, long targetCount, CancellationToken ct, Walk walk)
     {
+        if (AncestorIndex(walk.Path, recipe.Ingredients.Select(i => i.ItemId)) is var ancestor and >= 0)
+        {
+            walk.Cut(ancestor);
+            return null;
+        }
+
         var recipeNode = new RecipeNode
         {
             ItemId = recipe.OutputItemId,
@@ -542,7 +651,13 @@ public class RecipeTreeBuilder
                 requiredCount = 1;
             }
 
-            recipeNode.Ingredients.Add(await BuildTreeAsync(ingredient.ItemId, ct, requiredCount, path));
+            RecipeNode ingredientTree = await BuildTreeAsync(ingredient.ItemId, ct, requiredCount, walk);
+            if (ingredientTree.IsLoopBlocked)
+            {
+                return null;
+            }
+
+            recipeNode.Ingredients.Add(ingredientTree);
         }
 
         // Cost per output = total ingredient cost / total produced (crafts × expected yield), so a fractional
@@ -617,11 +732,14 @@ public class RecipeTreeBuilder
 
     /// <summary>An offer's coin-equivalent per single unit it yields (its full valued cost ÷ its quantity), or
     /// null when a cost currency has no derived weight.</summary>
-    private decimal? OfferPerUnitCoinValue(Model.VendorOffer offer) =>
-        OfferValuer.CoinValue(offer, _currencyWeights!, itemId => _latestPrices!.GetValueOrDefault(itemId).Sell)
-            is { } total
-            ? total / offer.Quantity
-            : null;
+    private decimal? OfferPerUnitCoinValue(Model.VendorOffer offer)
+    {
+        Func<int, int> itemValue = itemId => _latestPrices!.GetValueOrDefault(itemId).Sell;
+        decimal? total = _priceConfiguration.CountAccountCurrencies
+            ? OfferValuer.CoinValue(offer, _currencyWeights!, itemValue)
+            : OfferValuer.CoinOnlyValue(offer, itemValue);
+        return total / offer.Quantity;
+    }
 
     /// <summary>The icon URL for a cost component's currency, or null for an item-currency (rendered via its item
     /// icon instead). Resolved by currency id, then by normalized name (singular/plural tolerant).</summary>

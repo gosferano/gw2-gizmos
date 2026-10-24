@@ -1370,6 +1370,22 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.ToTable("AccountRecipes");
                 });
 
+            modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.ItemCoinCost", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ComputedAtUtc")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("Cost")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("ItemId");
+
+                    b.ToTable("ItemCoinCosts");
+                });
+
             modelBuilder.Entity("Gw2Gizmos.Data.EntityFramework.Entities.Recipes.ItemCraftCost", b =>
                 {
                     b.Property<int>("ItemId")
