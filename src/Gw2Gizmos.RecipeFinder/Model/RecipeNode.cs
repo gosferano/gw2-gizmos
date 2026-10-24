@@ -42,6 +42,11 @@ public class RecipeNode
     /// obtainable (just not coin-priced), so it counts as known-cost rather than genuinely unpriceable.</summary>
     public bool IsVendorAcquirable { get; set; }
 
+    /// <summary>Every recipe for it was ruled out on this branch, as each took an item further up (it would be made
+    /// from itself), and it can't be bought: so it can't be had here, and recipes taking it are ruled out too. Set by
+    /// the builder; never remembered across branches.</summary>
+    public bool IsLoopBlocked { get; set; }
+
     public List<RecipeNode> Ingredients { get; set; } = new();
     public bool IsCraftable => Ingredients.Count > 0;
 
