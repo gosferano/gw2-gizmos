@@ -87,11 +87,12 @@ public class AccountValueUpdater
     /// <summary>Values the account now, updating this hour's point if there is one.</summary>
     private void RecordNow(string accountId, DateTimeOffset now)
     {
-        AccountValue value = AccountValuation.HoldingsAsOf(_dbContext, accountId, now, historicalPrices: false)
+        AccountValue held = AccountValuation.HoldingsAsOf(_dbContext, accountId, now, historicalPrices: false);
+        AccountValue value = held
             with
             {
+                Characters = held.Characters + AccountValuation.EquipmentValue(_dbContext, accountId),
                 TradingPost = AccountValuation.TradingPostValue(_dbContext, accountId),
-                Equipment = AccountValuation.EquipmentValue(_dbContext, accountId),
                 LegendaryArmory = AccountValuation.LegendaryArmoryValue(_dbContext, accountId),
                 Unlocks = AccountUnlockValuation.ByKind(_dbContext, accountId).Values.Sum(),
             };
@@ -129,7 +130,6 @@ public class AccountValueUpdater
             SharedInventoryCopper = value.SharedInventory,
             CharactersCopper = value.Characters,
             TradingPostCopper = value.TradingPost,
-            EquipmentCopper = value.Equipment,
             LegendaryArmoryCopper = value.LegendaryArmory,
             UnlocksCopper = value.Unlocks,
             IsBackfilled = isBackfilled,

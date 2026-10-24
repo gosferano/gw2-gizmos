@@ -11,13 +11,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<long>(
-                name: "EquipmentCopper",
-                table: "AccountValueSnapshots",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: 0L);
-
-            migrationBuilder.AddColumn<long>(
                 name: "LegendaryArmoryCopper",
                 table: "AccountValueSnapshots",
                 type: "INTEGER",
@@ -35,10 +28,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "EquipmentCopper",
-                table: "AccountValueSnapshots");
-
             migrationBuilder.DropColumn(
                 name: "LegendaryArmoryCopper",
                 table: "AccountValueSnapshots");

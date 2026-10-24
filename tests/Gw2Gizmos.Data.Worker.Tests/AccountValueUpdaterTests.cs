@@ -88,7 +88,7 @@ public sealed class AccountValueUpdaterTests : IDisposable
     }
 
     [Fact]
-    public async Task Records_equipment_the_legendary_armory_and_unlocks_live()
+    public async Task Records_equipment_with_characters_and_the_legendary_armory_and_unlocks_live()
     {
         DateTimeOffset at = _time.Now.AddMinutes(-1);
         SeedAccount();
@@ -110,7 +110,7 @@ public sealed class AccountValueUpdaterTests : IDisposable
         await RecordAsync();
 
         AccountValueSnapshot live = Snapshots().Single(s => !s.IsBackfilled);
-        Assert.Equal((10, 60, 850), (live.EquipmentCopper, live.LegendaryArmoryCopper, live.UnlocksCopper));
+        Assert.Equal((10, 60, 850), (live.CharactersCopper, live.LegendaryArmoryCopper, live.UnlocksCopper));
     }
 
     [Fact]

@@ -99,13 +99,14 @@ public static class AccountValuation
 }
 
 /// <summary>
-/// An account's estimated value by where it's held, in copper. Equipment, the legendary armory and unlocks are only
-/// known as of the last sync, so they're 0 for past points.
+/// An account's estimated value by where it's held, in copper. What characters have equipped (part of
+/// <see cref="Characters"/>), the legendary armory and unlocks are only known as of the last sync, so they're left out
+/// of past points.
 /// </summary>
 public sealed record AccountValue(
     long Coin, long Materials, long Bank, long SharedInventory, long Characters, long TradingPost,
-    long Equipment = 0, long LegendaryArmory = 0, long Unlocks = 0)
+    long LegendaryArmory = 0, long Unlocks = 0)
 {
     public long Total =>
-        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + Equipment + LegendaryArmory + Unlocks;
+        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + LegendaryArmory + Unlocks;
 }

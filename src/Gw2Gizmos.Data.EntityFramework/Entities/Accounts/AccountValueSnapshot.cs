@@ -29,7 +29,10 @@ public class AccountValueSnapshot
 
     public long SharedInventoryCopper { get; set; }
 
-    /// <summary>Items in character bags.</summary>
+    /// <summary>
+    /// Items in character bags, and for points recorded live, what characters have equipped too, with upgrades and
+    /// infusions (legendaries from the armory aside).
+    /// </summary>
     public long CharactersCopper { get; set; }
 
     /// <summary>
@@ -38,13 +41,7 @@ public class AccountValueSnapshot
     /// </summary>
     public long TradingPostCopper { get; set; }
 
-    /// <summary>
-    /// What characters have equipped, with upgrades and infusions (legendaries from the armory aside). Only known for
-    /// points recorded live, like the next two.
-    /// </summary>
-    public long EquipmentCopper { get; set; }
-
-    /// <summary>The legendaries in the legendary armory.</summary>
+    /// <summary>The legendaries in the legendary armory. Only known for points recorded live, like unlocks.</summary>
     public long LegendaryArmoryCopper { get; set; }
 
     /// <summary>The account's unlocks: skins, dyes, minis, outfits, recipes and the rest.</summary>

@@ -139,9 +139,6 @@ namespace Gw2Gizmos.Data.Provider.Sqlite.Migrations
                     b.Property<long>("CoinCopper")
                         .HasColumnType("INTEGER");
 
-                    b.Property<long>("EquipmentCopper")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsBackfilled")
                         .HasColumnType("INTEGER");
 

@@ -618,7 +618,6 @@ public sealed class AccountReader
                     s.TakenAtUtc, s.CoinCopper, s.MaterialsCopper, s.BankCopper, s.SharedInventoryCopper,
                     s.CharactersCopper, s.TradingPostCopper, s.IsBackfilled)
                 {
-                    Equipment = s.EquipmentCopper,
                     LegendaryArmory = s.LegendaryArmoryCopper,
                     Unlocks = s.UnlocksCopper,
                 })
@@ -1100,9 +1099,6 @@ public sealed record AccountValuePoint(
     bool IsBackfilled
 )
 {
-    /// <summary>What characters have equipped (legendaries from the armory aside); 0 for past points.</summary>
-    public long Equipment { get; init; }
-
     /// <summary>The legendaries in the legendary armory; 0 for past points.</summary>
     public long LegendaryArmory { get; init; }
 
@@ -1110,7 +1106,7 @@ public sealed record AccountValuePoint(
     public long Unlocks { get; init; }
 
     public long Total =>
-        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + Equipment + LegendaryArmory + Unlocks;
+        Coin + Materials + Bank + SharedInventory + Characters + TradingPost + LegendaryArmory + Unlocks;
 }
 
 /// <summary>The account's latest value and its change over the last day and week (null when not known yet).</summary>
