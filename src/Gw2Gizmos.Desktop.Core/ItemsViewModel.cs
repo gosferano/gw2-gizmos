@@ -466,7 +466,7 @@ public sealed class ItemsViewModel : ViewModelBase
                 .Where(snapshot => snapshot.ItemId == item.ItemId)
                 .OrderBy(snapshot => snapshot.Id)
                 .Select(snapshot => new HistoryPoint(
-                    snapshot.TimestampUtc.LocalDateTime,
+                    snapshot.TimestampUtc.UtcDateTime,
                     snapshot.Buy,
                     snapshot.Sell,
                     snapshot.Sold + snapshot.Bought

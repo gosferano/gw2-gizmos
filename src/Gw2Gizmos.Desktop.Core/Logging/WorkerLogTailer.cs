@@ -14,13 +14,14 @@ namespace Gw2Gizmos.Desktop.Core;
 /// Tails the worker process's current rolling Serilog file and merges its lines into the shared
 /// <see cref="LogStore"/> (tagged <c>Source = Worker</c>), so the in-app viewer shows both processes.
 /// Starts at the current end of the file (no history replay) and follows daily rollover. Lines that don't start an
-/// entry (an exception's stack trace) are kept with the entry they follow, as its details.
+/// entry (an exception's stack trace) are kept with the entry they follow, as its details. The file's times are UTC;
+/// entries carry them as local time for display.
 /// </summary>
 public sealed class WorkerLogTailer : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1.5);
     private static readonly Regex LineRegex = new(
-        @"^(\d{2}:\d{2}:\d{2}\.\d{3}) \[([A-Za-z]{3})\] \[[^\]]*\] (.*)$",
+        @"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[([A-Za-z]{3})\] \[[^\]]*\] (.*)$",
         RegexOptions.Compiled
     );
 
@@ -152,16 +153,16 @@ public sealed class WorkerLogTailer : BackgroundService
             Flush();
             _lastLevel = match.Groups[2].Value.ToUpperInvariant();
             if (
-                DateTime.TryParseExact(
+                DateTimeOffset.TryParseExact(
                     match.Groups[1].Value,
-                    "HH:mm:ss.fff",
+                    "yyyy-MM-ddTHH:mm:ss.fffZ",
                     CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out DateTime parsed
+                    DateTimeStyles.AssumeUniversal,
+                    out DateTimeOffset parsed
                 )
             )
             {
-                _lastTimestamp = new DateTimeOffset(DateTime.Today.Add(parsed.TimeOfDay));
+                _lastTimestamp = parsed.ToLocalTime();
             }
 
             message = match.Groups[3].Value;
