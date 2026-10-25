@@ -12,7 +12,8 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// <summary>
 /// Draws an <see cref="AccountValueViewModel"/>'s points with ScottPlot: the total as a bold line over one thinner line
 /// per category (coin, materials, …) in the colours the page's breakdown uses. Hovering shows the nearest point's
-/// time and total. ScottPlot's own mouse pan/zoom is off; the range comes from the page's presets.
+/// time and total. Times are plotted in UTC with local ticks (<see cref="LocalTimeTicks"/>). ScottPlot's own mouse
+/// pan/zoom is off; the range comes from the page's presets.
 /// </summary>
 public partial class AccountValueChart : UserControl
 {
@@ -58,7 +59,7 @@ public partial class AccountValueChart : UserControl
         Style(plot);
 
         IReadOnlyList<AccountValuePoint> points = _model?.Points ?? Array.Empty<AccountValuePoint>();
-        _times = points.Select(p => p.Time.LocalDateTime.ToOADate()).ToArray();
+        _times = points.Select(p => p.Time.UtcDateTime.ToOADate()).ToArray();
         if (points.Count == 0)
         {
             Plot.Refresh();
@@ -88,8 +89,8 @@ public partial class AccountValueChart : UserControl
 
         // The time axis spans the selected range, not just the points in it. Values from zero, so the categories'
         // scale reads honestly, with a little headroom above the total.
-        double from = _model!.RangeStart.LocalDateTime.ToOADate();
-        double to = _model.RangeEnd.LocalDateTime.ToOADate();
+        double from = _model!.RangeStart.UtcDateTime.ToOADate();
+        double to = _model.RangeEnd.UtcDateTime.ToOADate();
         if (to - from < 1.0 / 24)
         {
             from = to - 1.0 / 24;
@@ -167,11 +168,7 @@ public partial class AccountValueChart : UserControl
 
         // Swap in the date axis before colouring: it replaces the bottom axis, which would otherwise keep ScottPlot's
         // default (black) labels.
-        var bottom = plot.Axes.DateTimeTicksBottom();
-        if (bottom.TickGenerator is DateTimeAutomatic dates)
-        {
-            dates.LabelFormatter = PriceHistoryViewModel.FormatTime;
-        }
+        plot.Axes.DateTimeTicksBottom().TickGenerator = new LocalTimeTicks();
 
         plot.Axes.Color(AxisColor);
         plot.Grid.MajorLineColor = AxisColor.WithAlpha(0.15);

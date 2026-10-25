@@ -18,12 +18,12 @@ public sealed class WorkerLogTailerTests : IDisposable
     {
         List<LogEntry> entries = NewTailer().Parse(
             [
-                "22:33:10.916 [INF] [production|Recipes] Processing recipes 1401 to 1600",
-                "22:33:28.195 [ERR] [production|Recipes] Error processing recipes 1401 to 1600",
+                "2026-10-24T22:33:10.916Z [INF] [production|Recipes] Processing recipes 1401 to 1600",
+                "2026-10-24T22:33:28.195Z [ERR] [production|Recipes] Error processing recipes 1401 to 1600",
                 "System.InvalidOperationException: The instance cannot be tracked",
                 "   at IdentityMap.ThrowIdentityConflict(InternalEntityEntry entry)",
                 "   at RecipesUpdater.UpdateRecipes(CancellationToken stoppingToken)",
-                "22:33:28.200 [INF] [production|Recipes] Processing recipes 1601 to 1800",
+                "2026-10-24T22:33:28.200Z [INF] [production|Recipes] Processing recipes 1601 to 1800",
             ]
         );
 
@@ -46,7 +46,7 @@ public sealed class WorkerLogTailerTests : IDisposable
     public void Lines_continuing_an_entry_from_an_earlier_read_form_their_own_entry_at_its_level()
     {
         WorkerLogTailer tailer = NewTailer();
-        tailer.Parse(["22:33:28.195 [ERR] [production|Recipes] Error processing recipes"]);
+        tailer.Parse(["2026-10-24T22:33:28.195Z [ERR] [production|Recipes] Error processing recipes"]);
 
         List<LogEntry> entries = tailer.Parse(["   at A.B()", "   at C.D()"]);
 
@@ -54,6 +54,19 @@ public sealed class WorkerLogTailerTests : IDisposable
         Assert.Equal("ERR", rest.Level);
         Assert.Equal("   at A.B()", rest.Message);
         Assert.Equal("   at C.D()", rest.Details);
+    }
+
+    [Fact]
+    public void Entries_are_timed_in_local_time_from_the_files_utc_times()
+    {
+        // 01:30 UTC on 25 October 2026 falls in the hour repeated when European clocks go back, so a local clock time
+        // alone couldn't place it.
+        LogEntry entry = Assert.Single(
+            NewTailer().Parse(["2026-10-25T01:30:00.000Z [INF] [production|Prices] Polled"]));
+
+        var utc = new DateTimeOffset(2026, 10, 25, 1, 30, 0, TimeSpan.Zero);
+        Assert.Equal(utc, entry.Timestamp);
+        Assert.Equal(TimeZoneInfo.Local.GetUtcOffset(utc), entry.Timestamp.Offset);
     }
 
     private sealed class InlineDispatcher : IUiDispatcher

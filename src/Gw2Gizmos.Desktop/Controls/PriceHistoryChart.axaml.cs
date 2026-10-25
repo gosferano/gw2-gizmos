@@ -13,8 +13,8 @@ namespace Gw2Gizmos.Desktop.Controls;
 /// Draws the shared <see cref="PriceHistoryViewModel"/> with ScottPlot: a detail chart (buy/sell lines on the left
 /// axis, volume bars on the right) clipped to the view-model's window, and a navigator over the whole history with that
 /// window as a shaded span. Navigator presses and drags go to the view-model's drag logic (as in the WPF app), and
-/// hovering the detail chart shows the nearest point's figures in a small readout. ScottPlot's own mouse pan/zoom is
-/// off on both charts.
+/// hovering the detail chart shows the nearest point's figures in a small readout. Times are plotted in UTC with local
+/// ticks (<see cref="LocalTimeTicks"/>). ScottPlot's own mouse pan/zoom is off on both charts.
 /// </summary>
 public partial class PriceHistoryChart : UserControl
 {
@@ -221,7 +221,7 @@ public partial class PriceHistoryChart : UserControl
         }
 
         HistoryPoint point = _history.Points[index];
-        ReadoutTime.Text = $"{point.Time:yyyy-MM-dd HH:mm}";
+        ReadoutTime.Text = $"{point.Time.ToLocalTime():yyyy-MM-dd HH:mm}";
         ShowPrice(ReadoutBuy, ReadoutBuyNone, point.Buy);
         ShowPrice(ReadoutSell, ReadoutSellNone, point.Sell);
         ReadoutVolume.Text = $"Volume {point.Volume:N0}";
@@ -276,7 +276,8 @@ public partial class PriceHistoryChart : UserControl
 
     // ── Helpers ──
 
-    /// <summary>The time under an Avalonia position on <paramref name="plot"/> (ScottPlot works in scaled pixels).</summary>
+    /// <summary>The UTC time under an Avalonia position on <paramref name="plot"/> (ScottPlot works in scaled
+    /// pixels).</summary>
     private static DateTime ToTime(AvaPlot plot, Point position)
     {
         float scale = plot.DisplayScale;
@@ -284,7 +285,7 @@ public partial class PriceHistoryChart : UserControl
             new Pixel((float)(position.X * scale), (float)(position.Y * scale)),
             plot.Plot.Axes.Bottom, plot.Plot.Axes.Left);
         double oaDate = Math.Clamp(coordinates.X, DateTime.MinValue.ToOADate() + 1, DateTime.MaxValue.ToOADate() - 1);
-        return DateTime.FromOADate(oaDate);
+        return DateTime.SpecifyKind(DateTime.FromOADate(oaDate), DateTimeKind.Utc);
     }
 
     /// <summary>Adds one series as line segments, breaking wherever <paramref name="value"/> is null.</summary>
@@ -330,11 +331,7 @@ public partial class PriceHistoryChart : UserControl
 
         // Swap in the date axis before colouring: it replaces the bottom axis, which would otherwise keep ScottPlot's
         // default (black) labels.
-        var bottom = plot.Axes.DateTimeTicksBottom();
-        if (bottom.TickGenerator is DateTimeAutomatic dates)
-        {
-            dates.LabelFormatter = PriceHistoryViewModel.FormatTime;
-        }
+        plot.Axes.DateTimeTicksBottom().TickGenerator = new LocalTimeTicks();
 
         plot.Axes.Color(AxisColor);
         plot.Grid.MajorLineColor = AxisColor.WithAlpha(0.15);

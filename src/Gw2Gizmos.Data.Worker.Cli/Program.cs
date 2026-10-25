@@ -21,6 +21,11 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicati
 string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
 const string logOutputTemplate =
     "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}";
+// The file is in UTC, so its times stay unambiguous through daylight saving changes and midnight; the desktop app's
+// Logs page reads it back and shows local time.
+const string logFileTemplate =
+    "{UtcTimestamp:yyyy-MM-ddTHH:mm:ss.fffZ} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}"
+    + "{NewLine}{Exception}";
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Is(Debugger.IsAttached ? LogEventLevel.Debug : LogEventLevel.Information)
@@ -30,7 +35,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Environment", environment)
     .WriteTo.Console(outputTemplate: logOutputTemplate)
-    .WriteTo.File("Logs/worker-.txt", outputTemplate: logOutputTemplate, rollingInterval: RollingInterval.Day)
+    .WriteTo.File("Logs/worker-.txt", outputTemplate: logFileTemplate, rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Logging.ClearProviders();

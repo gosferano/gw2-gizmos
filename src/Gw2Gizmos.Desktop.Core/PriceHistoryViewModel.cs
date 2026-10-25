@@ -4,8 +4,9 @@ using Gw2Gizmos.Desktop.Core.Mvvm;
 
 namespace Gw2Gizmos.Desktop.Core;
 
-/// <summary>One recorded point of an item's trading-post history, flattened for charting. Buy/Sell are null
-/// when that side of the book was empty at the time, which the line charts render as a gap.</summary>
+/// <summary>One recorded point of an item's trading-post history, flattened for charting. Time is UTC, so it keeps
+/// moving forward through daylight saving changes. Buy/Sell are null when that side of the book was empty at the
+/// time, which the line charts render as a gap.</summary>
 public readonly record struct HistoryPoint(DateTime Time, int? Buy, int? Sell, int Volume);
 
 /// <summary>
@@ -13,7 +14,7 @@ public readonly record struct HistoryPoint(DateTime Time, int? Buy, int? Sell, i
 /// chart shows. Each UI head draws two charts from it — a detailed one (buy/sell lines over volume bars) clipped to
 /// <see cref="WindowStart"/>..<see cref="WindowEnd"/>, and a short navigator over the whole history with that window
 /// drawn as a draggable thumb. Dragging on the navigator goes through <see cref="BeginDrag"/> / <see cref="DragTo"/> /
-/// <see cref="EndDrag"/> in data coordinates (time), so both heads behave the same.
+/// <see cref="EndDrag"/> in data coordinates (UTC time), so both heads behave the same.
 /// </summary>
 public sealed class PriceHistoryViewModel : ViewModelBase
 {
@@ -135,7 +136,7 @@ public sealed class PriceHistoryViewModel : ViewModelBase
     /// <summary>Ends a navigator drag.</summary>
     public void EndDrag() => _drag = Drag.None;
 
-    /// <summary>Axis label for a time: just the date at midnight, otherwise date and time.</summary>
+    /// <summary>Axis label for a local time: just the date at midnight, otherwise date and time.</summary>
     public static string FormatTime(DateTime time) =>
         time.ToString(time.TimeOfDay == TimeSpan.Zero ? "MM-dd" : "MM-dd HH:mm");
 

@@ -30,6 +30,10 @@ internal static class AppHostFactory
         string environment = builder.Environment.EnvironmentName.ToLowerInvariant();
         const string logOutputTemplate =
             "{Timestamp:HH:mm:ss.fff} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}{NewLine}{Exception}";
+        // Log files are in UTC, so their times stay unambiguous through daylight saving changes and midnight.
+        const string logFileTemplate =
+            "{UtcTimestamp:yyyy-MM-ddTHH:mm:ss.fffZ} [{Level:u3}] [{Environment}|{SourceContext:l}] {Message}"
+            + "{NewLine}{Exception}";
 
         // Shared, UI-bindable buffer feeding the in-app log viewer (this process's events). It exists before the
         // host (Serilog needs it), so it gets the dispatcher directly; the same instance is registered below.
@@ -47,7 +51,7 @@ internal static class AppHostFactory
             .WriteTo.Console(outputTemplate: logOutputTemplate)
             .WriteTo.File(
                 Path.Combine(dataDirectory, "Logs", "log-.txt"),
-                outputTemplate: logOutputTemplate,
+                outputTemplate: logFileTemplate,
                 rollingInterval: RollingInterval.Day
             )
             .WriteTo.Sink(new InMemoryLogSink(logStore))
