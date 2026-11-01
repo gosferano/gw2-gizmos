@@ -109,4 +109,14 @@ public class CraftingDataTests
         Assert.Contains(clovers!, recipe => recipe.OutputItemCount is > 2m and < 4m); // 10-forge, chance-adjusted
         Assert.All(clovers!, recipe => Assert.True(recipe.OutputItemCount < 10m));    // never the nominal yield
     }
+
+    [Fact]
+    public void A_forge_ingredient_the_wiki_names_in_the_plural_is_resolved()
+    {
+        // Gift of Expertise's recipe takes "50 Obsidian Shards"; without the id it would be dropped.
+        const int GiftOfExpertise = 100852;
+        StaticRecipe recipe = Assert.Single(StaticRecipes.ByOutputItemId[GiftOfExpertise]);
+
+        Assert.Contains(recipe.Ingredients, i => i.ItemId == ObsidianShard && i.Count == 50);
+    }
 }
