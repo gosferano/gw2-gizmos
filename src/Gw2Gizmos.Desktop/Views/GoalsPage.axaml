@@ -1,0 +1,178 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Gw2Gizmos.Desktop.Controls"
+             xmlns:core="using:Gw2Gizmos.Desktop.Core"
+             x:Class="Gw2Gizmos.Desktop.Views.GoalsPage"
+             x:DataType="core:GoalsViewModel">
+    <UserControl.DataTemplates>
+        <!-- A section of the selected goal's needs, with what it costs. -->
+        <DataTemplate x:DataType="core:GoalHeading">
+            <DockPanel Margin="0,12,0,4">
+                <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Copper}" FontWeight="Medium"
+                               VerticalAlignment="Bottom" IsVisible="{Binding HasCopper}" />
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Description}" FontSize="12" Classes="secondary" TextWrapping="Wrap" />
+                </StackPanel>
+            </DockPanel>
+        </DataTemplate>
+        <!-- An item it needs: how many, and what they cost or how they're had. -->
+        <DataTemplate x:DataType="core:GoalLineRow">
+            <Border Classes="hover-row">
+                <DockPanel>
+                    <c:CoinDisplay DockPanel.Dock="Right" Copper="{Binding Copper}" VerticalAlignment="Center"
+                                   Margin="12,0,0,0" IsVisible="{Binding HasCopper}" />
+                    <c:ItemImage ItemId="{Binding ItemId}" Width="24" Height="24" Margin="0,0,10,0"
+                                 VerticalAlignment="Center" />
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:ItemName Text="{Binding Name}" ItemId="{Binding ItemId}"
+                                        TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding CountText}" Classes="secondary" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Note}" FontSize="12" Classes="secondary" TextWrapping="Wrap"
+                                   IsVisible="{Binding HasNote}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+        <!-- A currency vendors take: what's needed against what the wallet has. -->
+        <DataTemplate x:DataType="core:GoalCurrencyRow">
+            <Border Classes="hover-row">
+                <DockPanel>
+                    <Panel Width="24" Height="24" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <c:ItemImage ItemId="{Binding ItemId}" IsVisible="{Binding IsItem}" />
+                        <c:IconImage IconUrl="{Binding IconUrl}" IsVisible="{Binding !IsItem}" />
+                    </Panel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" />
+                        <TextBlock Text="{Binding Text}" FontSize="12" Classes="secondary" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <!-- The count box: no spinner (it'd crowd the digits); arrow keys and the wheel still step it. -->
+        <Style Selector="NumericUpDown.count">
+            <Setter Property="ShowButtonSpinner" Value="False" />
+            <Setter Property="Minimum" Value="1" />
+            <Setter Property="Maximum" Value="9999" />
+            <Setter Property="Increment" Value="1" />
+            <Setter Property="FormatString" Value="0" />
+            <Setter Property="Width" Value="64" />
+            <Setter Property="HorizontalContentAlignment" Value="Right" />
+        </Style>
+        <Style Selector="Button.icon">
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Not scrollable itself: the needs list scrolls on its own. -->
+    <c:PageShell Breadcrumbs="{Binding Breadcrumbs}" Scrollable="False">
+        <Grid RowDefinitions="Auto,*">
+            <c:Card Grid.Row="0" Padding="20" IsVisible="{Binding !HasAccount}">
+                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="No account selected. Add an API key and pick an account on the API keys page." />
+            </c:Card>
+
+            <StackPanel Grid.Row="0" IsVisible="{Binding HasAccount}" Margin="0,0,0,12">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Command="{Binding AddCommand}" VerticalAlignment="Top"
+                            Margin="12,0,0,0" Height="{StaticResource FormControlHeight}"
+                            ToolTip.Tip="Pick an item on the Items page and press Goal">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:FluentIcon Symbol="Target24" FontSize="16" />
+                            <TextBlock Text="Add a goal" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock TextWrapping="Wrap" Classes="secondary"
+                               Text="Items you plan to make or buy, and what they still need. Each follows the cheapest way to make it, with what you already hold set aside first: a precursor you hold covers its whole branch. Goals share your holdings in order, so the first gets a material before the second. Prices are today's lowest listings." />
+                </DockPanel>
+                <TextBlock Text="No goals yet. Add one from the Items page." Margin="0,12,0,0" Classes="secondary"
+                           IsVisible="{Binding NoGoals}" />
+                <!-- The gold picture: what buying the rest costs, against the wallet. -->
+                <WrapPanel Margin="0,12,0,0" IsVisible="{Binding HasGoals}">
+                    <StackPanel Margin="0,0,32,0">
+                        <TextBlock Text="To buy" FontSize="12" Classes="secondary" />
+                        <c:CoinDisplay Copper="{Binding BuyCopper}" FontSize="16" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <StackPanel Margin="0,0,32,0">
+                        <TextBlock Text="Coin" FontSize="12" Classes="secondary" />
+                        <c:CoinDisplay Copper="{Binding CoinCopper}" FontSize="16" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding IsShort}">
+                        <TextBlock Text="Short" FontSize="12" Classes="secondary" />
+                        <c:CoinDisplay Copper="{Binding ShortCopper}" FontSize="16" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <TextBlock Text="Your coin covers it" IsVisible="{Binding CoinCovers}" VerticalAlignment="Bottom"
+                               Classes="secondary" />
+                </WrapPanel>
+            </StackPanel>
+
+            <Grid Grid.Row="1" ColumnDefinitions="340,16,*" IsVisible="{Binding HasGoals}">
+                <!-- The goals, in the order they're met; the first entry is all of them together. -->
+                <ListBox Grid.Column="0" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
+                         Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="core:GoalRow">
+                            <DockPanel Margin="0,4">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                            IsVisible="{Binding IsGoal}" Margin="8,0,0,0">
+                                    <NumericUpDown Classes="count" Value="{Binding Count}"
+                                                   ToolTip.Tip="How many you want" />
+                                    <Button Classes="icon" ToolTip.Tip="Meet this goal earlier"
+                                            Command="{Binding $parent[ListBox].((core:GoalsViewModel)DataContext).MoveUpCommand}"
+                                            CommandParameter="{Binding}">
+                                        <c:FluentIcon Symbol="ArrowUp24" FontSize="14" />
+                                    </Button>
+                                    <Button Classes="icon" ToolTip.Tip="Meet this goal later"
+                                            Command="{Binding $parent[ListBox].((core:GoalsViewModel)DataContext).MoveDownCommand}"
+                                            CommandParameter="{Binding}">
+                                        <c:FluentIcon Symbol="ArrowDown24" FontSize="14" />
+                                    </Button>
+                                    <Button Classes="icon" ToolTip.Tip="Remove this goal"
+                                            Command="{Binding $parent[ListBox].((core:GoalsViewModel)DataContext).RemoveCommand}"
+                                            CommandParameter="{Binding}">
+                                        <c:FluentIcon Symbol="Delete24" FontSize="14" />
+                                    </Button>
+                                </StackPanel>
+                                <Panel Width="28" Height="28" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <c:ItemImage ItemId="{Binding ItemId}" IsVisible="{Binding IsGoal}" />
+                                    <c:FluentIcon Symbol="Target24" FontSize="22" IsVisible="{Binding IsAll}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Panel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Margin="0,4,0,2"
+                                                 MinWidth="0" />
+                                    <TextBlock Text="{Binding Status}" FontSize="11" Classes="secondary"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <c:CoinDisplay Copper="{Binding BuyCopper}" FontSize="11" IconSize="10"
+                                                   IsVisible="{Binding HasBuy}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- The selected goal's needs, section by section; each entry picks its template by type. -->
+                <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsRepeater ItemsSource="{Binding Details}" Margin="0,0,16,0">
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                                <ContentControl Content="{Binding}" />
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </c:PageShell>
+</UserControl>

@@ -40,12 +40,76 @@ public static class MysticForgeRecipes
         IReadOnlyList<MysticForgeRecipe> recipes = catalog?.Recipes ?? [];
 
         // Fill in known success chances (absent from the scrape — see KnownChances); the rest keep their 1.0.
-        return recipes
+        recipes = recipes
             .Select(recipe => recipe.OutputId is { } id && KnownChances.TryGetValue(id, out double chance)
                 ? recipe with { Chance = chance }
                 : recipe)
             .ToList();
+        return ResolveNames(recipes);
     }
+
+    /// <summary>
+    /// Fills in the ids of ingredients the scrape couldn't resolve because the wiki names them in the plural
+    /// ("Obsidian Shards", "Globs of Ectoplasm") or with a section link ("…#item1"): matched, singular or plural, to
+    /// an item the forge recipes or the vendor catalog do have an id for. A recipe with such an ingredient would
+    /// otherwise be dropped (e.g. Gift of Expertise's, leaving only vendor offers that take ectoplasm). A name that
+    /// matches no single item ("Exotic staff", "Charm (ingredient)") stays unresolved.
+    /// </summary>
+    private static IReadOnlyList<MysticForgeRecipe> ResolveNames(IReadOnlyList<MysticForgeRecipe> recipes)
+    {
+        var ids = new Dictionary<string, HashSet<int>>();
+        void Know(string name, int? id)
+        {
+            if (id is { } known)
+            {
+                string key = Key(name);
+                if (!ids.TryGetValue(key, out HashSet<int>? set))
+                {
+                    ids[key] = set = [];
+                }
+
+                set.Add(known);
+            }
+        }
+
+        foreach (MysticForgeRecipe recipe in recipes)
+        {
+            Know(recipe.Output, recipe.OutputId);
+            foreach (MysticForgeIngredient ingredient in recipe.Ingredients)
+            {
+                Know(ingredient.Name, ingredient.Id);
+            }
+        }
+
+        foreach (VendorItem item in VendorItems.All)
+        {
+            Know(item.Item, item.GameId);
+            foreach (CostComponent cost in item.Offers.SelectMany(offer => offer.Cost))
+            {
+                Know(cost.Currency, cost.ItemId);
+            }
+        }
+
+        return recipes
+            .Select(recipe => recipe.Ingredients.Any(i => i.Id is null)
+                ? recipe with
+                {
+                    Ingredients = recipe.Ingredients
+                        .Select(i => i.Id is null && ids.TryGetValue(Key(i.Name), out HashSet<int>? set)
+                            && set.Count == 1
+                                ? i with { Id = set.Single() }
+                                : i)
+                        .ToList(),
+                }
+                : recipe)
+            .ToList();
+    }
+
+    // A name as matched: lower-cased, without a section link, each word's plural "s" trimmed ("Piles of Bloodstone
+    // Dust" → "pile of bloodstone dust").
+    private static string Key(string name) => string.Join(' ', name.Split('#')[0].Trim().ToLowerInvariant()
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Select(word => word.Length > 3 && word.EndsWith('s') ? word[..^1] : word));
 
     private sealed record RecipeCatalog
     {

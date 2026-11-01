@@ -264,10 +264,10 @@ public sealed class CraftCostTests : IDisposable
     }
 
     [Fact]
-    public async Task The_cached_craft_cost_is_left_out_when_a_direct_ingredient_cannot_be_acquired()
+    public async Task A_direct_ingredient_that_cannot_be_acquired_counts_as_nothing_in_the_cached_craft_cost()
     {
         // Made-up ids no vendor sells: 9_000_001 and 9_000_002 are crafted from a priced material, the second also
-        // from one that can't be acquired (no price, recipe or vendor).
+        // from one that can't be acquired (no price, recipe or vendor), as a precursor takes collection items.
         const int Priced = 9_000_010, Unobtainable = 9_000_011;
         Seed((Priced, 500));
         using (Gw2GizmosDbContext db = _fixture.NewContext())
@@ -290,7 +290,7 @@ public sealed class CraftCostTests : IDisposable
             .ItemCraftCosts.AsNoTracking()
             .ToDictionary(cost => cost.ItemId, cost => cost.CraftingCost);
         Assert.Equal(1_000, cached[9_000_001]);
-        Assert.False(cached.ContainsKey(9_000_002));
+        Assert.Equal(1_000, cached[9_000_002]);
     }
 
     // Made-up ids for recipe loops, like the Mists Essences': a Shard made from Globs, Globs downgraded from a

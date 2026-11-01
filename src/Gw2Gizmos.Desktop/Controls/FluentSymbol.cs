@@ -47,6 +47,7 @@ public enum FluentSymbol
     Settings24 = 0xF6AA,
     Shield24 = 0xF6BF,
     Star24 = 0xF710,
+    Target24 = 0xF782,
     Trophy24 = 0xF837,
     Wallet24 = 0xEE2D,
     Warning24 = 0xF86A,

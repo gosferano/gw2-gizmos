@@ -9,6 +9,11 @@
     <!-- Advice drawn from the account's own data, each with a summary of what it found; a row opens its page. -->
     <c:PageShell Title="Advisor">
         <StackPanel>
+            <ui:FASettingsExpander Header="Goals" Description="{Binding GoalsSummary}" Margin="0,0,0,8"
+                                   IconSource="{c:FluentIconSource Target24}" IsClickEnabled="True"
+                                   ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"
+                                   CommandParameter="{x:Static nav:AppPage.Goals}" />
+
             <ui:FASettingsExpander Header="Craft from stock" Description="{Binding CraftSummary}" Margin="0,0,0,8"
                                    IconSource="{c:FluentIconSource Wrench24}" IsClickEnabled="True"
                                    ActionIconSource="ChevronRight" Command="{Binding OpenCommand}"

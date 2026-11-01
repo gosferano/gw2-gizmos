@@ -273,39 +273,38 @@ public class RecipeNodeTests
     }
 
     [Fact]
-    public void ShowCraftCost_IsFalse_AndCollapsesToBuy_WhenADirectIngredientIsAnUnobtainableDeadEnd()
+    public void A_part_that_cant_be_bought_counts_as_nothing_in_the_craft_cost_marked_partial()
     {
-        // Dusk's case: a craftable with a buy order whose direct ingredient is a dead-end (no buy, no recipe, no
-        // vendor — Spirit/Essence). The craft can't be performed, so it collapses to buy: craft shown as em-dash,
-        // buy bolded as the value.
-        RecipeNode dusk = Craftable(buy: 160, count: 1, Leaf(buy: 0), Leaf(buy: 50));
+        // Nyr Hrammr's case: a precursor with a buy order made from a priced gift and collection items nothing sells.
+        // The craft is still shown, and cheaper, as gw2efficiency shows it, marked as leaving those parts out.
+        RecipeNode precursor = Craftable(buy: 3100, count: 1, Leaf(buy: 0), Leaf(buy: 900));
+        precursor.CraftingCostPerUnit = 900;
 
-        Assert.False(dusk.ShowCraftCost);
-        Assert.True(dusk.BuyIsCheaper);
-        Assert.False(dusk.CraftIsCheaper);
+        Assert.True(precursor.CraftCostPartial);
+        Assert.True(precursor.CraftIsCheaper);
+        Assert.False(precursor.BuyIsCheaper);
     }
 
     [Fact]
-    public void ShowCraftCost_IsTrue_WhenTheDeadEndIsBuriedBelowACraftableIngredient()
+    public void A_craft_cost_is_partial_when_a_part_that_cant_be_bought_is_buried_deeper()
     {
-        // Twilight's case: its direct ingredients are all craftable (a gift with a buried dead-end, plus a priced
-        // leaf) — no *direct* dead-end — so it keeps its craft estimate instead of collapsing.
+        // Twilight's case: a gift with a part nothing sells, plus a priced leaf.
         RecipeNode giftWithBuriedDeadEnd = Craftable(buy: 0, count: 1, Leaf(buy: 0));
         RecipeNode twilight = Craftable(buy: 2085, count: 1, giftWithBuriedDeadEnd, Leaf(buy: 100));
 
-        Assert.False(giftWithBuriedDeadEnd.ShowCraftCost); // it has a direct dead-end
-        Assert.True(twilight.ShowCraftCost);               // its direct ingredients are all obtainable/craftable
+        Assert.True(giftWithBuriedDeadEnd.CraftCostPartial);
+        Assert.True(twilight.CraftCostPartial);
     }
 
     [Fact]
-    public void ShowCraftCost_IsTrue_WhenAnUnpricedDirectIngredientIsVendorAcquirable()
+    public void A_craft_cost_isnt_partial_when_an_unpriced_part_is_sold_by_a_vendor()
     {
-        // A vendor-acquirable leaf (some currency) is obtainable, not a dead-end, so it doesn't force a collapse.
+        // A vendor-acquirable leaf (some currency) is obtainable, so the craft cost leaves nothing out.
         RecipeNode vendorLeaf = Leaf(buy: 0);
         vendorLeaf.IsVendorAcquirable = true;
         RecipeNode node = Craftable(buy: 50, count: 1, vendorLeaf, Leaf(buy: 10));
 
-        Assert.True(node.ShowCraftCost);
+        Assert.False(node.CraftCostPartial);
     }
 
     [Theory]

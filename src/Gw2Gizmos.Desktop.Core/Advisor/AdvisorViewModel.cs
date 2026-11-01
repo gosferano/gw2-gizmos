@@ -31,7 +31,8 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         DataChangeMonitor dataChanges,
         INavigationService navigation,
         CraftFromStockSettingsStore craftSettings,
-        InventoryCleanupSettingsStore cleanupSettings
+        InventoryCleanupSettingsStore cleanupSettings,
+        GoalStore goals
     )
     {
         _reader = reader;
@@ -39,6 +40,13 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
         _cleanupSettings = cleanupSettings;
         _accountId = string.IsNullOrEmpty(selected.AccountId) ? null : selected.AccountId;
         OpenCommand = new RelayCommand<AppPage>(page => navigation.NavigateTo(page));
+        int goalCount = _accountId is { } account ? goals.For(account).Count : 0;
+        GoalsSummary = goalCount switch
+        {
+            0 => "Plan what to make or buy, and see what it still needs",
+            1 => "1 goal",
+            _ => $"{Number(goalCount)} goals",
+        };
         _ = LoadAsync();
         _dataChanges = dataChanges.Subscribe(changes =>
         {
@@ -50,6 +58,9 @@ public sealed class AdvisorViewModel : ViewModelBase, INavigationAware
     }
 
     public void OnNavigatedFrom() => _dataChanges.Dispose();
+
+    /// <summary>E.g. "3 goals".</summary>
+    public string GoalsSummary { get; }
 
     /// <summary>Opens a section's page.</summary>
     public RelayCommand<AppPage> OpenCommand { get; }

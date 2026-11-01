@@ -35,7 +35,7 @@
                     <Run Text="{Binding PricesStatus}" />
                 </TextBlock>
                 <!-- Full-width search box with a refresh button to its right. -->
-                <Grid ColumnDefinitions="*,Auto,Auto">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                     <TextBox Grid.Column="0" PlaceholderText="search items" Text="{Binding FilterText}"
                              Height="{StaticResource FormControlHeight}" VerticalContentAlignment="Center" />
                     <!-- Alert on the selected item's price. -->
@@ -46,7 +46,16 @@
                             <TextBlock Text="Price alert" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <!-- Plan to make or buy the selected item (Advisor › Goals). -->
                     <Button Grid.Column="2" Margin="8,0,0,0" Height="{StaticResource FormControlHeight}"
+                            Command="{Binding AddGoalCommand}"
+                            ToolTip.Tip="Add the selected item to your goals (one more, if it's a goal already)">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:FluentIcon Symbol="Target24" FontSize="16" />
+                            <TextBlock Text="Goal" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="3" Margin="8,0,0,0" Height="{StaticResource FormControlHeight}"
                             Command="{Binding RefreshCommand}" ToolTip.Tip="Reload prices for the current list">
                         <c:FluentIcon Symbol="ArrowSync24" FontSize="16" />
                     </Button>
@@ -168,13 +177,16 @@
                                                         IsVisible="{Binding $parent[UserControl].((core:ItemsViewModel)DataContext).PricesEnabled}">
                                                 <TextBlock Text="  ·  " />
                                                 <TextBlock Text="craft " FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
-                                                <!-- Craft cost as coins, or an em-dash when there's no recipe or a direct
-                                                     ingredient is an unobtainable dead-end (a 0 would read as "free"). -->
+                                                <!-- Craft cost as coins, or an em-dash when there's no recipe (a 0 would read
+                                                     as "free"); "+" when it leaves out parts that can't be bought. -->
                                                 <c:CoinDisplay Copper="{Binding CraftingCost}"
                                                                FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                               IsVisible="{Binding ShowCraftCost}" />
+                                                               IsVisible="{Binding IsCraftable}" />
+                                                <TextBlock Text=" +" FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                           IsVisible="{Binding CraftCostPartial}" Background="Transparent"
+                                                           ToolTip.Tip="Plus parts that can't be bought, which you get by playing" />
                                                 <TextBlock Text="—" FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                           IsVisible="{Binding !ShowCraftCost}" />
+                                                           IsVisible="{Binding !IsCraftable}" />
                                                 <TextBlock Text="  ·  " />
                                                 <TextBlock Text="buy " FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
                                                 <!-- Coin price (trading post / coin vendor). -->
