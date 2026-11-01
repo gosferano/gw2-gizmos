@@ -484,20 +484,25 @@ public class RecipeTreeBuilder
 
     private readonly ConcurrentDictionary<int, Memo> _memoizationCache = new();
 
-    /// <summary>A remembered tree (for one), and every item in it below its root.</summary>
+    /// <summary>
+    /// A remembered tree, as first built (for however many it was built for; <see cref="CopyForMemo"/> scales it to
+    /// what's needed), and every item in it below its root. The node itself is kept, not a copy: it's never changed
+    /// once built, and copying every finished subtree took most of a craft-cost run.
+    /// </summary>
     private sealed record Memo(RecipeNode Node, HashSet<int> Contains);
 
-    // Remembers a node's tree, unless a recipe was ruled out in it for an item above it on this branch.
+    // Remembers a node's tree, unless a recipe was ruled out in it for an item above it on this branch, or the item is
+    // remembered already.
     private void Remember(RecipeNode node, Walk walk, int depth)
     {
-        if (walk.LowestCut < depth)
+        if (walk.LowestCut < depth || _memoizationCache.ContainsKey(node.ItemId))
         {
             return;
         }
 
         var contains = new HashSet<int>();
         AddItems(node.Ingredients, contains);
-        _memoizationCache.TryAdd(node.ItemId, new Memo(CopyForMemo(node, 1), contains));
+        _memoizationCache.TryAdd(node.ItemId, new Memo(node, contains));
     }
 
     private static void AddItems(List<RecipeNode> nodes, HashSet<int> into)
