@@ -64,9 +64,13 @@ public class PriceHistoryRetentionUpdater
     }
 
     /// <summary>
-    /// Collapses every (item, time-bucket) group in <c>[lower, upper)</c> to its latest row, folding the
-    /// group's total <c>Sold</c>/<c>Bought</c> into that survivor and deleting the rest. Idempotent: a
-    /// bucket already reduced to one row sums to itself and deletes nothing. Returns the rows deleted.
+    /// Collapses every (item, time-bucket) group in <c>[lower, upper)</c> with more than one row to its latest row,
+    /// folding the group's total <c>Sold</c>/<c>Bought</c> into that survivor and deleting the rest. Returns the rows
+    /// deleted. First, without taking the write lock, it works out which groups still need collapsing, their totals
+    /// and the rows to delete, into temp tables (they live in SQLite's temp database). Then it updates and deletes only
+    /// those rows, in one transaction: the write lock is held for a moment, not the minutes a sweep over the whole
+    /// window took (every other write waited out its timeout and failed), and a stop part-way can't leave a survivor
+    /// holding its group's total beside rows the next run would count again.
     /// </summary>
     private async Task<int> CollapseBucketAsync(
         Func<string, string> bucketOf,
@@ -78,44 +82,58 @@ public class PriceHistoryRetentionUpdater
         // The time bounds are compared against TimestampUtc, which is stored as UTC ticks (the model's value
         // converter) — and raw SQL bypasses that converter, so bind the bounds as ticks too. Binding DateTimeOffset
         // here would compare an integer column to a text datetime and match nothing (so nothing would ever collapse).
-        long lowerTicks = lower.UtcTicks;
-        long upperTicks = upper.UtcTicks;
+        object[] bounds = [lower.UtcTicks, upper.UtcTicks];
 
-        // bucketOf builds the time-bucket expression for a given table qualifier; it's fixed code (not
-        // user input) so it's interpolated as literal SQL, while the time bounds are bound as parameters.
-        // The inner subquery aliases the table 'p', so the outer row must be qualified explicitly —
-        // otherwise an unqualified column would bind to 'p' and the bucket match would always be true.
-        string inner = bucketOf("p");
-        string outer = bucketOf("PriceSnapshots");
-        string survivors =
-            $"SELECT MAX(Id) FROM PriceSnapshots WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}} "
-            + $"GROUP BY ItemId, {outer}";
+        // bucketOf builds the time-bucket expression for a given table qualifier; it's fixed code (not user input) so
+        // it's interpolated as literal SQL, while the time bounds are bound as parameters. EF1002 is safe to suppress
+        // for the same reason.
+        string bucket = bucketOf("PriceSnapshots");
+        string rowBucket = bucketOf("p");
 
-        // Fold each (item, bucket) group's total volume into its latest row before deleting the rest.
-        // EF1002 is safe to suppress here: the only interpolated values (inner/outer/survivors) are
-        // code-built SQL fragments — never user input — and the {0}/{1} time bounds are bound as parameters.
+        // Temp tables belong to the connection, so it's held open across the statements.
+        await _dbContext.Database.OpenConnectionAsync(stoppingToken);
+        try
+        {
 #pragma warning disable EF1002
-        await _dbContext.Database.ExecuteSqlRawAsync(
-            $@"UPDATE PriceSnapshots
-               SET Sold = (SELECT SUM(p.Sold) FROM PriceSnapshots p
-                           WHERE p.ItemId = PriceSnapshots.ItemId AND {inner} = {outer}
-                             AND p.TimestampUtc >= {{0}} AND p.TimestampUtc < {{1}}),
-                   Bought = (SELECT SUM(p.Bought) FROM PriceSnapshots p
-                             WHERE p.ItemId = PriceSnapshots.ItemId AND {inner} = {outer}
-                               AND p.TimestampUtc >= {{0}} AND p.TimestampUtc < {{1}})
-               WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}}
-                 AND Id IN ({survivors})",
-            new object[] { lowerTicks, upperTicks },
-            stoppingToken
-        );
-
-        return await _dbContext.Database.ExecuteSqlRawAsync(
-            $@"DELETE FROM PriceSnapshots
-               WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}}
-                 AND Id NOT IN ({survivors})",
-            new object[] { lowerTicks, upperTicks },
-            stoppingToken
-        );
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "DROP TABLE IF EXISTS temp.Collapse; DROP TABLE IF EXISTS temp.Doomed;", stoppingToken);
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                $@"CREATE TEMP TABLE Collapse AS
+                   SELECT ItemId, {bucket} AS Bucket, MAX(Id) AS Keep, SUM(Sold) AS Sold, SUM(Bought) AS Bought
+                   FROM PriceSnapshots
+                   WHERE TimestampUtc >= {{0}} AND TimestampUtc < {{1}}
+                   GROUP BY ItemId, Bucket
+                   HAVING COUNT(*) > 1",
+                bounds,
+                stoppingToken
+            );
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                $@"CREATE TEMP TABLE Doomed AS
+                   SELECT p.Id FROM temp.Collapse c JOIN PriceSnapshots p ON p.ItemId = c.ItemId
+                   WHERE p.TimestampUtc >= {{0}} AND p.TimestampUtc < {{1}}
+                     AND {rowBucket} = c.Bucket AND p.Id <> c.Keep",
+                bounds,
+                stoppingToken
+            );
 #pragma warning restore EF1002
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(stoppingToken);
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                @"UPDATE PriceSnapshots SET Sold = c.Sold, Bought = c.Bought
+                  FROM temp.Collapse c
+                  WHERE PriceSnapshots.Id = c.Keep",
+                stoppingToken
+            );
+            int deleted = await _dbContext.Database.ExecuteSqlRawAsync(
+                "DELETE FROM PriceSnapshots WHERE Id IN (SELECT Id FROM temp.Doomed)", stoppingToken);
+            await transaction.CommitAsync(stoppingToken);
+            return deleted;
+        }
+        finally
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "DROP TABLE IF EXISTS temp.Collapse; DROP TABLE IF EXISTS temp.Doomed;", CancellationToken.None);
+            await _dbContext.Database.CloseConnectionAsync();
+        }
     }
 }
