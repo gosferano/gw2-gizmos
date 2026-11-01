@@ -43,15 +43,14 @@ public class ItemCraftCostUpdater
             return;
         }
 
-        // Keep the cheapest tree per output item, with the craft tree's rule for whether a craft has a cost: none
-        // when a direct ingredient can't be acquired (the tree shows "—"; counted as 0 it would read as a misleadingly
-        // low cost). An unpriced ingredient deeper down still counts as 0, so a legendary keeps an estimate. Before
-        // the first price poll all prices are 0, so every cost is 0 and the run is skipped by the empty-result guard
-        // below — meaning a cached cost is only ever built against a populated price set.
+        // Keep the cheapest tree per output item. Parts that can't be bought count as 0, as in the craft tree, so a
+        // precursor made from collection items keeps an estimate of what the rest costs. Before the first price poll
+        // all prices are 0, so every cost is 0 and the run is skipped by the empty-result guard below — meaning a
+        // cached cost is only ever built against a populated price set.
         var cheapestByItem = new Dictionary<int, RecipeNode>();
         foreach (RecipeNode tree in trees)
         {
-            if (tree.CraftingCost <= 0 || !tree.ShowCraftCost)
+            if (tree.CraftingCost <= 0)
             {
                 continue;
             }

@@ -168,13 +168,16 @@
                                                         IsVisible="{Binding $parent[UserControl].((core:ItemsViewModel)DataContext).PricesEnabled}">
                                                 <TextBlock Text="  ·  " />
                                                 <TextBlock Text="craft " FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}" />
-                                                <!-- Craft cost as coins, or an em-dash when there's no recipe or a direct
-                                                     ingredient is an unobtainable dead-end (a 0 would read as "free"). -->
+                                                <!-- Craft cost as coins, or an em-dash when there's no recipe (a 0 would read
+                                                     as "free"); "+" when it leaves out parts that can't be bought. -->
                                                 <c:CoinDisplay Copper="{Binding CraftingCost}"
                                                                FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                               IsVisible="{Binding ShowCraftCost}" />
+                                                               IsVisible="{Binding IsCraftable}" />
+                                                <TextBlock Text=" +" FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
+                                                           IsVisible="{Binding CraftCostPartial}" Background="Transparent"
+                                                           ToolTip.Tip="Plus parts that can't be bought, which you get by playing" />
                                                 <TextBlock Text="—" FontWeight="{Binding CraftIsCheaper, Converter={StaticResource Bold}}"
-                                                           IsVisible="{Binding !ShowCraftCost}" />
+                                                           IsVisible="{Binding !IsCraftable}" />
                                                 <TextBlock Text="  ·  " />
                                                 <TextBlock Text="buy " FontWeight="{Binding BuyIsCheaper, Converter={StaticResource Bold}}" />
                                                 <!-- Coin price (trading post / coin vendor). -->
