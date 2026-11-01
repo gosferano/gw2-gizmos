@@ -149,47 +149,7 @@ public class RecipeNode
     /// as 0 coin rather than unknown. Only a genuinely unobtainable item (no trading post, no recipe, and not
     /// vendor-sold for any currency) is unknown.
     /// </summary>
-    public decimal? EffectiveCostOrNull
-    {
-        get
-        {
-            decimal? acquire = CheapestAcquisition();
-
-            if (!IsCraftable)
-            {
-                // Cheapest buy/vendor coin-equivalent; else 0 when a vendor sells it for a currency we couldn't
-                // value (obtainable, just uncosted); else genuinely unknown (account-bound, no acquisition path).
-                return acquire ?? (IsVendorAcquirable || IsEarned ? 0m : null);
-            }
-
-            decimal craftSum = 0m;
-            bool craftKnown = true;
-            foreach (RecipeNode child in Ingredients)
-            {
-                if (child.IsCurrency)
-                {
-                    continue;
-                }
-
-                decimal? childCost = child.EffectiveCostOrNull;
-                if (childCost is null)
-                {
-                    craftKnown = false;
-                    break;
-                }
-
-                craftSum += childCost.Value;
-            }
-
-            decimal? craft = craftKnown ? craftSum : null;
-            return (craft, acquire) switch
-            {
-                (null, _) => acquire,
-                (_, null) => craft,
-                _ => Math.Min(craft.Value, acquire.Value)
-            };
-        }
-    }
+    public decimal? EffectiveCostOrNull => Costs().Known;
 
     /// <summary>
     /// The cost used to roll a node up into its parent. Unlike <see cref="EffectiveCostOrNull"/> (which is
@@ -199,41 +159,49 @@ public class RecipeNode
     /// of crafting vs. buying; a partially-priced node prefers a real buy order (a true upper bound) and falls
     /// back to the partial craft only when the item can't be bought at all (untradeable).
     /// </summary>
-    public decimal EffectiveCost
+    public decimal EffectiveCost => Costs().Cost;
+
+    /// <summary>
+    /// <see cref="EffectiveCost"/> and <see cref="EffectiveCostOrNull"/> together, in one pass over the tree. Each
+    /// needs both of every ingredient's, so working them out separately asked each ingredient twice, and each of
+    /// those asked theirs twice again: the work doubled at every level of the tree (a legendary's promotion chains
+    /// run deep), which kept the worker's craft-cost runs at a full core for seconds.
+    /// </summary>
+    private (decimal Cost, decimal? Known) Costs()
     {
-        get
+        decimal? acquire = CheapestAcquisition();
+        if (!IsCraftable)
         {
-            decimal? acquire = CheapestAcquisition();
-            if (!IsCraftable)
-            {
-                return acquire ?? 0m;
-            }
-
-            decimal craftSum = 0m;
-            var craftFullyKnown = true;
-            foreach (RecipeNode child in Ingredients)
-            {
-                if (child.IsCurrency)
-                {
-                    continue;
-                }
-
-                craftSum += child.EffectiveCost; // untradeable/unpriced children contribute 0
-                if (child.EffectiveCostOrNull is null)
-                {
-                    craftFullyKnown = false;
-                }
-            }
-
-            if (craftFullyKnown)
-            {
-                return acquire is { } known ? Math.Min(known, craftSum) : craftSum;
-            }
-
-            // Partially priced: the craft sum is only a lower bound, so prefer a known buy/vendor cost; fall back
-            // to the partial craft only when the item can't be bought at all.
-            return acquire ?? craftSum;
+            // Cheapest buy/vendor coin-equivalent; else 0 when a vendor sells it for a currency we couldn't value
+            // (obtainable, just uncosted) or it's earned by playing; else genuinely unknown (account-bound, no
+            // acquisition path), which the roll-up counts as 0.
+            return (acquire ?? 0m, acquire ?? (IsVendorAcquirable || IsEarned ? 0m : null));
         }
+
+        decimal craftSum = 0m; // untradeable/unpriced children contribute 0
+        var craftFullyKnown = true;
+        foreach (RecipeNode child in Ingredients)
+        {
+            if (child.IsCurrency)
+            {
+                continue;
+            }
+
+            (decimal cost, decimal? known) = child.Costs();
+            craftSum += cost;
+            craftFullyKnown &= known is not null;
+        }
+
+        // A known child's cost is the same either way, so a fully known craft is the same sum for both.
+        if (craftFullyKnown)
+        {
+            decimal cheapest = acquire is { } known ? Math.Min(known, craftSum) : craftSum;
+            return (cheapest, cheapest);
+        }
+
+        // Partially priced: the craft sum is only a lower bound, so prefer a known buy/vendor cost; fall back to the
+        // partial craft only when the item can't be bought at all (and then the cost isn't known).
+        return (acquire ?? craftSum, acquire);
     }
 
     /// <summary>
