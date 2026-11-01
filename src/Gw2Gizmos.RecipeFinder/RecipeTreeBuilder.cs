@@ -106,7 +106,10 @@ public class RecipeTreeBuilder
         _achievementSources ??= await LoadAchievementSourcesAsync(ct);
     }
 
-    public async Task<List<RecipeNode>> GetRecipeTrees(CancellationToken stoppingToken)
+    /// <param name="pause">Called between trees, so a background caller can pace the work (see the worker's
+    /// CpuPacer); null runs straight through.</param>
+    public async Task<List<RecipeNode>> GetRecipeTrees(
+        CancellationToken stoppingToken, Action<CancellationToken>? pause = null)
     {
         await EnsureLoadedAsync(stoppingToken);
 
@@ -134,6 +137,7 @@ public class RecipeTreeBuilder
             RecipeNode rootNode = await BuildTreeAsync(outputItemIds[i], stoppingToken);
 
             recipeTrees.Add(rootNode);
+            pause?.Invoke(stoppingToken);
         }
 
         return recipeTrees;

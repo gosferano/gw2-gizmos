@@ -12,17 +12,21 @@ namespace Gw2Gizmos.Data.Worker.Updaters;
 /// engine. Replaces the table wholesale each commerce refresh (ingredient prices come from the listings, so
 /// it refreshes after each commerce sync). Heavy enough to belong in the background worker; everything else
 /// the grid shows — live buy/sell, profit, margin — is derived at read time from the price history, so it is
-/// no longer computed or stored here. Then rebuilds the <see cref="ItemCoinCost"/> cache for valuing holdings.
+/// no longer computed or stored here. Then rebuilds the <see cref="ItemCoinCost"/> cache for valuing holdings. Both
+/// are paced to about half a core (<see cref="CpuPacer"/>), as they'd otherwise hold one at full load for seconds.
 /// </summary>
 public class ItemCraftCostUpdater
 {
     private readonly Gw2GizmosDbContext _dbContext;
     private readonly ILogger<ItemCraftCostUpdater> _logger;
+    private readonly CpuPacer _pacer;
 
-    public ItemCraftCostUpdater(Gw2GizmosDbContext dbContext, ILogger<ItemCraftCostUpdater> logger)
+    public ItemCraftCostUpdater(
+        Gw2GizmosDbContext dbContext, ILogger<ItemCraftCostUpdater> logger, TimeProvider? time = null)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _pacer = new CpuPacer(time ?? TimeProvider.System);
     }
 
     public async Task UpdateCraftCosts(CancellationToken stoppingToken)
@@ -37,7 +41,7 @@ public class ItemCraftCostUpdater
             .Select(a => a.AccountId)
             .FirstOrDefaultAsync(stoppingToken);
         var builder = new RecipeTreeBuilder(_dbContext, RecipeFinder.Configuration.Default, accountId);
-        List<RecipeNode> trees = await builder.GetRecipeTrees(stoppingToken);
+        List<RecipeNode> trees = await builder.GetRecipeTrees(stoppingToken, _pacer.PauseIfDue);
         if (stoppingToken.IsCancellationRequested)
         {
             return;
@@ -141,6 +145,8 @@ public class ItemCraftCostUpdater
             {
                 rows.Add(new ItemCoinCost { ItemId = itemId, Cost = (double)cost, ComputedAtUtc = computedAt });
             }
+
+            _pacer.PauseIfDue(stoppingToken);
         }
 
         await _dbContext.ItemCoinCosts.ExecuteDeleteAsync(stoppingToken);
