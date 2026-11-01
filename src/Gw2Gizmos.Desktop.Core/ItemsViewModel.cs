@@ -55,10 +55,20 @@ public sealed class ItemsViewModel : ViewModelBase
         IUiDispatcher dispatcher,
         PageTargets targets,
         PriceAlertEditing alerts,
-        SelectedAccountService account
+        SelectedAccountService account,
+        GoalStore goals
     )
     {
         _accountId = string.IsNullOrEmpty(account.AccountId) ? null : account.AccountId;
+        AddGoalCommand = new RelayCommand(
+            () =>
+            {
+                if (SelectedItem is { } item && _accountId is { } accountId)
+                {
+                    goals.Add(accountId, item.ItemId, item.Name);
+                }
+            },
+            () => SelectedItem is not null && _accountId is not null);
         _alerts = alerts;
         AddAlertCommand = new RelayCommand(
             () => _ = SelectedItem is { } item ? _alerts.AddAsync(item.ItemId, item.Name) : null,
@@ -245,6 +255,9 @@ public sealed class ItemsViewModel : ViewModelBase
     /// <summary>Opens the price alert dialog for the selected item.</summary>
     public RelayCommand AddAlertCommand { get; }
 
+    /// <summary>Adds the selected item to the account's goals, or one more of it when it's a goal already.</summary>
+    public RelayCommand AddGoalCommand { get; }
+
     /// <summary>True while a (re)load is in flight; disables the Refresh button so loads can't stack.</summary>
     public bool IsRefreshing
     {
@@ -309,6 +322,7 @@ public sealed class ItemsViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CraftTreePlaceholder));
                 OnPropertyChanged(nameof(ShowCraftTreePlaceholder));
                 AddAlertCommand.RaiseCanExecuteChanged();
+                AddGoalCommand.RaiseCanExecuteChanged();
                 _ = LoadDetailsAsync(value);
             }
         }

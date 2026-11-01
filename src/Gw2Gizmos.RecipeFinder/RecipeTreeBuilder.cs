@@ -539,6 +539,7 @@ public class RecipeTreeBuilder
             // A recipe's currency ingredient (e.g. Research Notes) shares its id space with items; without the flag
             // a copy reads as an unpriced item, and the craft it's in as incomplete.
             IsCurrency = node.IsCurrency,
+            CurrencyIconUrl = node.CurrencyIconUrl,
             AcquiredVia = node.AcquiredVia,
             IsEarned = node.IsEarned,
             IsVendorAcquirable = node.IsVendorAcquirable,
@@ -591,6 +592,7 @@ public class RecipeTreeBuilder
                     ItemId = ingredient.Id,
                     Count = requiredCount,
                     IsCurrency = true,
+                    CurrencyIconUrl = _currencyIconById!.GetValueOrDefault(ingredient.Id),
                     BuyPricePerUnit = 0,
                     SellPricePerUnit = 0,
                     CraftingCostPerUnit = 0,

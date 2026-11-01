@@ -45,6 +45,8 @@ public sealed class GlobalSearch
             "tp ledger realized profit margin fees income flipping"),
         new("Price alerts", "Trading post", "AlertOn24", AppPage.PriceAlerts, "tp notify price watch"),
         new("Advisor", null, "Lightbulb24", AppPage.Advisor, "advice suggestions"),
+        new("Goals", "Advisor", "Target24", AppPage.Goals,
+            "plan legendary craft buy materials needed shopping list what to sell"),
         new("Craft from stock", "Advisor", "Wrench24", AppPage.CraftFromStock,
             "crafting profit materials owned storage what to craft"),
         new("Inventory cleanup", "Advisor", "Broom24", AppPage.InventoryCleanup,

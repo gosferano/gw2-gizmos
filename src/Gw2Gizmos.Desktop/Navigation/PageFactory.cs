@@ -39,6 +39,7 @@ public sealed class PageFactory
         [AppPage.TradingPostProfit] = typeof(TradingPostProfitPage),
         [AppPage.PriceAlerts] = typeof(PriceAlertsPage),
         [AppPage.Advisor] = typeof(AdvisorPage),
+        [AppPage.Goals] = typeof(GoalsPage),
         [AppPage.CraftFromStock] = typeof(CraftFromStockPage),
         [AppPage.InventoryCleanup] = typeof(InventoryCleanupPage),
         [AppPage.Notifications] = typeof(NotificationsPage),

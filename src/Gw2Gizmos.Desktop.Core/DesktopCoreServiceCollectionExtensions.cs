@@ -132,6 +132,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddSingleton<WvwSettingsStore>();
         services.AddSingleton<CraftFromStockSettingsStore>();
         services.AddSingleton<InventoryCleanupSettingsStore>();
+        services.AddSingleton<GoalStore>();
         services.AddSingleton<LogsViewModel>();
         // Transient so the page re-reads the stored keys (and current feature state) on every navigation.
         services.AddTransient<ApiKeysViewModel>();
@@ -185,6 +186,7 @@ public static class DesktopCoreServiceCollectionExtensions
         services.AddTransient<TradingPostHistoryViewModel>();
         services.AddTransient<TradingPostProfitViewModel>();
         services.AddTransient<AdvisorViewModel>();
+        services.AddTransient<GoalsViewModel>();
         services.AddTransient<CraftFromStockViewModel>();
         services.AddTransient<InventoryCleanupViewModel>();
         services.AddTransient<PriceAlertsViewModel>();

@@ -803,6 +803,27 @@ public sealed class AccountReader
     }
 
     /// <summary>
+    /// What goals can draw on (<see cref="GoalPlanner"/>): every item the account holds, in material storage, the bank,
+    /// shared inventory and bags, bound or not, plus the legendaries in its armory; and its wallet. Equipped gear is in
+    /// use, so it isn't counted.
+    /// </summary>
+    public GoalHoldings GetGoalHoldings(string accountId) =>
+        SafeRead(db =>
+        {
+            Dictionary<int, long> items = AccountHoldingsReconstructor
+                .ItemTotalsAsOf(db, accountId, DateTimeOffset.MaxValue)
+                .ToDictionary(pair => pair.Key, pair => (long)pair.Value);
+            foreach (AccountLegendaryItem legendary in db.AccountLegendaryArmory.AsNoTracking()
+                         .Where(l => l.AccountId == accountId))
+            {
+                items[legendary.ItemId] = items.GetValueOrDefault(legendary.ItemId) + legendary.Count;
+            }
+
+            return new GoalHoldings(items,
+                AccountHoldingsReconstructor.WalletTotalsAsOf(db, accountId, DateTimeOffset.MaxValue));
+        }, GoalHoldings.Empty);
+
+    /// <summary>
     /// What to clean up in the account's bank, shared inventory and bags (<see cref="InventoryCleanup"/>), with
     /// material storage taken to hold <paramref name="storageCapacity"/> per item (null to guess it).
     /// </summary>

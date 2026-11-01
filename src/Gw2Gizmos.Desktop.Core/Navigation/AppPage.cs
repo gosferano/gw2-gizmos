@@ -32,6 +32,7 @@ public enum AppPage
     TradingPostProfit,
     PriceAlerts,
     Advisor,
+    Goals,
     CraftFromStock,
     InventoryCleanup,
     Notifications,

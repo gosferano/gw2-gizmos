@@ -27,6 +27,10 @@ public class RecipeNode
     public bool AutoExpand => Depth < 2;
     public bool IsCurrency { get; set; }
 
+    /// <summary>For a currency a recipe takes (<see cref="IsCurrency"/>, e.g. Research Notes), its icon's URL.
+    /// </summary>
+    public string? CurrencyIconUrl { get; set; }
+
     /// <summary>How this item is acquired when that isn't crafting, the Mystic Forge or buying it: from its
     /// ingredients (e.g. "the legendary armory" for a Memory of Sunrise made from Sunrise) or by playing (e.g.
     /// "world completion", see <see cref="IsEarned"/>); null otherwise.</summary>
